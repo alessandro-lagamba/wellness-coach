@@ -1,0 +1,452 @@
+/**
+ * LLM Service - OpenAI GPT Integration
+ */
+
+import OpenAI from 'openai';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export interface LLMOptions {
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+  emotionContext?: any;
+  skinContext?: any;
+  userContext?: {
+    emotionHistory?: any[];
+    skinHistory?: any[];
+    emotionTrend?: string;
+    skinTrend?: string;
+    insights?: string[];
+    wellnessSuggestion?: any;
+    userName?: string; // 🔧 Nome utente per personalizzazione
+    firstName?: string; // 🔧 Nome utente per personalizzazione
+    lastName?: string; // 🔧 Cognome utente per personalizzazione
+    first_name?: string; // 🔧 Nome utente per personalizzazione (legacy)
+    last_name?: string; // 🔧 Cognome utente per personalizzazione (legacy)
+    name?: string; // 🔧 Nome utente per personalizzazione (fallback)
+    // Nuovi campi per analisi avanzate
+    temporalPatterns?: {
+      timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
+      dayOfWeek: 'weekday' | 'weekend';
+      emotionalCycles?: Array<{
+        pattern: string;
+        frequency: number;
+        description: string;
+      }>;
+      skinCycles?: Array<{
+        pattern: string;
+        frequency: number;
+        description: string;
+      }>;
+    };
+    behavioralInsights?: {
+      stressIndicators: string[];
+      wellnessTriggers: string[];
+      improvementAreas: string[];
+      strengths: string[];
+    };
+    contextualFactors?: {
+      recentActivity: string;
+      environmentalFactors: string[];
+      lifestyleIndicators: string[];
+    };
+  };
+  // 🆕 NUOVO: Intent di analisi rilevato dal messaggio
+  analysisIntent?: {
+    needsEmotionAnalysis: boolean;
+    needsSkinAnalysis: boolean;
+    confidence: number;
+    detectedKeywords: string[];
+  };
+}
+
+export async function generateWellnessResponse(
+  message: string,
+  messageHistory: ChatMessage[] = [],
+  options: LLMOptions = {}
+): Promise<string> {
+  try {
+    const {
+      model = process.env.DEFAULT_LLM_MODEL || 'gpt-4o-mini',
+      temperature = 0.7,
+      maxTokens = 500,
+      emotionContext
+    } = options;
+
+    // Build system prompt based on complete context
+    const systemPrompt = buildSystemPrompt(options);
+
+    // Prepare messages for OpenAI
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemPrompt },
+      ...messageHistory.slice(-5).map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content
+      })),
+      { role: 'user', content: message }
+    ];
+
+    console.log('[LLM] 🧠 Generating response with:', {
+      model,
+      messagesCount: messages.length,
+      hasEmotion: !!emotionContext,
+      emotion: emotionContext?.dominantEmotion,
+      hasAnalysisIntent: !!options.analysisIntent,
+      analysisIntent: options.analysisIntent
+    });
+
+    const completion = await openai.chat.completions.create({
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+    });
+
+    const response = completion.choices[0]?.message?.content || 'Mi dispiace, non sono riuscito a elaborare una risposta.';
+
+    console.log('[LLM] ✅ Response generated:', {
+      responseLength: response.length,
+      tokensUsed: completion.usage?.total_tokens || 0
+    });
+
+    return response;
+
+  } catch (error) {
+    console.error('[LLM] ❌ Error generating response:', error);
+    
+    // Fallback response based on emotion
+    if (options.emotionContext?.dominantEmotion) {
+      return getFallbackResponse(message, options.emotionContext.dominantEmotion);
+    }
+    
+    return 'Mi dispiace, sto avendo difficoltà tecniche. Puoi riprovare tra un momento?';
+  }
+}
+
+function buildSystemPrompt(options: LLMOptions = {}): string {
+  const { emotionContext, skinContext, userContext } = options;
+  
+  // Extract user name from context
+  const userName = userContext?.firstName || userContext?.first_name || userContext?.name || null;
+  const userGreeting = userName ? `Ciao ${userName}!` : 'Ciao!';
+  
+  const basePrompt = `Sei WellnessCoach, un AI coach avanzato per il benessere integrato che combina analisi emotive e della pelle per offrire supporto personalizzato e actionable.
+
+👤 PERSONALIZZAZIONE:
+- L'utente si chiama ${userName ? userName : '[nome non disponibile]'}
+- Usa sempre il nome dell'utente quando disponibile per creare un'esperienza più calda e personale
+- Saluta l'utente con il suo nome nelle risposte quando appropriato
+- Riferisciti all'utente con "tu" e mantieni un tono amichevole ma professionale
+
+🧠 CAPACITÀ AVANZATE:
+- Analisi emotiva in tempo reale con metriche di valence (-1 a +1) e arousal (0 a 1)
+- Analisi della pelle con punteggi specifici (idratazione, oleosità, texture, pigmentazione)
+- Pattern recognition per identificare cicli emotivi e della pelle
+- Correlazioni tra stress emotivo e condizioni della pelle
+- Analisi temporale (orario, giorno settimana) per suggerimenti contestuali
+- Identificazione di indicatori di stress e trigger di benessere
+
+🎯 PERSONALITÀ:
+- Empatico e non giudicante, ma scientificamente preciso
+- Offri consigli basati su dati reali e pattern identificati
+- Parli in italiano naturale, caldo ma professionale
+- Celebra i progressi e riconosci le sfide dell'utente
+
+📊 TIPI DI DATI CHE RICEVI:
+1. STATO ATTUALE: Emozione dominante, valence, arousal, punteggi pelle
+2. STORICO: Ultime 5 analisi emotive e della pelle con trend
+3. PATTERN: Cicli emotivi ricorrenti, cicli della pelle, correlazioni
+4. CONTESTO TEMPORALE: Periodo giornata, giorno settimana, fattori ambientali
+5. INSIGHTS: Indicatori stress, trigger benessere, aree miglioramento, punti forza
+6. SUGGERIMENTI: Wellness suggestions con urgenza e timing specifici
+
+💡 WELLNESS SUGGESTIONS DISPONIBILI:
+Puoi riferirti a questi suggerimenti specifici quando appropriato:
+
+🧘 MIND & BODY:
+- "Breathing Exercises" (5 min, facile): Pratica respirazione consapevole per ridurre stress
+- "Take a Walk" (15 min, facile): Camminata all'aperto per migliorare umore e circolazione
+- "Gentle Stretching" (10 min, facile): Allungamenti per collo e spalle per rilasciare tensione
+- "Yoga Flow" (20 min, medio): Sequenza yoga dolce per connettere mente e corpo
+
+🥗 NUTRITION:
+- "Hydration" (continuo, facile): Bevi acqua costantemente per pelle luminosa
+- "Healthy Snack" (5 min, facile): Scegli snack nutrienti come noci o frutta fresca
+- "Green Tea Break" (5 min, facile): Pausa con tè verde per antiossidanti e calma
+
+😊 EMOZIONI SPECIFICHE:
+- FELICITÀ: "Mantieni l'energia positiva", "Danza della gioia"
+- TRISTEZZA: "Respirazione consolante", "Contatto sociale", "Attività creativa"
+- RABBIA: "Respirazione 4-7-8", "Attività fisica", "Tecnica grounding"
+- PAURA: "Respirazione a terra", "Tecnica 5-4-3-2-1", "Contatto sociale"
+- STRESS: "Breathing Exercises", "Gentle Stretching", "Nature Break"
+
+🌙 SLEEP & RELAXATION:
+- "Evening Wind-down" (20 min, facile): Routine serale per prepararsi al sonno
+- "Progressive Relaxation" (15 min, facile): Rilassamento muscolare progressivo
+- "Meditation" (10 min, medio): Meditazione guidata per calma mentale
+
+🏃 LIFESTYLE:
+- "Morning Energy Boost" (10 min, facile): Routine mattutina per energia
+- "Digital Detox" (30 min, facile): Pausa dai dispositivi digitali
+- "Gratitude Practice" (5 min, facile): Pratica di gratitudine quotidiana
+
+🎯 APPROCCIO ALLE RISPOSTE:
+- Usa TUTTI i dati disponibili per personalizzare la risposta
+- Se rilevi indicatori di stress → offri supporto immediato e pratico
+- Se vedi pattern negativi → suggerisci interventi specifici
+- Se rilevi miglioramenti → celebra e rafforza i comportamenti positivi
+- Considera il timing: mattina = energia, sera = rilassamento
+- Collega sempre emozioni e pelle quando rilevante
+
+💡 COME UTILIZZARE I WELLNESS SUGGESTIONS:
+- Riferisciti a suggerimenti specifici quando appropriato (es. "Prova 'Breathing Exercises'")
+- Collega i suggerimenti ai dati dell'utente (es. "Dato il tuo stress elevato, 'Gentle Stretching' ti aiuterà")
+- Considera durata e difficoltà per il timing appropriato
+- Usa suggerimenti per emozioni specifiche quando rilevante
+- Combina suggerimenti per approcci integrati (es. respirazione + idratazione)
+
+🔍 ANALISI PROATTIVE:
+Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi specifiche:
+
+📊 PER EMOZIONI (parole chiave: stressato, triste, ansioso, felice, umore, mi sento):
+- "Per aiutarti meglio, fai un'analisi delle tue emozioni così posso vedere esattamente come ti senti"
+- Usa: "🔍 Analizza Emozioni" come call-to-action
+
+📸 PER PELLE (parole chiave: pelle, secca, grassa, acne, rughe, skincare):
+- "Facciamo un'analisi della pelle per capire esattamente cosa sta succedendo"
+- Usa: "📸 Analizza Pelle" come call-to-action
+
+🎯 PER PROBLEMI GENERALI (parole chiave: non mi sento bene, aiutami, benessere):
+- "Per avere un quadro completo, facciamo entrambe le analisi"
+- Usa: "🔍 Analizza Emozioni" e "📸 Analizza Pelle" come call-to-action
+
+⚠️ IMPORTANTE: Suggerisci analisi solo quando rilevante, non in ogni risposta!
+
+⚠️ LIMITAZIONI:
+- Non sei un medico o psicologo clinico
+- Non diagnosticare condizioni mediche
+- Incoraggia sempre consulti professionali quando necessario
+- Mantieni risposte tra 50-150 parole, specifiche e actionable
+
+💡 ESEMPI DI RISPOSTE INTELLIGENTI:
+- "Vedo che hai avuto una settimana stressante (valence -0.4) e la tua pelle mostra segni di disidratazione. Prova 'Breathing Exercises' per 5 minuti, poi 'Hydration' per migliorare sia l'umore che la pelle."
+- "Ottimo! La tua pelle è migliorata del 15% questa settimana e il tuo umore è più stabile. Continua con la routine serale che stai seguendo. Considera 'Evening Wind-down' per mantenere questi risultati."
+- "È sera e percepisco tensione (arousal 0.8). Prima di dormire, prova 'Gentle Stretching' per 10 minuti seguito da 'Progressive Relaxation'. Questo rituale aiuterà sia il sonno che la pelle."
+- "Noto che hai pattern di stress ricorrenti. Quando senti tensione, usa 'Respirazione 4-7-8': inspira per 4, trattieni per 7, espira per 8. Ripeti 5 volte."
+
+🔍 ESEMPI DI ANALISI PROATTIVE:
+- "Mi sento stressato" → "Capisco che ti senti stressato. Per aiutarti meglio, fai un'analisi delle tue emozioni così posso vedere esattamente come ti senti e darti consigli mirati. 🔍 Analizza Emozioni"
+- "La mia pelle è secca" → "Vedo che hai problemi con la pelle secca. Facciamo un'analisi della pelle per capire esattamente cosa sta succedendo e come migliorarla. 📸 Analizza Pelle"
+- "Non mi sento bene" → "Mi dispiace sentire che non ti senti bene. Per aiutarti al meglio, facciamo entrambe le analisi per avere un quadro completo. 🔍 Analizza Emozioni 📸 Analizza Pelle"`;
+
+  let contextualPrompt = basePrompt;
+
+  // 🔧 Aggiungi nome utente se disponibile
+  if (userContext?.userName) {
+    contextualPrompt += `\n\n👤 UTENTE:
+- Nome: ${userContext.userName}
+- Usa sempre il nome dell'utente nelle tue risposte per personalizzare l'esperienza`;
+  }
+
+  // 🆕 Aggiungi intent di analisi rilevato
+  if (options.analysisIntent && options.analysisIntent.confidence > 0.3) {
+    const intent = options.analysisIntent;
+    contextualPrompt += `\n\n🔍 INTENT DI ANALISI RILEVATO:
+    - Confidence: ${intent.confidence.toFixed(2)}
+    - Keywords rilevate: ${intent.detectedKeywords.join(', ')}
+    - Analisi emozioni necessaria: ${intent.needsEmotionAnalysis ? 'SÌ' : 'NO'}
+    - Analisi pelle necessaria: ${intent.needsSkinAnalysis ? 'SÌ' : 'NO'}
+    
+    🎯 AZIONE RICHIESTA: Suggerisci le analisi appropriate nella tua risposta usando i call-to-action specifici.`;
+  }
+
+  // Aggiungi contesto emotivo attuale
+  if (emotionContext?.dominantEmotion) {
+    const emotion = emotionContext.dominantEmotion;
+    const valence = emotionContext.valence || 0;
+    const arousal = emotionContext.arousal || 0;
+    const confidence = emotionContext.confidence || 0;
+    
+    contextualPrompt += `\n\nSTATO EMOTIVO ATTUALE:
+- Emozione dominante: ${emotion}
+- Valence: ${valence.toFixed(2)} (da -1 negativo a +1 positivo)
+- Arousal: ${arousal.toFixed(2)} (da -1 calmo a +1 eccitato)
+- Confidenza: ${(confidence * 100).toFixed(1)}%`;
+  }
+
+  // Aggiungi contesto pelle attuale
+  if (skinContext?.overallScore !== undefined) {
+    contextualPrompt += `\n\nCONDIZIONE PELLE ATTUALE:
+- Score generale: ${skinContext.overallScore}/100`;
+    
+    if (skinContext.hydrationScore !== undefined) {
+      contextualPrompt += `\n- Idratazione: ${skinContext.hydrationScore}/100`;
+    }
+    if (skinContext.oilinessScore !== undefined) {
+      contextualPrompt += `\n- Oleosità: ${skinContext.oilinessScore}/100`;
+    }
+    if (skinContext.textureScore !== undefined) {
+      contextualPrompt += `\n- Texture: ${skinContext.textureScore}/100`;
+    }
+    if (skinContext.pigmentationScore !== undefined) {
+      contextualPrompt += `\n- Pigmentazione: ${skinContext.pigmentationScore}/100`;
+    }
+  }
+
+  // Aggiungi storico emozioni
+  if (userContext?.emotionHistory && userContext.emotionHistory.length > 0) {
+    contextualPrompt += `\n\nSTORICO EMOZIONI (Ultime ${userContext.emotionHistory.length} analisi):`;
+    userContext.emotionHistory.forEach((h: any, index: number) => {
+      const date = new Date(h.date).toLocaleDateString('it-IT');
+      contextualPrompt += `\n${index + 1}. ${date}: ${h.emotion} (valence: ${h.valence.toFixed(2)}, arousal: ${h.arousal.toFixed(2)})`;
+    });
+    
+    if (userContext.emotionTrend) {
+      contextualPrompt += `\n- Trend emotivo: ${userContext.emotionTrend}`;
+    }
+  }
+
+  // Aggiungi storico pelle
+  if (userContext?.skinHistory && userContext.skinHistory.length > 0) {
+    contextualPrompt += `\n\nSTORICO PELLE (Ultime ${userContext.skinHistory.length} analisi):`;
+    userContext.skinHistory.forEach((h: any, index: number) => {
+      const date = new Date(h.date).toLocaleDateString('it-IT');
+      contextualPrompt += `\n${index + 1}. ${date}: Score ${h.overallScore}/100`;
+    });
+    
+    if (userContext.skinTrend) {
+      contextualPrompt += `\n- Trend pelle: ${userContext.skinTrend}`;
+    }
+  }
+
+  // Aggiungi pattern temporali
+  if (userContext?.temporalPatterns) {
+    contextualPrompt += `\n\nCONTESTO TEMPORALE:
+- Periodo della giornata: ${userContext.temporalPatterns.timeOfDay}
+- Giorno della settimana: ${userContext.temporalPatterns.dayOfWeek}`;
+    
+    if (userContext.temporalPatterns.emotionalCycles && userContext.temporalPatterns.emotionalCycles.length > 0) {
+      contextualPrompt += `\n- Cicli emotivi rilevati:`;
+      userContext.temporalPatterns.emotionalCycles.forEach((cycle: any) => {
+        contextualPrompt += `\n  • ${cycle.description} (frequenza: ${(cycle.frequency * 100).toFixed(0)}%)`;
+      });
+    }
+    
+    if (userContext.temporalPatterns.skinCycles && userContext.temporalPatterns.skinCycles.length > 0) {
+      contextualPrompt += `\n- Cicli della pelle rilevati:`;
+      userContext.temporalPatterns.skinCycles.forEach((cycle: any) => {
+        contextualPrompt += `\n  • ${cycle.description} (frequenza: ${(cycle.frequency * 100).toFixed(0)}%)`;
+      });
+    }
+  }
+
+  // Aggiungi insights comportamentali
+  if (userContext?.behavioralInsights) {
+    if (userContext.behavioralInsights.stressIndicators && userContext.behavioralInsights.stressIndicators.length > 0) {
+      contextualPrompt += `\n\nINDICATORI DI STRESS:`;
+      userContext.behavioralInsights.stressIndicators.forEach((indicator: string) => {
+        contextualPrompt += `\n- ${indicator}`;
+      });
+    }
+    
+    if (userContext.behavioralInsights.wellnessTriggers && userContext.behavioralInsights.wellnessTriggers.length > 0) {
+      contextualPrompt += `\n\nTRIGGER DI BENESSERE:`;
+      userContext.behavioralInsights.wellnessTriggers.forEach((trigger: string) => {
+        contextualPrompt += `\n- ${trigger}`;
+      });
+    }
+    
+    if (userContext.behavioralInsights.improvementAreas && userContext.behavioralInsights.improvementAreas.length > 0) {
+      contextualPrompt += `\n\nAREE DI MIGLIORAMENTO:`;
+      userContext.behavioralInsights.improvementAreas.forEach((area: string) => {
+        contextualPrompt += `\n- ${area}`;
+      });
+    }
+    
+    if (userContext.behavioralInsights.strengths && userContext.behavioralInsights.strengths.length > 0) {
+      contextualPrompt += `\n\nPUNTI DI FORZA:`;
+      userContext.behavioralInsights.strengths.forEach((strength: string) => {
+        contextualPrompt += `\n- ${strength}`;
+      });
+    }
+  }
+
+  // Aggiungi fattori contestuali
+  if (userContext?.contextualFactors) {
+    if (userContext.contextualFactors.environmentalFactors && userContext.contextualFactors.environmentalFactors.length > 0) {
+      contextualPrompt += `\n\nFATTORI AMBIENTALI:`;
+      userContext.contextualFactors.environmentalFactors.forEach((factor: string) => {
+        contextualPrompt += `\n- ${factor}`;
+      });
+    }
+    
+    if (userContext.contextualFactors.lifestyleIndicators && userContext.contextualFactors.lifestyleIndicators.length > 0) {
+      contextualPrompt += `\n\nINDICATORI DI STILE DI VITA:`;
+      userContext.contextualFactors.lifestyleIndicators.forEach((indicator: string) => {
+        contextualPrompt += `\n- ${indicator}`;
+      });
+    }
+  }
+
+  // Aggiungi insights personalizzati esistenti
+  if (userContext?.insights && userContext.insights.length > 0) {
+    contextualPrompt += `\n\nINSIGHTS PERSONALIZZATI:`;
+    userContext.insights.forEach((insight: string) => {
+      contextualPrompt += `\n- ${insight}`;
+    });
+  }
+
+  // Aggiungi suggerimento wellness
+  if (userContext?.wellnessSuggestion) {
+    contextualPrompt += `\n\nSUGGERIMENTO WELLNESS CONSIGLIATO:
+- Titolo: ${userContext.wellnessSuggestion.title}
+- Categoria: ${userContext.wellnessSuggestion.category}
+- Descrizione: ${userContext.wellnessSuggestion.description}`;
+    
+    if (userContext.wellnessSuggestion.urgency) {
+      contextualPrompt += `\n- Urgenza: ${userContext.wellnessSuggestion.urgency}`;
+    }
+    if (userContext.wellnessSuggestion.timing) {
+      contextualPrompt += `\n- Timing: ${userContext.wellnessSuggestion.timing}`;
+    }
+  }
+
+  // Istruzioni finali migliorate
+  contextualPrompt += `\n\n🎯 ISTRUZIONI FINALI PER QUESTA RISPOSTA:
+- Analizza TUTTI i dati forniti sopra per creare una risposta personalizzata
+- Se vedi indicatori di stress → offri supporto immediato e pratico
+- Se rilevi pattern negativi → suggerisci interventi specifici basati sui dati
+- Se vedi miglioramenti → celebra i progressi e rafforza i comportamenti positivi
+- Considera il periodo della giornata per suggerimenti appropriati
+- Collega sempre emozioni e pelle quando i dati lo supportano
+- Usa i numeri specifici (valence, arousal, punteggi) per essere preciso
+- Se l'urgenza è alta → suggerisci azioni immediate
+- Se l'urgenza è bassa → offri consigli per il lungo termine
+- Sii specifico: non dire "mangia meglio", ma "mangia 3 porzioni di verdure verdi oggi"`;
+
+  return contextualPrompt;
+}
+
+function getFallbackResponse(message: string, emotion: string): string {
+  const fallbacks = {
+    sadness: "Capisco che potresti sentirti un po' giù. È normale attraversare momenti difficili. Vuoi condividere cosa ti preoccupa? A volte parlarne aiuta.",
+    anger: "Sento che potresti essere teso. La respirazione profonda può aiutare: inspira per 4 secondi, trattieni per 4, espira per 6. Vuoi che ti guidi?",
+    fear: "Percepisco un po' di ansia. Ricorda che sei al sicuro. Prova la tecnica 5-4-3-2-1: nomina 5 cose che vedi, 4 che tocchi, 3 che senti, 2 che annusi, 1 che gusti.",
+    happiness: "È bello vederti positivo! Come posso aiutarti a mantenere questo stato d'animo? Magari possiamo esplorare cosa ti rende felice.",
+    neutral: "Ti ascolto. Come posso supportarti oggi nel tuo percorso di benessere?"
+  };
+  
+  return fallbacks[emotion as keyof typeof fallbacks] || fallbacks.neutral;
+}

@@ -1,0 +1,46 @@
+# Base Avatar Model Placeholder
+
+Questo file rappresenta un placeholder per il modello GLB dell'avatar.
+
+Per testare l'avatar, dovrai:
+
+1. **Creare un modello GLB** con:
+   - Mesh del viso chiamata "FaceMesh"
+   - Morph targets per: mouthOpen, blinkLeft, blinkRight, smile, frown, jawOpen, eyebrowRaise, eyebrowFrown
+   - Materiali separati per: Skin, Hair, Eyes
+
+2. **Sostituire questo file** con il modello GLB reale
+
+3. **Testare l'integrazione** nella ChatScreen
+
+## Struttura modello suggerita:
+
+```
+base_avatar.glb
+├── FaceMesh (con morph targets)
+├── HairMesh
+├── EyesMesh
+├── BodyMesh
+└── Materials
+    ├── SkinMaterial
+    ├── HairMaterial
+    └── EyesMaterial
+```
+
+## Morph Targets richiesti:
+
+- `mouthOpen`: Apertura bocca per lipsync
+- `blinkLeft`: Chiusura occhio sinistro
+- `blinkRight`: Chiusura occhio destro  
+- `smile`: Sorriso
+- `frown`: Cipiglio
+- `jawOpen`: Apertura mandibola
+- `eyebrowRaise`: Sollevamento sopracciglia
+- `eyebrowFrown`: Abbassamento sopracciglia
+
+## Note per lo sviluppo:
+
+- Il modello deve essere ottimizzato per mobile (low poly)
+- Texture risoluzione consigliata: 512x512 o 1024x1024
+- Formato: GLB (GLTF Binary)
+- Compressione: Draco per geometria, KTX2 per texture

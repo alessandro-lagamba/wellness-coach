@@ -1,0 +1,328 @@
+/**
+ * AvatarBox - Generic Avatar Wrapper
+ * Factory pattern for different avatar implementations
+ */
+
+import React, { useEffect, useRef, useState } from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
+import { AvatarConfig, AvatarDriver, AvatarState, EmotionAnalysis } from '@wellness-coach/shared';
+
+import { SimliAvatar } from './SimliAvatar';
+import { PlaceholderAvatar } from './PlaceholderAvatar';
+import { ThreeAvatar } from './ThreeAvatar';
+import { AvatarLoadingOverlay } from './AvatarLoadingOverlay';
+import { AvatarErrorBoundary } from './AvatarErrorBoundary';
+
+// ========================================
+// AVATAR FACTORY
+// ========================================
+
+function createAvatarDriver(config: AvatarConfig): React.ComponentType<AvatarDriverProps> {
+  switch (config.type) {
+    case 'simli':
+      return SimliAvatar;
+    case 'three':
+      return ThreeAvatar;
+    case 'placeholder':
+    default:
+      return PlaceholderAvatar;
+  }
+}
+
+// ========================================
+// TYPES
+// ========================================
+
+interface AvatarBoxProps {
+  config: AvatarConfig;
+  emotionState?: EmotionAnalysis;
+  onSpeak?: (text: string) => Promise<void>;
+  onConnectionChange?: (connected: boolean) => void;
+  onError?: (error: Error) => void;
+  style?: any;
+  testID?: string;
+}
+
+interface AvatarDriverProps {
+  config: AvatarConfig;
+  emotionState?: EmotionAnalysis;
+  onSpeak?: (text: string) => Promise<void>;
+  onConnectionChange?: (connected: boolean) => void;
+  onError?: (error: Error) => void;
+}
+
+// ========================================
+// AVATAR BOX COMPONENT
+// ========================================
+
+export const AvatarBox: React.FC<AvatarBoxProps> = ({
+  config,
+  emotionState,
+  onSpeak,
+  onConnectionChange,
+  onError,
+  style,
+  testID = 'avatar-box'
+}) => {
+  const [avatarState, setAvatarState] = useState<AvatarState>({
+    connectionState: 'disconnected',
+    speakingState: 'idle'
+  });
+  const [showLoader, setShowLoader] = useState(true);
+  const avatarDriverRef = useRef<AvatarDriver | null>(null);
+
+  // Create avatar component based on config
+  const AvatarComponent = createAvatarDriver(config);
+
+  // Handle connection state changes
+  const handleConnectionChange = (connected: boolean) => {
+    setAvatarState(prev => ({
+      ...prev,
+      connectionState: connected ? 'connected' : 'disconnected'
+    }));
+    
+    // Hide loader when connected
+    if (connected) {
+      setShowLoader(false);
+    }
+    
+    onConnectionChange?.(connected);
+  };
+
+  // Handle speaking state changes
+  const handleSpeakingChange = (speaking: boolean) => {
+    setAvatarState(prev => ({
+      ...prev,
+      speakingState: speaking ? 'speaking' : 'idle'
+    }));
+  };
+
+  // Handle errors
+  const handleError = (error: Error) => {
+    console.error('[AvatarBox] Avatar error:', error);
+    setAvatarState(prev => ({
+      ...prev,
+      connectionState: 'error',
+      lastError: error.message
+    }));
+    
+    onError?.(error);
+  };
+
+  // Enhanced speak function
+  const handleSpeak = async (text: string) => {
+    if (!avatarDriverRef.current) {
+      console.warn('[AvatarBox] No avatar driver available for speech');
+      return;
+    }
+
+    try {
+      setAvatarState(prev => ({
+        ...prev,
+        speakingState: 'preparing'
+      }));
+
+      await avatarDriverRef.current.speak(text, {
+        emotionContext: emotionState ? {
+          dominantEmotion: emotionState.dominantEmotion,
+          intensity: Math.max(emotionState.valence, emotionState.arousal)
+        } : undefined
+      });
+
+      // Speaking state will be updated by handleSpeakingChange
+    } catch (error) {
+      console.error('[AvatarBox] Speech error:', error);
+      setAvatarState(prev => ({
+        ...prev,
+        speakingState: 'idle'
+      }));
+      throw error;
+    }
+  };
+
+  // Update emotion when it changes
+  useEffect(() => {
+    if (avatarDriverRef.current && emotionState) {
+      avatarDriverRef.current.setEmotion(emotionState).catch(console.error);
+    }
+  }, [emotionState]);
+
+  return (
+    <View style={[styles.container, style]} testID={testID}>
+      <AvatarErrorBoundary onError={handleError}>
+        {/* Avatar Component */}
+        <View style={styles.avatarContainer}>
+          <AvatarComponent
+            config={config}
+            emotionState={emotionState}
+            onSpeak={onSpeak || handleSpeak}
+            onConnectionChange={handleConnectionChange}
+            onError={handleError}
+          />
+        </View>
+
+        {/* Loading Overlay */}
+        {showLoader && (
+          <AvatarLoadingOverlay 
+            connectionState={avatarState.connectionState}
+            error={avatarState.lastError}
+          />
+        )}
+
+        {/* Debug Info (Development Only) */}
+        {__DEV__ && (
+          <View style={styles.debugInfo}>
+            {/* Debug information will be shown in development */}
+          </View>
+        )}
+      </AvatarErrorBoundary>
+    </View>
+  );
+};
+
+// ========================================
+// AVATAR LOADING OVERLAY
+// ========================================
+
+const AvatarLoadingOverlay: React.FC<{
+  connectionState: AvatarState['connectionState'];
+  error?: string;
+}> = ({ connectionState, error }) => {
+  const getLoadingText = () => {
+    switch (connectionState) {
+      case 'connecting':
+        return 'Connessione...';
+      case 'error':
+        return error || 'Errore di connessione';
+      default:
+        return 'Inizializzazione...';
+    }
+  };
+
+  return (
+    <View style={styles.loadingOverlay}>
+      <View style={styles.loadingContainer}>
+        <View style={styles.loadingSpinner} />
+        <Text style={styles.loadingText}>{getLoadingText()}</Text>
+      </View>
+    </View>
+  );
+};
+
+// ========================================
+// STYLES
+// ========================================
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1a1a2e',
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  
+  avatarContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(26, 26, 46, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  
+  loadingContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  
+  loadingSpinner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: '#6366f1',
+    borderTopColor: 'transparent',
+    marginBottom: 12,
+  },
+  
+  loadingText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  
+  debugInfo: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 4,
+    borderRadius: 4,
+    zIndex: 5,
+  },
+});
+
+// ========================================
+// DEFAULT CONFIGURATIONS
+// ========================================
+
+export const DEFAULT_AVATAR_CONFIGS: Record<string, AvatarConfig> = {
+  // Mobile default: Placeholder (fast, reliable)
+  mobile: {
+    type: 'placeholder',
+    settings: {
+      placeholder: {
+        style: 'animated',
+        color: '#6366f1',
+        size: 200,
+        animationSpeed: 1,
+      }
+    }
+  },
+  
+  // Web default: Simli (if available)
+  web: {
+    type: Platform.OS === 'web' ? 'simli' : 'placeholder',
+    settings: {
+      simli: {
+        sessionToken: '', // Will be set dynamically
+        voice: 'liv',
+        language: 'it',
+        videoQuality: 'medium',
+        enableLipSync: true,
+      },
+      placeholder: {
+        style: 'gradient',
+        color: '#6366f1',
+        size: 300,
+        animationSpeed: 0.8,
+      }
+    }
+  },
+  
+  // Future 3D avatar
+  future3D: {
+    type: 'three',
+    settings: {
+      three: {
+        modelUrl: '/models/wellness-coach.glb',
+        animations: ['idle', 'speaking', 'greeting', 'thinking'],
+        scale: 1.2,
+        lightingPreset: 'natural',
+        enableShadows: true,
+      }
+    }
+  }
+};
+
+export default AvatarBox;

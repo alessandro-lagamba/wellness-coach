@@ -1,0 +1,31 @@
+{
+  "name": "wellness-coach",
+  "private": true,
+  "workspaces": [
+    "mobile",
+    "web",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "type-check": "turbo run type-check"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.45.0",
+    "turbo": "^1.10.16",
+    "typescript": "^5.1.6"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "pnpm@10.17.1",
+  "dependencies": {
+    "@radix-ui/react-use-callback-ref": "^1.1.1"
+  }
+}

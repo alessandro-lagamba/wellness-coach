@@ -1,0 +1,275 @@
+/**
+ * SimliAvatar - Simli Integration Wrapper
+ * Adapts existing Simli implementation to AvatarDriver interface
+ */
+
+import React, { useEffect, useRef, useState } from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
+import { AvatarConfig, EmotionAnalysis, SimliConfig } from '@wellness-coach/shared';
+
+// ========================================
+// TYPES
+// ========================================
+
+interface SimliAvatarProps {
+  config: AvatarConfig;
+  emotionState?: EmotionAnalysis;
+  onSpeak?: (text: string) => Promise<void>;
+  onConnectionChange?: (connected: boolean) => void;
+  onError?: (error: Error) => void;
+}
+
+// ========================================
+// SIMLI AVATAR COMPONENT
+// ========================================
+
+export const SimliAvatar: React.FC<SimliAvatarProps> = ({
+  config,
+  emotionState,
+  onSpeak,
+  onConnectionChange,
+  onError
+}) => {
+  const settings = config.settings.simli || {
+    sessionToken: '',
+    voice: 'liv',
+    language: 'it',
+    videoQuality: 'medium',
+    enableLipSync: true,
+  };
+
+  const [isConnected, setIsConnected] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const simliClientRef = useRef<any>(null);
+
+  // Note: This is a placeholder implementation
+  // In a real implementation, you would:
+  // 1. Import the actual Simli client
+  // 2. Handle WebRTC connections
+  // 3. Manage video streams
+  // 4. Process audio for lip-sync
+
+  useEffect(() => {
+    // Simli is not ideal for mobile, so we simulate connection for now
+    if (Platform.OS !== 'web') {
+      console.warn('[SimliAvatar] Simli not recommended for mobile, consider using PlaceholderAvatar');
+      
+      // Simulate connection failure after a delay
+      const timer = setTimeout(() => {
+        const error = new Error('Simli not supported on mobile platform');
+        setError(error.message);
+        onError?.(error);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+
+    // Web implementation would go here
+    initializeSimli();
+
+    return () => {
+      cleanup();
+    };
+  }, []);
+
+  const initializeSimli = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        // Web-specific Simli initialization
+        console.log('[SimliAvatar] Initializing Simli for web...');
+        
+        // This is where you would:
+        // 1. Load Simli client
+        // 2. Create session
+        // 3. Setup video element
+        // 4. Handle WebSocket connection
+        
+        // Simulate successful connection for web
+        setTimeout(() => {
+          setIsConnected(true);
+          onConnectionChange?.(true);
+        }, 1500);
+      }
+    } catch (error) {
+      console.error('[SimliAvatar] Initialization failed:', error);
+      setError((error as Error).message);
+      onError?.(error as Error);
+    }
+  };
+
+  const cleanup = () => {
+    if (simliClientRef.current) {
+      // Cleanup Simli client
+      try {
+        simliClientRef.current.disconnect?.();
+      } catch (error) {
+        console.error('[SimliAvatar] Cleanup error:', error);
+      }
+      simliClientRef.current = null;
+    }
+  };
+
+  const handleSpeak = async (text: string) => {
+    if (!isConnected || !onSpeak) {
+      console.warn('[SimliAvatar] Cannot speak: not connected or no speak handler');
+      return;
+    }
+
+    try {
+      setIsSpeaking(true);
+      
+      // This is where you would:
+      // 1. Call TTS API
+      // 2. Convert audio to required format
+      // 3. Send to Simli for lip-sync
+      // 4. Play audio through Simli avatar
+      
+      await onSpeak(text);
+      
+    } catch (error) {
+      console.error('[SimliAvatar] Speech error:', error);
+      onError?.(error as Error);
+    } finally {
+      setIsSpeaking(false);
+    }
+  };
+
+  // Handle emotion changes
+  useEffect(() => {
+    if (isConnected && emotionState && simliClientRef.current) {
+      // This is where you would send emotion data to Simli
+      // to adjust avatar expressions or behavior
+      console.log('[SimliAvatar] Emotion changed:', emotionState.dominantEmotion);
+    }
+  }, [emotionState, isConnected]);
+
+  if (Platform.OS !== 'web') {
+    // Mobile fallback message
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>
+            Simli Avatar non disponibile su mobile
+          </Text>
+          <Text style={styles.errorSubtext}>
+            Utilizza PlaceholderAvatar o ThreeAvatar
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {/* Web implementation */}
+      {Platform.OS === 'web' && (
+        <>
+          {/* This is where the Simli video element would go */}
+          <View style={styles.videoContainer}>
+            {!isConnected && !error && (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Connessione Simli...</Text>
+              </View>
+            )}
+            
+            {error && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>Errore Simli</Text>
+                <Text style={styles.errorSubtext}>{error}</Text>
+              </View>
+            )}
+            
+            {isConnected && (
+              <View style={styles.connectedContainer}>
+                <Text style={styles.connectedText}>Simli Connesso</Text>
+                {isSpeaking && (
+                  <View style={styles.speakingIndicator}>
+                    <Text style={styles.speakingText}>Parlando...</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        </>
+      )}
+    </View>
+  );
+};
+
+// ========================================
+// STYLES
+// ========================================
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1a1a2e',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  
+  videoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  loadingContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  
+  loadingText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  
+  errorContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  
+  errorText: {
+    color: '#ef4444',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  
+  errorSubtext: {
+    color: '#9ca3af',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  
+  connectedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  
+  connectedText: {
+    color: '#10b981',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
+  speakingIndicator: {
+    marginTop: 16,
+    padding: 8,
+    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    borderRadius: 8,
+  },
+  
+  speakingText: {
+    color: '#6366f1',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+});
+
+export default SimliAvatar;

@@ -1,0 +1,108 @@
+{
+  "expo": {
+    "sdkVersion": "54.0.0",
+    "scheme": "wellnesscoach",
+    "name": "Wellness Coach",
+    "slug": "wellness-coach",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#6366f1"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wellnesscoach.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to analyze your skin and detect emotions for personalized wellness coaching.",
+        "NSMicrophoneUsageDescription": "This app uses the microphone for voice interactions with your wellness coach.",
+        "NSSpeechRecognitionUsageDescription": "This app uses speech recognition to understand your voice commands and provide personalized wellness coaching.",
+        "NSHealthShareUsageDescription": "This app accesses health data to provide personalized wellness recommendations.",
+        "NSHealthUpdateUsageDescription": "This app writes wellness data to Apple Health for comprehensive health tracking.",
+        "NSCalendarsUsageDescription": "This app needs access to your calendar to sync wellness activities and reminders.",
+        "NSRemindersUsageDescription": "This app needs access to your reminders to set wellness activity notifications."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#6366f1"
+      },
+      "package": "com.wellnesscoach.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.BODY_SENSORS"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-dev-client",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "2.0.21",
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 34,
+            "minSdkVersion": 26
+          }
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Wellness Coach to access your camera for skin analysis and emotion detection."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Wellness Coach to save analysis photos to your photo library.",
+          "savePhotosPermission": "Allow Wellness Coach to save analysis results.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Allow Wellness Coach to sync wellness activities with your calendar."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow Wellness Coach to access your microphone for voice interactions.",
+          "speechRecognitionPermission": "Allow Wellness Coach to use speech recognition for voice commands."
+        }
+      ],
+      [
+        "react-native-health",
+        {
+          "NSHealthShareUsageDescription": "This app accesses health data to provide personalized wellness recommendations.",
+          "NSHealthUpdateUsageDescription": "This app writes wellness data to Apple Health for comprehensive health tracking."
+        }
+      ],
+      "react-native-health-connect"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

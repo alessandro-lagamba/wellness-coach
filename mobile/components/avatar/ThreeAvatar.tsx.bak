@@ -1,0 +1,370 @@
+/**
+ * ThreeAvatar - 3D Avatar Implementation (Stub)
+ * Future implementation with React Three Fiber + Ready Player Me
+ */
+
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, Text } from 'react-native';
+import { AvatarConfig, EmotionAnalysis, ThreeConfig } from '@wellness-coach/shared';
+
+// Note: This is a stub implementation
+// Future implementation will use:
+// - @react-three/fiber/native
+// - @react-three/drei/native  
+// - Ready Player Me SDK
+// - Custom animation system
+
+// ========================================
+// TYPES
+// ========================================
+
+interface ThreeAvatarProps {
+  config: AvatarConfig;
+  emotionState?: EmotionAnalysis;
+  onSpeak?: (text: string) => Promise<void>;
+  onConnectionChange?: (connected: boolean) => void;
+  onError?: (error: Error) => void;
+}
+
+// ========================================
+// THREE AVATAR COMPONENT (STUB)
+// ========================================
+
+export const ThreeAvatar: React.FC<ThreeAvatarProps> = ({
+  config,
+  emotionState,
+  onSpeak,
+  onConnectionChange,
+  onError
+}) => {
+  const settings = config.settings.three || {
+    modelUrl: '/models/wellness-coach.glb',
+    animations: ['idle', 'speaking', 'greeting'],
+    scale: 1,
+    lightingPreset: 'natural',
+    enableShadows: true,
+  };
+
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [currentAnimation, setCurrentAnimation] = useState('idle');
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Simulate model loading
+  useEffect(() => {
+    const loadModel = async () => {
+      try {
+        console.log('[ThreeAvatar] Loading 3D model:', settings.modelUrl);
+        
+        // Simulate loading time
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        setIsLoaded(true);
+        onConnectionChange?.(true);
+        
+        console.log('[ThreeAvatar] 3D model loaded successfully');
+      } catch (error) {
+        console.error('[ThreeAvatar] Failed to load model:', error);
+        onError?.(error as Error);
+      }
+    };
+
+    loadModel();
+  }, [settings.modelUrl, onConnectionChange, onError]);
+
+  // Handle emotion changes
+  useEffect(() => {
+    if (!isLoaded || !emotionState) return;
+
+    const emotionAnimations: Record<string, string> = {
+      happiness: 'smile-o',
+      sadness: 'concerned',
+      anger: 'serious', 
+      fear: 'worried',
+      surprise: 'surprised',
+      neutral: 'idle',
+    };
+
+    const targetAnimation = emotionAnimations[emotionState.dominantEmotion] || 'idle';
+    
+    if (targetAnimation !== currentAnimation && !isSpeaking) {
+      setCurrentAnimation(targetAnimation);
+      console.log('[ThreeAvatar] Animation changed to:', targetAnimation);
+    }
+  }, [emotionState, isLoaded, currentAnimation, isSpeaking]);
+
+  // Handle speaking
+  const handleSpeak = async (text: string) => {
+    if (!isLoaded || !onSpeak) return;
+
+    try {
+      setIsSpeaking(true);
+      setCurrentAnimation('speaking');
+      
+      console.log('[ThreeAvatar] Starting speech animation for:', text.substring(0, 50) + '...');
+      
+      // This is where lip-sync would be implemented
+      // 1. Generate mouth animations from text
+      // 2. Sync with TTS audio
+      // 3. Blend with emotion expressions
+      
+      await onSpeak(text);
+      
+      console.log('[ThreeAvatar] Speech animation completed');
+      
+    } catch (error) {
+      console.error('[ThreeAvatar] Speech error:', error);
+      onError?.(error as Error);
+    } finally {
+      setIsSpeaking(false);
+      setCurrentAnimation('idle');
+    }
+  };
+
+  if (!isLoaded) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <View style={styles.loadingSpinner} />
+          <Text style={styles.loadingText}>Caricamento Avatar 3D...</Text>
+          <Text style={styles.loadingSubtext}>
+            Modello: {settings.modelUrl.split('/').pop()}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {/* Future: React Three Fiber Canvas will go here */}
+      <View style={styles.canvasPlaceholder}>
+        <View style={styles.avatarPlaceholder}>
+          <Text style={styles.avatarText}>3D</Text>
+          <Text style={styles.animationText}>{currentAnimation}</Text>
+        </View>
+        
+        {/* Current state indicators */}
+        <View style={styles.stateContainer}>
+          {emotionState && (
+            <View style={styles.stateItem}>
+              <Text style={styles.stateLabel}>Emotion:</Text>
+              <Text style={styles.stateValue}>{emotionState.dominantEmotion}</Text>
+            </View>
+          )}
+          
+          <View style={styles.stateItem}>
+            <Text style={styles.stateLabel}>Animation:</Text>
+            <Text style={styles.stateValue}>{currentAnimation}</Text>
+          </View>
+          
+          {isSpeaking && (
+            <View style={styles.speakingIndicator}>
+              <Text style={styles.speakingText}>Speaking...</Text>
+            </View>
+          )}
+        </View>
+      </View>
+      
+      {/* Future implementation note */}
+      <View style={styles.futureNote}>
+        <Text style={styles.futureText}>🚧 Future Implementation</Text>
+        <Text style={styles.futureDetails}>
+          React Three Fiber + Ready Player Me
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+// ========================================
+// FUTURE IMPLEMENTATION STRUCTURE
+// ========================================
+
+/*
+Future implementation will look like this:
+
+import { Canvas } from '@react-three/fiber/native';
+import { useGLTF, useAnimations } from '@react-three/drei/native';
+
+const ThreeAvatarScene = ({ modelUrl, currentAnimation, emotionState }) => {
+  const { scene, animations } = useGLTF(modelUrl);
+  const { actions, mixer } = useAnimations(animations, scene);
+  
+  useEffect(() => {
+    // Play current animation
+    Object.values(actions).forEach(action => action?.stop());
+    actions[currentAnimation]?.play();
+  }, [currentAnimation, actions]);
+  
+  useEffect(() => {
+    // Apply emotion-based modifications
+    if (emotionState) {
+      applyEmotionToAvatar(scene, emotionState);
+    }
+  }, [emotionState, scene]);
+  
+  return (
+    <primitive 
+      object={scene} 
+      scale={settings.scale}
+      position={settings.position}
+    />
+  );
+};
+
+const applyEmotionToAvatar = (scene, emotionState) => {
+  // Modify facial expressions based on emotion
+  // Adjust posture and gestures
+  // Apply color/lighting changes
+};
+
+const generateLipSyncAnimations = (text, audioBuffer) => {
+  // Use light lip-sync service
+  const lipSyncService = getLipSyncService();
+  return lipSyncService.generateMouthAnimations(text, audioBuffer.duration);
+};
+*/
+
+// ========================================
+// STYLES
+// ========================================
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0f0f1a',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  
+  loadingSpinner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: '#6366f1',
+    borderTopColor: 'transparent',
+    marginBottom: 16,
+  },
+  
+  loadingText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  
+  loadingSubtext: {
+    color: '#9ca3af',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  
+  canvasPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a2e',
+  },
+  
+  avatarPlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#6366f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#6366f1',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  
+  avatarText: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  
+  animationText: {
+    color: '#ffffff',
+    fontSize: 12,
+    marginTop: 4,
+    opacity: 0.8,
+  },
+  
+  stateContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    minWidth: 200,
+  },
+  
+  stateItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  
+  stateLabel: {
+    color: '#9ca3af',
+    fontSize: 14,
+  },
+  
+  stateValue: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  
+  speakingIndicator: {
+    marginTop: 8,
+    padding: 6,
+    backgroundColor: 'rgba(99, 102, 241, 0.3)',
+    borderRadius: 4,
+    alignItems: 'center',
+  },
+  
+  speakingText: {
+    color: '#6366f1',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  
+  futureNote: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 6,
+    padding: 8,
+    alignItems: 'center',
+  },
+  
+  futureText: {
+    color: '#f59e0b',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  
+  futureDetails: {
+    color: '#9ca3af',
+    fontSize: 10,
+    marginTop: 2,
+  },
+});
+
+export default ThreeAvatar;

@@ -1,0 +1,473 @@
+/**
+ * PlaceholderAvatar - Animated Placeholder
+ * Lightweight avatar with smooth animations
+ */
+
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated, Dimensions } from 'react-native';
+import { AvatarConfig, EmotionAnalysis, PlaceholderConfig } from '@wellness-coach/shared';
+
+// ========================================
+// TYPES
+// ========================================
+
+interface PlaceholderAvatarProps {
+  config: AvatarConfig;
+  emotionState?: EmotionAnalysis;
+  onSpeak?: (text: string) => Promise<void>;
+  onConnectionChange?: (connected: boolean) => void;
+  onError?: (error: Error) => void;
+}
+
+// ========================================
+// PLACEHOLDER AVATAR COMPONENT
+// ========================================
+
+export const PlaceholderAvatar: React.FC<PlaceholderAvatarProps> = ({
+  config,
+  emotionState,
+  onSpeak,
+  onConnectionChange,
+  onError
+}) => {
+  const settings = config.settings.placeholder || {
+    style: 'animated',
+    color: '#6366f1',
+    size: 200,
+    animationSpeed: 1,
+  };
+
+  // Animation refs
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const emotionAnim = useRef(new Animated.Value(0.5)).current;
+  const speakingAnim = useRef(new Animated.Value(1)).current;
+  
+  // State
+  const [isSpeaking, setIsSpeaking] = React.useState(false);
+  const [isConnected, setIsConnected] = React.useState(false);
+
+  // Initialize "connection" immediately for placeholder
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsConnected(true);
+      onConnectionChange?.(true);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [onConnectionChange]);
+
+  // Pulse animation (breathing effect)
+  useEffect(() => {
+    const createPulseAnimation = () => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 2000 / settings.animationSpeed,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 2000 / settings.animationSpeed,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+    };
+
+    const animation = createPulseAnimation();
+    animation.start();
+
+    return () => animation.stop();
+  }, [pulseAnim, settings.animationSpeed]);
+
+  // Rotation animation (subtle rotation)
+  useEffect(() => {
+    if (settings.style === 'animated') {
+      const rotationAnimation = Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 20000 / settings.animationSpeed, // 20 seconds per rotation
+          useNativeDriver: true,
+        })
+      );
+      
+      rotationAnimation.start();
+      return () => rotationAnimation.stop();
+    }
+  }, [rotateAnim, settings.animationSpeed, settings.style]);
+
+  // Emotion-based animation
+  useEffect(() => {
+    if (emotionState) {
+      const emotionIntensity = Math.abs(emotionState.valence) + Math.abs(emotionState.arousal);
+      
+      Animated.timing(emotionAnim, {
+        toValue: 0.3 + (emotionIntensity * 0.4), // Range: 0.3 to 0.7
+        duration: 1000,
+        useNativeDriver: false, // We'll use this for color changes
+      }).start();
+    }
+  }, [emotionState, emotionAnim]);
+
+  // Speaking animation
+  const handleSpeak = async (text: string) => {
+    if (!onSpeak) return;
+
+    try {
+      setIsSpeaking(true);
+      
+      // Start speaking animation
+      const speakingAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(speakingAnim, {
+            toValue: 1.15,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(speakingAnim, {
+            toValue: 0.95,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      
+      speakingAnimation.start();
+      
+      // Call actual speak function
+      await onSpeak(text);
+      
+      // Stop speaking animation
+      speakingAnimation.stop();
+      Animated.timing(speakingAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+      
+      setIsSpeaking(false);
+    } catch (error) {
+      setIsSpeaking(false);
+      onError?.(error as Error);
+    }
+  };
+
+  // Get colors based on emotion and settings
+  const getAvatarColors = () => {
+    const baseColor = settings.color;
+    
+    if (!emotionState) {
+      return {
+        primary: baseColor,
+        secondary: baseColor + '80', // Add transparency
+        accent: baseColor + '40',
+      };
+    }
+
+    // Emotion-based color modifications
+    const emotion = emotionState.dominantEmotion;
+    switch (emotion) {
+      case 'happiness':
+        return {
+          primary: '#10b981', // Green
+          secondary: '#10b98180',
+          accent: '#10b98140',
+        };
+      case 'sadness':
+        return {
+          primary: '#3b82f6', // Blue
+          secondary: '#3b82f680',
+          accent: '#3b82f640',
+        };
+      case 'anger':
+        return {
+          primary: '#ef4444', // Red
+          secondary: '#ef444480',
+          accent: '#ef444440',
+        };
+      case 'fear':
+        return {
+          primary: '#8b5cf6', // Purple
+          secondary: '#8b5cf680',
+          accent: '#8b5cf640',
+        };
+      case 'surprise':
+        return {
+          primary: '#f59e0b', // Yellow
+          secondary: '#f59e0b80',
+          accent: '#f59e0b40',
+        };
+      default:
+        return {
+          primary: baseColor,
+          secondary: baseColor + '80',
+          accent: baseColor + '40',
+        };
+    }
+  };
+
+  const colors = getAvatarColors();
+  const rotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const renderAvatar = () => {
+    switch (settings.style) {
+      case 'gradient':
+        return (
+          <Animated.View
+            style={[
+              styles.gradientAvatar,
+              {
+                width: settings.size,
+                height: settings.size,
+                transform: [
+                  { scale: pulseAnim },
+                  { scale: speakingAnim },
+                  { rotate: rotation },
+                ],
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.gradientInner,
+                {
+                  backgroundColor: colors.primary,
+                },
+              ]}
+            />
+            <View
+              style={[
+                styles.gradientOuter,
+                {
+                  borderColor: colors.secondary,
+                },
+              ]}
+            />
+          </Animated.View>
+        );
+        
+      case 'minimal':
+        return (
+          <Animated.View
+            style={[
+              styles.minimalAvatar,
+              {
+                width: settings.size,
+                height: settings.size,
+                backgroundColor: colors.primary,
+                transform: [
+                  { scale: pulseAnim },
+                  { scale: speakingAnim },
+                ],
+              },
+            ]}
+          />
+        );
+        
+      case 'animated':
+      default:
+        return (
+          <Animated.View
+            style={[
+              styles.animatedAvatar,
+              {
+                width: settings.size,
+                height: settings.size,
+                transform: [
+                  { scale: pulseAnim },
+                  { scale: speakingAnim },
+                  { rotate: rotation },
+                ],
+              },
+            ]}
+          >
+            {/* Outer ring */}
+            <View
+              style={[
+                styles.outerRing,
+                {
+                  borderColor: colors.accent,
+                  width: settings.size,
+                  height: settings.size,
+                },
+              ]}
+            />
+            
+            {/* Middle ring */}
+            <View
+              style={[
+                styles.middleRing,
+                {
+                  borderColor: colors.secondary,
+                  width: settings.size * 0.8,
+                  height: settings.size * 0.8,
+                },
+              ]}
+            />
+            
+            {/* Inner core */}
+            <View
+              style={[
+                styles.innerCore,
+                {
+                  backgroundColor: colors.primary,
+                  width: settings.size * 0.6,
+                  height: settings.size * 0.6,
+                },
+              ]}
+            />
+            
+            {/* Speaking indicator */}
+            {isSpeaking && (
+              <View style={styles.speakingIndicator}>
+                <Animated.View
+                  style={[
+                    styles.speakingDot,
+                    { backgroundColor: colors.primary }
+                  ]}
+                />
+              </View>
+            )}
+          </Animated.View>
+        );
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.avatarWrapper}>
+        {renderAvatar()}
+      </View>
+      
+      {/* Connection status */}
+      {!isConnected && (
+        <View style={styles.statusIndicator}>
+          <View style={[styles.statusDot, styles.connecting]} />
+        </View>
+      )}
+    </View>
+  );
+};
+
+// ========================================
+// STYLES
+// ========================================
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  
+  avatarWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  // Animated style
+  animatedAvatar: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  
+  outerRing: {
+    position: 'absolute',
+    borderRadius: 1000,
+    borderWidth: 2,
+    opacity: 0.3,
+  },
+  
+  middleRing: {
+    position: 'absolute',
+    borderRadius: 1000,
+    borderWidth: 3,
+    opacity: 0.6,
+  },
+  
+  innerCore: {
+    borderRadius: 1000,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  
+  // Gradient style
+  gradientAvatar: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  
+  gradientInner: {
+    width: '70%',
+    height: '70%',
+    borderRadius: 1000,
+  },
+  
+  gradientOuter: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: 1000,
+    borderWidth: 3,
+  },
+  
+  // Minimal style
+  minimalAvatar: {
+    borderRadius: 1000,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  
+  // Speaking indicator
+  speakingIndicator: {
+    position: 'absolute',
+    bottom: -10,
+    left: '50%',
+    marginLeft: -4,
+  },
+  
+  speakingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  
+  // Status indicator
+  statusIndicator: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+  },
+  
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  
+  connecting: {
+    backgroundColor: '#f59e0b',
+  },
+});
+
+export default PlaceholderAvatar;
