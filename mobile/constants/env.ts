@@ -13,9 +13,9 @@ const PRODUCTION_BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://y
  * Determina se siamo in modalità sviluppo o produzione
  */
 const isDevelopment = (): boolean => {
-  // Se c'è un URL di produzione valido (https), usa quello
-  if (PRODUCTION_BACKEND_URL.startsWith('https://')) {
-    return false;
+  // Se c'è un URL di produzione valido (https), usa quello - SEMPRE produzione
+  if (PRODUCTION_BACKEND_URL && PRODUCTION_BACKEND_URL.startsWith('https://')) {
+    return false; // PRODUZIONE - usa sempre l'URL Railway
   }
   // Se c'è un backend URL che non è localhost, consideralo sviluppo con IP/mDNS fisso
   if (PRODUCTION_BACKEND_URL && 
@@ -31,9 +31,11 @@ const isDevelopment = (): boolean => {
  * Ottiene l'URL del backend con auto-discovery dell'IP
  */
 export const getBackendURL = async (): Promise<string> => {
-  // 🚀 PRODUZIONE: Usa sempre l'URL di produzione (HTTPS)
+  // 🚀 PRODUZIONE: Usa sempre l'URL di produzione (HTTPS) - NESSUN AUTO-DISCOVERY
   if (!isDevelopment()) {
     console.log('🌍 PRODUCTION MODE - Using production backend:', PRODUCTION_BACKEND_URL);
+    BACKEND_URL_CACHE = PRODUCTION_BACKEND_URL;
+    LAST_DISCOVERY_TIME = Date.now();
     return PRODUCTION_BACKEND_URL;
   }
 
