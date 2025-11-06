@@ -7,6 +7,10 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.json ./
 
+# Rimuovi workspace:* dal package.json (npm non supporta workspace:)
+RUN sed -i.bak 's/"@wellness-coach\/shared": "workspace:\*",//' package.json || \
+    sed -i 's/"@wellness-coach\/shared": "workspace:\*",//' package.json
+
 # Installa dipendenze
 RUN npm install
 
@@ -23,6 +27,10 @@ WORKDIR /app
 
 # Copia package files
 COPY package*.json ./
+
+# Rimuovi workspace:* dal package.json (npm non supporta workspace:)
+RUN sed -i.bak 's/"@wellness-coach\/shared": "workspace:\*",//' package.json || \
+    sed -i 's/"@wellness-coach\/shared": "workspace:\*",//' package.json
 
 # Installa solo production dependencies
 RUN npm install --only=production
