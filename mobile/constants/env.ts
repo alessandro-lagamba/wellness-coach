@@ -121,4 +121,8 @@ if (isDevelopment()) {
   initializeBackendURL();
 } else {
   console.log('🚀 PRODUCTION MODE - Using:', PRODUCTION_BACKEND_URL);
+  // In produzione, imposta immediatamente l'URL senza async
+  BACKEND_URL = PRODUCTION_BACKEND_URL;
+  BACKEND_URL_CACHE = PRODUCTION_BACKEND_URL;
+  LAST_DISCOVERY_TIME = Date.now();
 }
