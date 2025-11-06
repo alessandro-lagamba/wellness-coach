@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -39,13 +39,11 @@ import { BACKEND_URL, getBackendURL } from '../constants/env';
 import { UnifiedTTSService } from '../services/unified-tts.service';
 import LoadingCloud from './LoadingCloud';
 import AnimatedOrbVoiceChat from './AnimatedOrbVoiceChat';
-import ModernVoiceChat from './ModernVoiceChat';
+import { ModernVoiceChat } from './ModernVoiceChat';
 import MessageLoadingDots from './MessageLoadingDots';
 import { DailyJournalService } from '../services/daily-journal.service';
 import { DailyJournalDBService } from '../services/daily-journal-db.service';
 import { AnalysisActionButtons } from './AnalysisActionButtons';
-import { FastVoiceChatService } from '../services/fast-voice-chat.service';
-
 // Database Services
 import { ChatService, WellnessSuggestionService } from '../services/chat-wellness.service';
 import { EmotionAnalysisService } from '../services/emotion-analysis.service';
@@ -53,6 +51,8 @@ import { SkinAnalysisService } from '../services/skin-analysis.service';
 import { AIContextService } from '../services/ai-context.service';
 import { AuthService } from '../services/auth.service';
 import { AnalysisIntentService } from '../services/analysis-intent.service';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -164,29 +164,33 @@ const extractSuggestionFromAIResponse = (aiResponse: string) => {
 };
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
+  const { colors, mode: themeMode } = useTheme();
   const router = useRouter();
-  const { voiceMode, t } = useLocalSearchParams();
+  const { voiceMode } = useLocalSearchParams(); // 🆕 Rimossa t da qui (era in conflitto)
   
-  // Force voice interface to open if voiceMode is true
+  // 🆕 Rimossi log per performance
   useEffect(() => {
     if (voiceMode === 'true') {
-      console.log('ChatScreen: Force opening voice interface immediately');
       setShowVoiceInterface(true);
       voiceInterfaceOpacity.value = withTiming(1, { duration: 300 });
     }
-  }, [voiceMode, t]);
-  // 🔧 FIX: Messaggio iniziale personalizzato
+  }, [voiceMode]);
+  // 🔧 FIX: Messaggio iniziale personalizzato con traduzione
   const getInitialMessage = () => {
+    let userName: string | undefined;
     if (currentUserProfile?.first_name) {
-      return `Ciao ${currentUserProfile.first_name}! 👋 Sono il tuo AI wellness coach. Come ti senti oggi?`;
+      userName = currentUserProfile.first_name;
     } else if (user?.user_metadata?.full_name) {
-      const firstName = user.user_metadata.full_name.split(' ')[0];
-      return `Ciao ${firstName}! 👋 Sono il tuo AI wellness coach. Come ti senti oggi?`;
+      userName = user.user_metadata.full_name.split(' ')[0];
     } else if (user?.email) {
-      const firstName = user.email.split('@')[0].split('.')[0];
-      return `Ciao ${firstName}! 👋 Sono il tuo AI wellness coach. Come ti senti oggi?`;
+      userName = user.email.split('@')[0].split('.')[0];
     }
-    return 'Ciao! 👋 Sono il tuo AI wellness coach. Come ti senti oggi?';
+    
+    if (userName) {
+      return t('chat.welcomeMessage.withName', { name: userName });
+    }
+    return t('chat.welcomeMessage.default');
   };
 
   const [mode, setMode] = useState<'chat' | 'journal'>('chat');
@@ -217,7 +221,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [monthDays, setMonthDays] = useState<string[]>([]);
   const [monthMoodMap, setMonthMoodMap] = useState<Record<string, number>>({});
   const [monthRestMap, setMonthRestMap] = useState<Record<string, number>>({});
+  const [monthJournalMap, setMonthJournalMap] = useState<Record<string, { hasEntry: boolean; aiScore?: number }>>({}); // 🆕 Map per journal entries dal DB
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const monthStripScrollRef = useRef<ScrollView>(null); // 🆕 Ref per scroll automatico
 
   // Persist and restore mode
   useEffect(() => {
@@ -248,35 +254,54 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         const recent = await DailyJournalDBService.listRecent(currentUser.id, 10);
         setJournalHistory(recent);
       } catch (e) {
-        console.log('Failed to load journal history', e);
+        // 🆕 Rimosso log per performance
       }
       // Try to fetch AI fields for selected day
       try {
         const existing = await DailyJournalDBService.getEntryByDate(currentUser.id, selectedDayKey);
-        console.log('🔍 Loading AI data for day:', selectedDayKey, existing);
+        // 🆕 Rimossi log per performance
         setAiSummary(existing?.ai_summary ?? null);
         setAiScore((existing as any)?.ai_score ?? null);
         setAiLabel((existing as any)?.ai_label ?? null);
         setAiAnalysis((existing as any)?.ai_analysis ?? null);
-        console.log('🔍 AI data loaded:', {
-          summary: existing?.ai_summary,
-          score: (existing as any)?.ai_score,
-          label: (existing as any)?.ai_label,
-          analysis: (existing as any)?.ai_analysis
-        });
       } catch (e) {
-        console.log('❌ Error loading AI data:', e);
+        // 🆕 Rimosso log per performance
       }
     })();
   }, [currentUser, selectedDayKey]);
 
+  // 🆕 Scroll automatico al giorno selezionato nella barra orizzontale
+  useEffect(() => {
+    if (monthStripScrollRef.current && selectedDayKey && monthDays.includes(selectedDayKey)) {
+      const index = monthDays.indexOf(selectedDayKey);
+      // Delay per permettere al layout di completarsi
+      setTimeout(() => {
+        monthStripScrollRef.current?.scrollTo({ 
+          x: Math.max(0, index * 60 - width / 4), // Scroll per centrare approssimativamente
+          animated: true 
+        });
+      }, 100);
+    }
+  }, [selectedDayKey, monthDays]);
+
+  // 🆕 Helper per creare ISO date senza problemi di timezone
+  const toISODateSafe = (year: number, month: number, day: number): string => {
+    // Crea la stringa ISO direttamente senza conversioni timezone
+    const m = String(month + 1).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    return `${year}-${m}-${d}`;
+  };
+
   // Build month days and color maps
   useEffect(() => {
-    const first = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    const last = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+    const y = currentMonth.getFullYear();
+    const m = currentMonth.getMonth();
+    const first = new Date(y, m, 1);
+    const last = new Date(y, m + 1, 0);
     const days: string[] = [];
     for (let d = first.getDate(); d <= last.getDate(); d++) {
-      const iso = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d).toISOString().slice(0, 10);
+      // 🆕 Usa helper per evitare problemi timezone
+      const iso = toISODateSafe(y, m, d);
       days.push(iso);
     }
     setMonthDays(days);
@@ -289,8 +314,29 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       restPairs.forEach(([k, v]) => { if (v) restMap[k] = parseInt(v, 10); });
       setMonthMoodMap(moodMap);
       setMonthRestMap(restMap);
+      
+      // 🆕 Carica journal entries dal DB per il mese corrente
+      if (currentUser?.id) {
+        try {
+          const firstDay = days[0];
+          const lastDay = days[days.length - 1];
+          const journalEntries = await DailyJournalDBService.listByDateRange(currentUser.id, firstDay, lastDay);
+          const journalMap: Record<string, { hasEntry: boolean; aiScore?: number }> = {};
+          journalEntries.forEach(entry => {
+            journalMap[entry.entry_date] = {
+              hasEntry: true,
+              aiScore: (entry as any).ai_score || undefined
+            };
+          });
+          setMonthJournalMap(journalMap);
+          // 🆕 Rimosso log per performance
+        } catch (e) {
+          console.error('❌ Error loading journal entries:', e);
+          setMonthJournalMap({});
+        }
+      }
     })();
-  }, [currentMonth]);
+  }, [currentMonth, currentUser]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -300,24 +346,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [showLoadingCloud, setShowLoadingCloud] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState('');
-  
-  // ⚡ Fast Chat States
-  const [useFastChat, setUseFastChat] = useState(true);
-  const [fastChatLoading, setFastChatLoading] = useState(false);
-  const [fastChatMessage, setFastChatMessage] = useState('');
-  const [fastChatTimings, setFastChatTimings] = useState<any>(null);
-  const fastChatService = useRef(new FastVoiceChatService());
 
   // 🔧 FIX: Aggiorna currentUser quando user cambia
   useEffect(() => {
-    console.log('🔧 ChatScreen: user prop changed:', user ? { id: user.id, email: user.email } : null);
+    // 🆕 Rimosso log per performance
     setCurrentUser(user);
     
     // 🔧 Carica il profilo utente per ottenere first_name e last_name
     if (user?.id) {
       AuthService.getUserProfile(user.id).then(profile => {
         setCurrentUserProfile(profile);
-        console.log('👤 User profile loaded:', profile ? { first_name: profile.first_name, last_name: profile.last_name } : null);
+        // 🆕 Rimosso log per performance
       });
     } else {
       setCurrentUserProfile(null);
@@ -419,27 +458,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const inputContainerRef = useRef<View>(null);
   const [inputFocused, setInputFocused] = useState(false);
 
-  // 🔧 DEBUG: Log user state
-  useEffect(() => {
-    console.log('👤 User state:', { 
-      user: user, 
-      currentUser: currentUser, 
-      aiContext: aiContext,
-      sessionId: currentSessionId,
-      userId: currentUser?.id,
-      userEmail: currentUser?.email
-    });
-  }, [user, currentUser, aiContext, currentSessionId]);
-
-  // 🔧 DEBUG: Log keyboard state
-  useEffect(() => {
-    console.log('⌨️ Keyboard state:', { 
-      keyboardVisible, 
-      keyboardHeight, 
-      inputFocused,
-      platform: Platform.OS
-    });
-  }, [keyboardVisible, keyboardHeight, inputFocused]);
+  // 🆕 Rimossi log debug per performance
 
   const scrollRef = useRef<ScrollView>(null);
   const tts = useMemo(() => UnifiedTTSService.getInstance(), []);
@@ -449,12 +468,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const pulseScale = useSharedValue(1);
   const voiceInterfaceOpacity = useSharedValue(0);
 
-  const quickReplies = [
-    { text: 'I\'m feeling stressed', icon: 'heartbeat', color: '#ef4444' },
-    { text: 'Help me sleep better', icon: 'moon-o', color: '#8b5cf6' },
-    { text: 'Give me energy tips', icon: 'bolt', color: '#f59e0b' },
-    { text: 'Skin care advice', icon: 'tint', color: '#3b82f6' },
-  ];
+  const quickReplies = useMemo(() => [
+    { text: t('chat.quickStart.feelingStressed'), icon: 'heartbeat', color: '#ef4444' },
+    { text: t('chat.quickStart.sleepBetter'), icon: 'moon-o', color: '#8b5cf6' },
+    { text: t('chat.quickStart.energyTips'), icon: 'bolt', color: '#f59e0b' },
+    { text: t('chat.quickStart.skinAdvice'), icon: 'tint', color: '#3b82f6' },
+  ], [t]);
 
   const getDayColor = async (date: Date) => {
     const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -494,7 +513,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     const initializeServices = async () => {
       try {
         await tts.initialize();
-        console.log('TTS initialized for ChatScreen');
+        // 🆕 Rimosso log per performance
         
         // Initialize database services if user is authenticated
         if (currentUser) {
@@ -510,7 +529,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   // Initialize database services
   const initializeDatabaseServices = async () => {
     try {
-      console.log('🧠 Initializing database services for user:', currentUser.id);
+      // 🆕 Rimosso log per performance
       
       // Get AI context
       const context = await AIContextService.getCompleteContext(currentUser.id);
@@ -518,7 +537,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       
       // 🔧 RIMOSSO: Non mostrare banner iniziale automatico
       // Il banner apparirà solo dopo conversazioni contestuali
-      console.log('ℹ️ Wellness suggestions will appear contextually during conversations');
+      // 🆕 Rimosso log per performance
       setWellnessSuggestion(null);
       
       // Create or get current chat session
@@ -542,7 +561,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       
       if (session) {
         setCurrentSessionId(session.id);
-        console.log('✅ Chat session created:', session.id);
+        // 🆕 Rimosso log per performance
       }
       
     } catch (error) {
@@ -552,38 +571,34 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
   // Auto-start voice mode when coming from Avatar mic button
   useEffect(() => {
-    console.log('ChatScreen: voiceMode changed to:', voiceMode, 'timestamp:', t);
+    // 🆕 Rimosso log per performance
     if (voiceMode === 'true') {
-      console.log('ChatScreen: Starting voice interface');
       const timer = setTimeout(() => {
         setShowVoiceInterface(true);
         voiceInterfaceOpacity.value = withTiming(1, { duration: 300 });
-        console.log('ChatScreen: Voice interface opened');
       }, 500);
 
       return () => clearTimeout(timer);
     }
-  }, [voiceMode, t]);
+  }, [voiceMode]);
 
   // Also check voiceMode on component mount/focus
   useEffect(() => {
-    console.log('ChatScreen: Component mounted/focused, voiceMode:', voiceMode);
+    // 🆕 Rimosso log per performance
     if (voiceMode === 'true' && !showVoiceInterface) {
-      console.log('ChatScreen: Auto-opening voice interface on mount');
       const timer = setTimeout(() => {
         setShowVoiceInterface(true);
         voiceInterfaceOpacity.value = withTiming(1, { duration: 300 });
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [voiceMode, showVoiceInterface]);
 
   // Listen for app state changes to handle navigation
   useEffect(() => {
     const handleAppStateChange = (nextAppState: string) => {
-      console.log('ChatScreen: App state changed to:', nextAppState);
+      // 🆕 Rimosso log per performance
       if (nextAppState === 'active' && voiceMode === 'true' && !showVoiceInterface) {
-        console.log('ChatScreen: App became active, opening voice interface');
         setTimeout(() => {
           setShowVoiceInterface(true);
           voiceInterfaceOpacity.value = withTiming(1, { duration: 300 });
@@ -595,11 +610,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     return () => subscription?.remove();
   }, [voiceMode, showVoiceInterface]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
     });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -608,7 +623,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   // Keyboard management
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
-      console.log('⌨️ Keyboard shown, height:', e.endCoordinates.height);
+      // 🆕 Rimosso log per performance
       setKeyboardVisible(true);
       setKeyboardHeight(e.endCoordinates.height);
       
@@ -621,7 +636,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     });
 
     const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      console.log('⌨️ Keyboard hidden');
+      // 🆕 Rimosso log per performance
       setKeyboardVisible(false);
       setKeyboardHeight(0);
       setInputFocused(false);
@@ -646,24 +661,22 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   }, []);
 
   // 🆕 Funzioni per navigazione alle analisi
-  const handleEmotionAnalysis = () => {
-    console.log('🔍 Navigating to emotion analysis');
+  const handleEmotionAnalysis = useCallback(() => {
     router.push('/(tabs)/analysis');
-  };
+  }, [router]);
 
-  const handleSkinAnalysis = () => {
-    console.log('📸 Navigating to skin analysis');
+  const handleSkinAnalysis = useCallback(() => {
     router.push('/(tabs)/skin');
-  };
+  }, [router]);
 
   // 🆕 Handle voice messages through the same pipeline as text
-  const handleVoiceMessage = async (voiceText: string) => {
+  const handleVoiceMessage = useCallback(async (voiceText: string) => {
     try {
-      console.log('🎤 Processing voice message:', voiceText);
+      // 🆕 Rimossi log per performance
       
       // 🆕 Rileva intent di analisi dal messaggio vocale
       const analysisIntent = AnalysisIntentService.detectAnalysisIntent(voiceText);
-      console.log('🔍 Analysis intent detected in voice:', analysisIntent);
+      // 🆕 Rimosso log per performance
 
       // Prepare context for AI (same as text chat)
       const userContext = aiContext ? {
@@ -694,12 +707,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         isAnonymous: true
       };
 
-      console.log('🌐 Making request to dynamic backend URL');
-      console.log('🌐 BACKEND_URL value:', BACKEND_URL);
+      // 🆕 Rimossi log per performance
       
       // 🔧 AUTO-DISCOVERY: Ottieni URL dinamico del backend
       const dynamicBackendURL = await getBackendURL();
-      console.log('🌐 Dynamic backend URL:', dynamicBackendURL);
+      // 🆕 Rimosso log per performance
       
       const response = await fetch(`${dynamicBackendURL}/api/chat/respond`, {
         method: 'POST',
@@ -795,7 +807,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 urgency: 'medium',
                 timing: 'now'
               });
-              console.log('✅ AI-specific wellness suggestion shown:', aiSuggestion.title);
+              // 🆕 Rimossi log per performance
             } else {
               // Fallback al sistema intelligente
               const suggestion = await WellnessSuggestionService.getIntelligentSuggestion(
@@ -808,11 +820,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   ...suggestion,
                   shouldShowBanner: true
                 });
-                console.log('✅ Contextual wellness suggestion shown:', suggestion.suggestion?.title);
+                // 🆕 Rimossi log per performance
               }
             }
           } else {
-            console.log('ℹ️ No contextual trigger for wellness suggestion');
+            // 🆕 Rimossi log per performance
           }
         } catch (error) {
           console.error('Error getting wellness suggestion:', error);
@@ -832,11 +844,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       };
       setMessages((prev) => [...prev, errorMessage]);
     }
-  };
+  }, [aiContext, currentUser, currentUserProfile, currentSessionId, messages, setMessages, setIsProcessing, setWellnessSuggestion]);
 
   // Keyboard management functions
-  const handleInputFocus = () => {
-    console.log('⌨️ Input focused');
+  const handleInputFocus = useCallback(() => {
     setInputFocused(true);
     
     // Scroll to bottom when input is focused
@@ -845,10 +856,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         scrollViewRef.current.scrollToEnd({ animated: true });
       }
     }, 100);
-  };
+  }, []);
 
-  const handleInputBlur = () => {
-    console.log('⌨️ Input blurred');
+  const handleInputBlur = useCallback(() => {
     setInputFocused(false);
     
     // Small delay to ensure smooth transition
@@ -857,7 +867,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         scrollViewRef.current.scrollToEnd({ animated: true });
       }
     }, 100);
-  };
+  }, []);
 
   const handleSendMessage = async () => {
     const trimmed = inputValue.trim();
@@ -895,267 +905,164 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         );
       }
 
-      // ⚡ Fast Chat should be used for voice input, not text input
-      // For now, disable Fast Chat entirely until voice input is properly detected
-      if (false) { // Disabled: useFastChat && mode === 'chat'
-        // ⚡ Use Fast Chat System ONLY for voice chat mode
-        setFastChatLoading(true);
-        setFastChatMessage('');
-        
-        console.log('[ChatScreen] 🚀 Using Fast Chat for voice mode:', trimmed);
-        
-        // Prepare complete context for Fast Chat (same as traditional chat)
-        const fastChatContext = aiContext ? {
-          emotionHistory: aiContext.emotionHistory,
-          skinHistory: aiContext.skinHistory,
-          emotionTrend: aiContext.emotionTrend,
-          skinTrend: aiContext.skinTrend,
-          insights: aiContext.insights,
-          wellnessSuggestion: wellnessSuggestion?.suggestion,
-          temporalPatterns: aiContext.temporalPatterns,
-          behavioralInsights: aiContext.behavioralInsights,
-          contextualFactors: aiContext.contextualFactors,
-          firstName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
-          lastName: currentUserProfile?.last_name || currentUser?.user_metadata?.full_name?.split(' ').slice(1).join(' ') || undefined,
-          userName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente'
-        } : {
-          emotionHistory: [],
-          skinHistory: [],
-          emotionTrend: null,
-          skinTrend: null,
-          insights: [],
-          wellnessSuggestion: null,
-          temporalPatterns: null,
-          behavioralInsights: null,
-          contextualFactors: null,
-          userName: 'Utente',
-          isAnonymous: true
-        };
+      // 🔄 Use Traditional Chat System (OpenAI) for all text messages
+      // 🆕 Rimossi log per performance
+      
+      // 🆕 Rileva intent di analisi dal messaggio dell'utente
+      const analysisIntent = AnalysisIntentService.detectAnalysisIntent(trimmed);
 
-        // Detect analysis intent for Fast Chat
-        const analysisIntent = AnalysisIntentService.detectAnalysisIntent(trimmed);
-        console.log('🔍 Analysis intent detected for Fast Chat:', analysisIntent);
+      // Prepare context for AI
+      const userContext = aiContext ? {
+        emotionHistory: aiContext.emotionHistory,
+        skinHistory: aiContext.skinHistory,
+        emotionTrend: aiContext.emotionTrend,
+        skinTrend: aiContext.skinTrend,
+        insights: aiContext.insights,
+        wellnessSuggestion: wellnessSuggestion?.suggestion,
+        // Nuovi campi per analisi avanzate
+        temporalPatterns: aiContext.temporalPatterns,
+        behavioralInsights: aiContext.behavioralInsights,
+        contextualFactors: aiContext.contextualFactors,
+        // 🔧 Aggiungi nome utente per personalizzazione (usa first_name se disponibile)
+        firstName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
+        lastName: currentUserProfile?.last_name || currentUser?.user_metadata?.full_name?.split(' ').slice(1).join(' ') || undefined,
+        userName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente'
+      } : {
+        // 🔧 FALLBACK: Contesto base anche senza autenticazione
+        emotionHistory: [],
+        skinHistory: [],
+        emotionTrend: null,
+        skinTrend: null,
+        insights: [],
+        wellnessSuggestion: null,
+        temporalPatterns: null,
+        behavioralInsights: null,
+        contextualFactors: null,
+        userName: 'Utente',
+        isAnonymous: true
+      };
 
+      // 🆕 Rimossi log per performance
+      
+      // 🔧 AUTO-DISCOVERY: Ottieni URL dinamico del backend
+      const dynamicBackendURL = await getBackendURL();
+      // 🆕 Rimosso log per performance
+      
+      const response = await fetch(`${dynamicBackendURL}/api/chat/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: trimmed,
+          sessionId: currentSessionId,
+          userId: currentUser?.id,
+          emotionContext: aiContext?.currentEmotion,
+          skinContext: aiContext?.currentSkin,
+          userContext,
+          // 🆕 Invia l'analysis intent al backend
+          analysisIntent: analysisIntent.confidence > 0.3 ? analysisIntent : undefined,
+          messageHistory: messages.slice(-5).map(msg => ({
+            role: msg.sender === 'user' ? 'user' : 'assistant',
+            content: msg.text
+          }))
+        }),
+      });
+
+      const data = response.ok ? await response.json() : null;
+      const reply = data?.text || data?.message || data?.response || 
+        "I'm processing that—give me just a second and I'll suggest something helpful.";
+
+      const aiMessage: Message = {
+        id: `${Date.now()}-ai`,
+        text: reply,
+        sender: 'ai',
+        timestamp: new Date(),
+        sessionId: currentSessionId || undefined,
+        wellnessSuggestionId: data?.wellnessSuggestionId,
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+
+      // Save AI message to database if authenticated
+      if (currentUser && currentSessionId) {
+        await ChatService.saveChatMessage(
+          currentSessionId,
+          currentUser.id,
+          'assistant',
+          reply,
+          aiContext?.currentEmotion ? {
+            dominantEmotion: aiContext.currentEmotion.emotion,
+            valence: aiContext.currentEmotion.valence,
+            arousal: aiContext.currentEmotion.arousal,
+            confidence: aiContext.currentEmotion.confidence
+          } : undefined,
+          data?.wellnessSuggestionId
+        );
+      }
+
+      // Only speak the response if input was vocal
+      if (isVoiceMode) {
         try {
-          for await (const chunk of fastChatService.current.streamChatResponse(
-            trimmed,
-            fastChatContext,
-            true, // Include audio
-            aiContext?.currentEmotion, // emotionContext
-            aiContext?.currentSkin, // skinContext
-            analysisIntent // analysisIntent
-          )) {
-            console.log('[ChatScreen] 📨 Fast chat chunk:', {
-              type: chunk.type,
-              size: chunk.chunk ? chunk.chunk.length : 'audio'
-            });
-
-            if (chunk.type === 'text' && chunk.chunk) {
-              setFastChatMessage(prev => prev + chunk.chunk);
-            } else if (chunk.type === 'complete') {
-              setFastChatTimings(chunk.timings);
-              console.log('[ChatScreen] ⚡ Fast chat complete:', {
-                totalTime: chunk.timings?.total,
-                geminiTime: chunk.timings?.gemini
-              });
-            } else if (chunk.type === 'error') {
-              console.error('[ChatScreen] ❌ Fast chat error:', chunk.error);
-              throw new Error(chunk.error || 'Fast chat failed');
-            }
-          }
-        } catch (fastChatError) {
-          console.error('[ChatScreen] ❌ Fast chat failed, falling back to traditional chat:', fastChatError);
-          
-          // Fallback to traditional chat system
-          setUseFastChat(false);
-          setFastChatLoading(false);
-          
-          // Show user-friendly message
-          const fallbackMessage: Message = {
-            id: `${Date.now()}-fallback`,
-            text: "Sistema veloce temporaneamente non disponibile, uso il sistema tradizionale...",
-            sender: 'ai',
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, fallbackMessage]);
-          
-          // Continue with traditional chat logic
-          return;
+          setIsSpeaking(true);
+          await tts.speak(reply, {
+            rate: 0.5,
+            pitch: 1.0,
+            language: 'it-IT',
+          });
+        } catch (error) {
+          console.error('TTS error:', error);
+        } finally {
+          setIsSpeaking(false);
         }
+      }
 
-        // Add AI response to messages
-        const aiMessage: Message = {
-          id: `${Date.now()}-ai`,
-          text: fastChatMessage,
-          sender: 'ai',
-          timestamp: new Date(),
-          sessionId: currentSessionId || undefined,
-        };
-        setMessages((prev) => [...prev, aiMessage]);
-        setFastChatLoading(false);
-      } else {
-        // 🔄 Use Traditional Chat System (OpenAI) for all text messages
-        // Fast Chat is only available in ModernVoiceChat component for voice input
-        console.log('[ChatScreen] 💬 Using traditional OpenAI chat for text messages');
-        
-        // 🆕 Rileva intent di analisi dal messaggio dell'utente
-        const analysisIntent = AnalysisIntentService.detectAnalysisIntent(trimmed);
-        console.log('🔍 Analysis intent detected:', analysisIntent);
-
-        // Prepare context for AI
-        const userContext = aiContext ? {
-          emotionHistory: aiContext.emotionHistory,
-          skinHistory: aiContext.skinHistory,
-          emotionTrend: aiContext.emotionTrend,
-          skinTrend: aiContext.skinTrend,
-          insights: aiContext.insights,
-          wellnessSuggestion: wellnessSuggestion?.suggestion,
-          // Nuovi campi per analisi avanzate
-          temporalPatterns: aiContext.temporalPatterns,
-          behavioralInsights: aiContext.behavioralInsights,
-          contextualFactors: aiContext.contextualFactors,
-          // 🔧 Aggiungi nome utente per personalizzazione (usa first_name se disponibile)
-          firstName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
-          lastName: currentUserProfile?.last_name || currentUser?.user_metadata?.full_name?.split(' ').slice(1).join(' ') || undefined,
-          userName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente'
-        } : {
-          // 🔧 FALLBACK: Contesto base anche senza autenticazione
-          emotionHistory: [],
-          skinHistory: [],
-          emotionTrend: null,
-          skinTrend: null,
-          insights: [],
-          wellnessSuggestion: null,
-          temporalPatterns: null,
-          behavioralInsights: null,
-          contextualFactors: null,
-          userName: 'Utente',
-          isAnonymous: true
-        };
-
-        console.log('🌐 Making request to dynamic backend URL');
-        console.log('🌐 BACKEND_URL value:', BACKEND_URL);
-        
-        // 🔧 AUTO-DISCOVERY: Ottieni URL dinamico del backend
-        const dynamicBackendURL = await getBackendURL();
-        console.log('🌐 Dynamic backend URL:', dynamicBackendURL);
-        
-        const response = await fetch(`${dynamicBackendURL}/api/chat/respond`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message: trimmed,
-            sessionId: currentSessionId,
-            userId: currentUser?.id,
-            emotionContext: aiContext?.currentEmotion,
-            skinContext: aiContext?.currentSkin,
-            userContext,
-            // 🆕 Invia l'analysis intent al backend
-            analysisIntent: analysisIntent.confidence > 0.3 ? analysisIntent : undefined,
-            messageHistory: messages.slice(-5).map(msg => ({
-              role: msg.sender === 'user' ? 'user' : 'assistant',
-              content: msg.text
-            }))
-          }),
-        });
-
-        const data = response.ok ? await response.json() : null;
-        const reply = data?.text || data?.message || data?.response || 
-          "I'm processing that—give me just a second and I'll suggest something helpful.";
-
-        const aiMessage: Message = {
-          id: `${Date.now()}-ai`,
-          text: reply,
-          sender: 'ai',
-          timestamp: new Date(),
-          sessionId: currentSessionId || undefined,
-          wellnessSuggestionId: data?.wellnessSuggestionId,
-        };
-
-        setMessages((prev) => [...prev, aiMessage]);
-
-        // Save AI message to database if authenticated
-        if (currentUser && currentSessionId) {
-          await ChatService.saveChatMessage(
-            currentSessionId,
-            currentUser.id,
-            'assistant',
-            reply,
-            aiContext?.currentEmotion ? {
-              dominantEmotion: aiContext.currentEmotion.emotion,
-              valence: aiContext.currentEmotion.valence,
-              arousal: aiContext.currentEmotion.arousal,
-              confidence: aiContext.currentEmotion.confidence
-            } : undefined,
-            data?.wellnessSuggestionId
-          );
-        }
-
-        // Only speak the response if input was vocal
-        if (isVoiceMode) {
-          try {
-            setIsSpeaking(true);
-            await tts.speak(reply, {
-              rate: 0.5,
-              pitch: 1.0,
-              language: 'it-IT',
-            });
-          } catch (error) {
-            console.error('TTS error:', error);
-          } finally {
-            setIsSpeaking(false);
-          }
-        }
-
-        // 🔧 MIGLIORATO: Banner coerente con suggerimenti IA
-        if (currentUser && aiContext) {
-          try {
-            // Solo se l'utente ha espresso bisogni specifici o l'IA ha dato consigli
-            const shouldShowSuggestion = 
-              analysisIntent.confidence > 0.3 || // Intent di analisi rilevato
-              reply.toLowerCase().includes('consiglio') || // IA ha dato consigli
-              reply.toLowerCase().includes('prova') || // IA ha suggerito azioni
-              reply.toLowerCase().includes('breathing') || // Suggerimenti specifici
-              reply.toLowerCase().includes('camminata') ||
-              reply.toLowerCase().includes('stretching') ||
-              reply.toLowerCase().includes('green tea');
+      // 🔧 MIGLIORATO: Banner coerente con suggerimenti IA
+      if (currentUser && aiContext) {
+        try {
+          // Solo se l'utente ha espresso bisogni specifici o l'IA ha dato consigli
+          const shouldShowSuggestion = 
+            analysisIntent.confidence > 0.3 || // Intent di analisi rilevato
+            reply.toLowerCase().includes('consiglio') || // IA ha dato consigli
+            reply.toLowerCase().includes('prova') || // IA ha suggerito azioni
+            reply.toLowerCase().includes('breathing') || // Suggerimenti specifici
+            reply.toLowerCase().includes('camminata') ||
+            reply.toLowerCase().includes('stretching') ||
+            reply.toLowerCase().includes('green tea');
+          
+          if (shouldShowSuggestion) {
+            // 🔧 NUOVO: Estrai suggerimento specifico dalla risposta IA
+            const aiSuggestion = extractSuggestionFromAIResponse(reply);
             
-            if (shouldShowSuggestion) {
-              // 🔧 NUOVO: Estrai suggerimento specifico dalla risposta IA
-              const aiSuggestion = extractSuggestionFromAIResponse(reply);
-              
-              if (aiSuggestion) {
-                // Usa il suggerimento specifico dell'IA
-                setWellnessSuggestion({
-                  suggestion: aiSuggestion,
-                  shouldShowBanner: true,
-                  urgency: 'medium',
-                  timing: 'now'
-                });
-                console.log('✅ AI-specific wellness suggestion shown:', aiSuggestion.title);
-              } else {
-                // Fallback al sistema intelligente
-                const suggestion = await WellnessSuggestionService.getIntelligentSuggestion(
-                  currentUser.id,
-                  aiContext
-                );
-                
-                if (suggestion.shouldShow) {
-                  setWellnessSuggestion({
-                    ...suggestion,
-                    shouldShowBanner: true
-                  });
-                  console.log('✅ Contextual wellness suggestion shown:', suggestion.suggestion?.title);
-                }
-              }
+            if (aiSuggestion) {
+              // Usa il suggerimento specifico dell'IA
+              setWellnessSuggestion({
+                suggestion: aiSuggestion,
+                shouldShowBanner: true,
+                urgency: 'medium',
+                timing: 'now'
+              });
+              // 🆕 Rimossi log per performance
             } else {
-              console.log('ℹ️ No contextual trigger for wellness suggestion');
+              // Fallback al sistema intelligente
+              const suggestion = await WellnessSuggestionService.getIntelligentSuggestion(
+                currentUser.id,
+                aiContext
+              );
+              
+              if (suggestion.shouldShow) {
+                setWellnessSuggestion({
+                  ...suggestion,
+                  shouldShowBanner: true
+                });
+                // 🆕 Rimossi log per performance
+              }
             }
-          } catch (error) {
-            console.error('Error getting wellness suggestion:', error);
+          } else {
+            // 🆕 Rimossi log per performance
           }
+        } catch (error) {
+          console.error('Error getting wellness suggestion:', error);
         }
       }
     } catch (error) {
@@ -1175,9 +1082,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     }
   };
 
-  const handleQuickReply = (reply: string) => {
+  const handleQuickReply = useCallback((reply: string) => {
     setInputValue(reply);
-  };
+  }, []);
 
   const handleVoiceToggle = async () => {
     if (!isListening && !isSpeaking && !isProcessing) {
@@ -1274,8 +1181,53 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     opacity: voiceInterfaceOpacity.value,
   }));
 
+  const dynamicStyles = useMemo(() => ({
+    container: {
+      backgroundColor: colors.background,
+    },
+  }), [colors.background]);
+
+  // 🆕 Voice input handler memoizzato
+  const handleVoiceInput = useCallback(async (text: string) => {
+    // ✅ REAL VOICE INPUT - No more simulation!
+    // 🆕 Rimosso log per performance
+    
+    if (mode === 'journal') {
+      // In Journal mode, append dictation to journal text instead of sending to chat
+      setJournalText(prev => (prev ? `${prev}\n${text}` : text));
+      setIsListening(false);
+      setIsProcessing(false);
+      setIsVoiceMode(false);
+      return;
+    }
+
+    setIsVoiceMode(true);
+    setIsListening(false);
+    setIsProcessing(true);
+    setTranscript(text);
+    
+    // Add user message
+    const userMessage: Message = {
+      id: `${Date.now()}-voice-user`,
+      text: text,
+      sender: 'user',
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    
+    // Process the real voice input through the same pipeline as text chat
+    await handleVoiceMessage(text);
+  }, [mode, handleVoiceMessage]);
+
+  // 🆕 Wellness activity handler memoizzato
+  const handleAddWellnessActivity = useCallback((suggestion: any) => {
+    // 🆕 Rimosso log per performance
+    // TODO: Implement adding to today's activities
+    // This will be implemented later with proper data storage
+  }, []);
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]}> 
       <KeyboardAvoidingView 
         style={styles.flex} 
         behavior={keyboardVisible ? "height" : "padding"}  // 🔧 FIX: Comportamento dinamico
@@ -1283,38 +1235,35 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         enabled={keyboardVisible}  // 🔧 FIX: Disabilita quando tastiera chiusa
       >
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.push('/(tabs)')} style={styles.headerButton}>
-            <FontAwesome name="chevron-left" size={18} color="#0f172a" />
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)')} style={[styles.headerButton, { backgroundColor: colors.surfaceSecondary }]}>
+            <FontAwesome name="chevron-left" size={18} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.headerContent}>
             {/* Segmented toggle: Chat | Journal */}
-            <View style={styles.segmentedWrap}>
+            <View style={[styles.segmentedWrap, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
               <TouchableOpacity
-                style={[styles.segmentBtn, mode === 'chat' && styles.segmentBtnActive]}
+                style={[styles.segmentBtn, mode === 'chat' && [styles.segmentBtnActive, { backgroundColor: colors.surface }]]}
                 onPress={() => setMode('chat')}
                 accessibilityRole="button"
                 accessibilityState={{ selected: mode === 'chat' }}
               >
-                <Text style={[styles.segmentText, mode === 'chat' && styles.segmentTextActive]}>Chat</Text>
+                <Text style={[styles.segmentText, { color: colors.textSecondary }, mode === 'chat' && [styles.segmentTextActive, { color: colors.text }]]}>{t('chat.title')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.segmentBtn, mode === 'journal' && styles.segmentBtnActive]}
+                style={[styles.segmentBtn, mode === 'journal' && [styles.segmentBtnActive, { backgroundColor: colors.surface }]]}
                 onPress={() => setMode('journal')}
                 accessibilityRole="button"
                 accessibilityState={{ selected: mode === 'journal' }}
               >
-                <Text style={[styles.segmentText, mode === 'journal' && styles.segmentTextActive]}>Journal</Text>
+                <Text style={[styles.segmentText, { color: colors.textSecondary }, mode === 'journal' && [styles.segmentTextActive, { color: colors.text }]]}>{t('journal.title')}</Text>
               </TouchableOpacity>
             </View>
           </View>
-          <TouchableOpacity style={styles.headerButton}>
-            <FontAwesome name="cog" size={18} color="#0f172a" />
+          <TouchableOpacity style={[styles.headerButton, { backgroundColor: colors.surfaceSecondary }]}>
+            <FontAwesome name="cog" size={18} color={colors.text} />
           </TouchableOpacity>
         </View>
-
-        {/* Fast Chat is only available for voice chat mode */}
-        {/* Text chat always uses OpenAI for stability and quality */}
 
         {/* Wellness Suggestion Banner */}
         {wellnessSuggestion?.shouldShowBanner && wellnessSuggestion?.suggestion && (
@@ -1355,49 +1304,29 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           </View>
         )}
 
-        {/* Modern Voice Chat */}
+        {/* Modern Voice Chat in full-screen modal */}
         <ModernVoiceChat
           visible={showVoiceInterface}
           onClose={() => setShowVoiceInterface(false)}
-          onVoiceInput={async (text) => {
-            // ✅ REAL VOICE INPUT - No more simulation!
-            console.log('🎤 Real voice input received:', text);
-            
-            if (mode === 'journal') {
-              // In Journal mode, append dictation to journal text instead of sending to chat
-              setJournalText(prev => (prev ? `${prev}\n${text}` : text));
-              setIsListening(false);
-              setIsProcessing(false);
-              setIsVoiceMode(false);
-              return;
-            }
-
-            setIsVoiceMode(true);
-            setIsListening(false);
-            setIsProcessing(true);
-            setTranscript(text);
-            
-            // Add user message
-            const userMessage: Message = {
-              id: `${Date.now()}-voice-user`,
-              text: text,
-              sender: 'user',
-              timestamp: new Date(),
-            };
-            setMessages((prev) => [...prev, userMessage]);
-            
-            // Process the real voice input through the same pipeline as text chat
-            await handleVoiceMessage(text);
-          }}
+          onVoiceInput={handleVoiceInput}
           isListening={isListening}
           isSpeaking={isSpeaking}
           isProcessing={isProcessing}
           transcript={transcript}
-          onAddWellnessActivity={(suggestion) => {
-            console.log('Adding wellness activity to today:', suggestion);
-            // TODO: Implement adding to today's activities
-            // This will be implemented later with proper data storage
-          }}
+          userContext={aiContext ? {
+            emotionHistory: aiContext.emotionHistory || [],
+            skinHistory: aiContext.skinHistory || [],
+            emotionTrend: aiContext.emotionTrend || null,
+            skinTrend: aiContext.skinTrend || null,
+            insights: aiContext.insights || [],
+            temporalPatterns: aiContext.temporalPatterns || null,
+            behavioralInsights: aiContext.behavioralInsights || null,
+            contextualFactors: aiContext.contextualFactors || null,
+          } : undefined}
+          aiContext={aiContext}
+          currentUser={currentUser}
+          currentUserProfile={currentUserProfile}
+          onAddWellnessActivity={handleAddWellnessActivity}
         />
 
         {/* Chat/Journal Content */}
@@ -1422,17 +1351,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           scrollEnabled={true}
           nestedScrollEnabled={true}
           automaticallyAdjustKeyboardInsets={false} // 🔧 DISABILITATO: Gestiamo manualmente
+          removeClippedSubviews={true} // 🆕 Ottimizzazione performance
         >
           {mode === 'chat' ? (
             <>
               {/* Quick Replies */}
               <View style={styles.quickRepliesContainer}>
-                <Text style={styles.sectionTitle}>Quick Start</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('chat.quickStart.title')}</Text>
                 <View style={styles.quickRepliesGrid}>
                   {quickReplies.map((reply) => (
                     <TouchableOpacity
                       key={reply.text}
-                      style={[styles.quickReplyCard, { backgroundColor: `${reply.color}15` }]}
+                      style={[styles.quickReplyCard, { backgroundColor: themeMode === 'dark' ? `${reply.color}20` : `${reply.color}15` }]}
                       onPress={() => handleQuickReply(reply.text)}
                     >
                       <FontAwesome name={reply.icon as any} size={16} color={reply.color} />
@@ -1450,16 +1380,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     style={[styles.messageWrapper, message.sender === 'user' ? styles.userWrapper : styles.aiWrapper]}
                   >
                     <View
-                      style={[styles.messageBubble, message.sender === 'user' ? styles.userBubble : styles.aiBubble]}
+                      style={[styles.messageBubble, message.sender === 'user' ? styles.userBubble : [styles.aiBubble, { backgroundColor: colors.surface, borderColor: colors.border }]]}
                     >
                       {message.sender === 'ai' ? (
-                        <Markdown style={chatMarkdownStyles}>{message.text}</Markdown>
+                        <Markdown style={chatMarkdownStyles(themeMode, colors)}>{message.text}</Markdown>
                       ) : (
                         <Text style={[styles.messageText, styles.userMessageText]}>
                           {message.text}
                         </Text>
                       )}
-                      <Text style={styles.timestamp}>{formatTime(message.timestamp)}</Text>
+                      <Text style={[styles.timestamp, { color: colors.textTertiary }]}>{formatTime(message.timestamp)}</Text>
                       {message.sender === 'ai' && (
                         <AnalysisActionButtons
                           message={message.text}
@@ -1495,16 +1425,38 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               </View>
 
               {/* Month day strip */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.monthStrip} contentContainerStyle={styles.monthStripContent}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                style={styles.monthStrip} 
+                contentContainerStyle={styles.monthStripContent}
+                ref={monthStripScrollRef} // 🆕 Ref per scroll automatico
+              >
                 {monthDays.map((iso) => {
                   const mood = monthMoodMap[iso];
                   const rest = monthRestMap[iso];
-                  const color = mood ? (mood <= 2 ? '#ef4444' : mood === 3 ? '#f59e0b' : '#10b981') : (rest ? (rest <= 2 ? '#f87171' : rest === 3 ? '#f59e0b' : '#34d399') : '#e2e8f0');
+                  const journal = monthJournalMap[iso]; // 🆕 Journal entry dal DB
+                  
+                  // 🆕 Priorità: journal entry (ai_score) > mood > rest > grigio
+                  let color = '#e2e8f0'; // Default grigio
+                  if (journal?.hasEntry && journal.aiScore) {
+                    color = DailyJournalService.colorForScore(journal.aiScore);
+                  } else if (mood) {
+                    color = mood <= 2 ? '#ef4444' : mood === 3 ? '#f59e0b' : '#10b981';
+                  } else if (rest) {
+                    color = rest <= 2 ? '#f87171' : rest === 3 ? '#f59e0b' : '#34d399';
+                  } else if (journal?.hasEntry) {
+                    // 🆕 Giorno con entry ma senza ai_score
+                    color = '#6366f1'; // Blu per indicare presenza entry
+                  }
+                  
                   const active = iso === selectedDayKey;
                   const dayNum = parseInt(iso.slice(8,10), 10);
+                  const hasEntry = journal?.hasEntry || false;
+                  
                   return (
-                    <TouchableOpacity key={iso} onPress={() => setSelectedDayKey(iso)} style={[styles.dayPill, active && { borderColor: '#6366f1', backgroundColor: '#eef2ff' }]}> 
-                      <View style={[styles.colorDot, { backgroundColor: color }]} />
+                    <TouchableOpacity key={iso} onPress={() => setSelectedDayKey(iso)} style={[styles.dayPill, { backgroundColor: colors.surface, borderColor: colors.border }, active && { borderColor: '#6366f1', backgroundColor: '#eef2ff' }]}> 
+                      {hasEntry && <View style={[styles.colorDot, { backgroundColor: color }]} />}
                       <Text style={[styles.dayText, active && { color: '#3730a3', fontWeight: '800' }]}>{dayNum}</Text>
                     </TouchableOpacity>
                   );
@@ -1513,7 +1465,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               {/* Month Picker Modal (calendar view) */}
               <Modal visible={showMonthPicker} transparent animationType="fade" onRequestClose={() => setShowMonthPicker(false)}>
                 <View style={styles.modalBackdrop}>
-                  <View style={styles.monthPickerCard}>
+                  <View style={[styles.monthPickerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                     {/* Modal header with month navigation */}
                     <View style={styles.monthHeaderModal}>
                       <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth()-1, 1))} style={styles.monthNavBtn}>
@@ -1543,7 +1495,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
                     {/* Weekday headers */}
                     <View style={styles.weekHeaderRow}>
-                      {['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map((wd) => (
+                      {[
+                        t('journal.weekdays.mon'),
+                        t('journal.weekdays.tue'),
+                        t('journal.weekdays.wed'),
+                        t('journal.weekdays.thu'),
+                        t('journal.weekdays.fri'),
+                        t('journal.weekdays.sat'),
+                        t('journal.weekdays.sun')
+                      ].map((wd) => (
                         <Text key={wd} style={styles.weekHeaderTxt}>{wd}</Text>
                       ))}
                     </View>
@@ -1565,15 +1525,39 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                           if (dayNum < 1 || dayNum > daysInMonth) {
                             cells.push(<View key={`e-${i}`} style={styles.calCellEmpty} />);
                           } else {
-                            const iso = new Date(y, m, dayNum).toISOString().slice(0,10);
+                            // 🆕 Usa helper per evitare problemi timezone
+                            const iso = toISODateSafe(y, m, dayNum);
                             const mood = monthMoodMap[iso];
                             const rest = monthRestMap[iso];
-                            const color = mood ? (mood <= 2 ? '#ef4444' : mood === 3 ? '#f59e0b' : '#10b981') : (rest ? (rest <= 2 ? '#f87171' : rest === 3 ? '#f59e0b' : '#34d399') : '#e2e8f0');
+                            const journal = monthJournalMap[iso]; // 🆕 Journal entry dal DB
+                            
+                            // 🆕 Priorità: journal entry (ai_score) > mood > rest > grigio
+                            let color = '#e2e8f0'; // Default grigio
+                            if (journal?.hasEntry && journal.aiScore) {
+                              color = DailyJournalService.colorForScore(journal.aiScore);
+                            } else if (mood) {
+                              color = mood <= 2 ? '#ef4444' : mood === 3 ? '#f59e0b' : '#10b981';
+                            } else if (rest) {
+                              color = rest <= 2 ? '#f87171' : rest === 3 ? '#f59e0b' : '#34d399';
+                            } else if (journal?.hasEntry) {
+                              // 🆕 Giorno con entry ma senza ai_score
+                              color = '#6366f1'; // Blu per indicare presenza entry
+                            }
+                            
                             const active = iso === selectedDayKey;
+                            const hasEntry = journal?.hasEntry || false; // 🆕 Mostra pallino solo se c'è entry
+                            
                             cells.push(
-                              <TouchableOpacity key={`d-${i}`} style={[styles.calCell, active && { borderColor:'#6366f1', backgroundColor:'#eef2ff' }]} onPress={() => { setSelectedDayKey(iso); setShowMonthPicker(false); }}>
+                              <TouchableOpacity 
+                                key={`d-${i}`} 
+                                style={[styles.calCell, { backgroundColor: colors.surface, borderColor: colors.border }, active && { borderColor:'#6366f1', backgroundColor:'#eef2ff' }]} 
+                                onPress={() => { 
+                                  setSelectedDayKey(iso); 
+                                  setShowMonthPicker(false); 
+                                }}
+                              >
                                 <Text style={[styles.calDayTxt, active && { color:'#3730a3', fontWeight:'800' }]}>{dayNum}</Text>
-                                <View style={[styles.calDot, { backgroundColor: color }]} />
+                                {hasEntry && <View style={[styles.calDot, { backgroundColor: color }]} />} {/* 🆕 Mostra pallino solo se c'è entry */}
                               </TouchableOpacity>
                             );
                           }
@@ -1582,7 +1566,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       })()}
                     </View>
 
-                    <TouchableOpacity onPress={() => setShowMonthPicker(false)} style={styles.modalCloseBtn}><Text style={styles.modalCloseTxt}>Chiudi</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => setShowMonthPicker(false)} style={styles.modalCloseBtn}><Text style={styles.modalCloseTxt}>{t('common.close')}</Text></TouchableOpacity>
                   </View>
                 </View>
               </Modal>
@@ -1590,35 +1574,37 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               {/* Journal Prompt */}
               {journalPrompt ? (
                 <LinearGradient
-                  colors={["#EEF2FF", "#FFFFFF"]}
+                  colors={themeMode === 'dark' ? ["rgba(99,102,241,0.2)", "rgba(99,102,241,0.1)"] : ["#EEF2FF", "#FFFFFF"]}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                  style={styles.journalPromptGrad}
+                  style={[styles.journalPromptGrad, { borderColor: colors.border }]}
                 >
                   <View style={styles.journalPromptHeader}>
-                    <Text style={styles.journalPromptTitle}>Prompt del giorno</Text>
-                    <TouchableOpacity style={styles.pillSecondary} onPress={() => setJournalPrompt(journalPrompt)}>
-                      <Text style={styles.pillSecondaryText}>Rigenera</Text>
+                    <Text style={[styles.journalPromptTitle, { color: colors.text }]}>{t('journal.dailyPrompt')}</Text>
+                    <TouchableOpacity style={[styles.pillSecondary, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]} onPress={() => setJournalPrompt(journalPrompt)}>
+                      <Text style={[styles.pillSecondaryText, { color: colors.primary }]}>{t('journal.regeneratePrompt')}</Text>
                     </TouchableOpacity>
                   </View>
-                  <Text style={styles.journalPromptText}>{journalPrompt}</Text>
+                  <Text style={[styles.journalPromptText, { color: colors.text }]}>{journalPrompt}</Text>
                 </LinearGradient>
               ) : null}
 
               {/* Journal Editor */}
               <View style={styles.journalEditorWrap}>
                 <BlurView intensity={12} tint="light" style={styles.journalBlur} />
-                <View style={styles.journalEditorHeader}>
+                  <View style={styles.journalEditorHeader}>
                   <View style={{ flexDirection:'row', alignItems:'center', gap:8 }}>
-                    <Text style={styles.editorTitle}>Entry di oggi</Text>
-                    <View style={styles.dateChip}><Text style={styles.dateChipText}>{dayKey}</Text></View>
+                    <Text style={[styles.editorTitle, { color: colors.text }]}>{t('journal.entryTitle')}</Text>
+                    <View style={[styles.dateChip, { backgroundColor: colors.surfaceSecondary }]}>
+                      <Text style={[styles.dateChipText, { color: colors.textSecondary }]}>{selectedDayKey}</Text>
+                    </View>
                   </View>
-                  <Text style={styles.counterText}>{journalText.length}/2000</Text>
+                  <Text style={[styles.counterText, { color: colors.textTertiary }]}>{journalText.length}/2000</Text>
                 </View>
                 <TextInput
-                  style={styles.journalInput}
+                  style={[styles.journalInput, { color: colors.text }]}
                   multiline
-                  placeholder="Scrivi il tuo diario di oggi…"
-                  placeholderTextColor="#94a3b8"
+                  placeholder={t('journal.placeholder')}
+                  placeholderTextColor={colors.textTertiary}
                   value={journalText}
                   onChangeText={setJournalText}
                 />
@@ -1640,11 +1626,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                         const hasExistingAI = aiScore || aiSummary;
                         
                         if (journalText.trim().length > 10 && !hasExistingAI) {
-                          console.log('🤖 Generating AI judgment for entry...');
+                          // 🆕 Rimossi log per performance
                           // Get mood and sleep notes for context
                           const moodNote = await AsyncStorage.getItem(`checkin:mood_note:${dayKey}`);
                           const sleepNote = await AsyncStorage.getItem(`checkin:sleep_note:${dayKey}`);
-                          console.log('📝 Context notes:', { moodNote, sleepNote });
                           
                           const aiJudgment = await DailyJournalService.generateAIJudgment(
                             currentUser.id, 
@@ -1653,34 +1638,33 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                             sleepNote || undefined
                           );
                           
-                          console.log('🤖 AI Judgment result:', aiJudgment);
-                          
                           if (aiJudgment) {
                             aiScore = aiJudgment.ai_score;
                             aiLabel = aiJudgment.ai_label;
                             aiSummary = aiJudgment.ai_summary;
                             aiAnalysis = aiJudgment.ai_analysis;
                             
-                            console.log('✅ AI Judgment processed:', { aiScore, aiLabel, aiSummary, aiAnalysis });
-                            
                             // Update local state
                             setAiScore(aiScore);
                             setAiLabel(aiLabel);
                             setAiSummary(aiSummary);
                             setAiAnalysis(aiAnalysis);
-                          } else {
-                            console.log('❌ AI Judgment failed or returned null');
                           }
-                        } else {
-                          console.log('⏭️ Skipping AI judgment:', { 
-                            hasContent: journalText.trim().length > 10, 
-                            hasExistingScore: !!aiScore 
-                          });
                         }
 
-                        await DailyJournalService.syncToRemote(currentUser.id, dayKey, journalText, journalPrompt, aiSummary, aiScore, aiLabel, aiAnalysis);
+                        await DailyJournalService.syncToRemote(currentUser.id, selectedDayKey, journalText, journalPrompt, aiSummary, aiScore, aiLabel, aiAnalysis); // 🆕 Usa selectedDayKey
                         const recent = await DailyJournalDBService.listRecent(currentUser.id, 10);
                         setJournalHistory(recent);
+                        
+                        // 🆕 Aggiorna monthJournalMap quando si salva una entry
+                        setMonthJournalMap(prev => ({
+                          ...prev,
+                          [selectedDayKey]: {
+                            hasEntry: true,
+                            aiScore: aiScore || undefined
+                          }
+                        }));
+                        
                         const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         setLastSavedAt(ts);
                         setShowSavedChip(true);
@@ -1691,26 +1675,26 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       }
                     }}
                   >
-                    <Text style={styles.journalSaveText}>Salva</Text>
+                    <Text style={styles.journalSaveText}>{t('journal.save')}</Text>
                   </TouchableOpacity>
                 </View>
                 {showSavedChip && lastSavedAt && (
-                  <View style={styles.savedChip}><Text style={styles.savedChipText}>Salvato alle {lastSavedAt}</Text></View>
+                  <View style={styles.savedChip}><Text style={styles.savedChipText}>{t('journal.savedAt', { time: lastSavedAt })}</Text></View>
                 )}
               </View>
 
               {/* AI Journal Insight */}
               {(() => {
-                console.log('🎯 AI Judgment Box render check (Journal):', { aiSummary, aiScore, aiLabel, aiAnalysis });
-                return (aiSummary || aiScore);
+        // 🆕 Rimosso log per performance
+        return (aiSummary || aiScore);
               })() && (
-                <View style={styles.aiInsightCard}>
+                <View style={[styles.aiInsightCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <View style={styles.aiInsightHeader}>
                     <View style={styles.aiInsightTitleRow}>
                       <View style={styles.aiInsightIcon}>
                         <Text style={styles.aiInsightIconText}>🤖</Text>
                       </View>
-                      <Text style={styles.aiInsightTitle}>AI Journal Insight</Text>
+                      <Text style={[styles.aiInsightTitle, { color: colors.text }]}>{t('journal.aiInsight')}</Text>
                     </View>
                     {typeof aiScore === 'number' && (
                       <View style={[styles.aiInsightScore, { backgroundColor: DailyJournalService.colorForScore(aiScore) }]}>
@@ -1722,16 +1706,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   <View style={styles.aiInsightContent}>
                     <View style={styles.aiInsightLabelRow}>
                       <View style={[styles.aiInsightDot, { backgroundColor: DailyJournalService.colorForScore(aiScore ?? undefined) }]} />
-                      <Text style={styles.aiInsightLabel}>{aiLabel || 'Analisi AI'}</Text>
+                      <Text style={[styles.aiInsightLabel, { color: colors.text }]}>{aiLabel || t('journal.aiAnalysis')}</Text>
                     </View>
                     
                     {!!aiSummary && (
-                      <Text style={styles.aiInsightSummary}>{aiSummary}</Text>
+                      <Text style={[styles.aiInsightSummary, { color: colors.textSecondary }]}>{aiSummary}</Text>
                     )}
                     
                     {!!aiAnalysis && (
                       <TouchableOpacity onPress={() => setShowFullAnalysis(true)} style={styles.aiInsightButton}>
-                        <Text style={styles.aiInsightButtonText}>Vedi analisi completa</Text>
+                        <Text style={styles.aiInsightButtonText}>{t('journal.seeFullAnalysis')}</Text>
                         <Text style={styles.aiInsightButtonIcon}>→</Text>
                       </TouchableOpacity>
                     )}
@@ -1742,15 +1726,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               {/* Journal History */}
               {journalHistory?.length ? (
                 <View style={styles.journalHistory}>
-                  <Text style={styles.sectionTitle}>Ultime note</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('journal.latestNotes')}</Text>
                   {journalHistory.map((it) => (
-                    <View key={it.id} style={styles.historyCard}>
+                    <View key={it.id} style={[styles.historyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       <View style={styles.historyHeader}>
                         <View style={styles.dateChipSm}><Text style={styles.dateChipSmText}>{it.entry_date}</Text></View>
-                        <TouchableOpacity><Text style={styles.openTxt}>Apri</Text></TouchableOpacity>
+                        <TouchableOpacity><Text style={styles.openTxt}>{t('journal.open')}</Text></TouchableOpacity>
                       </View>
                       <View style={styles.historyPreviewBox}>
-                        <Markdown style={chatMarkdownStyles}>{it.content}</Markdown>
+                        <Markdown style={chatMarkdownStyles(themeMode, colors)}>{it.content}</Markdown>
                       </View>
                     </View>
                   ))}
@@ -1763,28 +1747,29 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         {/* Full Analysis Modal */}
         <Modal visible={showFullAnalysis} animationType="fade" transparent>
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
               <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { fontSize: 18 }]}>Analisi Completa</Text>
+                <Text style={[styles.modalTitle, { fontSize: 18, color: colors.text }]}>{t('journal.completeAnalysis')}</Text>
                 <TouchableOpacity onPress={() => setShowFullAnalysis(false)} style={styles.modalClose}>
-                  <FontAwesome name="times" size={18} color="#64748b" />
+                  <FontAwesome name="times" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalBody}>
                 {!!aiAnalysis && (
-                  <Text style={styles.modalText}>{aiAnalysis}</Text>
+                  <Text style={[styles.modalText, { color: colors.text }]}>{aiAnalysis}</Text>
                 )}
               </ScrollView>
             </View>
           </View>
         </Modal>
 
-        {/* Input Area (Chat only) */}
-        {mode === 'chat' && (
+        {/* Input Area (Chat only) - hidden when voice interface is visible */}
+        {mode === 'chat' && !showVoiceInterface && (
         <View 
           ref={inputContainerRef}
           style={[
             styles.inputContainer,
+            { backgroundColor: colors.surface, borderTopColor: colors.border },
             // 🔧 FIX: Posizionamento fisso APPENA sopra la tastiera
             keyboardVisible && {
               position: 'absolute',
@@ -1803,11 +1788,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             }
           ]}
         >
-          <View style={styles.inputWrapper}>
+          <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
             <TextInput
-              style={[styles.textInput, isVoiceMode && styles.voiceInput]}
-              placeholder={isVoiceMode ? "Voice input detected..." : "Type your message..."}
-              placeholderTextColor="#94a3b8"
+              style={[styles.textInput, { color: colors.text }, isVoiceMode && styles.voiceInput]}
+              placeholder={isVoiceMode ? t('chat.voicePlaceholder') : t('chat.placeholder')}
+              placeholderTextColor={colors.textTertiary}
               value={inputValue}
               onChangeText={setInputValue}
               multiline
@@ -1826,7 +1811,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               disabled={!inputValue.trim() || isSending}
               onPress={handleSendMessage}
             >
-              <FontAwesome name="send" size={16} color={inputValue.trim() ? '#ffffff' : '#cbd5f5'} />
+              <FontAwesome name="send" size={16} color={inputValue.trim() ? '#ffffff' : (themeMode === 'dark' ? '#94a3b8' : '#cbd5f5')} />
             </TouchableOpacity>
           </View>
         </View>
@@ -1848,7 +1833,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    // backgroundColor sarà sovrascritto dinamicamente con colors.background
   },
   flex: {
     flex: 1,
@@ -1916,21 +1901,6 @@ const styles = StyleSheet.create({
   },
   segmentTextActive: {
     color: '#0f172a',
-  },
-  fastChatToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    backgroundColor: '#f0f9ff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e7ff',
-  },
-  fastChatLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1e40af',
-    marginRight: 12,
   },
   pillSecondary: {
     paddingHorizontal: 10,
@@ -2137,12 +2107,10 @@ const styles = StyleSheet.create({
   journalPromptTitle: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#3730a3',
     marginBottom: 6,
   },
   journalPromptText: {
     fontSize: 13,
-    color: '#1f2937',
   },
   journalEditorWrap: {
     marginTop: 12,
@@ -2154,15 +2122,15 @@ const styles = StyleSheet.create({
   },
   journalBlur: { ...StyleSheet.absoluteFillObject, borderRadius: 16 },
   journalEditorHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  editorTitle: { fontSize: 14, fontWeight: '800', color: '#0f172a' },
-  dateChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, backgroundColor: '#e5e7eb' },
-  dateChipText: { fontSize: 11, fontWeight: '700', color: '#334155' },
-  counterText: { fontSize: 11, color: '#64748b', fontWeight: '700' },
+  editorTitle: { fontSize: 14, fontWeight: '800' },
+  dateChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
+  dateChipText: { fontSize: 11, fontWeight: '700' },
+  counterText: { fontSize: 11, fontWeight: '700' },
   // toolbar removed
   journalInput: {
     minHeight: 120,
     fontSize: 14,
-    color: '#0f172a',
+    // color sarà sovrascritto dinamicamente con colors.text
   },
   journalActions: {
     flexDirection: 'row',
@@ -2229,8 +2197,7 @@ const styles = StyleSheet.create({
   },
   aiInsightTitle: { 
     fontSize: 16, 
-    fontWeight: '800', 
-    color: '#0f172a',
+    fontWeight: '800',
     letterSpacing: -0.2,
   },
   aiInsightScore: { 
@@ -2263,12 +2230,10 @@ const styles = StyleSheet.create({
   },
   aiInsightLabel: { 
     fontSize: 14, 
-    fontWeight: '700', 
-    color: '#374151',
+    fontWeight: '700',
   },
   aiInsightSummary: { 
-    fontSize: 14, 
-    color: '#4b5563', 
+    fontSize: 14,
     lineHeight: 20,
     marginBottom: 16,
   },
@@ -2370,9 +2335,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#6366f1',
   },
   aiBubble: {
-    backgroundColor: '#ffffff',
+    // backgroundColor e borderColor saranno sovrascritti dinamicamente
     borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   messageText: {
     fontSize: 14,
@@ -2382,12 +2346,12 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   aiMessageText: {
-    color: '#0f172a',
+    // color sarà sovrascritto dinamicamente con colors.text
   },
   timestamp: {
     marginTop: 6,
     fontSize: 11,
-    color: 'rgba(0, 0, 0, 0.4)',
+    // color sarà sovrascritto dinamicamente con colors.textTertiary
     textAlign: 'right',
   },
   inputContainer: {
@@ -2420,7 +2384,7 @@ const styles = StyleSheet.create({
     flex: 1,
     maxHeight: 100,
     fontSize: 16,
-    color: '#0f172a',
+    // color sarà sovrascritto dinamicamente con colors.text
     paddingVertical: 8,
   },
   voiceInput: {
@@ -2511,41 +2475,41 @@ const styles = StyleSheet.create({
   },
 });
 
-// Stili per il markdown nella chat
-const chatMarkdownStyles = {
+// Stili per il markdown nella chat (dinamici basati sul tema)
+const chatMarkdownStyles = (mode: 'light' | 'dark', colors: any) => ({
   body: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#0f172a',
+    color: colors.text,
   },
   heading1: {
     fontSize: 18,
     fontWeight: '700' as any,
-    color: '#1e293b',
+    color: colors.text,
     marginTop: 12,
     marginBottom: 6,
   },
   heading2: {
     fontSize: 16,
     fontWeight: '700' as any,
-    color: '#1e293b',
+    color: colors.text,
     marginTop: 10,
     marginBottom: 4,
   },
   heading3: {
     fontSize: 15,
     fontWeight: '700' as any,
-    color: '#1e293b',
+    color: colors.text,
     marginTop: 8,
     marginBottom: 3,
   },
   strong: {
     fontWeight: '700' as any,
-    color: '#0f172a',
+    color: colors.text,
   },
   em: {
     fontStyle: 'italic' as any,
-    color: '#475569',
+    color: colors.textSecondary,
   },
   list_item: {
     marginBottom: 3,
@@ -2560,7 +2524,7 @@ const chatMarkdownStyles = {
     marginBottom: 6,
   },
   code_inline: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#f1f5f9',
     color: '#e11d48',
     paddingHorizontal: 3,
     paddingVertical: 1,
@@ -2568,8 +2532,8 @@ const chatMarkdownStyles = {
     fontSize: 13,
   },
   code_block: {
-    backgroundColor: '#f8fafc',
-    color: '#0f172a',
+    backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+    color: colors.text,
     padding: 8,
     borderRadius: 6,
     marginVertical: 6,
@@ -2577,6 +2541,6 @@ const chatMarkdownStyles = {
     borderLeftWidth: 3,
     borderLeftColor: '#6366f1',
   },
-};
+});
 
 export default ChatScreen;

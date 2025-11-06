@@ -56,8 +56,12 @@ export function useHealthData(): UseHealthDataReturn {
         setIsInitialized(success);
         
         if (success) {
-          // Auto-sync data after initialization
-          await syncData();
+          // Snapshot permessi e sync forzata se già concessi
+          const currentPerms = healthService.getPermissions();
+          setPermissions(currentPerms);
+          if (Object.values(currentPerms).some(Boolean)) {
+            await syncData();
+          }
         }
       } catch (err) {
         console.error('Failed to initialize health service:', err);
@@ -94,22 +98,67 @@ export function useHealthData(): UseHealthDataReturn {
     }
   }, [healthService, permissions]);
 
-  // Sync health data
+  const hasMeaningfulData = (data?: HealthData | null) => {
+    if (!data) return false;
+    return (
+      (data.steps ?? 0) > 0 ||
+      (data.sleepHours ?? 0) > 0 ||
+      (data.hrv ?? 0) > 0 ||
+      (data.heartRate ?? 0) > 0 ||
+      (data.hydration ?? 0) > 0 ||
+      (data.mindfulnessMinutes ?? 0) > 0
+    );
+  };
+
+  // Sync health data (supports forced sync via service cooldown bypass)
   const syncData = useCallback(async (): Promise<HealthDataSyncResult> => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const result = await healthService.syncHealthData();
+      const result = await healthService.syncHealthData(true);
+      let resolvedResult = result;
       
+      // 🔥 Aggiorna sempre i dati se disponibili, anche se la sync è stata "skipped"
       if (result.success && result.data) {
         setHealthData(result.data);
         setLastSyncDate(result.lastSyncDate || new Date());
+        console.log('✅ Health data updated in hook:', {
+          steps: result.data.steps,
+          heartRate: result.data.heartRate,
+          hrv: result.data.hrv,
+          sleepHours: result.data.sleepHours,
+        });
+      } else if (result.success && !result.data) {
+        // Se la sync è riuscita ma non ci sono dati nuovi, mantieni i dati esistenti
+        console.log('⚠️ Sync successful but no new data returned');
       } else {
         setError(result.error || 'Sync failed');
       }
+
+      if (!hasMeaningfulData(resolvedResult.data)) {
+        const fallback = await healthService.getLatestSyncedHealthData();
+        if (fallback.data && hasMeaningfulData(fallback.data)) {
+          setHealthData(fallback.data);
+          setLastSyncDate(fallback.syncedAt || new Date());
+          resolvedResult = {
+            success: true,
+            data: fallback.data,
+            lastSyncDate: fallback.syncedAt || new Date(),
+          };
+          setError(null);
+        } else if (!result.success && !fallback.data) {
+          setError(result.error || 'Sync failed');
+        }
+      } else {
+        resolvedResult = {
+          success: true,
+          data: result.data!,
+          lastSyncDate: result.lastSyncDate,
+        };
+      }
       
-      return result;
+      return resolvedResult;
     } catch (err) {
       console.error('Failed to sync health data:', err);
       const errorMessage = err instanceof Error ? err.message : 'Sync failed';
@@ -137,6 +186,32 @@ export function useHealthData(): UseHealthDataReturn {
   // Computed values
   const hasData = healthData !== null;
   const hasAnyPermission = Object.values(permissions).some(Boolean);
+
+  // Schedule periodic background sync based on service configuration
+  useEffect(() => {
+    if (!isInitialized || !hasAnyPermission) {
+      return;
+    }
+
+    const intervalMinutes = healthService.getSyncIntervalMinutes
+      ? healthService.getSyncIntervalMinutes()
+      : 15;
+
+    if (!intervalMinutes || intervalMinutes <= 0) {
+      return;
+    }
+
+    const intervalMs = intervalMinutes * 60_000;
+    const intervalId = setInterval(() => {
+      syncData().catch(err => {
+        console.warn('⚠️ Periodic health sync failed:', err);
+      });
+    }, intervalMs);
+
+    console.log(`⏱️ Health data auto-sync scheduled every ${intervalMinutes} minute(s)`);
+
+    return () => clearInterval(intervalId);
+  }, [isInitialized, hasAnyPermission, syncData, healthService]);
 
   return {
     // Data
@@ -222,4 +297,3 @@ export function useHeartRateData() {
     isAvailable: hasPermission && heartRateData !== null,
   };
 }
-

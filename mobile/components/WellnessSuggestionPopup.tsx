@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { WellnessSuggestion } from '../data/wellnessSuggestions';
 import { PanGestureHandler as RNGHPanGestureHandler, State } from 'react-native-gesture-handler';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +32,7 @@ export const WellnessSuggestionPopup: React.FC<WellnessSuggestionPopupProps> = (
   onDismiss,
   onStartExercise
 }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(-100); // Start from top (negative value)
@@ -119,7 +121,7 @@ export const WellnessSuggestionPopup: React.FC<WellnessSuggestionPopupProps> = (
                   <FontAwesome name={iconName as any} size={20} color="#ffffff" />
                 </View>
                 <View style={styles.titleContent}>
-                  <Text style={styles.title}>{suggestion.title || 'Wellness Activity'}</Text>
+                  <Text style={styles.title}>{suggestion.title || t('popups.wellnessSuggestion.defaultTitle')}</Text>
                   {suggestion.duration && (
                     <Text style={styles.duration}>{suggestion.duration}</Text>
                   )}
@@ -127,7 +129,7 @@ export const WellnessSuggestionPopup: React.FC<WellnessSuggestionPopupProps> = (
               </View>
 
             {/* Description */}
-            <Text style={styles.description}>{suggestion.description || 'A helpful wellness activity for you.'}</Text>
+            <Text style={styles.description}>{suggestion.description || t('popups.wellnessSuggestion.defaultDescription')}</Text>
 
             {/* Action buttons */}
             <View style={styles.actions}>
@@ -140,7 +142,7 @@ export const WellnessSuggestionPopup: React.FC<WellnessSuggestionPopupProps> = (
                 >
                   <FontAwesome name="play" size={14} color="#ffffff" />
                   <Text style={styles.startButtonText}>
-                    Inizia subito l'esercizio
+                    {t('popups.wellnessSuggestion.startExercise')}
                   </Text>
                 </TouchableOpacity>
               ) : (
@@ -151,7 +153,7 @@ export const WellnessSuggestionPopup: React.FC<WellnessSuggestionPopupProps> = (
                 >
                   <FontAwesome name="plus" size={14} color={colors[0]} />
                   <Text style={[styles.addButtonText, { color: colors[0] }]}>
-                    Add to Today
+                    {t('popups.wellnessSuggestion.addToToday')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -161,7 +163,7 @@ export const WellnessSuggestionPopup: React.FC<WellnessSuggestionPopupProps> = (
                 onPress={onDismiss}
                 activeOpacity={0.8}
               >
-                <Text style={styles.dismissButtonText}>Later</Text>
+                <Text style={styles.dismissButtonText}>{t('popups.wellnessSuggestion.later')}</Text>
               </TouchableOpacity>
             </View>
             </View>

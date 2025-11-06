@@ -79,11 +79,63 @@ export interface SkinAnalysisResult {
   version: string;
 }
 
+// Food Analysis Types
+export interface Macronutrients {
+  carbohydrates: number; // grams
+  proteins: number; // grams
+  fats: number; // grams
+  fiber?: number; // grams
+  calories: number; // kcal
+}
+
+export interface Vitamins {
+  vitamin_a?: number; // IU or mcg
+  vitamin_c?: number; // mg
+  vitamin_d?: number; // IU or mcg
+  vitamin_e?: number; // mg
+  vitamin_k?: number; // mcg
+  thiamine?: number; // mg
+  riboflavin?: number; // mg
+  niacin?: number; // mg
+  vitamin_b6?: number; // mg
+  folate?: number; // mcg
+  vitamin_b12?: number; // mcg
+}
+
+export interface Minerals {
+  calcium?: number; // mg
+  iron?: number; // mg
+  magnesium?: number; // mg
+  phosphorus?: number; // mg
+  potassium?: number; // mg
+  sodium?: number; // mg
+  zinc?: number; // mg
+  copper?: number; // mg
+  manganese?: number; // mg
+  selenium?: number; // mcg
+}
+
+export interface FoodAnalysisResult {
+  identified_foods: string[]; // List of foods identified
+  macronutrients: Macronutrients;
+  vitamins?: Vitamins;
+  minerals?: Minerals;
+  meal_type?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other';
+  health_score?: number; // 0 to 100
+  recommendations: string[]; // max 6 items
+  observations: string[]; // max 5 items
+  confidence: number; // 0 to 1
+  version: string;
+}
+
 export interface AnalysisRequest {
   imageUri: string;
-  analysisType: 'emotion' | 'skin';
+  analysisType: 'emotion' | 'skin' | 'food';
   sessionId?: string;
   timestamp?: Date;
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  prefs?: string[];
+  allergies?: string[];
 }
 
 export interface AnalysisResponse<T> {
@@ -96,8 +148,8 @@ export interface AnalysisResponse<T> {
 
 export interface AnalysisHistory {
   id: string;
-  type: 'emotion' | 'skin';
-  result: EmotionAnalysisResult | SkinAnalysisResult;
+  type: 'emotion' | 'skin' | 'food';
+  result: EmotionAnalysisResult | SkinAnalysisResult | FoodAnalysisResult;
   imageUri: string;
   timestamp: Date;
   sessionId?: string;

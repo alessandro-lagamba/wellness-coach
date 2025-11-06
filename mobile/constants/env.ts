@@ -55,58 +55,15 @@ export const getBackendURL = async (): Promise<string> => {
       LAST_DISCOVERY_TIME = Date.now();
       return PRODUCTION_BACKEND_URL;
     } else {
-      console.log('⚠️ Backend from .env not reachable, will try auto-discovery...');
-    }
-  }
-
-  // 🔍 AUTO-DISCOVERY: Prova a trovare il backend sulla rete
-  console.log('🛠️ DEVELOPMENT MODE - Auto-discovering backend...');
-
-  // Controlla se abbiamo un URL cached e valido
-  if (BACKEND_URL_CACHE && (Date.now() - LAST_DISCOVERY_TIME) < CACHE_DURATION) {
-    console.log('🌐 Using cached backend URL:', BACKEND_URL_CACHE);
-    
-    // Verifica comunque che sia ancora raggiungibile
-    const networkService = NetworkDiscoveryService.getInstance();
-    const isStillWorking = await networkService.testBackendConnection(BACKEND_URL_CACHE);
-    
-    if (isStillWorking) {
-      return BACKEND_URL_CACHE;
-    } else {
-      console.log('⚠️ Cached backend URL no longer working, rediscovering...');
-      BACKEND_URL_CACHE = null;
-    }
-  }
-
-  try {
-    const networkService = NetworkDiscoveryService.getInstance();
-    
-    // 🔍 Prova a trovare un backend funzionante
-    const workingBackend = await networkService.findWorkingBackend(3000);
-    
-    if (workingBackend) {
-      console.log('✅ Found working backend:', workingBackend);
-      BACKEND_URL_CACHE = workingBackend;
+      console.log('⚠️ Backend from .env not reachable, disabling auto-discovery to avoid loops');
+      // Non fare auto-discovery per evitare loop/log flooding: usa comunque l'URL .env
+      BACKEND_URL_CACHE = PRODUCTION_BACKEND_URL;
       LAST_DISCOVERY_TIME = Date.now();
-      return workingBackend;
+      return PRODUCTION_BACKEND_URL;
     }
-
-    // ❌ Nessun backend trovato
-    throw new Error('No working backend found on the network');
-
-  } catch (error) {
-    console.error('❌ Backend discovery failed:', error);
-    
-    // Fallback: mostra un errore chiaro all'utente
-    throw new Error(
-      'Impossibile connettersi al backend.\n\n' +
-      '📱 SVILUPPO: Assicurati che:\n' +
-      '1. Il backend sia avviato (npm run dev)\n' +
-      '2. Il Mac e il telefono siano sulla STESSA RETE WiFi\n' +
-      '3. Il firewall non blocchi la porta 3000\n\n' +
-      '🚀 PRODUZIONE: Configura EXPO_PUBLIC_BACKEND_URL'
-    );
   }
+  // Auto-discovery disabilitato per evitare loop; restituiamo placeholder .env
+  return PRODUCTION_BACKEND_URL;
 };
 
 /**

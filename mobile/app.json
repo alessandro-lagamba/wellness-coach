@@ -6,12 +6,12 @@
     "slug": "wellness-coach",
     "version": "0.1.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icona.png",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/icona.png",
       "resizeMode": "contain",
-      "backgroundColor": "#6366f1"
+      "backgroundColor": "#10b981"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -31,19 +31,37 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icona.png",
         "backgroundColor": "#6366f1"
       },
+      "notification": {
+        "icon": "./assets/icona.png",
+        "color": "#10b981"
+      },
       "package": "com.wellnesscoach.app",
+      "statusBar": {
+        "backgroundColor": "#00000000",
+        "translucent": true,
+        "barStyle": "light-content"
+      },
+      "navigationBar": {
+        "backgroundColor": "#0b0b14",
+        "barStyle": "light-content",
+        "visibility": "leanback"
+      },
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.READ_CALENDAR",
         "android.permission.WRITE_CALENDAR",
         "android.permission.ACTIVITY_RECOGNITION",
-        "android.permission.BODY_SENSORS"
+        "android.permission.BODY_SENSORS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
     },
     "web": {
@@ -54,6 +72,14 @@
     "plugins": [
       "expo-router",
       "expo-dev-client",
+      [
+        "expo-audio-studio",
+        {
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone for voice chat"
+        }
+      ],
+      "@livekit/react-native-expo-plugin",
+      "@config-plugins/react-native-webrtc",
       [
         "expo-build-properties",
         {

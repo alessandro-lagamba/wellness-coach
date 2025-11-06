@@ -6,6 +6,8 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { useTranslation } from '../hooks/useTranslation';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -35,37 +37,37 @@ interface SkinCapture {
 // -----------------------------------------------------
 const METRIC_DEFINITIONS = {
   smoothness: {
-    label: 'Smoothness',
-    whyItMatters: 'Indica uniformità e levigatezza della pelle.',
-    howItWorks: 'Analisi delle irregolarità superficiali.',
+    label: 'analysis.skin.metrics.texture',
+    whyItMatters: 'analysis.skin.metricExplainers.texture.why',
+    howItWorks: 'analysis.skin.metricExplainers.texture.how',
     color: '#8b5cf6',
     icon: 'blur-linear' as const,
   },
   redness: {
-    label: 'Redness',
-    whyItMatters: 'Stima arrossamento/irritazione visibile.',
-    howItWorks: 'Analisi dei segnali cromatici cutanei.',
+    label: 'analysis.skin.metrics.redness',
+    whyItMatters: 'analysis.skin.metricExplainers.redness.why',
+    howItWorks: 'analysis.skin.metricExplainers.redness.how',
     color: '#ef4444',
     icon: 'local-fire-department' as const,
   },
   hydration: {
-    label: 'Hydration',
-    whyItMatters: "Contenuto d'acqua superficiale.",
-    howItWorks: "Stima dell'idratazione da pattern cutanei.",
+    label: 'analysis.skin.metrics.hydration',
+    whyItMatters: 'analysis.skin.metricExplainers.hydration.why',
+    howItWorks: 'analysis.skin.metricExplainers.hydration.how',
     color: '#06b6d4',
     icon: 'water-drop' as const,
   },
   oiliness: {
-    label: 'Oiliness',
-    whyItMatters: 'Equilibrio del sebo e lucidità.',
-    howItWorks: 'Rilevazione della brillantezza superficiale.',
+    label: 'analysis.skin.metrics.oiliness',
+    whyItMatters: 'analysis.skin.metricExplainers.oiliness.why',
+    howItWorks: 'analysis.skin.metricExplainers.oiliness.how',
     color: '#f59e0b',
     icon: 'oil-barrel' as const,
   },
   overall: {
-    label: 'Skin Health',
-    whyItMatters: 'Indice sintetico dei parametri chiave.',
-    howItWorks: 'Combinazione di smoothness, redness, hydration, oiliness.',
+    label: 'analysis.skin.metricExplainers.overall.label',
+    whyItMatters: 'analysis.skin.metricExplainers.overall.why',
+    howItWorks: 'analysis.skin.metricExplainers.overall.how',
     color: '#10b981',
     icon: 'medical-services' as const,
   },
@@ -74,11 +76,11 @@ const METRIC_DEFINITIONS = {
 // -----------------------------------------------------
 // Utility: confidenza e colori
 // -----------------------------------------------------
-const getConfidenceLabel = (confidence: number) => {
-  if (confidence >= 0.8) return 'Excellent';
-  if (confidence >= 0.6) return 'Good';
-  if (confidence >= 0.4) return 'Fair';
-  return 'Poor';
+const getConfidenceLabel = (confidence: number, t: (k: string, o?: any)=>string) => {
+  if (confidence >= 0.8) return t('rating.excellent');
+  if (confidence >= 0.6) return t('rating.good');
+  if (confidence >= 0.4) return t('rating.fair');
+  return t('rating.poor');
 };
 
 const getConfidenceColor = (confidence: number) => {
@@ -92,6 +94,7 @@ const getConfidenceColor = (confidence: number) => {
 // Collapsible affidabile: misura contenuto invisibile + anima maxHeight
 // -----------------------------------------------------
 const Collapsible: React.FC<{ expanded: boolean; children: React.ReactNode }> = ({ expanded, children }) => {
+  const { colors } = useTheme();
   const measured = useSharedValue(0);
 
   const onLayout = (e: any) => {
@@ -119,7 +122,7 @@ const Collapsible: React.FC<{ expanded: boolean; children: React.ReactNode }> = 
       </View>
 
       {/* Contenuto visibile con altezza animata */}
-      <Animated.View style={[styles.expandedContent, containerStyle]}>
+      <Animated.View style={[styles.expandedContent, { borderTopColor: colors.border }, containerStyle]}>
         {children}
       </Animated.View>
     </>
@@ -141,6 +144,8 @@ const ScoreTile: React.FC<{
   trend?: number;
 }> = ({ metricKey, score, trend }) => {
   const def = METRIC_DEFINITIONS[metricKey];
+  const { t } = useTranslation();
+  const { colors } = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const toggle = () => setIsExpanded((v) => !v);
@@ -148,25 +153,25 @@ const ScoreTile: React.FC<{
   const safeScore = Math.max(0, Math.min(100, Number.isFinite(score) ? score : 0));
 
   return (
-    <View style={[styles.scoreTile, { borderColor: `${def.color}22` }]}>
+    <View style={[styles.scoreTile, { borderColor: `${def.color}22`, backgroundColor: colors.surface }]}>
       <TouchableOpacity onPress={toggle} activeOpacity={0.9} style={styles.scoreTileHeader}>
         <View style={styles.titleRowLeft}>
           <MaterialIcons name={def.icon} size={18} color={def.color} />
-          <Text style={[styles.scoreLabel, { color: def.color }]}>{def.label.toUpperCase()}</Text>
+          <Text style={[styles.scoreLabel, { color: def.color }]}>{t(def.label).toUpperCase()}</Text>
         </View>
 
         <View style={styles.scoreRow}>
           <Text style={[styles.scoreValue, { color: def.color }]}>{safeScore}</Text>
-          <Text style={styles.scoreUnit}>/100</Text>
+          <Text style={[styles.scoreUnit, { color: colors.textSecondary }]}>/100</Text>
 
           {typeof trend === 'number' && (
             <View style={[styles.trendChip, { backgroundColor: `${def.color}15` }]}>
               <MaterialIcons
                 name={trend > 0 ? 'trending-up' : trend < 0 ? 'trending-down' : 'trending-flat'}
                 size={14}
-                color={trend > 0 ? '#10b981' : trend < 0 ? '#ef4444' : '#64748b'}
+                color={trend > 0 ? colors.success : trend < 0 ? colors.error : colors.textTertiary}
               />
-              <Text style={styles.trendChipText}>
+              <Text style={[styles.trendChipText, { color: colors.text }]}>
                 {trend > 0 ? '+' : trend < 0 ? '' : ''}{trend}
               </Text>
             </View>
@@ -174,25 +179,25 @@ const ScoreTile: React.FC<{
         </View>
 
         {/* progress compatta */}
-        <View style={styles.progressTrack}>
+        <View style={[styles.progressTrack, { backgroundColor: colors.borderLight }]}>
           <View style={[styles.progressFill, { width: `${safeScore}%`, backgroundColor: def.color }]} />
         </View>
 
         <View style={styles.tapRow}>
-          <Text style={styles.tapHint}>{isExpanded ? 'Tap to collapse' : 'Tap to expand'}</Text>
-          <MaterialIcons name={isExpanded ? 'expand-less' : 'expand-more'} size={18} color="#6366f1" />
+          <Text style={[styles.tapHint, { color: colors.primary }]}>{isExpanded ? t('ui.tapToCollapse') : t('ui.tapToExpand')}</Text>
+          <MaterialIcons name={isExpanded ? 'expand-less' : 'expand-more'} size={18} color={colors.primary} />
         </View>
       </TouchableOpacity>
 
       {/* Collapsible vero */}
       <Collapsible expanded={isExpanded}>
         <View style={styles.definitionSection}>
-          <Text style={styles.definitionTitle}>Why it matters</Text>
-          <Text style={styles.definitionText}>{def.whyItMatters}</Text>
+          <Text style={[styles.definitionTitle, { color: colors.text }]}>{t('ui.whyItMatters')}</Text>
+          <Text style={[styles.definitionText, { color: colors.textSecondary }]}>{t(def.whyItMatters)}</Text>
         </View>
         <View style={styles.definitionSection}>
-          <Text style={styles.definitionTitle}>How it works</Text>
-          <Text style={styles.definitionText}>{def.howItWorks}</Text>
+          <Text style={[styles.definitionTitle, { color: colors.text }]}>{t('ui.howItWorks')}</Text>
+          <Text style={[styles.definitionText, { color: colors.textSecondary }]}>{t(def.howItWorks)}</Text>
         </View>
       </Collapsible>
     </View>
@@ -207,6 +212,8 @@ interface SkinCaptureCardProps {
 }
 
 export const SkinCaptureCard: React.FC<SkinCaptureCardProps> = ({ capture }) => {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
   const confidence = capture.confidence ?? 0.8;
   
   // Check if this is fallback data
@@ -230,23 +237,23 @@ export const SkinCaptureCard: React.FC<SkinCaptureCardProps> = ({ capture }) => 
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>
-            {isFallback ? 'Sample skin analysis' : 'Last skin analysis'}
+          <Text style={[styles.title, { color: colors.text }]}>
+            {isFallback ? t('analysis.skin.card.sampleTitle') : t('analysis.skin.card.lastTitle')}
           </Text>
-          <View style={styles.confidenceBadge}>
+          <View style={[styles.confidenceBadge, { backgroundColor: colors.surfaceMuted }]}>
             <View style={[styles.confidenceDot, { backgroundColor: getConfidenceColor(confidence) }]} />
-            <Text style={styles.confidenceText}>
-              {isFallback ? 'Sample' : getConfidenceLabel(confidence)} ({Math.round(confidence * 100)}%)
+            <Text style={[styles.confidenceText, { color: colors.text }]}>
+              {isFallback ? t('analysis.common.sample') : getConfidenceLabel(confidence, t)} ({Math.round(confidence * 100)}%)
             </Text>
           </View>
         </View>
         {isFallback && (
-          <Text style={styles.fallbackText}>
-            Complete your first skin analysis to see your real results
+          <Text style={[styles.fallbackText, { color: colors.textSecondary }]}>
+            {t('analysis.skin.card.sampleHint')}
           </Text>
         )}
       </View>
@@ -272,7 +279,6 @@ export const SkinCaptureCard: React.FC<SkinCaptureCardProps> = ({ capture }) => 
 // -----------------------------------------------------
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
     borderRadius: 18,
     padding: 16,
     marginHorizontal: 16,
@@ -283,7 +289,6 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.06)',
   },
   header: {
     marginBottom: 8,
@@ -296,12 +301,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
   },
   confidenceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 14,
@@ -315,18 +318,15 @@ const styles = StyleSheet.create({
   confidenceText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#374151',
   },
   fallbackText: {
     fontSize: 12,
-    color: '#6b7280',
     fontStyle: 'italic',
     marginTop: 6,
     textAlign: 'center',
   },
 
   scoreTile: {
-    backgroundColor: '#fff',
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
@@ -365,7 +365,6 @@ const styles = StyleSheet.create({
   scoreUnit: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#6b7280',
     marginLeft: 2,
   },
   trendChip: {
@@ -380,12 +379,10 @@ const styles = StyleSheet.create({
   trendChipText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#334155',
   },
   progressTrack: {
     height: 6,
     width: '100%',
-    backgroundColor: '#eef2ff',
     borderRadius: 999,
     overflow: 'hidden',
     marginTop: 8,
@@ -404,13 +401,10 @@ const styles = StyleSheet.create({
   tapHint: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#6366f1',
   },
 
   expandedContent: {
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    backgroundColor: '#fff',
     overflow: 'hidden',
   },
   definitionSection: {
@@ -421,12 +415,10 @@ const styles = StyleSheet.create({
   definitionTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#111827',
     marginBottom: 4,
   },
   definitionText: {
     fontSize: 12.5,
-    color: '#4b5563',
     lineHeight: 18,
   },
 });

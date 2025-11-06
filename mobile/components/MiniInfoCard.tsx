@@ -1,9 +1,10 @@
 "use client"
 
 import React, { useMemo } from "react"
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native"
+import { View, Text, StyleSheet, Platform } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons"
+import { useTheme } from "../contexts/ThemeContext"
 
 type WidgetSize = "small" | "medium" | "large"
 
@@ -19,8 +20,7 @@ interface Props {
   showStatus?: boolean
   status?: "pending" | "completed" | "warning"
   detailChips?: Array<{ icon: string; label: string; value: string }>
-  onPress?: () => void
-  onLongPress?: () => void
+  // onPress e onLongPress gestiti da EditableWidget
 }
 
 const statusStyles = {
@@ -51,10 +51,10 @@ const MiniInfoCard: React.FC<Props> = ({
   showStatus,
   status = "pending",
   detailChips,
-  onPress,
-  onLongPress,
+  // onPress e onLongPress gestiti da EditableWidget
 }) => {
   const st = statusStyles[status]
+  const { colors } = useTheme()
 
   const getTrendColor = () => {
     if (!trendValue) return "#6b7280"
@@ -81,14 +81,9 @@ const MiniInfoCard: React.FC<Props> = ({
 
   /* ==================== RENDER SMALL (immutato) ==================== */
   const renderSmall = () => (
-    <LinearGradient
-      colors={[`${color}10`, backgroundColor, `${color}04`]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.innerGradient}
-    >
+    <LinearGradient colors={[colors.surface, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.innerGradient}>
       <View style={styles.smallHeader}>
-        <Text style={styles.smallLabel} numberOfLines={1}>{label}</Text>
+        <Text style={[styles.smallLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
         {showStatus ? (
           <View style={[styles.smallStatusBadge, { backgroundColor: st.bg, borderColor: st.border }]}>
             <MaterialCommunityIcons name={st.icon as any} size={11} color={st.text} />
@@ -116,13 +111,13 @@ const MiniInfoCard: React.FC<Props> = ({
             >
               {primary}
             </Text>
-            {!!unit && <Text style={styles.smallUnitText}>{unit}</Text>}
+            {!!unit && <Text style={[styles.smallUnitText, { color: colors.textSecondary }]}>{unit}</Text>}
           </View>
           <Text style={styles.smallValueEmoji}>{icon}</Text>
         </View>
 
         {!!subtitle && (
-          <Text style={styles.smallSubtitle} numberOfLines={2}>
+          <Text style={[styles.smallSubtitle, { color: colors.textSecondary }]} numberOfLines={2}>
             {subtitle}
           </Text>
         )}
@@ -132,18 +127,13 @@ const MiniInfoCard: React.FC<Props> = ({
 
   /* ==================== RENDER MEDIUM (immutato) ==================== */
   const renderMedium = () => (
-    <LinearGradient
-      colors={[`${color}12`, backgroundColor, `${color}05`]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.innerGradient, styles.relative]}
-    >
+    <LinearGradient colors={[colors.surface, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.innerGradient, styles.relative]}>
       <View style={styles.miHeaderRow}>
         <View style={styles.miTitleWrap}>
           <View style={[styles.miIconChip, { backgroundColor: `${color}15`, borderColor: `${color}32` }]}>
             <Text style={styles.miIcon}>{icon}</Text>
           </View>
-          <Text style={styles.miTitle} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[styles.miTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
             {label}
           </Text>
         </View>
@@ -168,15 +158,15 @@ const MiniInfoCard: React.FC<Props> = ({
 
       <View style={[styles.miBodyRow, styles.miBodyWithRightPadding]}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={[styles.miValue, { color }]}>
+          <Text numberOfLines={1} style={[styles.miValue, { color }]}> 
             {value}
           </Text>
           {!!subtitle && (
-            <Text numberOfLines={1} style={styles.miSubtitle}>
+            <Text numberOfLines={1} style={[styles.miSubtitle, { color: colors.textSecondary }]}>
               {subtitle}
             </Text>
           )}
-          <Text style={styles.miDescriptor} numberOfLines={1}>
+          <Text style={[styles.miDescriptor, { color: colors.textSecondary }]} numberOfLines={1}>
             {descriptorText}
           </Text>
         </View>
@@ -192,7 +182,7 @@ const MiniInfoCard: React.FC<Props> = ({
         <View style={[styles.miDetailChipFloat, { borderColor: `${color}22` }]}>
           <Text style={styles.miChipEmoji}>{detailChips[0].icon}</Text>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.miChipLabel} numberOfLines={1}>
+            <Text style={[styles.miChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>
               {detailChips[0].label}
             </Text>
             <Text style={[styles.miChipValue, { color }]} numberOfLines={1}>
@@ -282,16 +272,11 @@ const MiniInfoCard: React.FC<Props> = ({
     </LinearGradient>
   )
 
+  // TouchableOpacity rimosso - gestito da EditableWidget
   return (
-    <TouchableOpacity
-      activeOpacity={0.88}
-      onPress={onPress}
-      onLongPress={onLongPress}
-      delayLongPress={450}
-      style={[styles.card, { backgroundColor }]}
-    >
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {size === "small" ? renderSmall() : size === "medium" ? renderMedium() : renderLarge()}
-    </TouchableOpacity>
+    </View>
   )
 }
 

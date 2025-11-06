@@ -1,0 +1,1245 @@
+{
+  "common": {
+    "save": "Salva",
+    "cancel": "Annulla",
+    "capture": "Scatta",
+    "pickFromGallery": "Scegli dalla galleria",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "close": "Chiudi",
+    "confirm": "Conferma",
+    "ok": "OK",
+    "loading": "Caricamento...",
+    "error": "Errore",
+    "success": "Operazione riuscita",
+    "retry": "Riprova",
+    "skip": "Salta",
+    "continue": "Continua",
+    "back": "Indietro"
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "subtitle": "Personalizza la tua esperienza, gestisci le notifiche e configura il tuo coach AI.",
+    "account": "Account",
+    "appSettings": "Impostazioni App",
+    "language": "Lingua",
+    "languageDescription": "Scegli la lingua dell'app",
+    "darkMode": "Modalità Scura",
+    "darkModeDescription": "Attiva il tema scuro",
+    "personalInfo": "Informazioni Personali",
+    "personalInfoDescription": "Gestisci le tue informazioni personali",
+    "preferences": "Preferenze",
+    "preferencesDescription": "Aggiorna il tuo focus sul benessere",
+    "healthPermissions": "Permessi Dati Salute",
+    "healthPermissionsDescription": "Gestisci l'accesso ai tuoi dati di salute",
+    "biometricSecurity": "Sicurezza Biometrica",
+    "biometricSecurityDescription": "Gestisci login Face ID / Touch ID",
+    "appConfig": "Configurazione App",
+    "appConfigDescription": "Controlla l'esperienza dell'app",
+    "notifications": "Notifiche",
+    "notificationsTitle": "Notifiche",
+    "notificationsDescription": "Definisci promemoria e avvisi",
+    "subscription": "Abbonamento",
+    "subscriptionDescription": "Gestisci il tuo piano",
+    "about": "Informazioni",
+    "aboutDescription": "Scopri di più su Wellness Coach",
+    "logout": "Logout",
+    "logoutConfirm": "Sei sicuro di voler effettuare il logout?",
+    "logoutCancel": "Annulla",
+    "version": "Versione App",
+    "versionValue": "1.0.0",
+    "profile": {
+      "loading": "Caricamento profilo...",
+      "error": "Impossibile caricare il profilo",
+      "age": "Età",
+      "gender": "Genere",
+      "memberSince": "Membro da",
+      "male": "Maschio",
+      "female": "Femmina",
+      "other": "Altro",
+      "preferNotToSay": "Preferisco non dirlo",
+      "notSpecified": "Non specificato"
+    },
+    "healthPermissionsUpdated": "Permessi Aggiornati",
+    "healthPermissionsUpdatedMessage": "I tuoi permessi per i dati di salute sono stati aggiornati con successo.",
+    "comingSoon": "In arrivo",
+    "comingSoonMessage": "Questa funzionalità sarà disponibile in un aggiornamento futuro.",
+    "aboutTitle": "Informazioni su Wellness Coach",
+    "aboutMessage": "Versione 1.0.0\n\nIl tuo coach AI personale per il benessere alimentato da analisi avanzate delle emozioni e della pelle.",
+    "chooseLanguage": "Scegli la lingua dell'app",
+    "languageChanged": "Lingua cambiata in {{lang}}",
+    "notificationsCategories": "Categorie Notifiche",
+    "notifications": {
+      "emotionSkin": "Analisi Emozioni/Pelle",
+      "diary": "Diario",
+      "fridgeExpiry": "Ingredienti in Scadenza",
+      "breathing": "Pausa/Respirazione",
+      "hydration": "Idratazione",
+      "morningGreeting": "Saluto Mattutino",
+      "eveningWinddown": "Buona Serata",
+      "sleepPreparation": "Preparazione al Sonno",
+      "diaryTimeTitle": "Orario Diario",
+      "diaryTitle": "Diario",
+      "diaryBody": "Ti va di scrivere una breve voce nel diario?",
+      "saved": "Notifiche aggiornate con successo"
+    }
+  },
+  "journal": {
+    "title": "Diario",
+    "today": "Oggi",
+    "dailyPrompt": "Prompt del giorno",
+    "regeneratePrompt": "Rigenera",
+    "entryTitle": "Entry di oggi",
+    "placeholder": "Scrivi il tuo diario di oggi…",
+    "save": "Salva",
+    "saved": "Salvato",
+    "savedAt": "Salvato alle {{time}}",
+    "offline": "Offline",
+    "offlineMessage": "Journal salvato in locale, verrà sincronizzato",
+    "savedSuccess": "Journal salvato e analizzato correttamente",
+    "latestNotes": "Ultime note",
+    "open": "Apri",
+    "characters": "{{count}}/2000",
+    "aiInsight": "AI Journal Insight",
+    "seeFullAnalysis": "Vedi analisi completa",
+    "completeAnalysis": "Analisi Completa",
+    "aiAnalysis": "Analisi AI",
+    "weekdays": {
+      "mon": "Lun",
+      "tue": "Mar",
+      "wed": "Mer",
+      "thu": "Gio",
+      "fri": "Ven",
+      "sat": "Sab",
+      "sun": "Dom"
+    },
+    "noEntry": "Nessuna entry per questo giorno",
+    "loadingHistory": "Caricamento storia...",
+    "errorLoading": "Errore nel caricamento"
+  },
+  "chat": {
+    "title": "Chat",
+    "subtitle": "Parla con il tuo coach AI",
+    "placeholder": "Scrivi il tuo messaggio...",
+    "voicePlaceholder": "Voice input detected...",
+    "sending": "Invio in corso...",
+    "welcomeMessage": {
+      "withName": "Ciao {{name}}! 👋 Sono il tuo AI wellness coach. Come ti senti oggi?",
+      "default": "Ciao! 👋 Sono il tuo AI wellness coach. Come ti senti oggi?"
+    },
+    "quickReplies": {
+      "stressed": "Mi sento stressato",
+      "sleep": "Aiutami a dormire meglio",
+      "energy": "Dammi consigli per l'energia",
+      "skin": "Consigli per la cura della pelle"
+    },
+    "quickStart": {
+      "title": "Avvio rapido",
+      "feelingStressed": "Mi sento stressato",
+      "sleepBetter": "Aiutami a dormire meglio",
+      "energyTips": "Dammi consigli energia",
+      "skinAdvice": "Consigli cura pelle"
+    }
+  },
+  "voiceChat": {
+    "title": "Chat Vocale",
+    "connecting": "Connessione...",
+    "connectingToLiveKit": "Connessione a LiveKit...",
+    "connectingToVoiceChat": "Connessione alla chat vocale...",
+    "connected": "Connesso",
+    "disconnected": "Disconnesso",
+    "listening": "In ascolto...",
+    "speaking": "AI sta parlando...",
+    "processing": "Elaborazione...",
+    "tapToStart": "Tocca per avviare la chat vocale",
+    "stopCall": "Ferma chiamata",
+    "error": "Errore",
+    "errorConnecting": "Errore durante la connessione. Riprova.",
+    "errorToken": "Impossibile ottenere il token LiveKit",
+    "connectionFailed": "Connessione fallita",
+    "connectionFailedMessage": "Impossibile connettersi alla chat vocale. Riprova.",
+    "waitingAgent": "In attesa dell'agente...",
+    "agentJoining": "L'agente sta entrando nella stanza..."
+  },
+  "home": {
+    "title": "Home",
+    "welcome": "Benvenuto",
+    "hello": "Ciao, {{name}}",
+    "tagline": "Ecco un rapido riepilogo del tuo percorso di benessere.",
+    "today": "Oggi",
+    "todayLowercase": "oggi",
+    "todayAtGlance": "Oggi in breve",
+    "todaySubtitle": "Il tuo riepilogo di benessere",
+    "insights": "Insight",
+    "suggestions": "Suggerimenti per Te",
+    "subtitle": "Routine curate per mantenere lo slancio",
+    "edit": "Modifica",
+    "done": "Fatto",
+    "loadingWidgets": "Caricamento widget...",
+    "moodBalance": "Equilibrio Umore",
+    "restfulSleep": "Sonno Riparatore",
+    "hydration": "Idratazione",
+    "vsYesterday": "vs ieri",
+    "sipWaterNow": "Bevi acqua ora",
+    "moodDescriptors": {
+      "veryLow": "Molto basso",
+      "low": "Basso",
+      "neutral": "Neutro",
+      "good": "Buono",
+      "great": "Ottimo",
+      "suggestions": {
+        "veryLow": "Fai una pausa consapevole",
+        "low": "Una breve passeggiata potrebbe aiutare",
+        "neutral": "Continua a notare i tuoi segnali",
+        "good": "Celebra le piccole vittorie",
+        "great": "Condividi l'energia positiva"
+      }
+    },
+    "activities": {
+      "title": "Attività di Oggi",
+      "todayActivities": "Attività di Oggi",
+      "morningMeditation": "Meditazione Mattutina",
+      "hydrationGoal": "Obiettivo Idratazione",
+      "eveningWalk": "Passeggiata Sera",
+      "gratitudeJournal": "Diario della Gratitudine",
+      "drinkGlasses": "Bevi {{count}} bicchieri d'acqua",
+      "breathingExercise": "Esercizio di respirazione di 5 minuti",
+      "outdoorWalk": "Passeggiata all'aperto di 20 minuti",
+      "gratefulThings": "Scrivi 3 cose per cui sei grato",
+      "ongoing": "In corso",
+      "completed": "Completato"
+    },
+    "status": {
+      "excellent": "Eccellente",
+      "good": "Buono",
+      "complete": "Completo",
+      "pending": "In attesa",
+      "loggedToday": "Registrato oggi",
+      "completeCheckIns": "Completa i check-in"
+    },
+    "sleep": {
+      "deepSleep": "Sonno profondo",
+      "rem": "REM",
+      "wakeTime": "Orario risveglio",
+      "quality": "Qualità",
+      "hours": "{{hours}}h"
+    },
+    "hrv": {
+      "currentHR": "Frequenza attuale",
+      "restingHR": "Frequenza a riposo",
+      "recovery": "Recupero",
+      "value": "{{value}}ms"
+    },
+    "analyses": {
+      "streak": "Serie",
+      "status": "Stato",
+      "days": "{{count}} giorni",
+      "lastCheckIn": "Ultimo check-in",
+      "today": "Oggi"
+    },
+    "goal": "Obiettivo",
+    "bpm": "bpm",
+    "stats": {
+      "streak": "Serie",
+      "momentum": "Momento",
+      "nextSession": "Prossima Sessione",
+      "days": "{{count}} giorni",
+      "loading": "Caricamento..."
+    },
+    "emptySlot": {
+      "addWidget": "Premi a lungo per aggiungere widget"
+    },
+    "permissions": {
+      "required": "Permessi Necessari",
+      "requiredMessage": "Per sincronizzare le attività con il calendario e i promemoria, abilita i permessi nelle Impostazioni."
+    },
+    "calendar": {
+      "synced": "Sincronizzato con Calendario",
+      "addedMessage": "{{title}} è stato aggiunto al tuo calendario!",
+      "ofCompleted": "{{completed}} di {{total}} completati",
+      "syncFailed": "Sincronizzazione Fallita",
+      "syncFailedMessage": "Impossibile sincronizzare con il calendario. Controlla i permessi."
+    },
+    "dailyCheckIn": {
+      "title": "Check-In Giornaliero",
+      "subtitle": "Uno sguardo a come si sentono corpo e mente"
+    }
+  },
+  "analysis": {
+    "emotion": {
+      "card": {
+        "lastTitle": "Ultima analisi emotiva",
+        "sampleTitle": "Esempio di analisi emotiva",
+        "sampleHint": "Completa la tua prima analisi emotiva per vedere i risultati reali"
+      },
+      "banner": {
+        "title": "EMOZIONE DOMINANTE",
+        "subtitle": "Rilevata nell’ultima sessione"
+      },
+      "hero": {
+        "title": "Rilevamento Emotivo in tempo reale",
+        "subtitle": "Fai una scansione rapida per capire come ti senti e tracciare i trend dell'umore."
+      },
+      "title": "Analisi Emotiva",
+      "capture": "Cattura",
+      "analyze": "Analizza",
+      "results": "Risultati",
+      "startDetection": "Avvia rilevamento",
+      "selectFromGallery": "Seleziona dalla galleria",
+      "analyzingExpressions": "Analisi delle espressioni",
+      "processingSubtitle": "Elaborazione delle micro-espressioni facciali e dei pattern emotivi...",
+      "currentMood": "Umore attuale",
+      "recentLogs": "Registri recenti",
+      "readyToScan": "Pronto per scansionare",
+      "saved": "{{count}} salvati",
+      "noneYet": "Nessuno ancora",
+      "recent": { "title": "Ultima sessione", "subtitle": "I risultati più recenti dell'analisi emotiva" },
+      "quickStats": { "title": "Statistiche rapide", "subtitle": "Panoramica del tuo benessere emotivo" },
+      "trends": { "title": "Trend Emotivi", "subtitle": "Andamento di 7 giorni del tuo stato emotivo" },
+      "valenceArousal": { "title": "Valence & Arousal", "subtitle": "Comprendi positività e intensità delle emozioni" },
+      "metrics": {
+        "valence": "Valence",
+        "positivity": "Positività",
+        "arousal": "Arousal",
+        "intensity": "Intensità",
+        "sessions": "Sessioni",
+        "thisMonth": "Questo mese",
+        "valenceDesc": "Misura la positività della tua espressione e dell'affetto generale.",
+        "arousalDesc": "Misura l'intensità/energia rilevata nel momento."
+      },
+      "howItWorks": {
+        "title": "Come funziona il rilevamento delle emozioni",
+        "subtitle": "La tecnologia dietro la nostra analisi",
+        "cardTitle": "Analisi potenziata dall'AI",
+        "cardDesc": "Reti neurali analizzano espressioni, micro-movimenti e segnali emotivi in tempo reale.",
+        "step1": "Inquadra il volto con la fotocamera",
+        "step2": "L'AI analizza i punti del viso e le micro-espressioni",
+        "step3": "Ottieni il dettaglio delle emozioni e insight sull'umore"
+      },
+      "errors": {
+        "cameraPermission": "Permesso fotocamera necessario per il rilevamento delle emozioni",
+        "serviceNotReady": "Il servizio di analisi non è pronto. Controlla la configurazione di OpenAI.",
+        "mediaLibraryPermission": "Permesso libreria media necessario per selezionare foto",
+        "imageProcessingFailed": "Impossibile elaborare l'immagine selezionata",
+        "analysisFailed": "Analisi fallita: {{error}}",
+        "failedToAnalyze": "Impossibile analizzare l'immagine: {{error}}",
+        "cameraNotReady": "Fotocamera non pronta. Attendi un momento...",
+        "initializationFailed": "Impossibile inizializzare il servizio di analisi. Controlla le impostazioni di OpenAI.",
+        "captureTimeout": "Tempo scaduto per la cattura. Riprova.",
+        "captureFailed": "Impossibile catturare l'immagine.",
+        "allStrategiesFailed": "Tutte le strategie di cattura sono fallite",
+        "cameraNull": "Riferimento fotocamera nullo - la fotocamera potrebbe essere stata smontata. Riavvia la fotocamera.",
+        "emptyData": "La fotocamera ha restituito dati vuoti. Riprova."
+      }
+    },
+    "skin": {
+      "card": {
+        "lastTitle": "Ultima analisi pelle",
+        "sampleTitle": "Esempio di analisi pelle",
+        "sampleHint": "Completa la tua prima analisi per vedere i risultati reali"
+      },
+      "metricExplainers": {
+        "texture": { "why": "Indica uniformità e levigatezza della pelle.", "how": "Analisi delle irregolarità superficiali." },
+        "redness": { "why": "Stima arrossamento/irritazione visibile.", "how": "Analisi dei segnali cromatici cutanei." },
+        "hydration": { "why": "Contenuto d'acqua superficiale.", "how": "Stima dell'idratazione da pattern cutanei." },
+        "oiliness": { "why": "Equilibrio del sebo e lucidità.", "how": "Rilevazione della brillantezza superficiale." },
+        "overall": { "label": "Salute della Pelle", "why": "Indice sintetico dei parametri chiave.", "how": "Combinazione di uniformità, rossore, idratazione e oleosità." }
+      },
+      "guides": {
+        "smoothness": { "title": "Guida miglioramento texture", "description": "Suggerimenti personalizzati per una pelle più uniforme." },
+        "redness": { "title": "Guida riduzione infiammazione", "description": "Come calmare pelle irritata e sensibile." },
+        "oiliness": { "title": "Guida bilanciamento sebo", "description": "Controlla l'eccesso di sebo con consigli mirati." },
+        "confidence": { "title": "Suggerimenti qualità analisi", "description": "Ottieni risultati di analisi più accurati." }
+      },
+      "header": {
+        "hydrationReadiness": "Prontezza idratazione",
+        "oilBalance": "Equilibrio sebo",
+        "lastSession": "Ultima sessione",
+        "awaitingScan": "In attesa di scansione",
+        "notMeasured": "Non misurato",
+        "neverRun": "Mai eseguita",
+        "justNow": "Adesso"
+      },
+      "hero": {
+        "title": "Analisi Avanzata della Pelle",
+        "subtitle": "Misura idratazione, rossore e texture con una scansione guidata."
+      },
+      "start": "Avvia analisi pelle",
+      "recent": { "title": "Analisi recente", "subtitle": "I risultati più recenti" },
+      "quickStats": { "title": "Statistiche rapide", "subtitle": "Panoramica della salute della pelle" },
+      "trends": { "title": "Trend del punteggio pelle", "subtitle": "Andamento di 7 giorni delle metriche cutanee" },
+      "metrics": {
+        "texture": "Uniformità",
+        "textureSubtitle": "Texture della pelle",
+        "redness": "Rossore",
+        "rednessSubtitle": "Rossore cutaneo",
+        "hydration": "Idratazione",
+        "hydrationSubtitle": "Contenuto d'acqua",
+        "oiliness": "Oleosità",
+        "oilinessSubtitle": "Attività sebacea"
+      },
+      "howItWorks": {
+        "title": "Come funziona l'analisi della pelle",
+        "subtitle": "La tecnologia dietro la nostra analisi",
+        "cardTitle": "Analisi pelle con AI",
+        "cardDesc": "Algoritmi di visione analizzano uniformità, idratazione, rossore e oleosità.",
+        "step1": "Scatta immagini ad alta risoluzione del viso",
+        "step2": "L'AI analizza texture, idratazione, rossore e oleosità",
+        "step3": "Ottieni un report dettagliato con consigli personalizzati"
+      },
+      "advancedModules": {
+        "title": "Moduli avanzati",
+        "subtitle": "Sblocca diagnosi più approfondite",
+        "tapForGuide": "Apri guida dettagliata"
+      },
+      "title": "Analisi Pelle",
+      "capture": "Cattura",
+      "analyze": "Analizza",
+      "results": "Risultati",
+      "startAnalysis": "Avvia analisi",
+      "selectFromGallery": "Seleziona dalla galleria",
+      "analyzingSkin": "Analisi della pelle",
+      "processingSubtitle": "Elaborazione della texture, idratazione e qualità della pelle...",
+      "currentStatus": "Stato attuale",
+      "recentLogs": "Registri recenti",
+      "readyToScan": "Pronto per scansionare",
+      "saved": "{{count}} salvati",
+      "noneYet": "Nessuno ancora",
+      "errors": {
+        "cameraPermission": "Permesso fotocamera necessario per l'analisi della pelle",
+        "serviceNotReady": "Il servizio di analisi non è pronto. Controlla la configurazione di OpenAI.",
+        "mediaLibraryPermission": "Permesso libreria media necessario per selezionare foto",
+        "imageProcessingFailed": "Impossibile elaborare l'immagine selezionata",
+        "analysisFailed": "Analisi fallita: {{error}}",
+        "failedToAnalyze": "Impossibile analizzare l'immagine: {{error}}",
+        "cameraNotReady": "Fotocamera non pronta. Attendi un momento...",
+        "initializationFailed": "Impossibile inizializzare il servizio di analisi. Controlla le impostazioni di OpenAI.",
+        "captureTimeout": "Tempo scaduto per la cattura. Riprova.",
+        "captureFailed": "Impossibile catturare l'immagine.",
+        "allStrategiesFailed": "Tutte le strategie di cattura sono fallite",
+        "cameraNull": "Riferimento fotocamera nullo - la fotocamera potrebbe essere stata smontata. Riavvia la fotocamera.",
+        "emptyData": "La fotocamera ha restituito dati vuoti. Riprova."
+      }
+    },
+    "food": {
+      "hero": {
+        "title": "Analisi Nutrizionale Avanzata",
+        "subtitle": "Identifica cibi e calcola nutrienti con una foto del tuo pasto."
+      },
+      "header": {
+        "calories": "Calorie",
+        "healthScore": "Punteggio Salute",
+        "lastSession": "Ultima sessione",
+        "awaitingScan": "In attesa di scansione",
+        "notMeasured": "Non misurato",
+        "neverRun": "Mai eseguita",
+        "justNow": "Adesso"
+      },
+      "title": "Analisi Cibo",
+      "capture": "Cattura",
+      "analyze": "Analizza",
+      "results": "Risultati",
+      "startAnalysis": "Avvia Analisi",
+      "selectFromGallery": "Seleziona dalla galleria",
+      "analyzingFood": "Analisi del cibo",
+      "processingSubtitle": "Elaborazione dell'immagine e calcolo dei nutrienti...",
+      "recent": {
+        "title": "Ultima Analisi",
+        "subtitle": "La tua analisi nutrizionale più recente"
+      },
+      "card": {
+        "lastTitle": "Ultima Analisi",
+        "sampleTitle": "Esempio di Analisi",
+        "sampleHint": "Esegui un'analisi per vedere i tuoi dati nutrizionali qui"
+      },
+      "mealTypes": {
+        "breakfast": "Colazione",
+        "lunch": "Pranzo",
+        "dinner": "Cena",
+        "snack": "Spuntino",
+        "other": "Pasto"
+      },
+      "metricExplainers": {
+        "calories": {
+          "why": "Le calorie forniscono l'energia necessaria per il corpo. Monitorarle aiuta a mantenere l'equilibrio energetico.",
+          "how": "Le calorie vengono calcolate in base ai macronutrienti identificati nel pasto. Ogni grammo di carboidrati e proteine fornisce 4 kcal, mentre i grassi forniscono 9 kcal per grammo."
+        },
+        "carbohydrates": {
+          "why": "I carboidrati sono la principale fonte di energia per il corpo. Aiutano a mantenere la funzione cerebrale e muscolare.",
+          "how": "I carboidrati vengono identificati in base ai cibi presenti nel pasto. Sono presenti in cereali, frutta, verdura e legumi."
+        },
+        "proteins": {
+          "why": "Le proteine sono essenziali per la costruzione e la riparazione dei tessuti muscolari. Aiutano anche a mantenere la massa muscolare.",
+          "how": "Le proteine vengono calcolate in base agli alimenti proteici identificati nel pasto, come carne, pesce, uova e legumi."
+        },
+        "fats": {
+          "why": "I grassi sono importanti per l'assorbimento delle vitamine liposolubili e forniscono energia. Aiutano a mantenere la salute delle cellule.",
+          "how": "I grassi vengono identificati in base agli alimenti grassi presenti nel pasto, come oli, noci, avocado e latticini."
+        },
+        "healthScore": {
+          "why": "Il punteggio di salute valuta la qualità nutrizionale complessiva del pasto. Aiuta a prendere decisioni alimentari più sane.",
+          "how": "Il punteggio viene calcolato in base all'equilibrio dei macronutrienti, alla presenza di vitamine e minerali, e alla varietà degli alimenti."
+        }
+      },
+      "quickStats": {
+        "title": "Panoramica Nutrizionale",
+        "subtitle": "Metriche nutrizionali chiave dalla tua analisi"
+      },
+      "metrics": {
+        "calories": "Calorie",
+        "caloriesSubtitle": "Calorie totali",
+        "carbohydrates": "Carboidrati",
+        "carbohydratesSubtitle": "Carbo (g)",
+        "proteins": "Proteine",
+        "proteinsSubtitle": "Proteine (g)",
+        "fats": "Grassi",
+        "fatsSubtitle": "Grassi (g)",
+        "fiber": "Fibra",
+        "healthScore": "Punteggio Salute"
+      },
+      "howItWorks": {
+        "title": "Come funziona l'analisi del cibo",
+        "subtitle": "Scopri come la nostra AI analizza i tuoi pasti",
+        "cardTitle": "Analisi Nutrizionale con AI",
+        "cardDesc": "La nostra tecnologia AI avanzata identifica i cibi e calcola le informazioni nutrizionali",
+        "step1": "Scatta una foto del tuo pasto",
+        "step2": "L'AI identifica i cibi e calcola i nutrienti",
+        "step3": "Ottieni insights nutrizionali dettagliati e raccomandazioni"
+      },
+      "detailedAnalysis": {
+        "title": "Ricevi ulteriori dettagli della tua analisi nutrizionale"
+      },
+      "results": {
+        "title": "Analisi Cibo Completata",
+        "subtitle": "Valutazione nutrizionale completa con AI",
+        "nutrition": "Nutrizione",
+        "mealType": "Tipo di Pasto",
+        "identifiedFoods": "Cibi Identificati",
+        "macronutrients": "Macronutrienti",
+        "vitaminsMinerals": "Vitamine e Minerali",
+        "vitamins": "Vitamine",
+        "minerals": "Minerali",
+        "recommendations": "Raccomandazioni",
+        "observations": "Osservazioni"
+      },
+      "mealType": {
+        "breakfast": "Colazione",
+        "lunch": "Pranzo",
+        "dinner": "Cena",
+        "snack": "Spuntino",
+        "other": "Pasto"
+      },
+      "health": {
+        "excellent": "Il tuo pasto è nutrizionalmente bilanciato!",
+        "good": "Il tuo pasto è sano con un buon valore nutrizionale.",
+        "fair": "Il tuo pasto potrebbe beneficiare di più varietà.",
+        "poor": "Considera di aggiungere cibi più nutrienti."
+      },
+      "dailyIntake": {
+        "title": "Assunzione Giornaliera",
+        "subtitle": "Monitora i tuoi progressi verso gli obiettivi nutrizionali giornalieri",
+        "ofGoal": "{{value}}% dell'obiettivo",
+        "caloriesDesc": "Progresso dell'assunzione calorica giornaliera. Aiuta a mantenere l'equilibrio energetico.",
+        "carbsDesc": "Progresso dell'assunzione di carboidrati giornaliera. Essenziale per l'energia.",
+        "proteinsDesc": "Progresso dell'assunzione di proteine giornaliera. Importante per la salute muscolare."
+      },
+      "recipes": {
+        "title": "Suggerimenti Ricette AI",
+        "subtitle": "Ricette personalizzate in base alle tue preferenze e obiettivi",
+        "tapForRecipe": "Tocca per la ricetta >",
+        "loading": "Caricamento ricetta...",
+        "generating": "Generazione ricetta in corso...",
+        "defaultStep1": "Prepara tutti gli ingredienti necessari.",
+        "defaultStep2": "Segui le istruzioni di cottura.",
+        "defaultStep3": "Servi e gusta il tuo pasto.",
+        "breakfast": {
+          "title": "Idee per Colazione",
+          "description": "Inizia la giornata con ricette per colazione nutrienti"
+        },
+        "lunch": {
+          "title": "Ricette per Pranzo",
+          "description": "Opzioni per pranzo sane e soddisfacenti"
+        },
+        "dinner": {
+          "title": "Suggerimenti per Cena",
+          "description": "Ricette per cena bilanciate per una nutrizione ottimale"
+        },
+        "snack": {
+          "title": "Spuntini Sani",
+          "description": "Idee per spuntini nutrienti per mantenerti energico"
+        }
+      },
+      "fridge": {
+        "title": "Cosa hai nel Frigo?",
+        "subtitle": "Ottieni suggerimenti di ricette personalizzati in base ai tuoi ingredienti",
+        "cardTitle": "Ricerca Ricette Intelligente",
+        "cardDesc": "Indicaci quali ingredienti hai, e ti suggeriremo ricette deliziose personalizzate in base alle tue preferenze e obiettivi nutrizionali.",
+        "addIngredients": "Aggiungi Ingredienti",
+        "modalDesc": "Inserisci gli ingredienti che hai disponibili nel tuo frigo o nella dispensa. L'AI genererà una ricetta personalizzata per te!",
+        "ingredientsList": "Ingredienti Disponibili",
+        "ingredientPlaceholder": "Ingrediente {{number}}",
+        "addMore": "Aggiungi altro ingrediente",
+        "expiryPlaceholder": "Scadenza (AAAA-MM-GG)",
+        "quickAdd": "Dettatura / Inserimento rapido",
+        "quickAddPlaceholder": "Esempio: latte, uova, pomodori, tonno in scatola",
+        "parseAndAdd": "Analizza e aggiungi",
+        "dictate": "Detta",
+        "useKeyboardDictation": "Usa la dettatura della tastiera",
+        "dictationHint": "Suggerimento: tocca il microfono sulla tastiera per dettare, separa con virgole.",
+        "startRecording": "Registra",
+        "stopRecording": "Ferma",
+        "transcript": "Trascrizione",
+        "confirmIngredients": "Conferma ingredienti",
+        "addAll": "Aggiungi tutti",
+        "expires": "Scade",
+        "recordingError": "Errore durante la registrazione",
+        "ambiguousTitle": "Non ho capito '{{text}}'",
+        "ambiguousMessage": "Intendevi: {{suggestions}}",
+        "generateRecipe": "Genera Ricetta",
+        "recipeGenerated": "Ricetta Generata",
+        "noIngredients": "Inserisci almeno un ingrediente",
+        "needMoreIngredients": "Aggiungi almeno {{count}} ingredienti prima di generare una ricetta",
+        "generateError": "Errore durante la generazione della ricetta",
+        "minutes": "minuti",
+        "servings": "porzioni",
+        "nutritionPerServing": "Valori Nutrizionali per Porzione",
+        "ingredients": "Ingredienti",
+        "steps": "Procedimento",
+        "tips": "Consigli",
+        "missingIngredients": "Ingredienti Mancanti",
+        "optional": "opzionale",
+        "newRecipe": "Nuova Ricetta"
+      },
+      "goals": {
+        "title": "Obiettivi Nutrizionali",
+        "manual": "Inserimento Manuale",
+        "aiSuggestion": "Suggerimento AI",
+        "aiTitle": "Calcolo con AI",
+        "aiDesc": "Lascia che la nostra AI calcoli le tue esigenze caloriche giornaliere ottimali e la distribuzione dei macronutrienti in base al tuo profilo.",
+        "getAISuggestion": "Ottieni Suggerimento AI",
+        "aiSuggestionReady": "Suggerimento Pronto",
+        "aiSuggestionDesc": "L'AI ha calcolato i tuoi obiettivi nutrizionali. Rivedi e modifica se necessario.",
+        "aiError": "Impossibile ottenere il suggerimento AI. Prova l'inserimento manuale.",
+        "dailyCalories": "Calorie Giornaliere",
+        "macronutrients": "Distribuzione Macronutrienti",
+        "macronutrientsDesc": "Imposta la distribuzione percentuale dei tuoi macronutrienti (devono sommare a 100%)",
+        "total": "Totale",
+        "carbsDesc": "Consigliato: 40-60% per l'energia",
+        "proteinsDesc": "Consigliato: 20-30% per la salute muscolare",
+        "fatsDesc": "Consigliato: 20-30% per l'assorbimento dei nutrienti",
+        "percentagesError": "Le percentuali devono sommare a 100%",
+        "caloriesError": "Le calorie giornaliere devono essere maggiori di 0",
+        "nutritionistTitle": "Da Nutrizionista",
+        "nutritionistDesc": "Se hai obiettivi specifici da un nutrizionista, segnalali qui.",
+        "nutritionistSet": "Contrassegnato come Nutrizionista",
+        "nutritionistSetDesc": "I tuoi obiettivi sono contrassegnati come provenienti da un nutrizionista.",
+        "markAsNutritionist": "Segna come Nutrizionista",
+        "noUser": "Utente non trovato",
+        "noProfile": "Profilo non trovato. Completa prima il tuo profilo.",
+        "configureGoals": "Configura Obiettivi",
+        "currentGoals": "Obiettivi Attuali",
+        "noGoalsSet": "Nessun obiettivo configurato. Tocca per impostare i tuoi obiettivi nutrizionali.",
+        "from": "Fonte",
+        "sourceManual": "Manuale",
+        "sourceAI": "Suggerito da AI",
+        "sourceNutritionist": "Nutrizionista",
+        "dietGoal": "Obiettivo Dieta",
+        "dietGoalDesc": "Scegli il tuo obiettivo principale per personalizzare calorie e macronutrienti",
+        "dietGoals": {
+          "maintenance": "Mantenimento",
+          "weight_loss": "Dimagrire",
+          "bulk": "Aumento Peso",
+          "custom": "Personalizzato"
+        },
+        "missingData": "Dati Mancanti",
+        "missingDataDesc": "Completa il tuo profilo con età, peso, altezza e genere per ottenere un suggerimento AI preciso.",
+        "missingActivityLevel": "Livello di Attività Mancante",
+        "missingActivityLevelDesc": "Imposta il tuo livello di attività per calcolare accuratamente le tue esigenze caloriche.",
+        "setActivityLevel": "Imposta Livello",
+        "selectActivityLevel": "Seleziona Livello di Attività",
+        "selectActivityLevelDesc": "Quanto sei attivo durante la settimana?",
+        "activityLevels": {
+          "sedentary": "Sedentario",
+          "lightlyActive": "Leggermente Attivo",
+          "moderatelyActive": "Moderatamente Attivo",
+          "veryActive": "Molto Attivo",
+          "extremelyActive": "Estremamente Attivo"
+        },
+        "saveError": "Errore durante il salvataggio"
+      },
+      "errors": {
+        "cameraPermission": "Permesso fotocamera necessario per l'analisi del cibo",
+        "serviceNotReady": "Il servizio di analisi non è pronto. Controlla la configurazione di OpenAI.",
+        "mediaLibraryPermission": "Permesso libreria media necessario per selezionare foto",
+        "imageProcessingFailed": "Impossibile elaborare l'immagine selezionata",
+        "analysisFailed": "Analisi fallita: {{error}}",
+        "failedToAnalyze": "Impossibile analizzare l'immagine: {{error}}",
+        "cameraNotReady": "Fotocamera non pronta. Attendi un momento...",
+        "initializationFailed": "Impossibile inizializzare il servizio di analisi. Controlla le impostazioni di OpenAI.",
+        "captureTimeout": "Tempo scaduto per la cattura. Riprova.",
+        "captureFailed": "Impossibile catturare l'immagine.",
+        "allStrategiesFailed": "Tutte le strategie di cattura sono fallite",
+        "cameraNull": "Riferimento fotocamera nullo - la fotocamera potrebbe essere stata smontata. Riavvia la fotocamera.",
+        "emptyData": "La fotocamera ha restituito dati vuoti. Riprova."
+      }
+    },
+    "common": {
+      "back": "Indietro",
+      "retry": "Riprova",
+      "close": "Chiudi",
+      "processing": "Elaborazione...",
+      "requestingPermission": "Richiesta permesso fotocamera…",
+      "loading": "Caricamento...",
+      "sample": "Esempio",
+      "success": "Successo"
+    }
+  },
+  "ui": {
+    "tapToExpand": "Tocca per espandere",
+    "tapToCollapse": "Tocca per ridurre",
+    "whyItMatters": "Perché è importante",
+    "howItWorks": "Come funziona"
+  },
+  "rating": {
+    "excellent": "Eccellente",
+    "good": "Buono",
+    "fair": "Discreto",
+    "poor": "Scarso"
+  },
+  "notifications": {
+    "moodDeclineTitle": "Stai bene?",
+    "moodDeclineMessage": "Hai notato un calo del tuo umore negli ultimi 3 giorni. Vuoi parlare con il tuo coach?",
+    "permissionRequired": "Permesso Necessario",
+    "permissionMessage": "Abbiamo bisogno del permesso per inviarti notifiche utili sul tuo benessere."
+  },
+  "popups": {
+    "wellnessSuggestion": {
+      "defaultTitle": "Attività di Benessere",
+      "defaultDescription": "Un'attività di benessere utile per te.",
+      "startExercise": "Inizia subito l'esercizio",
+      "addToToday": "Aggiungi a Oggi",
+      "later": "Dopo"
+    },
+    "recommendation": {
+      "title": "Dettagli Raccomandazione",
+      "subtitle": "Analisi approfondita",
+      "scientificExplanation": "Spiegazione Scientifica",
+      "correlations": "Correlazioni con i tuoi dati",
+      "expectedBenefits": "Benefici Attesi"
+    },
+    "pillDetail": {
+      "streak": {
+        "title": "Serie",
+        "subtitle": "Il tuo percorso di costanza",
+        "currentStreak": "Serie Attuale",
+        "currentStreakDesc": "Sei stato costante per {{days}} giorni consecutivi!",
+        "bestStreak": "Migliore Serie",
+        "bestStreakDesc": "La tua serie più lunga è stata di {{days}} giorni a marzo",
+        "goal": "Obiettivo Serie",
+        "goalDesc": "Sei al {{percent}}% verso il tuo obiettivo mensile",
+        "tips": "Consigli per Continuare",
+        "keepItUp": "Continua così!",
+        "tipsDesc": "• Imposta promemoria quotidiani\n• Tieni traccia dei tuoi progressi\n• Celebra piccole vittorie\n• Non rompere la catena!"
+      },
+      "momentum": {
+        "title": "Momento",
+        "subtitle": "Il tuo tasso di completamento",
+        "current": "Momento Attuale",
+        "currentDesc": "Hai completato {{completed}} di {{total}} attività negli ultimi 7 giorni",
+        "trend": "Tendenza",
+        "stable": "Stabile →",
+        "trendUp": "In Aumento ↑",
+        "trendDown": "In Calo ↓",
+        "unknown": "Sconosciuto",
+        "trendDesc": {
+          "up": "Aumento del {{percent}}% rispetto alla scorsa settimana",
+          "down": "Diminuzione del {{percent}}% rispetto alla scorsa settimana",
+          "stable": "Variazione del {{percent}}% rispetto alla scorsa settimana"
+        },
+        "noTrend": "Nessun dato di tendenza disponibile",
+        "completionRate": "Tasso di Completamento",
+        "completionRateDesc": "Basato sulle tue attività e obiettivi di benessere",
+        "tips": "Consigli per Migliorare",
+        "keepBuilding": "Continua a costruire!",
+        "tipsDesc": "• Completa le attività quotidiane\n• Imposta obiettivi raggiungibili\n• Tieni traccia dei progressi\n• Celebra i traguardi"
+      },
+      "nextSession": {
+        "title": "Prossima Sessione",
+        "subtitle": "La tua prossima sessione di benessere",
+        "scheduledTime": "Orario Programmato",
+        "scheduledTimeDesc": "La tua prossima sessione di benessere è programmata per oggi alle 18:00",
+        "sessionType": "Tipo di Sessione",
+        "sessionTypeDesc": "Analizzeremo il tuo stato emotivo e forniremo insights personalizzati",
+        "preparation": "Preparazione",
+        "getReady": "Preparati!",
+        "preparationDesc": "• Trova uno spazio tranquillo\n• Assicurati una buona illuminazione\n• Fai alcuni respiri profondi\n• Sii pronto a condividere come ti senti",
+        "benefits": "Benefici",
+        "stayConsistent": "Resta coerente!",
+        "benefitsDesc": "Sessioni regolari aiutano a tracciare il tuo percorso di benessere e forniscono insights preziosi per il miglioramento"
+      }
+    },
+    "detailedAnalysis": {
+      "noData": "Nessun dato di analisi disponibile",
+      "timeout": "Timeout durante la generazione dell'analisi. Riprova.",
+      "notAuthenticated": "Utente non autenticato",
+      "loadingError": "Errore durante il caricamento dell'analisi",
+      "generationFailed": "Impossibile generare l'analisi dettagliata. Riprova più tardi.",
+      "generationError": "Errore durante la generazione dell'analisi. Controlla la connessione e riprova.",
+      "emotionTitle": "Analisi Emotiva Dettagliata",
+      "skinTitle": "Analisi della Pelle Dettagliata",
+      "foodTitle": "Analisi Nutrizionale Avanzata"
+    },
+    "gauge": {
+      "trend": "Trend vs tuo solito",
+      "whyImportant": "Perché è importante",
+      "howItWorks": "Come funziona",
+      "examples": "Esempi",
+      "recommendedAction": "Azione consigliata",
+      "resources": "Risorse",
+      "disclaimer": "⚠️ Valutazione cosmetica, non diagnostica. Per dubbi clinici rivolgiti a un professionista."
+    }
+  },
+  "modals": {
+    "healthPermissions": {
+      "title": "Permessi di Salute",
+      "subtitle": "Connetti i tuoi dati di salute per un monitoraggio completo del benessere",
+      "loading": "Caricamento permessi...",
+      "platformAvailable": "{{platform}} disponibile",
+      "skipForNow": "Salta per ora",
+      "requestPermissions": "Richiedi Permessi ({{count}})",
+      "privacyNote": "I tuoi dati di salute sono protetti e utilizzati solo per fornirti insights personalizzati",
+      "warning": "Attenzione",
+      "selectAtLeastOne": "Seleziona almeno un permesso per continuare",
+      "successMessage": "Permessi concessi: {{granted}}\nPermessi negati: {{denied}}",
+      "partialSuccess": "Permessi parzialmente concessi",
+      "deniedPermissions": "Permessi negati",
+      "deniedInstructions": "Puoi concedere manualmente questi permessi aprendo Health Connect nelle impostazioni del dispositivo o toccando il pulsante 'Apri Impostazioni'.",
+      "perfect": "Perfetto!",
+      "deniedTitle": "Permessi negati",
+      "deniedMessage": "Alcuni permessi sono stati negati. Puoi configurarli manualmente nelle impostazioni di salute del tuo dispositivo.",
+      "openSettings": "Apri Impostazioni",
+      "errorMessage": "Si è verificato un errore durante la richiesta dei permessi",
+      "reloadPermissions": "Ricarica permessi",
+      "permissionsGranted": "Permessi concessi",
+      "permissionsNowActive": "I permessi sono ora attivi!",
+      "categories": {
+        "activity": "Attività",
+        "vitals": "Parametri Vitali",
+        "sleep": "Sonno",
+        "nutrition": "Nutrizione",
+        "mindfulness": "Mindfulness",
+        "other": "Altro"
+      }
+    },
+        "widgetGoal": {
+          "subtitle": "Imposta il tuo obiettivo giornaliero preferito.",
+          "rangeHint": "Min {{min}} • Max {{max}} (passo {{step}})",
+          "steps": {
+            "title": "Obiettivo Passi Giornaliero",
+            "unit": "passi",
+            "hint": "es. 10000"
+          },
+          "hydration": {
+            "title": "Obiettivo Idratazione",
+            "unit": "bicchieri",
+            "hint": "es. 8"
+          },
+          "meditation": {
+            "title": "Obiettivo Meditazione",
+            "unit": "minuti",
+            "hint": "es. 30"
+          },
+          "sleep": {
+            "title": "Obiettivo Sonno",
+            "unit": "ore",
+            "hint": "es. 8"
+          }
+        },
+        "biometric": {
+          "title": "Biometric Security",
+          "useTitle": "Usa {{type}}",
+          "notAvailableTitle": "Biometrico Non Disponibile",
+          "description": "Abilita l'autenticazione biometrica per accedere all'app in modo sicuro e veloce usando {{type}}.",
+          "notSupported": "Il tuo dispositivo non supporta l'autenticazione biometrica.",
+          "currentStatus": "Stato Attuale",
+          "enabled": "Abilitato",
+          "disabled": "Disabilitato",
+          "benefits": "Vantaggi",
+          "benefit1": "Accesso sicuro e veloce",
+          "benefit2": "Nessuna password da ricordare",
+          "benefit3": "Protezione avanzata",
+          "privacyNote": "I tuoi dati biometrici rimangono sempre privati e non vengono mai condivisi.",
+          "notAvailable": "Non disponibile",
+          "notAvailableMessage": "I dati biometrici non sono disponibili su questo dispositivo",
+          "enableTitle": "Abilita Autenticazione Biometrica",
+          "enableMessage": "Inserisci la tua password per salvare i dati biometrici",
+          "enable": "Abilita",
+          "passwordRequired": "La password è obbligatoria",
+          "incorrectPassword": "Password non corretta",
+          "enabledSuccess": "Autenticazione biometrica abilitata!\nPotrai accedere usando {{type}} al prossimo accesso.",
+          "enableError": "Impossibile abilitare l'autenticazione biometrica",
+          "disabledSuccess": "Autenticazione biometrica disabilitata",
+          "disableError": "Impossibile disabilitare l'autenticazione biometrica"
+        },
+        "biometricSetup": {
+          "title": "Autenticazione Biometrica",
+          "subtitle": "Configura {{type}} per un accesso rapido e sicuro",
+          "checkingCapabilities": "Verifica delle capacità del dispositivo...",
+          "availableOnDevice": "{{type}} disponibile su questo dispositivo",
+          "credentialsProtected": "Le tue credenziali sono protette con crittografia end-to-end",
+          "notAvailable": "Autenticazione biometrica non disponibile",
+          "configureInSettings": "Configura l'autenticazione biometrica nelle impostazioni del dispositivo",
+          "skipForNow": "Salta per ora",
+          "configure": "Configura {{type}}",
+          "credentialsNotAvailable": "Credenziali non disponibili per la configurazione biometrica",
+          "cannotSaveCredentials": "Impossibile salvare le credenziali",
+          "setupSuccess": "L'autenticazione {{type}} è stata configurata con successo. D'ora in poi potrai accedere rapidamente all'app.",
+          "perfect": "Perfetto!",
+          "setupError": "Si è verificato un errore durante la configurazione"
+        },
+        "biometricSuggestion": {
+          "title": "Autenticazione Biometrica",
+          "enableTitle": "Abilita {{type}}",
+          "description": "Usa {{type}} per accedere rapidamente all'app senza inserire password."
+        }
+    },
+  "onboarding": {
+    "skip": "Salta",
+    "startJourney": "Inizia il tuo viaggio",
+    "welcome": {
+      "title": "Benvenuto in Wellness Coach",
+      "subtitle": "Il tuo compagno AI per il benessere",
+      "description": "Scopri come l'intelligenza artificiale può trasformare la tua routine di benessere quotidiana.",
+      "features": {
+        "0": "Analisi emotiva in tempo reale",
+        "1": "Monitoraggio della pelle avanzato",
+        "2": "Coaching personalizzato 24/7"
+      },
+      "actionText": "Iniziamo!"
+    },
+    "features": {
+      "title": "Funzionalità Principali",
+      "subtitle": "Tutto quello che ti serve in un'app",
+      "description": "Esplora le potenti funzionalità progettate per migliorare il tuo benessere.",
+      "features": {
+        "0": "Dashboard personalizzabile con widget",
+        "1": "Analisi della pelle con AI",
+        "2": "Rilevamento emozioni avanzato",
+        "3": "Journaling intelligente",
+        "4": "Esercizi di respirazione guidati"
+      },
+      "actionText": "Continua"
+    },
+    "health": {
+      "title": "Integrazione Salute",
+      "subtitle": "Connetti i tuoi dati di salute",
+      "description": "Sincronizza con Apple Health o Google Fit per un monitoraggio completo del tuo benessere.",
+      "features": {
+        "0": "Sincronizzazione automatica con HealthKit",
+        "1": "Monitoraggio sonno e attività",
+        "2": "Analisi HRV e frequenza cardiaca",
+        "3": "Tracking passi e calorie"
+      },
+      "actionText": "Abilita Salute"
+    },
+    "ai": {
+      "title": "AI Daily Copilot",
+      "subtitle": "Il tuo assistente personale",
+      "description": "Ricevi consigli personalizzati basati sui tuoi dati di salute e preferenze.",
+      "features": {
+        "0": "Analisi giornaliera del tuo stato",
+        "1": "Raccomandazioni personalizzate",
+        "2": "Insights intelligenti sui tuoi dati",
+        "3": "Piano di benessere adattivo"
+      },
+      "actionText": "Scopri AI Copilot"
+    },
+    "privacy": {
+      "title": "Privacy e Sicurezza",
+      "subtitle": "I tuoi dati sono al sicuro",
+      "description": "Utilizziamo crittografia end-to-end e non condividiamo mai i tuoi dati personali.",
+      "features": {
+        "0": "Crittografia end-to-end",
+        "1": "Dati salvati localmente",
+        "2": "Nessuna condivisione con terzi",
+        "3": "Controllo completo sui tuoi dati"
+      },
+      "actionText": "Accetta e Continua"
+    }
+  },
+  "auth": {
+    "welcome": "Benvenuto",
+    "createAccount": "Crea Account",
+    "loginSubtitle": "Accedi al tuo account WellnessCoach",
+    "signupSubtitle": "Inizia il tuo percorso di benessere",
+    "login": "Accedi",
+    "signup": "Registrati",
+    "email": "Email",
+    "emailPlaceholder": "Inserisci la tua email",
+    "password": "Password",
+    "passwordPlaceholder": "Inserisci la tua password",
+    "passwordPlaceholderSignup": "Crea una password sicura",
+    "confirmPassword": "Conferma Password",
+    "confirmPasswordPlaceholder": "Conferma la tua password",
+    "rememberMe": "Ricordami",
+    "forgotPassword": "Password dimenticata?",
+    "firstName": "Nome",
+    "lastName": "Cognome",
+    "age": "Età",
+    "agePlaceholder": "Es. 28",
+    "error": "Errore",
+    "fillAllFields": "Compila tutti i campi obbligatori",
+    "passwordsDoNotMatch": "Le password non coincidono",
+    "passwordMinLength": "La password deve essere di almeno 6 caratteri",
+    "invalidEmail": "Inserisci un indirizzo email valido",
+    "loginError": "Errore Login",
+    "loginSuccess": "Login effettuato con successo!",
+    "invalidCredentials": "Credenziali non valide",
+    "signupError": "Errore Registrazione",
+    "signupFailed": "Errore durante la registrazione",
+    "signupCompleted": "Registrazione Completata",
+    "checkEmail": "Controlla la tua email per confermare l'account",
+    "emailSent": "Email Inviata",
+    "checkEmailForInstructions": "Controlla la tua casella di posta per le istruzioni",
+    "enterEmailFirst": "Inserisci prima la tua email",
+    "resetPasswordError": "Errore durante il reset password",
+    "operationError": "Si è verificato un errore durante l'operazione",
+    "genericError": "Si è verificato un errore",
+    "gender": {
+      "label": "Genere",
+      "select": "Seleziona genere",
+      "selectTitle": "Seleziona Genere",
+      "male": "Uomo",
+      "female": "Donna",
+      "other": "Altro",
+      "preferNotToSay": "Preferisco non dire"
+    }
+  },
+  "profile": {
+    "title": "Informazioni Personali",
+    "loading": "Caricamento profilo...",
+    "fullName": "Nome Completo",
+    "fullNamePlaceholder": "Inserisci il tuo nome completo",
+    "fullNameRequired": "Il nome completo è obbligatorio",
+    "emailCannotBeChanged": "L'email non può essere modificata",
+    "selectGender": "Scegli il tuo genere",
+    "saveChanges": "Salva Modifiche",
+    "loadError": "Impossibile caricare il profilo",
+    "updateSuccess": "Profilo aggiornato con successo",
+    "updateError": "Impossibile aggiornare il profilo",
+    "weight": "Peso",
+    "weightPlaceholder": "es. 70",
+    "height": "Altezza",
+    "heightPlaceholder": "es. 175",
+    "activityLevel": "Livello di Attività",
+    "selectActivityLevel": "Seleziona Livello di Attività",
+    "selectActivityLevelDesc": "Scegli il tuo livello di attività giornaliero per un calcolo accurato delle calorie",
+    "activityLevelHelp": "Utilizzato per calcolare il tuo fabbisogno calorico giornaliero in base al tuo livello di attività",
+    "activityLevels": {
+      "sedentary": "Sedentario (poco o nessun esercizio)",
+      "lightlyActive": "Leggermente Attivo (esercizio leggero 1-3 giorni/settimana)",
+      "moderatelyActive": "Moderatamente Attivo (esercizio moderato 3-5 giorni/settimana)",
+      "veryActive": "Molto Attivo (esercizio intenso 6-7 giorni/settimana)",
+      "extremelyActive": "Estremamente Attivo (esercizio molto intenso, lavoro fisico)"
+    }
+  },
+  "widgets": {
+    "steps": "Passi",
+    "meditation": "Meditazione",
+    "hydration": "Idratazione",
+    "sleep": "Sonno",
+    "hrv": "HRV",
+    "analyses": "Check-In",
+    "checkIn": "Check-In",
+    "large": "Grande (65%)",
+    "small": "Piccolo (30%)"
+  },
+  "tabs": {
+    "home": "Home",
+    "emotion": "Emotion",
+    "skin": "Skin",
+    "food": "Cibo",
+    "library": "Libreria",
+    "chat": "Chat",
+    "settings": "Impostazioni"
+  },
+  "dailyCheckIn": {
+    "mood": {
+      "title": "Equilibrio Umore",
+      "subtitle": "Come ti senti oggi?",
+      "addNote": "Aggiungi una nota",
+      "notePlaceholder": "Scrivi dei tuoi sentimenti…",
+      "saveMood": "Salva Umore",
+      "saved": "Salvato",
+      "edit": "Modifica",
+      "done": "Fatto",
+      "veryLow": "Molto basso",
+      "low": "Basso",
+      "okay": "Ok",
+      "good": "Buono",
+      "great": "Ottimo"
+    },
+    "sleep": {
+      "title": "Sonno Riparatore",
+      "subtitle": "Quanto ti senti riposato?",
+      "notes": "Note",
+      "notesPlaceholder": "Come ti sei sentito quando ti sei svegliato?",
+      "saveRestLevel": "Salva Riposo",
+      "edit": "Modifica",
+      "done": "Fatto",
+      "exhausted": "Sfinito",
+      "tired": "Stanco",
+      "okay": "Ok",
+      "rested": "Riposato",
+      "energized": "Energico"
+    }
+  },
+  "widgetCustomization": {
+    "title": "Personalizza Widget",
+    "sectionTitle": "Impostazioni Widget",
+    "sectionSubtitle": "Tocca per mostrare/nascondere widget, premi a lungo per cambiare dimensione",
+    "error": "Errore",
+    "toggleError": "Impossibile attivare/disattivare widget",
+    "sizeError": "Impossibile cambiare dimensione widget",
+    "reorderError": "Impossibile riordinare widget",
+    "helpTitle": "Come personalizzare:",
+    "help1": "• Tocca l'icona dell'occhio per mostrare/nascondere widget",
+    "help2": "• Tocca l'icona ridimensiona per cambiare dimensione widget",
+    "help3": "• Trascina la maniglia per riordinare widget",
+    "help4": "• I widget grandi mostrano più informazioni"
+  },
+  "wellnessSuggestions": {
+    "title": "Suggerimenti di Benessere",
+    "subtitle": "Esplora routine curate dal tuo coach AI per supportare umore, sonno e salute della pelle",
+    "personalizedInsights": "Insight di Benessere Personalizzati",
+    "viewAll": "Vedi Tutto",
+    "categories": {
+      "mindBody": {
+        "name": "Mente e Corpo",
+        "description": "Benessere mentale e movimento fisico"
+      },
+      "nutrition": {
+        "name": "Nutrizione",
+        "description": "Alimentazione sana e idratazione"
+      },
+      "recovery": {
+        "name": "Recupero",
+        "description": "Routine di sonno e relax"
+      },
+      "mindfulness": {
+        "name": "Mindfulness",
+        "description": "Meditazione e chiarezza mentale"
+      },
+      "energy": {
+        "name": "Energia",
+        "description": "Aumentare vitalità e motivazione"
+      }
+    },
+    "suggestions": {
+      "breathingExercises": {
+        "title": "Esercizi di Respirazione",
+        "description": "Pratica la respirazione consapevole per ridurre lo stress e ritrovare la concentrazione"
+      },
+      "takeAWalk": {
+        "title": "Fai una Passeggiata",
+        "description": "Goditi una passeggiata all'aperto per migliorare l'umore e la circolazione"
+      },
+      "stretching": {
+        "title": "Stretching Dolce",
+        "description": "Rilascia la tensione con movimenti dolci per collo e spalle"
+      },
+      "yogaFlow": {
+        "title": "Yoga Flow",
+        "description": "Connetti mente e corpo con una sequenza yoga gentile"
+      },
+      "hydration": {
+        "title": "Idratazione",
+        "description": "Bevi acqua costantemente durante il giorno per mantenere la pelle luminosa"
+      },
+      "healthySnack": {
+        "title": "Spuntino Sano",
+        "description": "Scegli spuntini ricchi di nutrienti come noci o frutta fresca"
+      },
+      "greenTea": {
+        "title": "Pausa Tè Verde",
+        "description": "Goditi il tè verde ricco di antiossidanti per un momento rilassante"
+      },
+      "eveningRoutine": {
+        "title": "Routine Sera",
+        "description": "Abbassa le luci ed evita gli schermi 60 minuti prima di andare a letto"
+      },
+      "progressiveRelaxation": {
+        "title": "Rilassamento Progressivo",
+        "description": "Contrai e rilascia ogni gruppo muscolare per un rilassamento profondo"
+      },
+      "sleepMeditation": {
+        "title": "Meditazione per il Sonno",
+        "description": "Meditazione guidata per preparare la mente a un sonno riposante"
+      },
+      "mindfulnessMeditation": {
+        "title": "Meditazione Mindfulness",
+        "description": "Concentrati sul momento presente con una pratica di mindfulness guidata"
+      },
+      "gratitudePractice": {
+        "title": "Pratica della Gratitudine",
+        "description": "Rifletti su tre cose per cui sei grato oggi"
+      },
+      "bodyScan": {
+        "title": "Body Scan",
+        "description": "Porta consapevolezza a ogni parte del tuo corpo per il rilassamento"
+      },
+      "morningEnergy": {
+        "title": "Boost Energetico Mattutino",
+        "description": "Inizia la giornata con movimenti energizzanti e affermazioni positive"
+      },
+      "powerBreathing": {
+        "title": "Respirazione Potente",
+        "description": "Esercizi di respirazione energizzanti per aumentare la prontezza e la concentrazione"
+      },
+      "danceBreak": {
+        "title": "Pausa Ballo",
+        "description": "Muovi il corpo sulla tua musica preferita per un boost energetico immediato"
+      },
+      "natureBreak": {
+        "title": "Pausa nella Natura",
+        "description": "Trascorrere 20 minuti in un parco o spazio verde può ridurre significativamente gli ormoni dello stress"
+      },
+      "deepBreathing": {
+        "title": "Esercizio di Respirazione Profonda",
+        "description": "Prova la respirazione 4-7-8: Inspira per 4 secondi, trattieni per 7, espira per 8. Ripeti 5 volte"
+      },
+      "hydrationCheck": {
+        "title": "Controllo Idratazione",
+        "description": "La disidratazione può peggiorare lo stress. Bevi un bicchiere d'acqua con limone per rinfrescarti"
+      },
+      "gentleCleansing": {
+        "title": "Pulizia Delicata",
+        "description": "Usa un detergente bilanciato pH due volte al giorno per mantenere sana la barriera cutanea"
+      },
+      "sunProtection": {
+        "title": "Protezione Solare",
+        "description": "Applica protezione solare SPF 30+ quotidianamente, anche nelle giornate nuvolose"
+      },
+      "consistentSchedule": {
+        "title": "Programma Costante",
+        "description": "Vai a letto e svegliati alla stessa ora ogni giorno, anche nel weekend"
+      },
+      "screenFreeHour": {
+        "title": "Ora Senza Schermi",
+        "description": "Evita gli schermi 1 ora prima di andare a letto per migliorare la qualità del sonno"
+      }
+    },
+    "difficulty": {
+      "easy": "Facile",
+      "medium": "Medio",
+      "hard": "Difficile"
+    },
+    "duration": {
+      "ongoing": "In corso",
+      "minutes": "{{minutes}} minuti"
+    },
+    "categoriesMeta": {
+      "count": "{{count}} suggerimenti"
+    }
+  }
+}

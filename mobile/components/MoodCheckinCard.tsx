@@ -4,55 +4,74 @@ import CheckinCard from './CheckinCard';
 import * as Haptics from 'expo-haptics';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import PrimaryCTA from './PrimaryCTA';
-
-const MOODS = [
-  { v:1, emoji:'☹️', label:'Very low', bg:'#fee2e2' },
-  { v:2, emoji:'🙁', label:'Low',      bg:'#ffedd5' },
-  { v:3, emoji:'😐', label:'Okay',     bg:'#fef9c3' },
-  { v:4, emoji:'🙂', label:'Good',     bg:'#dcfce7' },
-  { v:5, emoji:'😄', label:'Great',    bg:'#bbf7d0' },
-] as const;
+import { useTranslation } from '../hooks/useTranslation';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = {
   value: 1|2|3|4|5;
   note?: string;
   onChange: (v:1|2|3|4|5)=>void;
   onSave: (payload:{ value:1|2|3|4|5; note:string })=>Promise<void>|void;
-  editing: boolean;
-  onToggleEdit: ()=>void;
 };
 
-export default function MoodCheckinCard({ value, note: initialNote='', onChange, onSave, editing, onToggleEdit }: Props) {
-  const current = useMemo(()=> MOODS.find(m => m.v === value) ?? MOODS[2], [value]);
+export default function MoodCheckinCard({ value, note: initialNote='', onChange, onSave }: Props) {
+  const { t } = useTranslation();
+  const { colors: themeColors, mode } = useTheme();
+  const MOODS = [
+    { v:1, emoji:'☹️', label:t('dailyCheckIn.mood.veryLow'), bg:'#fee2e2' },
+    { v:2, emoji:'🙁', label:t('dailyCheckIn.mood.low'),      bg:'#ffedd5' },
+    { v:3, emoji:'😐', label:t('dailyCheckIn.mood.okay'),     bg:'#fef9c3' },
+    { v:4, emoji:'🙂', label:t('dailyCheckIn.mood.good'),     bg:'#dcfce7' },
+    { v:5, emoji:'😄', label:t('dailyCheckIn.mood.great'),    bg:'#bbf7d0' },
+  ] as const;
+  
+  const current = useMemo(()=> MOODS.find(m => m.v === value) ?? MOODS[2], [value, MOODS]);
   const [note, setNote] = useState(initialNote);
   const [saving, setSaving] = useState(false);
-  const [savedAtLeastOnce, setSaved] = useState(false);
+  const [hasNoteText, setHasNoteText] = useState(false);
 
-  const dirty = (note ?? '') !== (initialNote ?? '');
+  // Salva automaticamente quando si clicca sull'emoticon (solo il valore, senza note)
+  const handleMoodChange = async (newValue: 1|2|3|4|5) => {
+    Haptics.selectionAsync();
+    onChange(newValue);
+    
+    // Salva automaticamente il valore senza note
+    try {
+      setSaving(true);
+      await Promise.resolve(onSave({ value: newValue, note: '' }));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error('Error saving mood:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  const handleSave = async () => {
+  // Salva quando l'utente clicca sul pulsante (solo se ci sono note)
+  const handleSaveWithNote = async () => {
+    if (!hasNoteText) return;
+    
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     try {
       setSaving(true);
       await Promise.resolve(onSave({ value, note: note.trim() }));
-      setSaved(true);
     } finally { setSaving(false); }
+  };
+
+  // Controlla se c'è testo nelle note
+  const handleNoteChange = (text: string) => {
+    setNote(text);
+    setHasNoteText(text.trim().length > 0);
   };
 
   return (
     <CheckinCard
       tint="mint"
-      title="Mood Balance"
-      subtitle="How are you feeling today?"
+      title={t('dailyCheckIn.mood.title')}
+      subtitle={t('dailyCheckIn.mood.subtitle')}
       headerIcon={<Text style={{fontSize:22}}>😊</Text>}
       minHeight={350}
       bodyMinHeight={220}
-      rightPill={
-        <Pressable onPress={onToggleEdit} style={[styles.pill, editing && styles.pillOn]}>
-          <MaterialCommunityIcons name={editing ? 'check-circle' : 'pencil'} size={16} color={editing ? '#fff':'#047857'} />
-          <Text style={[styles.pillText, editing && {color:'#fff'}]}>{editing ? 'Done' : 'Edit'}</Text>
-        </Pressable>
-      }
     >
       {/* mood picker */}
       <View style={styles.segmentRow} accessibilityRole="radiogroup">
@@ -60,8 +79,19 @@ export default function MoodCheckinCard({ value, note: initialNote='', onChange,
           const active = m.v === value;
           return (
             <Pressable key={m.v}
-              onPress={() => { Haptics.selectionAsync(); onChange(m.v as any); }}
-              style={[styles.segment, active && { backgroundColor:m.bg, borderColor:'#10b981', elevation:3}]}
+              onPress={() => handleMoodChange(m.v as any)}
+              style={[
+                styles.segment,
+                {
+                  backgroundColor: active 
+                    ? m.bg 
+                    : mode === 'dark' 
+                      ? 'rgba(255,255,255,0.15)' // Più chiaro in dark mode
+                      : themeColors.surfaceElevated,
+                  borderColor: active ? '#10b981' : themeColors.border,
+                },
+                active && { elevation: 3 }
+              ]}
               accessibilityRole="radio" accessibilityState={{selected:active}} accessibilityLabel={m.label}>
               <Text style={[styles.segmentEmoji, active && { transform:[{scale:1.06}] }]}>{m.emoji}</Text>
             </Pressable>
@@ -71,26 +101,36 @@ export default function MoodCheckinCard({ value, note: initialNote='', onChange,
 
       {/* note */}
       <View style={{marginTop:32}}>
-        <Text style={styles.fieldLabel}>Add a note</Text>
+        <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>{t('dailyCheckIn.mood.addNote')}</Text>
         <TextInput
           value={note}
-          onChangeText={setNote}
-          placeholder="Write about your feelings…"
-          placeholderTextColor="#94a3b8"
+          onChangeText={handleNoteChange}
+          placeholder={t('dailyCheckIn.mood.notePlaceholder')}
+          placeholderTextColor={themeColors.textTertiary}
           multiline
           numberOfLines={4}
-          style={styles.textarea}
+          style={[
+            styles.textarea,
+            {
+              backgroundColor: themeColors.surfaceElevated,
+              borderColor: themeColors.border,
+              color: themeColors.text,
+            }
+          ]}
         />
       </View>
 
-      {/* footer */}
-      <View style={{height:12}} />
-      <PrimaryCTA
-        label={savedAtLeastOnce && !dirty ? 'Saved' : 'Save Mood'}
-        onPress={handleSave}
-        loading={saving}
-        disabled={!editing && !dirty}
-      />
+      {/* footer - mostra solo se ci sono note */}
+      {hasNoteText && (
+        <>
+          <View style={{height:12}} />
+          <PrimaryCTA
+            label={t('dailyCheckIn.mood.saveMood')}
+            onPress={handleSaveWithNote}
+            loading={saving}
+          />
+        </>
+      )}
     </CheckinCard>
   );
 }
@@ -102,11 +142,11 @@ const styles = StyleSheet.create({
   pillText:{ fontSize:12, fontWeight:'800', color:'#047857' },
 
   segmentRow:{ flexDirection:'row', justifyContent:'space-between', gap:8, marginTop:8 },
-  segment:{ flex:1, height:52, borderRadius:26, borderWidth:1.2, borderColor:'#e2e8f0', backgroundColor:'#fff',
+  segment:{ flex:1, height:52, borderRadius:26, borderWidth:1.2,
     alignItems:'center', justifyContent:'center' },
   segmentEmoji:{ fontSize:22, fontWeight:'700' },
 
-  fieldLabel:{ fontSize:13, fontWeight:'700', color:'#64748b', marginBottom:6 },
-  textarea:{ borderWidth:1, borderColor:'#e2e8f0', backgroundColor:'#fff', borderRadius:16, padding:12, minHeight:96,
-    fontSize:14, color:'#0f172a' },
+  fieldLabel:{ fontSize:13, fontWeight:'700', marginBottom:6 },
+  textarea:{ borderWidth:1, borderRadius:16, padding:12, minHeight:96,
+    fontSize:14 },
 });

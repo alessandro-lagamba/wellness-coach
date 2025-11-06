@@ -2,16 +2,71 @@
  * Root Layout - Simplified for End-to-End Test with Authentication
  */
 
+import '../i18n'; // 🆕 Inizializza i18n all'avvio
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { registerGlobals } from '@livekit/react-native';
+
+// Do required setup for LiveKit React-Native
+registerGlobals();
+
+// Add polyfill for navigator.mediaDevices.addEventListener
+if (typeof globalThis.navigator === 'undefined') {
+  globalThis.navigator = {} as any;
+}
+
+if (!('mediaDevices' in globalThis.navigator) || !globalThis.navigator.mediaDevices) {
+  console.log('[LiveKit] Creating navigator.mediaDevices polyfill');
+  Object.defineProperty(globalThis.navigator, 'mediaDevices', {
+    value: {} as any,
+    configurable: true,
+    enumerable: true,
+  });
+}
+
+if (!globalThis.navigator.mediaDevices.addEventListener) {
+  console.log('[LiveKit] Adding addEventListener polyfill to navigator.mediaDevices');
+  
+  const mediaDevices = globalThis.navigator.mediaDevices as any;
+  
+  mediaDevices.addEventListener = function(type: string, listener: EventListener) {
+    if (typeof listener !== 'function') return;
+    
+    // Use the existing on* handlers
+    const handlerProp = `on${type}`;
+    const original = mediaDevices[handlerProp];
+    
+    mediaDevices[handlerProp] = function(event: any) {
+      if (original && typeof original === 'function') {
+        original.call(mediaDevices, event);
+      }
+      if (listener) {
+        listener.call(mediaDevices, event);
+      }
+    };
+  };
+  
+  mediaDevices.removeEventListener = function(type: string, listener: EventListener) {
+    const handlerProp = `on${type}`;
+    mediaDevices[handlerProp] = null;
+  };
+  
+  console.log('[LiveKit] ✅ navigator.mediaDevices polyfill added');
+}
+import { DarkTheme as RNDark, DefaultTheme as RNLight, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
+import React, { useEffect } from 'react';
+import { useColorScheme, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
+import * as NavigationBar from 'expo-navigation-bar';
 import { AuthWrapper } from '../components/AuthWrapper';
+import { ThemeProvider as CustomThemeProvider, useTheme } from '../contexts/ThemeContext'; // 🆕 Our custom theme provider
+import { StatusBarProvider, useStatusBarColor } from '../contexts/StatusBarContext'; // 🆕 StatusBar override context
+import * as Notifications from 'expo-notifications'; // 🆕 Local notifications
+import { useRouter } from 'expo-router'; // 🆕 Navigation
 
 // Prevent the splash screen from auto-hiding before asset loading is complete
 SplashScreen.preventAutoHideAsync();
@@ -32,6 +87,20 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
+  // 🆕 Configure notification handler (Expo API update: use banner/list flags)
+  useEffect(() => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: false,
+        priority: 'high',
+      }),
+    } as any);
+  }, []);
+
+  // (Removed global SystemUI override to avoid black bar across screens)
+
   if (!loaded) {
     return null;
   }
@@ -48,15 +117,133 @@ function RootLayoutNav() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthWrapper onAuthSuccess={handleAuthSuccess}>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="breathing-exercise" options={{ headerShown: false }} />
-          </Stack>
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </AuthWrapper>
+      <CustomThemeProvider> {/* 🆕 Our custom theme provider (dark mode) */}
+        <RootLayoutNavInner onAuthSuccess={handleAuthSuccess} />
+      </CustomThemeProvider>
     </GestureHandlerRootView>
+  );
+}
+
+// Componente interno che può usare useTheme perché è dentro CustomThemeProvider
+function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => void }) {
+  const { colors, mode } = useTheme(); // 🆕 Get colors from custom theme
+  const router = useRouter();
+
+  // 🆕 Configure notification handler for navigation
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+      const screen = data?.screen;
+      const action = data?.action;
+
+      console.log('[Notifications] Notification tapped:', { screen, action, data });
+
+      if (screen === 'analysis') {
+        router.push('/(tabs)/analysis');
+      } else if (screen === 'journal') {
+        router.push('/(tabs)/journal');
+      } else if (screen === 'food') {
+        router.push('/(tabs)/food');
+        if (action === 'OPEN_FRIDGE_RECIPES') {
+          // Could open fridge modal here if needed
+        }
+      } else if (screen === 'breathing') {
+        router.push('/breathing-exercise');
+      } else if (screen === 'home') {
+        router.push('/(tabs)/');
+      } else if (screen === 'hydration') {
+        // Could navigate to hydration tracking if exists
+        router.push('/(tabs)/');
+      }
+    });
+
+    return () => subscription.remove();
+  }, [router]);
+
+  // Costruisci un tema RN coerente con i tuoi colori personalizzati
+  const navTheme = React.useMemo(() => {
+    const base = mode === 'dark' ? RNDark : RNLight;
+    return {
+      ...base,
+      dark: mode === 'dark',
+      colors: {
+        ...base.colors,
+        background: colors.background,   // <- fondamentale: elimina la banda bianca
+        card: colors.background,
+        border: colors.border,
+        primary: colors.primary,
+        text: colors.text,
+        notification: colors.accent,
+      },
+    };
+  }, [mode, colors]);
+
+  return (
+    <StatusBarProvider>
+      <StatusBarWrapper>
+        <AuthWrapper onAuthSuccess={onAuthSuccess}>
+          <NavThemeProvider value={navTheme}>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                // ✅ evita "flash" o strisce chiare nelle transizioni
+                contentStyle: { backgroundColor: colors.background },
+              }}
+            >
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="breathing-exercise" options={{ headerShown: false }} />
+            </Stack>
+          </NavThemeProvider>
+        </AuthWrapper>
+      </StatusBarWrapper>
+    </StatusBarProvider>
+  );
+}
+
+// Componente wrapper per StatusBar dinamica basata sul tema
+function StatusBarWrapper({ children }: { children: React.ReactNode }) {
+  const { mode, colors } = useTheme();
+  const { statusBarColor } = useStatusBarColor();
+  
+  // Usa il colore override se disponibile, altrimenti usa il colore del tema
+  const effectiveStatusBarColor = statusBarColor || colors.background;
+  
+  // 🆕 Fix StatusBar e NavigationBar: edge-to-edge con fondo tematizzato
+  useEffect(() => {
+    // Colora il "dietro" della status bar con il colore override o il tema
+    // Questo evita la banda nera/bianca dietro le icone della status bar
+    SystemUI.setBackgroundColorAsync(effectiveStatusBarColor).catch(() => {});
+    
+    if (Platform.OS === 'android') {
+      // Colora la navigation bar in basso
+      NavigationBar.setBackgroundColorAsync(effectiveStatusBarColor).catch(() => {});
+      NavigationBar.setButtonStyleAsync(mode === 'dark' ? 'light' : 'dark').catch(() => {});
+      // Rimuovi la riga di separazione
+      NavigationBar.setBorderColorAsync('transparent').catch(() => {});
+      // Opzionale: per edge-to-edge completo sotto la gesture bar (se necessario)
+      // NavigationBar.setBehaviorAsync('overlay-swipe').catch(() => {});
+    }
+  }, [mode, effectiveStatusBarColor, statusBarColor, colors.background]);
+  
+  return (
+    <>
+      {/* View assoluto per coprire tutto lo schermo con il colore di background */}
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: effectiveStatusBarColor,
+        zIndex: -1,
+      }} />
+      {/* Edge-to-edge: icone sopra al contenuto, il fondo dietro è già colorato da SystemUI */}
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        style={mode === 'dark' ? 'light' : 'dark'}
+      />
+      {children}
+    </>
   );
 }

@@ -15,6 +15,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { IntelligentInsight } from '../services/intelligent-insight.service';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +32,7 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
   onActionPress,
   compact = false,
 }) => {
+  const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -91,12 +93,16 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
   if (compact) {
     return (
       <TouchableOpacity
-        style={[styles.compactCard, { borderLeftColor: getPriorityColor(insight.priority) }]}
+        style={[styles.compactCard, { 
+          borderLeftColor: getPriorityColor(insight.priority),
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+        }]}
         onPress={() => onPress?.(insight)}
         activeOpacity={0.7}
       >
         <View style={styles.compactHeader}>
-          <View style={styles.compactIconContainer}>
+          <View style={[styles.compactIconContainer, { backgroundColor: colors.surfaceMuted }]}>
             <MaterialCommunityIcons 
               name={getCategoryIcon(insight.category) as any} 
               size={16} 
@@ -116,11 +122,11 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
           </View>
         </View>
         
-        <Text style={styles.compactTitle} numberOfLines={2}>
+        <Text style={[styles.compactTitle, { color: colors.text }]} numberOfLines={2}>
           {insight.title}
         </Text>
         
-        <Text style={styles.compactDescription} numberOfLines={2}>
+        <Text style={[styles.compactDescription, { color: colors.textSecondary }]} numberOfLines={2}>
           {insight.description}
         </Text>
         
@@ -139,7 +145,7 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
             </Text>
           </View>
           {insight.estimatedTime && (
-            <Text style={styles.timeText}>{insight.estimatedTime}</Text>
+            <Text style={[styles.timeText, { color: colors.textTertiary }]}>{insight.estimatedTime}</Text>
           )}
         </View>
       </TouchableOpacity>
@@ -149,13 +155,17 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
   return (
     <Animated.View style={[styles.card, animatedStyle]}>
       <TouchableOpacity
-        style={[styles.cardContent, { borderLeftColor: getPriorityColor(insight.priority) }]}
+        style={[styles.cardContent, { 
+          borderLeftColor: getPriorityColor(insight.priority),
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+        }]}
         onPress={() => setExpanded(!expanded)}
         activeOpacity={0.8}
       >
         <View style={styles.header}>
           <View style={styles.titleContainer}>
-            <View style={styles.iconContainer}>
+            <View style={[styles.iconContainer, { backgroundColor: colors.surfaceMuted }]}>
               <MaterialCommunityIcons 
                 name={getCategoryIcon(insight.category) as any} 
                 size={20} 
@@ -163,8 +173,8 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
               />
             </View>
             <View style={styles.titleTextContainer}>
-              <Text style={styles.title}>{insight.title}</Text>
-              <Text style={styles.description}>{insight.description}</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{insight.title}</Text>
+              <Text style={[styles.description, { color: colors.textSecondary }]}>{insight.description}</Text>
             </View>
           </View>
           
@@ -197,26 +207,26 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
           </View>
           
           {insight.estimatedTime && (
-            <Text style={styles.timeText}>{insight.estimatedTime}</Text>
+            <Text style={[styles.timeText, { color: colors.textTertiary }]}>{insight.estimatedTime}</Text>
           )}
         </View>
 
         {expanded && (
-          <View style={styles.expandedContent}>
+          <View style={[styles.expandedContent, { borderTopColor: colors.border }]}>
             {insight.detailedExplanation && (
               <View style={styles.detailedSection}>
-                <Text style={styles.detailedTitle}>Spiegazione</Text>
-                <Text style={styles.detailedText}>{insight.detailedExplanation}</Text>
+                <Text style={[styles.detailedTitle, { color: colors.text }]}>Spiegazione</Text>
+                <Text style={[styles.detailedText, { color: colors.textSecondary }]}>{insight.detailedExplanation}</Text>
               </View>
             )}
 
             {insight.correlations && insight.correlations.length > 0 && (
               <View style={styles.correlationsSection}>
-                <Text style={styles.correlationsTitle}>Correlazioni</Text>
+                <Text style={[styles.correlationsTitle, { color: colors.text }]}>Correlazioni</Text>
                 {insight.correlations.map((correlation, index) => (
                   <View key={index} style={styles.correlationItem}>
-                    <MaterialCommunityIcons name="link" size={14} color="#6b7280" />
-                    <Text style={styles.correlationText}>{correlation}</Text>
+                    <MaterialCommunityIcons name="link" size={14} color={colors.textTertiary} />
+                    <Text style={[styles.correlationText, { color: colors.textSecondary }]}>{correlation}</Text>
                   </View>
                 ))}
               </View>
@@ -224,11 +234,11 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
 
             {insight.expectedBenefits && insight.expectedBenefits.length > 0 && (
               <View style={styles.benefitsSection}>
-                <Text style={styles.benefitsTitle}>Benefici Attesi</Text>
+                <Text style={[styles.benefitsTitle, { color: colors.text }]}>Benefici Attesi</Text>
                 {insight.expectedBenefits.map((benefit, index) => (
                   <View key={index} style={styles.benefitItem}>
                     <MaterialCommunityIcons name="check-circle" size={14} color="#10b981" />
-                    <Text style={styles.benefitText}>{benefit}</Text>
+                    <Text style={[styles.benefitText, { color: colors.textSecondary }]}>{benefit}</Text>
                   </View>
                 ))}
               </View>
@@ -249,7 +259,7 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.actionButton, styles.secondaryActionButton]}
+                style={[styles.actionButton, styles.secondaryActionButton, { borderColor: colors.border }]}
                 onPress={() => handleActionPress('remind')}
                 disabled={actionLoading === 'remind'}
               >
@@ -264,7 +274,7 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.actionButton, styles.secondaryActionButton]}
+                style={[styles.actionButton, styles.secondaryActionButton, { borderColor: colors.border }]}
                 onPress={() => handleActionPress('track')}
                 disabled={actionLoading === 'track'}
               >
@@ -297,12 +307,10 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   cardContent: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 16,
     borderLeftWidth: 4,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
   },
   header: {
     flexDirection: 'row',
@@ -319,7 +327,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f8fafc',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -330,13 +337,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f172a',
     marginBottom: 4,
     lineHeight: 20,
   },
   description: {
     fontSize: 14,
-    color: '#475569',
     lineHeight: 18,
   },
   priorityBadge: {
@@ -368,14 +373,12 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 12,
-    color: '#6b7280',
     fontWeight: '500',
   },
   expandedContent: {
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
   },
   detailedSection: {
     marginBottom: 16,
@@ -383,12 +386,10 @@ const styles = StyleSheet.create({
   detailedTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0f172a',
     marginBottom: 8,
   },
   detailedText: {
     fontSize: 13,
-    color: '#475569',
     lineHeight: 18,
   },
   correlationsSection: {
@@ -397,7 +398,6 @@ const styles = StyleSheet.create({
   correlationsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0f172a',
     marginBottom: 8,
   },
   correlationItem: {
@@ -408,7 +408,6 @@ const styles = StyleSheet.create({
   },
   correlationText: {
     fontSize: 13,
-    color: '#475569',
     flex: 1,
   },
   benefitsSection: {
@@ -417,7 +416,6 @@ const styles = StyleSheet.create({
   benefitsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0f172a',
     marginBottom: 8,
   },
   benefitItem: {
@@ -428,7 +426,6 @@ const styles = StyleSheet.create({
   },
   benefitText: {
     fontSize: 13,
-    color: '#475569',
     flex: 1,
   },
   actionButtons: {
@@ -449,7 +446,6 @@ const styles = StyleSheet.create({
   secondaryActionButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   actionButtonText: {
     fontSize: 12,
@@ -458,7 +454,6 @@ const styles = StyleSheet.create({
   },
   // Compact styles
   compactCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 12,
     borderLeftWidth: 3,
@@ -468,7 +463,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
   },
   compactHeader: {
     flexDirection: 'row',
@@ -480,20 +474,17 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#f8fafc',
     alignItems: 'center',
     justifyContent: 'center',
   },
   compactTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0f172a',
     marginBottom: 4,
     lineHeight: 18,
   },
   compactDescription: {
     fontSize: 12,
-    color: '#475569',
     lineHeight: 16,
     marginBottom: 8,
   },

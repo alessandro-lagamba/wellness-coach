@@ -18,6 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MomentumData } from '../services/momentum.service';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,6 +37,7 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
   data,
   momentumData
 }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.8);
   const translateY = useSharedValue(50);
@@ -68,93 +70,98 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
     switch (type) {
       case 'streak':
         return {
-          title: '🔥 Streak',
-          subtitle: 'Your consistency journey',
+          title: `🔥 ${t('popups.pillDetail.streak.title')}`,
+          subtitle: t('popups.pillDetail.streak.subtitle'),
           icon: 'fire',
           color: '#f97316',
           gradient: ['#f97316', '#dc2626'], // Orange to Red
           details: [
             {
-              title: 'Current Streak',
+              title: t('popups.pillDetail.streak.currentStreak'),
               value: '12 days',
-              description: 'You\'ve been consistent for 12 days straight!'
+              description: t('popups.pillDetail.streak.currentStreakDesc', { days: 12 })
             },
             {
-              title: 'Best Streak',
+              title: t('popups.pillDetail.streak.bestStreak'),
               value: '28 days',
-              description: 'Your longest streak was 28 days in March'
+              description: t('popups.pillDetail.streak.bestStreakDesc', { days: 28 })
             },
             {
-              title: 'Streak Goal',
+              title: t('popups.pillDetail.streak.goal'),
               value: '30 days',
-              description: 'You\'re 60% towards your monthly goal'
+              description: t('popups.pillDetail.streak.goalDesc', { percent: 60 })
             },
             {
-              title: 'Tips to Continue',
-              value: 'Keep it up!',
-              description: '• Set daily reminders\n• Track your progress\n• Celebrate small wins\n• Don\'t break the chain!'
+              title: t('popups.pillDetail.streak.tips'),
+              value: t('popups.pillDetail.streak.keepItUp'),
+              description: t('popups.pillDetail.streak.tipsDesc')
             }
           ]
         };
 
       case 'momentum':
         return {
-          title: '📈 Momentum',
-          subtitle: 'Your completion rate',
+          title: `📈 ${t('popups.pillDetail.momentum.title')}`,
+          subtitle: t('popups.pillDetail.momentum.subtitle'),
           icon: 'line-chart',
           color: momentumData ? getMomentumColor(momentumData.trend) : '#6366f1',
           gradient: momentumData ? getMomentumGradient(momentumData.trend) : ['#10b981', '#059669'], // Green gradient
           details: [
             {
-              title: 'Current Momentum',
-              value: momentumData ? `${momentumData.percentage}%` : 'Loading...',
-              description: `You've completed ${momentumData?.completedTasks || 0} of ${momentumData?.totalTasks || 0} tasks in the last 7 days`
+              title: t('popups.pillDetail.momentum.current'),
+              value: momentumData ? `${momentumData.percentage}%` : t('common.loading'),
+              description: t('popups.pillDetail.momentum.currentDesc', { 
+                completed: momentumData?.completedTasks || 0, 
+                total: momentumData?.totalTasks || 0 
+              })
             },
             {
-              title: 'Trend',
-              value: momentumData ? getTrendText(momentumData.trend) : 'Stable',
-              description: momentumData ? `${momentumData.trendPercentage}% ${momentumData.trend === 'up' ? 'increase' : momentumData.trend === 'down' ? 'decrease' : 'change'} from last week` : 'No trend data available'
+              title: t('popups.pillDetail.momentum.trend'),
+              value: momentumData ? getTrendText(momentumData.trend) : t('popups.pillDetail.momentum.stable'),
+              description: momentumData ? t(`popups.pillDetail.momentum.trendDesc.${momentumData.trend}`, { 
+                percent: momentumData.trendPercentage 
+              }) : t('popups.pillDetail.momentum.noTrend')
             },
             {
-              title: 'Completion Rate',
+              title: t('popups.pillDetail.momentum.completionRate'),
               value: momentumData ? `${momentumData.percentage}%` : 'N/A',
-              description: 'Based on your wellness activities and goals'
+              description: t('popups.pillDetail.momentum.completionRateDesc')
             },
             {
-              title: 'Tips to Improve',
-              value: 'Keep building!',
-              description: '• Complete daily activities\n• Set achievable goals\n• Track your progress\n• Celebrate milestones'
+              title: t('popups.pillDetail.momentum.tips'),
+              value: t('popups.pillDetail.momentum.keepBuilding'),
+              description: t('popups.pillDetail.momentum.tipsDesc')
             }
           ]
         };
 
       case 'next-session':
         return {
-          title: '📅 Next Session',
-          subtitle: 'Your upcoming wellness session',
+          title: `📅 ${t('popups.pillDetail.nextSession.title')}`,
+          subtitle: t('popups.pillDetail.nextSession.subtitle'),
           icon: 'calendar',
           color: '#8b5cf6',
           gradient: ['#3b82f6', '#1d4ed8'], // Blue gradient
           details: [
             {
-              title: 'Scheduled Time',
-              value: 'Today • 6:00 PM',
-              description: 'Your next wellness session is scheduled for today at 6:00 PM'
+              title: t('popups.pillDetail.nextSession.scheduledTime'),
+              value: `${t('home.analyses.today')} • 6:00 PM`,
+              description: t('popups.pillDetail.nextSession.scheduledTimeDesc')
             },
             {
-              title: 'Session Type',
-              value: 'Emotion Analysis',
-              description: 'We\'ll analyze your emotional state and provide personalized insights'
+              title: t('popups.pillDetail.nextSession.sessionType'),
+              value: t('analysis.emotion.title'),
+              description: t('popups.pillDetail.nextSession.sessionTypeDesc')
             },
             {
-              title: 'Preparation',
-              value: 'Get ready!',
-              description: '• Find a quiet space\n• Ensure good lighting\n• Take a few deep breaths\n• Be ready to share how you feel'
+              title: t('popups.pillDetail.nextSession.preparation'),
+              value: t('popups.pillDetail.nextSession.getReady'),
+              description: t('popups.pillDetail.nextSession.preparationDesc')
             },
             {
-              title: 'Benefits',
-              value: 'Stay consistent!',
-              description: 'Regular sessions help track your wellness journey and provide valuable insights for improvement'
+              title: t('popups.pillDetail.nextSession.benefits'),
+              value: t('popups.pillDetail.nextSession.stayConsistent'),
+              description: t('popups.pillDetail.nextSession.benefitsDesc')
             }
           ]
         };
@@ -184,10 +191,10 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
 
   const getTrendText = (trend: 'up' | 'down' | 'stable') => {
     switch (trend) {
-      case 'up': return 'Rising ↑';
-      case 'down': return 'Declining ↓';
-      case 'stable': return 'Stable →';
-      default: return 'Unknown';
+      case 'up': return t('popups.pillDetail.momentum.trendUp');
+      case 'down': return t('popups.pillDetail.momentum.trendDown');
+      case 'stable': return t('popups.pillDetail.momentum.stable');
+      default: return t('popups.pillDetail.momentum.unknown');
     }
   };
 

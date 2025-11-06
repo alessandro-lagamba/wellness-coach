@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthService } from '../services/auth.service';
@@ -10,6 +10,10 @@ import { InteractiveTutorial } from './InteractiveTutorial';
 import { BiometricPromptModal } from './BiometricPromptModal';
 import { TutorialProvider, useTutorial } from '../contexts/TutorialContext';
 import { useRouter } from 'expo-router';
+import PushNotificationService from '../services/push-notification.service'; // 🆕 Push notifications
+import { useStatusBarColor } from '../contexts/StatusBarContext'; // 🆕 StatusBar override
+import * as Notifications from 'expo-notifications'; // 🆕 Local notifications
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -28,6 +32,23 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   const [biometricPromptVisible, setBiometricPromptVisible] = useState(false);
   const { showTutorial, setShowTutorial } = useTutorial();
   const router = useRouter();
+  const { setStatusBarColor } = useStatusBarColor(); // 🆕 Override status bar color
+  
+  // 🆕 Imposta il colore della status bar quando viene renderizzato il loading screen o AuthScreen
+  useEffect(() => {
+    // Se siamo in loading o non autenticati, usa il colore del gradiente
+    if (isLoading || !isAuthenticated) {
+      setStatusBarColor('#667eea');
+    } else {
+      // Se siamo autenticati, ripristina il colore del tema
+      setStatusBarColor(null);
+    }
+    
+    // Cleanup: ripristina il colore del tema quando il componente viene smontato
+    return () => {
+      setStatusBarColor(null);
+    };
+  }, [isLoading, isAuthenticated, setStatusBarColor]);
 
   useEffect(() => {
     checkAuthStatus();
@@ -52,6 +73,124 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       subscription.unsubscribe();
     };
   }, []);
+
+  // 🆕 Inizializza push notifications quando l'utente è autenticato
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return;
+
+    let intervalId: NodeJS.Timeout | null = null;
+
+    const initPushNotifications = async () => {
+      const pushService = PushNotificationService.getInstance();
+      const enabled = await pushService.isEnabled();
+      
+      if (enabled) {
+        const initialized = await pushService.initialize(user.id);
+        if (initialized) {
+          console.log('[AuthWrapper] ✅ Push notifications initialized');
+          
+          // 🆕 Esegui controlli delle regole ogni 6 ore
+          const checkRules = async () => {
+            await pushService.checkAllRules(user.id);
+          };
+          
+          // Controlla immediatamente
+          checkRules();
+          
+          // Poi ogni 6 ore (solo se ancora autenticato)
+          intervalId = setInterval(() => {
+            if (isAuthenticated && user?.id) {
+              checkRules();
+            }
+          }, 6 * 60 * 60 * 1000);
+        }
+      }
+    };
+
+    initPushNotifications();
+    
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isAuthenticated, user?.id]);
+
+  // 🆕 Inizializza notifiche locali programmate quando l'utente è autenticato
+  const NOTIFICATIONS_SCHEDULED_KEY = '@notifications_scheduled';
+  const notificationsScheduledRef = useRef(false);
+  
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return;
+    
+    // Evita rischedulazioni multiple durante lo stesso mount
+    if (notificationsScheduledRef.current) {
+      console.log('[AuthWrapper] ⏭️ Notifications already scheduled in this session');
+      return;
+    }
+
+    const initLocalNotifications = async () => {
+      try {
+        // Verifica se le notifiche sono già state schedulate in una sessione precedente
+        const wasScheduled = await AsyncStorage.getItem(NOTIFICATIONS_SCHEDULED_KEY);
+        if (wasScheduled === 'true') {
+          // Verifica che ci siano effettivamente notifiche schedulate
+          const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+          if (scheduled.length >= 15) {
+            console.log('[AuthWrapper] ℹ️ Notifications already scheduled:', scheduled.length);
+            notificationsScheduledRef.current = true;
+            return;
+          }
+          // Se le notifiche sono state cancellate, rischedula
+          console.log('[AuthWrapper] ⚠️ Notifications were scheduled but not found, rescheduling...');
+        }
+
+        const { NotificationService } = await import('../services/notifications.service');
+        const granted = await NotificationService.initialize();
+        
+        if (granted) {
+          console.log('[AuthWrapper] ✅ Local notifications initialized');
+          
+          // Verifica se ci sono già notifiche schedulate
+          const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+          
+          // Controlla se ci sono già notifiche schedulate (almeno 15 per essere sicuri)
+          if (scheduled.length >= 15) {
+            console.log('[AuthWrapper] ℹ️ Notifications already scheduled:', scheduled.length);
+            await AsyncStorage.setItem(NOTIFICATIONS_SCHEDULED_KEY, 'true');
+            notificationsScheduledRef.current = true;
+            return;
+          }
+          
+          // Se ci sono poche notifiche o nessuna, cancellale tutte e rischedula
+          if (scheduled.length === 0 || scheduled.length < 15) {
+            console.log('[AuthWrapper] 📅 Scheduling default notifications...');
+            // Cancella eventuali notifiche esistenti per evitare duplicati
+            await NotificationService.cancelAll();
+            // Schedula le nuove notifiche
+            const ids = await NotificationService.scheduleDefaults();
+            console.log('[AuthWrapper] ✅ Scheduled default notifications:', ids.length);
+            // Salva il flag per evitare rischedulazioni future
+            await AsyncStorage.setItem(NOTIFICATIONS_SCHEDULED_KEY, 'true');
+            notificationsScheduledRef.current = true;
+          }
+        } else {
+          console.log('[AuthWrapper] ⚠️ Notification permission not granted');
+        }
+      } catch (error) {
+        console.error('[AuthWrapper] ❌ Error initializing local notifications:', error);
+      }
+    };
+
+    // Delay di 3 secondi per evitare rischedulazioni immediate all'avvio
+    const timer = setTimeout(() => {
+      initLocalNotifications();
+    }, 3000);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [isAuthenticated, user?.id]);
 
   const checkAuthStatus = async () => {
     try {
@@ -80,7 +219,14 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           biometricAvailable = false;
         }
         
-        if (isBiometricEnabled && biometricAvailable) {
+        // 🔥 Fallback: se ci sono credenziali biometriche salvate, proponi comunque il prompt
+        let hasSavedBiometricCredentials = false;
+        try {
+          const creds = await BiometricAuthService.getBiometricCredentials();
+          hasSavedBiometricCredentials = !!(creds.email && creds.password);
+        } catch {}
+
+        if ((isBiometricEnabled || hasSavedBiometricCredentials) && biometricAvailable) {
           console.log('🔐 Biometric authentication required, showing prompt...');
           setBiometricPromptVisible(true);
           // Don't set authenticated yet, wait for biometric confirmation
@@ -262,6 +408,7 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = (props) => {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
+    backgroundColor: '#667eea',
   },
   loadingGradient: {
     flex: 1,

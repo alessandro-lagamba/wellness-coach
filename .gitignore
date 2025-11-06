@@ -21,6 +21,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+*.log
+backend/*.log
 
 # Runtime data
 pids
@@ -107,3 +109,9 @@ public
 # OS
 .DS_Store
 Thumbs.db
+
+# Temporary files
+backend/src/temp/
+*.wav
+*.m4a
+*.mp3

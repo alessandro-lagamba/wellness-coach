@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Svg, { Circle } from 'react-native-svg';
 import { WidgetData } from '../services/today-glance.service';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -32,6 +33,7 @@ const TodayGlanceWidget: React.FC<TodayGlanceWidgetProps> = ({
   onLongPress
 }) => {
   const [isPressed, setIsPressed] = useState(false);
+  const { colors } = useTheme();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
 
@@ -119,7 +121,8 @@ const TodayGlanceWidget: React.FC<TodayGlanceWidgetProps> = ({
           {
             width: widgetSize.width,
             height: widgetSize.height,
-            backgroundColor: widget.backgroundColor,
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
           }
         ]}
         onPress={() => onPress(widget.id)}
@@ -160,11 +163,11 @@ const TodayGlanceWidget: React.FC<TodayGlanceWidgetProps> = ({
 
           {/* Title and Value */}
           <View style={styles.widgetContent}>
-            <Text style={styles.widgetTitle} numberOfLines={1}>{widget.title}</Text>
+            <Text style={[styles.widgetTitle, { color: colors.text }]} numberOfLines={1}>{widget.title}</Text>
             <Text style={[styles.widgetValue, { color: widget.color }]}>
               {widget.value}
             </Text>
-            <Text style={styles.widgetSubtitle}>{widget.subtitle}</Text>
+            <Text style={[styles.widgetSubtitle, { color: colors.textSecondary }]}>{widget.subtitle}</Text>
           </View>
         </View>
       </TouchableOpacity>

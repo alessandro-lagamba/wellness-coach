@@ -12,9 +12,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useTheme } from '../contexts/ThemeContext';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { BiometricAuthService } from '../services/biometric-auth.service';
 import { AuthService } from '../services/auth.service';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 
 interface BiometricSecurityModalProps {
   visible: boolean;
@@ -27,6 +29,8 @@ export const BiometricSecurityModal: React.FC<BiometricSecurityModalProps> = ({
   onClose,
   userEmail,
 }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
+  const { colors } = useTheme();
   const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
   const [canUseBiometric, setCanUseBiometric] = useState(false);
   const [biometricType, setBiometricType] = useState<string>('');
@@ -78,25 +82,25 @@ export const BiometricSecurityModal: React.FC<BiometricSecurityModalProps> = ({
 
   const handleToggleBiometric = async (value: boolean) => {
     if (!canUseBiometric) {
-      Alert.alert('Non disponibile', 'I dati biometrici non sono disponibili su questo dispositivo');
+      Alert.alert(t('modals.biometric.notAvailable'), t('modals.biometric.notAvailableMessage'));
       return;
     }
 
     if (value) {
       Alert.prompt(
-        'Abilita Autenticazione Biometrica',
-        'Inserisci la tua password per salvare i dati biometrici',
+        t('modals.biometric.enableTitle'),
+        t('modals.biometric.enableMessage'),
         [
           {
-            text: 'Annulla',
+            text: t('common.cancel'),
             onPress: () => {},
             style: 'cancel',
           },
           {
-            text: 'Abilita',
+            text: t('modals.biometric.enable'),
             onPress: async (password) => {
               if (!password) {
-                Alert.alert('Errore', 'La password è obbligatoria');
+                Alert.alert(t('common.error'), t('modals.biometric.passwordRequired'));
                 return;
               }
 
@@ -106,7 +110,7 @@ export const BiometricSecurityModal: React.FC<BiometricSecurityModalProps> = ({
 
                 const { user, error } = await AuthService.signIn(userEmail, password, false);
                 if (error) {
-                  Alert.alert('Errore', 'Password non corretta');
+                  Alert.alert(t('common.error'), t('modals.biometric.incorrectPassword'));
                   return;
                 }
 
@@ -115,12 +119,12 @@ export const BiometricSecurityModal: React.FC<BiometricSecurityModalProps> = ({
 
                 setIsBiometricEnabled(true);
                 Alert.alert(
-                  'Successo',
-                  `Autenticazione biometrica abilitata!\nPotrai accedere usando ${biometricType} al prossimo accesso.`
+                  t('common.success'),
+                  t('modals.biometric.enabledSuccess', { type: biometricType })
                 );
               } catch (err) {
                 console.error('Error enabling biometric:', err);
-                Alert.alert('Errore', 'Impossibile abilitare l\'autenticazione biometrica');
+                Alert.alert(t('common.error'), t('modals.biometric.enableError'));
               } finally {
                 setIsLoading(false);
               }
@@ -135,10 +139,10 @@ export const BiometricSecurityModal: React.FC<BiometricSecurityModalProps> = ({
         console.log('🔐 Disabling biometric authentication...');
         await BiometricAuthService.clearBiometricCredentials();
         setIsBiometricEnabled(false);
-        Alert.alert('Successo', 'Autenticazione biometrica disabilitata');
+        Alert.alert(t('common.success'), t('modals.biometric.disabledSuccess'));
       } catch (err) {
         console.error('Error disabling biometric:', err);
-        Alert.alert('Errore', 'Impossibile disabilitare l\'autenticazione biometrica');
+        Alert.alert(t('common.error'), t('modals.biometric.disableError'));
       } finally {
         setIsLoading(false);
       }
@@ -153,7 +157,7 @@ export const BiometricSecurityModal: React.FC<BiometricSecurityModalProps> = ({
       statusBarTranslucent
     >
       <View style={styles.overlay}>
-        <BlurView intensity={20} style={styles.blurContainer}>
+        <BlurView intensity={20} tint={colors.background === '#0f172a' ? 'dark' : 'light'} style={styles.blurContainer}>
           <LinearGradient
             colors={['#667eea', '#764ba2']}
             style={styles.modalContainer}
@@ -162,7 +166,7 @@ export const BiometricSecurityModal: React.FC<BiometricSecurityModalProps> = ({
               <TouchableOpacity onPress={onClose}>
                 <MaterialCommunityIcons name="close" size={24} color="#fff" />
               </TouchableOpacity>
-              <Text style={styles.title}>Biometric Security</Text>
+              <Text style={styles.title}>{t('modals.biometric.title')}</Text>
               <View style={{ width: 24 }} />
             </View>
 
@@ -176,21 +180,21 @@ export const BiometricSecurityModal: React.FC<BiometricSecurityModalProps> = ({
               </View>
 
               <Text style={styles.contentTitle}>
-                {canUseBiometric ? `Usa ${biometricType}` : 'Biometrico Non Disponibile'}
+                {canUseBiometric ? t('modals.biometric.useTitle', { type: biometricType }) : t('modals.biometric.notAvailableTitle')}
               </Text>
 
               <Text style={styles.contentDescription}>
                 {canUseBiometric
-                  ? `Abilita l'autenticazione biometrica per accedere all'app in modo sicuro e veloce usando ${biometricType}.`
-                  : 'Il tuo dispositivo non supporta l\'autenticazione biometrica.'}
+                  ? t('modals.biometric.description', { type: biometricType })
+                  : t('modals.biometric.notSupported')}
               </Text>
 
               <View style={styles.statusSection}>
                 <View style={styles.statusRow}>
                   <View>
-                    <Text style={styles.statusLabel}>Stato Attuale</Text>
+                    <Text style={styles.statusLabel}>{t('modals.biometric.currentStatus')}</Text>
                     <Text style={styles.statusValue}>
-                      {isBiometricEnabled ? '✅ Abilitato' : '❌ Disabilitato'}
+                      {isBiometricEnabled ? `✅ ${t('modals.biometric.enabled')}` : `❌ ${t('modals.biometric.disabled')}`}
                     </Text>
                   </View>
                   {canUseBiometric && !isLoading && (
@@ -208,18 +212,18 @@ export const BiometricSecurityModal: React.FC<BiometricSecurityModalProps> = ({
 
               {canUseBiometric && (
                 <View style={styles.benefitsSection}>
-                  <Text style={styles.benefitsTitle}>Vantaggi</Text>
+                  <Text style={styles.benefitsTitle}>{t('modals.biometric.benefits')}</Text>
                   <View style={styles.benefitItem}>
                     <MaterialCommunityIcons name="shield-check" size={20} color="#86efac" />
-                    <Text style={styles.benefitText}>Accesso sicuro e veloce</Text>
+                    <Text style={styles.benefitText}>{t('modals.biometric.benefit1')}</Text>
                   </View>
                   <View style={styles.benefitItem}>
                     <MaterialCommunityIcons name="lightning-bolt" size={20} color="#86efac" />
-                    <Text style={styles.benefitText}>Nessuna password da ricordare</Text>
+                    <Text style={styles.benefitText}>{t('modals.biometric.benefit2')}</Text>
                   </View>
                   <View style={styles.benefitItem}>
                     <MaterialCommunityIcons name="lock" size={20} color="#86efac" />
-                    <Text style={styles.benefitText}>Protezione avanzata</Text>
+                    <Text style={styles.benefitText}>{t('modals.biometric.benefit3')}</Text>
                   </View>
                 </View>
               )}
@@ -227,7 +231,7 @@ export const BiometricSecurityModal: React.FC<BiometricSecurityModalProps> = ({
               <View style={styles.infoSection}>
                 <MaterialCommunityIcons name="information-outline" size={20} color="#fbbf24" />
                 <Text style={styles.infoText}>
-                  I tuoi dati biometrici rimangono sempre privati e non vengono mai condivisi.
+                  {t('modals.biometric.privacyNote')}
                 </Text>
               </View>
             </View>
@@ -237,7 +241,7 @@ export const BiometricSecurityModal: React.FC<BiometricSecurityModalProps> = ({
               onPress={onClose}
               disabled={isLoading}
             >
-              <Text style={styles.closeButtonText}>Chiudi</Text>
+              <Text style={styles.closeButtonText}>{t('common.close')}</Text>
             </TouchableOpacity>
           </LinearGradient>
         </BlurView>

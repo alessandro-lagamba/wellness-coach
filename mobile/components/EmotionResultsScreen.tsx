@@ -1,9 +1,11 @@
 // @ts-nocheck
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
 import { EmotionSession } from '../stores/analysis.store';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface EmotionResultsScreenProps {
   currentEmotion: string | null;
@@ -20,6 +22,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
   onGoBack,
   onRetake,
 }) => {
+  const { colors } = useTheme();
   const getEmotionData = (emotion: string) => {
     const emotionData: { [key: string]: any } = {
       joy: {
@@ -103,12 +106,18 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
   const emotionData = getEmotionData(currentEmotion);
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["bottom"]}>
+        <ScrollView 
+          style={styles.scrollView} 
+          showsVerticalScrollIndicator={false}
+          overScrollMode="never"
+          bounces={false}
+        >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Emotion Analysis Complete</Text>
-          <Text style={styles.headerSubtitle}>Here's what we detected about your emotional state</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Emotion Analysis Complete</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Here's what we detected about your emotional state</Text>
         </View>
 
         {/* Main Emotion Card */}
@@ -147,10 +156,10 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         </View>
 
         {/* Wellness Tips */}
-        <View style={styles.tipsCard}>
+        <View style={[styles.tipsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.tipsHeader}>
             <FontAwesome name="lightbulb-o" size={20} color="#f59e0b" />
-            <Text style={styles.tipsTitle}>Wellness Tips</Text>
+            <Text style={[styles.tipsTitle, { color: colors.text }]}>Wellness Tips</Text>
           </View>
           <View style={styles.tipsList}>
             {emotionData.tips.map((tip: string, index: number) => (
@@ -158,23 +167,23 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
                 <View style={styles.tipIcon}>
                   <FontAwesome name="check" size={12} color="#10b981" />
                 </View>
-                <Text style={styles.tipText}>{tip}</Text>
+                <Text style={[styles.tipText, { color: colors.text }]}>{tip}</Text>
               </View>
             ))}
           </View>
         </View>
 
         {/* Analysis Details */}
-        <View style={styles.detailsCard}>
-          <Text style={styles.detailsTitle}>Analysis Details</Text>
+        <View style={[styles.detailsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.detailsTitle, { color: colors.text }]}>Analysis Details</Text>
           
           <View style={styles.detailRow}>
             <View style={styles.detailIcon}>
               <FontAwesome name="eye" size={16} color="#6366f1" />
             </View>
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Facial Expression</Text>
-              <Text style={styles.detailValue}>Micro-expressions and muscle movements analyzed</Text>
+              <Text style={[styles.detailLabel, { color: colors.text }]}>Facial Expression</Text>
+              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>Micro-expressions and muscle movements analyzed</Text>
             </View>
           </View>
 
@@ -183,8 +192,8 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
               <FontAwesome name="cogs" size={16} color="#8b5cf6" />
             </View>
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>AI Processing</Text>
-              <Text style={styles.detailValue}>Advanced neural network emotion recognition</Text>
+              <Text style={[styles.detailLabel, { color: colors.text }]}>AI Processing</Text>
+              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>Advanced neural network emotion recognition</Text>
             </View>
           </View>
 
@@ -193,8 +202,8 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
               <FontAwesome name="clock-o" size={16} color="#10b981" />
             </View>
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Analysis Time</Text>
-              <Text style={styles.detailValue}>Real-time processing completed</Text>
+              <Text style={[styles.detailLabel, { color: colors.text }]}>Analysis Time</Text>
+              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>Real-time processing completed</Text>
             </View>
           </View>
 
@@ -203,18 +212,18 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
               <FontAwesome name="heart" size={16} color="#ef4444" />
             </View>
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Emotional State</Text>
-              <Text style={styles.detailValue}>Current mood and emotional intensity</Text>
+              <Text style={[styles.detailLabel, { color: colors.text }]}>Emotional State</Text>
+              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>Current mood and emotional intensity</Text>
             </View>
           </View>
         </View>
 
         {/* Observations */}
         {fullAnalysisResult?.observations && fullAnalysisResult.observations.length > 0 && (
-          <View style={styles.observationsCard}>
+          <View style={[styles.observationsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.observationsHeader}>
               <FontAwesome name="search" size={20} color="#3b82f6" />
-              <Text style={styles.observationsTitle}>AI Observations</Text>
+              <Text style={[styles.observationsTitle, { color: colors.text }]}>AI Observations</Text>
             </View>
             <View style={styles.observationsList}>
               {fullAnalysisResult.observations.map((observation: string, index: number) => (
@@ -222,7 +231,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
                   <View style={styles.observationIcon}>
                     <FontAwesome name="check" size={12} color="#3b82f6" />
                   </View>
-                  <Text style={styles.observationText}>{observation}</Text>
+                  <Text style={[styles.observationText, { color: colors.text }]}>{observation}</Text>
                 </View>
               ))}
             </View>
@@ -231,10 +240,10 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
 
         {/* Recommendations */}
         {fullAnalysisResult?.recommendations && fullAnalysisResult.recommendations.length > 0 && (
-          <View style={styles.recommendationsCard}>
+          <View style={[styles.recommendationsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.recommendationsHeader}>
               <FontAwesome name="lightbulb-o" size={20} color="#f59e0b" />
-              <Text style={styles.recommendationsTitle}>AI Recommendations</Text>
+              <Text style={[styles.recommendationsTitle, { color: colors.text }]}>AI Recommendations</Text>
             </View>
             <View style={styles.recommendationsList}>
               {fullAnalysisResult.recommendations.map((recommendation: string, index: number) => (
@@ -242,7 +251,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
                   <View style={styles.recommendationIcon}>
                     <FontAwesome name="arrow-right" size={12} color="#f59e0b" />
                   </View>
-                  <Text style={styles.recommendationText}>{recommendation}</Text>
+                  <Text style={[styles.recommendationText, { color: colors.text }]}>{recommendation}</Text>
                 </View>
               ))}
             </View>
@@ -250,12 +259,12 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         )}
 
         {/* Wellness Advice */}
-        <View style={styles.adviceCard}>
+        <View style={[styles.adviceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.adviceHeader}>
             <FontAwesome name="heart" size={20} color="#ef4444" />
-            <Text style={styles.adviceTitle}>Wellness Guidance</Text>
+            <Text style={[styles.adviceTitle, { color: colors.text }]}>Wellness Guidance</Text>
           </View>
-          <Text style={styles.adviceText}>
+          <Text style={[styles.adviceText, { color: colors.textSecondary }]}>
             {fullAnalysisResult?.recommendations && fullAnalysisResult.recommendations.length > 0 
               ? fullAnalysisResult.recommendations.join('. ') + '.'
               : emotionData.advice
@@ -266,15 +275,15 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         {/* Action Buttons */}
         <View style={styles.actionButtonsContainer}>
           <TouchableOpacity 
-            style={styles.goBackButton} 
+            style={[styles.goBackButton, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]} 
             onPress={onGoBack}
           >
-            <FontAwesome name="arrow-left" size={16} color="#6366f1" />
-            <Text style={styles.goBackButtonText}>Go Back</Text>
+            <FontAwesome name="arrow-left" size={16} color={colors.primary} />
+            <Text style={[styles.goBackButtonText, { color: colors.primary }]}>Go Back</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={styles.retakeButton} 
+            style={[styles.retakeButton, { backgroundColor: colors.primary }]} 
             onPress={onRetake}
           >
             <FontAwesome name="refresh" size={16} color="#ffffff" />
@@ -282,6 +291,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
           </TouchableOpacity>
         </View>
       </ScrollView>
+      </SafeAreaView>
     </View>
   );
 };
@@ -289,26 +299,23 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   scrollView: {
     flex: 1,
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 20,
     paddingBottom: 20,
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1e293b',
     marginBottom: 8,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#64748b',
   },
   emotionCard: {
     marginHorizontal: 20,
@@ -372,7 +379,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   detailsCard: {
-    backgroundColor: '#ffffff',
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 16,
@@ -382,11 +388,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 1,
   },
   detailsTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
     marginBottom: 16,
   },
   detailRow: {
@@ -409,15 +415,12 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 2,
   },
   detailValue: {
     fontSize: 13,
-    color: '#6b7280',
   },
   tipsCard: {
-    backgroundColor: '#ffffff',
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 16,
@@ -427,6 +430,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 1,
   },
   tipsHeader: {
     flexDirection: 'row',
@@ -437,7 +441,6 @@ const styles = StyleSheet.create({
   tipsTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
   },
   tipsList: {
     gap: 12,
@@ -458,12 +461,10 @@ const styles = StyleSheet.create({
   },
   tipText: {
     fontSize: 14,
-    color: '#374151',
     lineHeight: 20,
     flex: 1,
   },
   adviceCard: {
-    backgroundColor: '#ffffff',
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 16,
@@ -475,6 +476,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 1,
   },
   adviceHeader: {
     flexDirection: 'row',
@@ -485,15 +487,12 @@ const styles = StyleSheet.create({
   adviceTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
   },
   adviceText: {
     fontSize: 14,
-    color: '#475569',
     lineHeight: 20,
   },
   observationsCard: {
-    backgroundColor: '#ffffff',
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 16,
@@ -503,6 +502,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 1,
   },
   observationsHeader: {
     flexDirection: 'row',
@@ -513,7 +513,6 @@ const styles = StyleSheet.create({
   observationsTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
   },
   observationsList: {
     gap: 12,
@@ -534,12 +533,10 @@ const styles = StyleSheet.create({
   },
   observationText: {
     fontSize: 14,
-    color: '#374151',
     lineHeight: 20,
     flex: 1,
   },
   recommendationsCard: {
-    backgroundColor: '#ffffff',
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 16,
@@ -549,6 +546,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 1,
   },
   recommendationsHeader: {
     flexDirection: 'row',
@@ -559,7 +557,6 @@ const styles = StyleSheet.create({
   recommendationsTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
   },
   recommendationsList: {
     gap: 12,
@@ -580,7 +577,6 @@ const styles = StyleSheet.create({
   },
   recommendationText: {
     fontSize: 14,
-    color: '#374151',
     lineHeight: 20,
     flex: 1,
   },
@@ -598,9 +594,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
-    backgroundColor: '#f1f5f9',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
     gap: 8,
   },
   goBackButtonText: {

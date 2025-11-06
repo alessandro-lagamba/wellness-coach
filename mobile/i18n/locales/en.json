@@ -1,0 +1,1237 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "capture": "Capture",
+    "pickFromGallery": "Pick from Gallery",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "ok": "OK",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "retry": "Retry",
+    "skip": "Skip",
+    "continue": "Continue",
+    "back": "Back"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Personalize your experience, manage notifications, and configure your AI coach.",
+    "account": "Account",
+    "appSettings": "App Settings",
+    "language": "Language",
+    "languageDescription": "Choose app language",
+    "darkMode": "Dark Mode",
+    "darkModeDescription": "Enable dark theme",
+    "personalInfo": "Personal Information",
+    "personalInfoDescription": "Manage your personal info",
+    "preferences": "Preferences",
+    "preferencesDescription": "Update your wellness focus",
+    "healthPermissions": "Health Data Permissions",
+    "healthPermissionsDescription": "Manage access to your health data",
+    "appConfig": "App Configuration",
+    "appConfigDescription": "Control app experience",
+    "notifications": "Notifications",
+    "notificationsTitle": "Notifications",
+    "notificationsDescription": "Define reminders & alerts",
+    "subscription": "Subscription",
+    "subscriptionDescription": "Manage your plan",
+    "about": "About",
+    "aboutDescription": "Learn more about Wellness Coach",
+    "logout": "Logout",
+    "logoutConfirm": "Are you sure you want to logout?",
+    "logoutCancel": "Cancel",
+    "version": "App Version",
+    "versionValue": "1.0.0",
+    "profile": {
+      "loading": "Loading profile...",
+      "error": "Unable to load profile",
+      "age": "Age",
+      "gender": "Gender",
+      "memberSince": "Member since",
+      "male": "Male",
+      "female": "Female",
+      "other": "Other",
+      "preferNotToSay": "Prefer not to say",
+      "notSpecified": "Not specified"
+    },
+    "healthPermissionsUpdated": "Permissions Updated",
+    "healthPermissionsUpdatedMessage": "Your health data permissions have been updated successfully.",
+    "comingSoon": "Coming Soon",
+    "comingSoonMessage": "This feature will be available in a future update.",
+    "aboutTitle": "About Wellness Coach",
+    "aboutMessage": "Version 1.0.0\n\nYour personal AI wellness coach powered by advanced emotion and skin analysis.",
+    "chooseLanguage": "Choose app language",
+    "languageChanged": "Language changed to {{lang}}",
+    "notificationsCategories": "Notification Categories",
+    "notifications": {
+      "emotionSkin": "Emotion/Skin Analysis",
+      "diary": "Diary",
+      "fridgeExpiry": "Fridge Expiry",
+      "breathing": "Breathing/Break",
+      "hydration": "Hydration",
+      "morningGreeting": "Morning Greeting",
+      "eveningWinddown": "Evening Winddown",
+      "sleepPreparation": "Sleep Preparation",
+      "diaryTimeTitle": "Diary Time",
+      "diaryTitle": "Diary",
+      "diaryBody": "Would you like to write a brief journal entry?",
+      "saved": "Notifications updated successfully"
+    }
+  },
+  "journal": {
+    "title": "Journal",
+    "today": "Today",
+    "dailyPrompt": "Daily Prompt",
+    "regeneratePrompt": "Regenerate",
+    "entryTitle": "Today's Entry",
+    "placeholder": "Write your diary entry for today…",
+    "save": "Save",
+    "saved": "Saved",
+    "savedAt": "Saved at {{time}}",
+    "offline": "Offline",
+    "offlineMessage": "Journal saved locally, will be synchronized",
+    "savedSuccess": "Journal saved and analyzed successfully",
+    "latestNotes": "Latest Notes",
+    "open": "Open",
+    "characters": "{{count}}/2000",
+    "aiInsight": "AI Journal Insight",
+    "seeFullAnalysis": "See full analysis",
+    "completeAnalysis": "Complete Analysis",
+    "aiAnalysis": "AI Analysis",
+    "weekdays": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "noEntry": "No entry for this day",
+    "loadingHistory": "Loading history...",
+    "errorLoading": "Error loading"
+  },
+  "chat": {
+    "title": "Chat",
+    "subtitle": "Talk with your AI coach",
+    "placeholder": "Type your message...",
+    "voicePlaceholder": "Voice input detected...",
+    "sending": "Sending...",
+    "welcomeMessage": {
+      "withName": "Hello {{name}}! 👋 I'm your AI wellness coach. How are you feeling today?",
+      "default": "Hello! 👋 I'm your AI wellness coach. How are you feeling today?"
+    },
+    "quickReplies": {
+      "stressed": "I'm feeling stressed",
+      "sleep": "Help me sleep better",
+      "energy": "Give me energy tips",
+      "skin": "Skin care advice"
+    },
+    "quickStart": {
+      "title": "Quick Start",
+      "feelingStressed": "I'm feeling stressed",
+      "sleepBetter": "Help me sleep better",
+      "energyTips": "Give me energy tips",
+      "skinAdvice": "Skin care advice"
+    }
+  },
+  "voiceChat": {
+    "title": "Voice Chat",
+    "connecting": "Connecting...",
+    "connectingToLiveKit": "Connecting to LiveKit...",
+    "connectingToVoiceChat": "Connecting to voice chat...",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "listening": "Listening...",
+    "speaking": "AI is speaking...",
+    "processing": "Processing...",
+    "tapToStart": "Tap to start voice chat",
+    "stopCall": "Stop Call",
+    "error": "Error",
+    "errorConnecting": "Error connecting. Please try again.",
+    "errorToken": "Unable to get LiveKit token",
+    "connectionFailed": "Connection failed",
+    "connectionFailedMessage": "Failed to connect to voice chat. Please try again.",
+    "waitingAgent": "Waiting for agent...",
+    "agentJoining": "Agent is joining the room..."
+  },
+  "home": {
+    "title": "Home",
+    "welcome": "Welcome",
+    "hello": "Hello, {{name}}",
+    "tagline": "Here's a quick pulse on your wellness journey.",
+    "today": "Today",
+    "todayLowercase": "today",
+    "todayAtGlance": "Today at a Glance",
+    "todaySubtitle": "Your wellness snapshot",
+    "insights": "Insights",
+    "suggestions": "Suggested For You",
+    "subtitle": "Curated routines to keep momentum going",
+    "edit": "Edit",
+    "done": "Done",
+    "loadingWidgets": "Loading widgets...",
+    "moodBalance": "Mood Balance",
+    "restfulSleep": "Restful Sleep",
+    "hydration": "Hydration",
+    "vsYesterday": "vs yesterday",
+    "sipWaterNow": "Sip water now",
+    "moodDescriptors": {
+      "veryLow": "Very low",
+      "low": "Low",
+      "neutral": "Neutral",
+      "good": "Good",
+      "great": "Great",
+      "suggestions": {
+        "veryLow": "Take a mindful pause",
+        "low": "A short walk could help",
+        "neutral": "Keep noticing your cues",
+        "good": "Celebrate the little wins",
+        "great": "Share the positive energy"
+      }
+    },
+    "activities": {
+      "title": "Today's Activities",
+      "todayActivities": "Today's Activities",
+      "morningMeditation": "Morning Meditation",
+      "hydrationGoal": "Hydration Goal",
+      "eveningWalk": "Evening Walk",
+      "gratitudeJournal": "Gratitude Journal",
+      "drinkGlasses": "Drink {{count}} glasses of water",
+      "breathingExercise": "5-minute breathing exercise",
+      "outdoorWalk": "20-minute outdoor walk",
+      "gratefulThings": "Write 3 things you're grateful for",
+      "ongoing": "Ongoing",
+      "completed": "Completed"
+    },
+    "status": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "complete": "Complete",
+      "pending": "Pending",
+      "loggedToday": "Logged today",
+      "completeCheckIns": "Complete check-ins"
+    },
+    "sleep": {
+      "deepSleep": "Deep sleep",
+      "rem": "REM",
+      "wakeTime": "Wake time",
+      "quality": "Quality",
+      "hours": "{{hours}}h"
+    },
+    "hrv": {
+      "currentHR": "Current HR",
+      "restingHR": "Resting HR",
+      "recovery": "Recovery",
+      "value": "{{value}}ms"
+    },
+    "analyses": {
+      "streak": "Streak",
+      "status": "Status",
+      "days": "{{count}} days",
+      "lastCheckIn": "Last check-in",
+      "today": "Today"
+    },
+    "goal": "Goal",
+    "bpm": "bpm",
+    "stats": {
+      "streak": "Streak",
+      "momentum": "Momentum",
+      "nextSession": "Next Session",
+      "days": "{{count}} days",
+      "loading": "Loading..."
+    },
+    "emptySlot": {
+      "addWidget": "Long press to add widget"
+    },
+    "permissions": {
+      "required": "Permissions Required",
+      "requiredMessage": "To sync activities with your calendar and reminders, please enable permissions in Settings."
+    },
+    "calendar": {
+      "synced": "Synced to Calendar",
+      "addedMessage": "{{title}} has been added to your calendar!",
+      "ofCompleted": "{{completed}} of {{total}} completed",
+      "syncFailed": "Sync Failed",
+      "syncFailedMessage": "Failed to sync to calendar. Please check your permissions."
+    },
+    "dailyCheckIn": {
+      "title": "Daily Check-In",
+      "subtitle": "A glance at how your body and mind feel"
+    }
+  },
+  "analysis": {
+    "emotion": {
+      "card": {
+        "lastTitle": "Last emotion analysis",
+        "sampleTitle": "Sample emotion analysis",
+        "sampleHint": "Complete your first emotion analysis to see real results"
+      },
+      "banner": {
+        "title": "DOMINANT EMOTION",
+        "subtitle": "Detected in the last session"
+      },
+      "hero": {
+        "title": "Real-time Emotion Detection",
+        "subtitle": "Capture a quick scan to understand how you feel and track mood trends."
+      },
+      "recent": { "title": "Recent Session", "subtitle": "Your latest emotion analysis results" },
+      "quickStats": { "title": "Quick Stats", "subtitle": "Your emotional wellness overview" },
+      "trends": { "title": "Emotional Trends", "subtitle": "7-day overview of your emotional state" },
+      "valenceArousal": { "title": "Valence & Arousal", "subtitle": "Understand emotional positivity and intensity" },
+      "metrics": {
+        "valence": "Valence",
+        "positivity": "Positivity",
+        "arousal": "Arousal",
+        "intensity": "Intensity",
+        "sessions": "Sessions",
+        "thisMonth": "This month",
+        "valenceDesc": "Tracks the positivity of your expression and overall affect.",
+        "arousalDesc": "Measures the intensity or energy level detected at the moment."
+      },
+      "howItWorks": {
+        "title": "How Emotion Detection Works",
+        "subtitle": "Understanding the technology behind our analysis",
+        "cardTitle": "AI-Powered Analysis",
+        "cardDesc": "Neural networks analyze facial expressions, micro-movements and emotional cues in real time.",
+        "step1": "Capture your facial expression using the camera",
+        "step2": "AI analyzes facial landmarks and micro-expressions",
+        "step3": "Get detailed emotion breakdown and mood insights"
+      },
+      "title": "Emotion Analysis",
+      "capture": "Capture",
+      "analyze": "Analyze",
+      "results": "Results",
+      "startDetection": "Start Detection",
+      "selectFromGallery": "Select from Gallery",
+      "analyzingExpressions": "Analyzing expressions",
+      "processingSubtitle": "Processing facial micro-expressions and emotional patterns...",
+      "currentMood": "Current mood",
+      "recentLogs": "Recent logs",
+      "readyToScan": "Ready to scan",
+      "saved": "{{count}} saved",
+      "noneYet": "None yet",
+      "errors": {
+        "cameraPermission": "Camera permission is required for emotion detection",
+        "serviceNotReady": "Analysis service is not ready. Please check your OpenAI configuration.",
+        "mediaLibraryPermission": "Media library permission is required to select photos",
+        "imageProcessingFailed": "Failed to process selected image",
+        "analysisFailed": "Analysis failed: {{error}}",
+        "failedToAnalyze": "Failed to analyze image: {{error}}",
+        "cameraNotReady": "Camera not ready. Please wait a moment...",
+        "initializationFailed": "Unable to initialize analysis service. Check OpenAI settings.",
+        "captureTimeout": "Camera capture timed out. Please try again.",
+        "captureFailed": "Failed to capture image.",
+        "allStrategiesFailed": "All capture strategies failed",
+        "cameraNull": "Camera ref is null - camera may have been unmounted. Please restart the camera.",
+        "emptyData": "Camera returned empty data. Please try again."
+      }
+    },
+    "skin": {
+      "card": {
+        "lastTitle": "Last skin analysis",
+        "sampleTitle": "Sample skin analysis",
+        "sampleHint": "Complete your first skin analysis to see real results"
+      },
+      "metricExplainers": {
+        "texture": { "why": "Shows surface uniformity.", "how": "Analysis of surface irregularities." },
+        "redness": { "why": "Estimates visible redness/irritation.", "how": "Analysis of chromatic skin signals." },
+        "hydration": { "why": "Surface water content.", "how": "Hydration estimate from skin patterns." },
+        "oiliness": { "why": "Sebum balance and shine.", "how": "Detection of surface shininess." },
+        "overall": { "label": "Skin Health", "why": "Aggregate index of key parameters.", "how": "Combination of smoothness, redness, hydration and oiliness." }
+      },
+      "guides": {
+        "smoothness": { "title": "Texture Improvement Guide", "description": "Personalized tips for smoother, more even skin." },
+        "redness": { "title": "Inflammation Reduction Guide", "description": "Learn how to calm irritated and sensitive skin." },
+        "oiliness": { "title": "Sebum Balance Guide", "description": "Control excess oil production with expert tips." },
+        "confidence": { "title": "Analysis Quality Tips", "description": "Get the most accurate skin analysis results." }
+      },
+      "header": {
+        "hydrationReadiness": "Hydration readiness",
+        "oilBalance": "Oil balance",
+        "lastSession": "Last session",
+        "awaitingScan": "Awaiting scan",
+        "notMeasured": "Not measured",
+        "neverRun": "Never run",
+        "justNow": "Just now"
+      },
+      "hero": {
+        "title": "Advanced Skin Analysis",
+        "subtitle": "Measure hydration, redness and texture with a guided camera scan."
+      },
+      "start": "Start skin scan",
+      "recent": { "title": "Recent Analysis", "subtitle": "Your latest skin scan results" },
+      "quickStats": { "title": "Quick Stats", "subtitle": "Your skin health overview" },
+      "trends": { "title": "Skin Health Score Trends", "subtitle": "7-day overview of your skin metrics" },
+      "metrics": {
+        "texture": "Smoothness",
+        "textureSubtitle": "Skin Texture",
+        "redness": "Redness",
+        "rednessSubtitle": "Skin Redness",
+        "hydration": "Hydration",
+        "hydrationSubtitle": "Water Content",
+        "oiliness": "Oiliness",
+        "oilinessSubtitle": "Sebaceous Activity"
+      },
+      "howItWorks": {
+        "title": "How Skin Analysis Works",
+        "subtitle": "Understanding the technology behind our analysis",
+        "cardTitle": "AI-Powered Skin Analysis",
+        "cardDesc": "Computer vision analyzes smoothness, hydration, redness and oiliness for insights.",
+        "step1": "Capture high-resolution skin images using advanced camera technology",
+        "step2": "AI analyzes skin smoothness, hydration, redness and oiliness patterns",
+        "step3": "Get a detailed skin health report with personalized recommendations"
+      },
+      "advancedModules": {
+        "title": "Advanced modules",
+        "subtitle": "Unlock deeper diagnostics",
+        "tapForGuide": "Tap for detailed guide"
+      },
+      "title": "Skin Analysis",
+      "capture": "Capture",
+      "analyze": "Analyze",
+      "results": "Results",
+      "startAnalysis": "Start Analysis",
+      "selectFromGallery": "Select from Gallery",
+      "analyzingSkin": "Analyzing skin",
+      "processingSubtitle": "Processing skin texture, hydration and quality...",
+      "currentStatus": "Current status",
+      "recentLogs": "Recent logs",
+      "readyToScan": "Ready to scan",
+      "saved": "{{count}} saved",
+      "noneYet": "None yet",
+      "errors": {
+        "cameraPermission": "Camera permission is required for skin analysis",
+        "serviceNotReady": "Analysis service is not ready. Please check your OpenAI configuration.",
+        "mediaLibraryPermission": "Media library permission is required to select photos",
+        "imageProcessingFailed": "Failed to process selected image",
+        "analysisFailed": "Analysis failed: {{error}}",
+        "failedToAnalyze": "Failed to analyze image: {{error}}",
+        "cameraNotReady": "Camera not ready. Please wait a moment...",
+        "initializationFailed": "Unable to initialize analysis service. Check OpenAI settings.",
+        "captureTimeout": "Camera capture timed out. Please try again.",
+        "captureFailed": "Failed to capture image.",
+        "allStrategiesFailed": "All capture strategies failed",
+        "cameraNull": "Camera ref is null - camera may have been unmounted. Please restart the camera.",
+        "emptyData": "Camera returned empty data. Please try again."
+      }
+    },
+    "food": {
+      "hero": {
+        "title": "Advanced Nutrition Analysis",
+        "subtitle": "Identify foods and calculate nutrients with a photo of your meal."
+      },
+      "header": {
+        "calories": "Calories",
+        "healthScore": "Health Score",
+        "lastSession": "Last session",
+        "awaitingScan": "Awaiting scan",
+        "notMeasured": "Not measured",
+        "neverRun": "Never run",
+        "justNow": "Just now"
+      },
+      "title": "Food Analysis",
+      "capture": "Capture",
+      "analyze": "Analyze",
+      "results": "Results",
+      "startAnalysis": "Start Analysis",
+      "selectFromGallery": "Select from Gallery",
+      "analyzingFood": "Analyzing food",
+      "processingSubtitle": "Processing image and calculating nutrients...",
+      "recent": {
+        "title": "Latest Analysis",
+        "subtitle": "Your most recent food analysis"
+      },
+      "card": {
+        "lastTitle": "Latest Analysis",
+        "sampleTitle": "Sample Analysis",
+        "sampleHint": "Perform an analysis to see your nutrition data here"
+      },
+      "mealTypes": {
+        "breakfast": "Breakfast",
+        "lunch": "Lunch",
+        "dinner": "Dinner",
+        "snack": "Snack",
+        "other": "Meal"
+      },
+      "metricExplainers": {
+        "calories": {
+          "why": "Calories provide the energy your body needs. Monitoring them helps maintain energy balance.",
+          "how": "Calories are calculated based on macronutrients identified in the meal. Each gram of carbohydrates and proteins provides 4 kcal, while fats provide 9 kcal per gram."
+        },
+        "carbohydrates": {
+          "why": "Carbohydrates are the body's primary energy source. They help maintain brain and muscle function.",
+          "how": "Carbohydrates are identified based on foods present in the meal. They're found in grains, fruits, vegetables, and legumes."
+        },
+        "proteins": {
+          "why": "Proteins are essential for building and repairing muscle tissue. They also help maintain muscle mass.",
+          "how": "Proteins are calculated based on protein-rich foods identified in the meal, such as meat, fish, eggs, and legumes."
+        },
+        "fats": {
+          "why": "Fats are important for absorbing fat-soluble vitamins and provide energy. They help maintain cell health.",
+          "how": "Fats are identified based on fatty foods present in the meal, such as oils, nuts, avocado, and dairy products."
+        },
+        "healthScore": {
+          "why": "The health score evaluates the overall nutritional quality of the meal. It helps make healthier food choices.",
+          "how": "The score is calculated based on macronutrient balance, presence of vitamins and minerals, and food variety."
+        }
+      },
+      "quickStats": {
+        "title": "Nutritional Overview",
+        "subtitle": "Key nutritional metrics from your analysis"
+      },
+      "metrics": {
+        "calories": "Calories",
+        "caloriesSubtitle": "Total calories",
+        "carbohydrates": "Carbohydrates",
+        "carbohydratesSubtitle": "Carbs (g)",
+        "proteins": "Proteins",
+        "proteinsSubtitle": "Proteins (g)",
+        "fats": "Fats",
+        "fatsSubtitle": "Fats (g)",
+        "fiber": "Fiber",
+        "healthScore": "Health Score"
+      },
+      "howItWorks": {
+        "title": "How Food Analysis Works",
+        "subtitle": "Learn how our AI analyzes your meals",
+        "cardTitle": "AI-Powered Nutrition Analysis",
+        "cardDesc": "Our advanced AI technology identifies foods and calculates nutritional information",
+        "step1": "Take a photo of your meal",
+        "step2": "AI identifies foods and calculates nutrients",
+        "step3": "Get detailed nutritional insights and recommendations"
+      },
+      "detailedAnalysis": {
+        "title": "Get additional details of your nutritional analysis"
+      },
+      "results": {
+        "title": "Food Analysis Complete",
+        "subtitle": "Comprehensive AI-powered nutritional assessment",
+        "nutrition": "Nutrition",
+        "mealType": "Meal Type",
+        "identifiedFoods": "Identified Foods",
+        "macronutrients": "Macronutrients",
+        "vitaminsMinerals": "Vitamins & Minerals",
+        "vitamins": "Vitamins",
+        "minerals": "Minerals",
+        "recommendations": "Recommendations",
+        "observations": "Observations"
+      },
+      "mealType": {
+        "breakfast": "Breakfast",
+        "lunch": "Lunch",
+        "dinner": "Dinner",
+        "snack": "Snack",
+        "other": "Meal"
+      },
+      "health": {
+        "excellent": "Your meal is nutritionally balanced!",
+        "good": "Your meal is healthy with good nutritional value.",
+        "fair": "Your meal could benefit from more variety.",
+        "poor": "Consider adding more nutritious foods."
+      },
+      "dailyIntake": {
+        "title": "Daily Intake",
+        "subtitle": "Track your progress toward daily nutritional goals",
+        "ofGoal": "{{value}}% of goal",
+        "caloriesDesc": "Daily calorie intake progress. Helps maintain energy balance.",
+        "carbsDesc": "Daily carbohydrate intake progress. Essential for energy.",
+        "proteinsDesc": "Daily protein intake progress. Important for muscle health."
+      },
+      "recipes": {
+        "title": "AI Recipe Suggestions",
+        "subtitle": "Personalized recipes based on your preferences and goals",
+        "tapForRecipe": "Tap for recipe >",
+        "loading": "Loading recipe...",
+        "generating": "Generating recipe...",
+        "defaultStep1": "Prepare all necessary ingredients.",
+        "defaultStep2": "Follow cooking instructions.",
+        "defaultStep3": "Serve and enjoy your meal.",
+        "breakfast": {
+          "title": "Breakfast Ideas",
+          "description": "Start your day with nutritious breakfast recipes"
+        },
+        "lunch": {
+          "title": "Lunch Recipes",
+          "description": "Healthy and satisfying lunch options"
+        },
+        "dinner": {
+          "title": "Dinner Suggestions",
+          "description": "Balanced dinner recipes for optimal nutrition"
+        },
+        "snack": {
+          "title": "Healthy Snacks",
+          "description": "Nutritious snack ideas to keep you energized"
+        }
+      },
+      "fridge": {
+        "title": "What's in Your Fridge?",
+        "subtitle": "Get personalized recipe suggestions based on your ingredients",
+        "cardTitle": "Smart Recipe Finder",
+        "cardDesc": "Tell us what ingredients you have, and we'll suggest delicious recipes tailored to your preferences and nutritional goals.",
+        "addIngredients": "Add Ingredients",
+        "modalDesc": "Enter the ingredients you have available in your fridge or pantry. The AI will generate a personalized recipe for you!",
+        "ingredientsList": "Available Ingredients",
+        "ingredientPlaceholder": "Ingredient {{number}}",
+        "addMore": "Add another ingredient",
+        "expiryPlaceholder": "Expiry (YYYY-MM-DD)",
+        "quickAdd": "Dictation / Quick Add",
+        "quickAddPlaceholder": "Example: milk, eggs, tomatoes, canned tuna",
+        "parseAndAdd": "Parse and add",
+        "dictate": "Dictate",
+        "useKeyboardDictation": "Use keyboard dictation",
+        "dictationHint": "Tip: tap the keyboard microphone to dictate, separate with commas.",
+        "startRecording": "Record",
+        "stopRecording": "Stop",
+        "transcript": "Transcript",
+        "confirmIngredients": "Confirm ingredients",
+        "addAll": "Add all",
+        "expires": "Expires",
+        "recordingError": "Error during recording",
+        "ambiguousTitle": "Didn't understand '{{text}}'",
+        "ambiguousMessage": "Did you mean: {{suggestions}}",
+        "generateRecipe": "Generate Recipe",
+        "recipeGenerated": "Recipe Generated",
+        "noIngredients": "Enter at least one ingredient",
+        "needMoreIngredients": "Add at least {{count}} ingredients before generating a recipe",
+        "generateError": "Error generating recipe",
+        "minutes": "minutes",
+        "servings": "servings",
+        "nutritionPerServing": "Nutrition per Serving",
+        "ingredients": "Ingredients",
+        "steps": "Steps",
+        "tips": "Tips",
+        "missingIngredients": "Missing Ingredients",
+        "optional": "optional",
+        "newRecipe": "New Recipe"
+      },
+      "goals": {
+        "title": "Nutritional Goals",
+        "manual": "Manual Entry",
+        "aiSuggestion": "AI Suggestion",
+        "aiTitle": "AI-Powered Calculation",
+        "aiDesc": "Let our AI calculate your optimal daily caloric needs and macronutrient distribution based on your profile.",
+        "getAISuggestion": "Get AI Suggestion",
+        "aiSuggestionReady": "Suggestion Ready",
+        "aiSuggestionDesc": "AI has calculated your nutritional goals. Review and adjust if needed.",
+        "aiError": "Unable to get AI suggestion. Please try manual entry.",
+        "dailyCalories": "Daily Calories",
+        "macronutrients": "Macronutrient Distribution",
+        "macronutrientsDesc": "Set the percentage distribution of your macronutrients (must sum to 100%)",
+        "total": "Total",
+        "carbsDesc": "Recommended: 40-60% for energy",
+        "proteinsDesc": "Recommended: 20-30% for muscle health",
+        "fatsDesc": "Recommended: 20-30% for nutrient absorption",
+        "percentagesError": "Percentages must sum to 100%",
+        "caloriesError": "Daily calories must be greater than 0",
+        "nutritionistTitle": "From Nutritionist",
+        "nutritionistDesc": "If you have specific goals from a nutritionist, mark them here.",
+        "nutritionistSet": "Marked as Nutritionist",
+        "nutritionistSetDesc": "Your goals are marked as coming from a nutritionist.",
+        "markAsNutritionist": "Mark as Nutritionist",
+        "noUser": "User not found",
+        "noProfile": "Profile not found. Please complete your profile first.",
+        "configureGoals": "Configure Goals",
+        "currentGoals": "Current Goals",
+        "noGoalsSet": "No goals configured. Tap to set your nutritional goals.",
+        "from": "Source",
+        "sourceManual": "Manual",
+        "sourceAI": "AI Suggested",
+        "sourceNutritionist": "Nutritionist",
+        "dietGoal": "Diet Goal",
+        "dietGoalDesc": "Choose your main goal to personalize calories and macronutrients",
+        "dietGoals": {
+          "maintenance": "Maintenance",
+          "weight_loss": "Weight Loss",
+          "bulk": "Bulk",
+          "custom": "Custom"
+        },
+        "missingData": "Missing Profile Data",
+        "missingDataDesc": "Please complete your profile (age, gender, weight, height) before getting AI suggestions.",
+        "missingActivityLevel": "Activity Level Required",
+        "missingActivityLevelDesc": "Your activity level is needed to calculate accurate daily caloric needs. Would you like to set it now?",
+        "setActivityLevel": "Set Activity Level",
+        "selectActivityLevel": "Select Your Activity Level",
+        "selectActivityLevelDesc": "How active are you during the week?",
+        "activityLevels": {
+          "sedentary": "Sedentary",
+          "lightlyActive": "Lightly Active",
+          "moderatelyActive": "Moderately Active",
+          "veryActive": "Very Active",
+          "extremelyActive": "Extremely Active"
+        },
+        "saveError": "Error saving activity level"
+      },
+      "errors": {
+        "cameraPermission": "Camera permission is required for food analysis",
+        "serviceNotReady": "Analysis service is not ready. Please check your OpenAI configuration.",
+        "mediaLibraryPermission": "Media library permission is required to select photos",
+        "imageProcessingFailed": "Failed to process selected image",
+        "analysisFailed": "Analysis failed: {{error}}",
+        "failedToAnalyze": "Failed to analyze image: {{error}}",
+        "cameraNotReady": "Camera not ready. Please wait a moment...",
+        "initializationFailed": "Unable to initialize analysis service. Check OpenAI settings.",
+        "captureTimeout": "Camera capture timed out. Please try again.",
+        "captureFailed": "Failed to capture image.",
+        "allStrategiesFailed": "All capture strategies failed",
+        "cameraNull": "Camera ref is null - camera may have been unmounted. Please restart the camera.",
+        "emptyData": "Camera returned empty data. Please try again."
+      }
+    },
+    "common": {
+      "back": "Back",
+      "retry": "Retry",
+      "close": "Close",
+      "processing": "Processing...",
+      "requestingPermission": "Requesting camera permission…",
+      "loading": "Loading...",
+      "sample": "Sample",
+      "success": "Success"
+    }
+  },
+  "ui": {
+    "tapToExpand": "Tap to expand",
+    "tapToCollapse": "Tap to collapse",
+    "whyItMatters": "Why it matters",
+    "howItWorks": "How it works"
+  },
+  "rating": {
+    "excellent": "Excellent",
+    "good": "Good",
+    "fair": "Fair",
+    "poor": "Poor"
+  },
+  "notifications": {
+    "moodDeclineTitle": "Are you okay?",
+    "moodDeclineMessage": "You've noticed a decline in your mood over the last 3 days. Would you like to talk with your coach?",
+    "permissionRequired": "Permission Required",
+    "permissionMessage": "We need permission to send you helpful notifications about your wellness."
+  },
+  "modals": {
+    "healthPermissions": {
+      "title": "Health Permissions",
+      "subtitle": "Connect your health data for comprehensive wellness tracking",
+      "loading": "Loading permissions...",
+      "platformAvailable": "{{platform}} available",
+      "skipForNow": "Skip for now",
+      "requestPermissions": "Request Permissions ({{count}})",
+      "privacyNote": "Your health data is protected and used only to provide you with personalized insights",
+      "warning": "Attention",
+      "selectAtLeastOne": "Select at least one permission to continue",
+      "successMessage": "Permissions granted: {{granted}}\nPermissions denied: {{denied}}",
+      "perfect": "Perfect!",
+      "deniedTitle": "Permissions Denied",
+      "deniedMessage": "Some permissions were denied. You can configure them manually in your device's health settings.",
+      "openSettings": "Open Settings",
+      "errorMessage": "An error occurred while requesting permissions",
+      "categories": {
+        "activity": "Activity",
+        "vitals": "Vitals",
+        "sleep": "Sleep",
+        "nutrition": "Nutrition",
+        "mindfulness": "Mindfulness",
+        "other": "Other"
+      }
+    },
+    "widgetGoal": {
+          "subtitle": "Set your preferred daily target.",
+          "rangeHint": "Min {{min}} • Max {{max}} ({{step}} step)",
+          "steps": {
+            "title": "Daily Steps Goal",
+            "unit": "steps",
+            "hint": "e.g. 10000"
+          },
+          "hydration": {
+            "title": "Hydration Goal",
+            "unit": "glasses",
+            "hint": "e.g. 8"
+          },
+          "meditation": {
+            "title": "Meditation Goal",
+            "unit": "minutes",
+            "hint": "e.g. 30"
+          },
+          "sleep": {
+            "title": "Sleep Goal",
+            "unit": "hours",
+            "hint": "e.g. 8"
+          }
+        },
+        "biometric": {
+          "title": "Biometric Security",
+          "useTitle": "Use {{type}}",
+          "notAvailableTitle": "Biometric Not Available",
+          "description": "Enable biometric authentication to securely and quickly access the app using {{type}}.",
+          "notSupported": "Your device does not support biometric authentication.",
+          "currentStatus": "Current Status",
+          "enabled": "Enabled",
+          "disabled": "Disabled",
+          "benefits": "Benefits",
+          "benefit1": "Secure and fast access",
+          "benefit2": "No password to remember",
+          "benefit3": "Advanced protection",
+          "privacyNote": "Your biometric data always remains private and is never shared.",
+          "notAvailable": "Not Available",
+          "notAvailableMessage": "Biometric data is not available on this device",
+          "enableTitle": "Enable Biometric Authentication",
+          "enableMessage": "Enter your password to save biometric data",
+          "enable": "Enable",
+          "passwordRequired": "Password is required",
+          "incorrectPassword": "Incorrect password",
+          "enabledSuccess": "Biometric authentication enabled!\nYou can access using {{type}} on next login.",
+          "enableError": "Unable to enable biometric authentication",
+          "disabledSuccess": "Biometric authentication disabled",
+          "disableError": "Unable to disable biometric authentication"
+        },
+        "biometricSetup": {
+          "title": "Biometric Authentication",
+          "subtitle": "Set up {{type}} for fast and secure access",
+          "checkingCapabilities": "Checking device capabilities...",
+          "availableOnDevice": "{{type}} available on this device",
+          "credentialsProtected": "Your credentials are protected with end-to-end encryption",
+          "notAvailable": "Biometric authentication not available",
+          "configureInSettings": "Configure biometric authentication in device settings",
+          "skipForNow": "Skip for now",
+          "configure": "Set up {{type}}",
+          "credentialsNotAvailable": "Credentials not available for biometric setup",
+          "cannotSaveCredentials": "Unable to save credentials",
+          "setupSuccess": "{{type}} authentication has been set up successfully. From now on, you can access the app quickly.",
+          "perfect": "Perfect!",
+          "setupError": "An error occurred during setup"
+        },
+        "biometricSuggestion": {
+          "title": "Biometric Authentication",
+          "enableTitle": "Enable {{type}}",
+          "description": "Use {{type}} to quickly access the app without entering a password."
+        }
+    },
+  "popups": {
+    "wellnessSuggestion": {
+      "defaultTitle": "Wellness Activity",
+      "defaultDescription": "A helpful wellness activity for you.",
+      "startExercise": "Start Exercise Now",
+      "addToToday": "Add to Today",
+      "later": "Later"
+    },
+    "recommendation": {
+      "title": "Recommendation Details",
+      "subtitle": "Detailed Analysis",
+      "scientificExplanation": "Scientific Explanation",
+      "correlations": "Correlations with Your Data",
+      "expectedBenefits": "Expected Benefits"
+    },
+    "pillDetail": {
+      "streak": {
+        "title": "Streak",
+        "subtitle": "Your consistency journey",
+        "currentStreak": "Current Streak",
+        "currentStreakDesc": "You've been consistent for {{days}} days straight!",
+        "bestStreak": "Best Streak",
+        "bestStreakDesc": "Your longest streak was {{days}} days in March",
+        "goal": "Streak Goal",
+        "goalDesc": "You're {{percent}}% towards your monthly goal",
+        "tips": "Tips to Continue",
+        "keepItUp": "Keep it up!",
+        "tipsDesc": "• Set daily reminders\n• Track your progress\n• Celebrate small wins\n• Don't break the chain!"
+      },
+      "momentum": {
+        "title": "Momentum",
+        "subtitle": "Your completion rate",
+        "current": "Current Momentum",
+        "currentDesc": "You've completed {{completed}} of {{total}} tasks in the last 7 days",
+        "trend": "Trend",
+        "stable": "Stable →",
+        "trendUp": "Rising ↑",
+        "trendDown": "Declining ↓",
+        "unknown": "Unknown",
+        "trendDesc": {
+          "up": "{{percent}}% increase from last week",
+          "down": "{{percent}}% decrease from last week",
+          "stable": "{{percent}}% change from last week"
+        },
+        "noTrend": "No trend data available",
+        "completionRate": "Completion Rate",
+        "completionRateDesc": "Based on your wellness activities and goals",
+        "tips": "Tips to Improve",
+        "keepBuilding": "Keep building!",
+        "tipsDesc": "• Complete daily activities\n• Set achievable goals\n• Track your progress\n• Celebrate milestones"
+      },
+      "nextSession": {
+        "title": "Next Session",
+        "subtitle": "Your upcoming wellness session",
+        "scheduledTime": "Scheduled Time",
+        "scheduledTimeDesc": "Your next wellness session is scheduled for today at 6:00 PM",
+        "sessionType": "Session Type",
+        "sessionTypeDesc": "We'll analyze your emotional state and provide personalized insights",
+        "preparation": "Preparation",
+        "getReady": "Get ready!",
+        "preparationDesc": "• Find a quiet space\n• Ensure good lighting\n• Take a few deep breaths\n• Be ready to share how you feel",
+        "benefits": "Benefits",
+        "stayConsistent": "Stay consistent!",
+        "benefitsDesc": "Regular sessions help track your wellness journey and provide valuable insights for improvement"
+      }
+    },
+    "detailedAnalysis": {
+      "noData": "No analysis data available",
+      "timeout": "Timeout while generating analysis. Please try again.",
+      "notAuthenticated": "User not authenticated",
+      "loadingError": "Error loading analysis",
+      "generationFailed": "Unable to generate detailed analysis. Please try again later.",
+      "generationError": "Error generating analysis. Check your connection and try again.",
+      "emotionTitle": "Detailed Emotion Analysis",
+      "skinTitle": "Detailed Skin Analysis",
+      "foodTitle": "Advanced Nutritional Analysis"
+    },
+    "gauge": {
+      "trend": "Trend vs your usual",
+      "whyImportant": "Why it matters",
+      "howItWorks": "How it works",
+      "examples": "Examples",
+      "recommendedAction": "Recommended Action",
+      "resources": "Resources",
+      "disclaimer": "⚠️ Cosmetic evaluation, not diagnostic. For clinical concerns, consult a professional."
+    }
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "startJourney": "Start Your Journey",
+    "welcome": {
+      "title": "Welcome to Wellness Coach",
+      "subtitle": "Your AI wellness companion",
+      "description": "Discover how artificial intelligence can transform your daily wellness routine.",
+      "features": {
+        "0": "Real-time emotion analysis",
+        "1": "Advanced skin monitoring",
+        "2": "24/7 personalized coaching"
+      },
+      "actionText": "Let's Get Started!"
+    },
+    "features": {
+      "title": "Main Features",
+      "subtitle": "Everything you need in one app",
+      "description": "Explore powerful features designed to improve your wellness.",
+      "features": {
+        "0": "Customizable dashboard with widgets",
+        "1": "AI-powered skin analysis",
+        "2": "Advanced emotion detection",
+        "3": "Intelligent journaling",
+        "4": "Guided breathing exercises"
+      },
+      "actionText": "Continue"
+    },
+    "health": {
+      "title": "Health Integration",
+      "subtitle": "Connect your health data",
+      "description": "Sync with Apple Health or Google Fit for comprehensive wellness tracking.",
+      "features": {
+        "0": "Automatic HealthKit synchronization",
+        "1": "Sleep and activity monitoring",
+        "2": "HRV and heart rate analysis",
+        "3": "Steps and calories tracking"
+      },
+      "actionText": "Enable Health"
+    },
+    "ai": {
+      "title": "AI Daily Copilot",
+      "subtitle": "Your personal assistant",
+      "description": "Receive personalized recommendations based on your health data and preferences.",
+      "features": {
+        "0": "Daily analysis of your state",
+        "1": "Personalized recommendations",
+        "2": "Intelligent insights on your data",
+        "3": "Adaptive wellness plan"
+      },
+      "actionText": "Discover AI Copilot"
+    },
+    "privacy": {
+      "title": "Privacy & Security",
+      "subtitle": "Your data is safe",
+      "description": "We use end-to-end encryption and never share your personal data.",
+      "features": {
+        "0": "End-to-end encryption",
+        "1": "Locally stored data",
+        "2": "No sharing with third parties",
+        "3": "Full control over your data"
+      },
+      "actionText": "Accept & Continue"
+    }
+  },
+  "auth": {
+    "welcome": "Welcome",
+    "createAccount": "Create Account",
+    "loginSubtitle": "Sign in to your WellnessCoach account",
+    "signupSubtitle": "Start your wellness journey",
+    "login": "Sign In",
+    "signup": "Sign Up",
+    "email": "Email",
+    "emailPlaceholder": "Enter your email",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "passwordPlaceholderSignup": "Create a secure password",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Confirm your password",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot password?",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "age": "Age",
+    "agePlaceholder": "e.g. 28",
+    "error": "Error",
+    "fillAllFields": "Fill in all required fields",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "passwordMinLength": "Password must be at least 6 characters",
+    "invalidEmail": "Enter a valid email address",
+    "loginError": "Login Error",
+    "loginSuccess": "Login successful!",
+    "invalidCredentials": "Invalid credentials",
+    "signupError": "Signup Error",
+    "signupFailed": "Error during registration",
+    "signupCompleted": "Registration Completed",
+    "checkEmail": "Check your email to confirm your account",
+    "emailSent": "Email Sent",
+    "checkEmailForInstructions": "Check your inbox for instructions",
+    "enterEmailFirst": "Enter your email first",
+    "resetPasswordError": "Error during password reset",
+    "operationError": "An error occurred during the operation",
+    "genericError": "An error occurred",
+    "gender": {
+      "label": "Gender",
+      "select": "Select gender",
+      "selectTitle": "Select Gender",
+      "male": "Male",
+      "female": "Female",
+      "other": "Other",
+      "preferNotToSay": "Prefer not to say"
+    }
+  },
+  "profile": {
+    "title": "Personal Information",
+    "loading": "Loading profile...",
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "Enter your full name",
+    "fullNameRequired": "Full name is required",
+    "emailCannotBeChanged": "Email cannot be changed",
+    "selectGender": "Choose your gender",
+    "saveChanges": "Save Changes",
+    "loadError": "Unable to load profile",
+    "updateSuccess": "Profile updated successfully",
+    "updateError": "Unable to update profile",
+    "weight": "Weight",
+    "weightPlaceholder": "e.g. 70",
+    "height": "Height",
+    "heightPlaceholder": "e.g. 175",
+    "activityLevel": "Activity Level",
+    "selectActivityLevel": "Select Activity Level",
+    "selectActivityLevelDesc": "Choose your daily activity level for accurate calorie calculation",
+    "activityLevelHelp": "Used to calculate your daily caloric needs based on your activity level",
+    "activityLevels": {
+      "sedentary": "Sedentary (little or no exercise)",
+      "lightlyActive": "Lightly Active (light exercise 1-3 days/week)",
+      "moderatelyActive": "Moderately Active (moderate exercise 3-5 days/week)",
+      "veryActive": "Very Active (hard exercise 6-7 days/week)",
+      "extremelyActive": "Extremely Active (very hard exercise, physical job)"
+    }
+  },
+  "widgets": {
+    "steps": "Steps",
+    "meditation": "Meditation",
+    "hydration": "Hydration",
+    "sleep": "Sleep",
+    "hrv": "HRV",
+    "analyses": "Check-In",
+    "checkIn": "Check-In",
+    "large": "Large (65%)",
+    "small": "Small (30%)"
+  },
+  "tabs": {
+    "home": "Home",
+    "emotion": "Emotion",
+    "skin": "Skin",
+    "food": "Food",
+    "library": "Library",
+    "chat": "Chat",
+    "settings": "Settings"
+  },
+  "dailyCheckIn": {
+    "mood": {
+      "title": "Mood Balance",
+      "subtitle": "How are you feeling today?",
+      "addNote": "Add a note",
+      "notePlaceholder": "Write about your feelings…",
+      "saveMood": "Save Mood",
+      "saved": "Saved",
+      "edit": "Edit",
+      "done": "Done",
+      "veryLow": "Very low",
+      "low": "Low",
+      "okay": "Okay",
+      "good": "Good",
+      "great": "Great"
+    },
+    "sleep": {
+      "title": "Restful Sleep",
+      "subtitle": "How rested do you feel?",
+      "notes": "Notes",
+      "notesPlaceholder": "How did you feel when you woke up?",
+      "saveRestLevel": "Save Rest Level",
+      "edit": "Edit",
+      "done": "Done",
+      "exhausted": "Exhausted",
+      "tired": "Tired",
+      "okay": "Okay",
+      "rested": "Rested",
+      "energized": "Energized"
+    }
+  },
+  "widgetCustomization": {
+    "title": "Customize Widgets",
+    "sectionTitle": "Widget Settings",
+    "sectionSubtitle": "Tap to toggle visibility, long press to change size",
+    "error": "Error",
+    "toggleError": "Failed to toggle widget",
+    "sizeError": "Failed to change widget size",
+    "reorderError": "Failed to reorder widgets",
+    "helpTitle": "How to customize:",
+    "help1": "• Tap the eye icon to show/hide widgets",
+    "help2": "• Tap the resize icon to change widget size",
+    "help3": "• Drag the handle to reorder widgets",
+    "help4": "• Large widgets show more information"
+  },
+  "wellnessSuggestions": {
+    "title": "Wellness Suggestions",
+    "subtitle": "Explore routines curated by your AI coach to support mood, sleep, and skin health",
+    "personalizedInsights": "Personalized Wellness Insights",
+    "viewAll": "View All",
+    "categories": {
+      "mindBody": {
+        "name": "Mind & Body",
+        "description": "Mental wellness and physical movement"
+      },
+      "nutrition": {
+        "name": "Nutrition",
+        "description": "Healthy eating and hydration"
+      },
+      "recovery": {
+        "name": "Recovery",
+        "description": "Sleep and relaxation routines"
+      },
+      "mindfulness": {
+        "name": "Mindfulness",
+        "description": "Meditation and mental clarity"
+      },
+      "energy": {
+        "name": "Energy",
+        "description": "Boosting vitality and motivation"
+      }
+    },
+    "suggestions": {
+      "breathingExercises": {
+        "title": "Breathing Exercises",
+        "description": "Practice mindful breathing to reduce stress and regain focus"
+      },
+      "takeAWalk": {
+        "title": "Take a Walk",
+        "description": "Enjoy a brisk walk outdoors to boost mood and circulation"
+      },
+      "stretching": {
+        "title": "Gentle Stretching",
+        "description": "Release tension with gentle stretches for your neck and shoulders"
+      },
+      "yogaFlow": {
+        "title": "Yoga Flow",
+        "description": "Connect mind and body with a gentle yoga sequence"
+      },
+      "hydration": {
+        "title": "Hydration",
+        "description": "Sip water steadily throughout the day to keep skin luminous"
+      },
+      "healthySnack": {
+        "title": "Healthy Snack",
+        "description": "Choose nutrient-rich snacks like nuts or fresh fruit"
+      },
+      "greenTea": {
+        "title": "Green Tea Break",
+        "description": "Enjoy antioxidant-rich green tea for a calming moment"
+      },
+      "eveningRoutine": {
+        "title": "Evening Routine",
+        "description": "Dim the lights and avoid screens 60 minutes before bedtime"
+      },
+      "progressiveRelaxation": {
+        "title": "Progressive Relaxation",
+        "description": "Tense and release each muscle group for deep relaxation"
+      },
+      "sleepMeditation": {
+        "title": "Sleep Meditation",
+        "description": "Guided meditation to prepare your mind for restful sleep"
+      },
+      "mindfulnessMeditation": {
+        "title": "Mindfulness Meditation",
+        "description": "Focus on the present moment with guided mindfulness practice"
+      },
+      "gratitudePractice": {
+        "title": "Gratitude Practice",
+        "description": "Reflect on three things you're grateful for today"
+      },
+      "bodyScan": {
+        "title": "Body Scan",
+        "description": "Bring awareness to each part of your body for relaxation"
+      },
+      "morningEnergy": {
+        "title": "Morning Energy Boost",
+        "description": "Start your day with energizing movements and positive affirmations"
+      },
+      "powerBreathing": {
+        "title": "Power Breathing",
+        "description": "Energizing breathing exercises to boost alertness and focus"
+      },
+      "danceBreak": {
+        "title": "Dance Break",
+        "description": "Move your body to your favorite music for an instant energy boost"
+      },
+      "natureBreak": {
+        "title": "Take a Nature Break",
+        "description": "Spending 20 minutes in a park or green space can significantly reduce stress hormones"
+      },
+      "deepBreathing": {
+        "title": "Deep Breathing Exercise",
+        "description": "Try 4-7-8 breathing: Inhale for 4 seconds, hold for 7, exhale for 8. Repeat 5 times"
+      },
+      "hydrationCheck": {
+        "title": "Hydration Check",
+        "description": "Dehydration can worsen stress. Drink a glass of water with lemon to refresh"
+      },
+      "gentleCleansing": {
+        "title": "Gentle Cleansing",
+        "description": "Use a pH-balanced cleanser twice daily to maintain healthy skin barrier"
+      },
+      "sunProtection": {
+        "title": "Sun Protection",
+        "description": "Apply SPF 30+ sunscreen daily, even on cloudy days"
+      },
+      "consistentSchedule": {
+        "title": "Consistent Schedule",
+        "description": "Go to bed and wake up at the same time every day, even on weekends"
+      },
+      "screenFreeHour": {
+        "title": "Screen-Free Hour",
+        "description": "Avoid screens 1 hour before bedtime to improve sleep quality"
+      }
+    },
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    },
+    "duration": {
+      "ongoing": "Ongoing",
+      "minutes": "{{minutes}} minutes"
+    },
+    "categoriesMeta": {
+      "count": "{{count}} suggestions"
+    }
+  }
+}

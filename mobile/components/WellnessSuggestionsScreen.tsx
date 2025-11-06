@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, withSpring, useSharedValue } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { useTranslation } from '../hooks/useTranslation';
+import { useTheme } from '../contexts/ThemeContext';
 
 import { WELLNESS_CATEGORIES, WELLNESS_SUGGESTIONS, WellnessSuggestion } from '../data/wellnessSuggestions';
 
@@ -21,10 +23,106 @@ const { width } = Dimensions.get('window');
 export const WellnessSuggestionsScreen: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const router = useRouter();
+  const { t, language } = useTranslation();
+  const { colors } = useTheme();
+
+  const safeT = (key: string, fallbackEn: string, fallbackIt: string) => {
+    const v = t(key);
+    if (v === key) {
+      return language === 'it' ? fallbackIt : fallbackEn;
+    }
+    return v;
+  };
+
+  // Helper function to translate category
+  const getTranslatedCategory = (category: typeof WELLNESS_CATEGORIES[0]) => {
+    const fallbacks: any = {
+      'mind-body': { en: { name: 'Mind & Body', description: 'Mental wellness and physical movement' }, it: { name: 'Mente e Corpo', description: 'Benessere mentale e movimento fisico' } },
+      'nutrition': { en: { name: 'Nutrition', description: 'Healthy eating and hydration' }, it: { name: 'Nutrizione', description: 'Alimentazione sana e idratazione' } },
+      'recovery': { en: { name: 'Recovery', description: 'Sleep and relaxation routines' }, it: { name: 'Recupero', description: 'Routine di sonno e relax' } },
+      'mindfulness': { en: { name: 'Mindfulness', description: 'Meditation and mental clarity' }, it: { name: 'Mindfulness', description: 'Meditazione e chiarezza mentale' } },
+      'energy': { en: { name: 'Energy', description: 'Boosting vitality and motivation' }, it: { name: 'Energia', description: 'Aumentare vitalità e motivazione' } },
+    };
+
+    const fb = fallbacks[category.id] || { en: { name: category.name, description: category.description }, it: { name: category.name, description: category.description } };
+
+    const map: { [key: string]: { k: string } } = {
+      'mind-body': { k: 'mindBody' },
+      'nutrition': { k: 'nutrition' },
+      'recovery': { k: 'recovery' },
+      'mindfulness': { k: 'mindfulness' },
+      'energy': { k: 'energy' },
+    };
+    const kk = map[category.id]?.k;
+
+    const name = kk ? safeT(`wellnessSuggestions.categories.${kk}.name`, fb.en.name, fb.it.name) : category.name;
+    const description = kk ? safeT(`wellnessSuggestions.categories.${kk}.description`, fb.en.description, fb.it.description) : category.description;
+
+    return { name, description };
+  };
+
+  // Helper function to translate suggestion
+  const getTranslatedSuggestion = (suggestion: WellnessSuggestion) => {
+    const id = suggestion.id;
+    const keyBaseMap: { [key: string]: string } = {
+      'breathing-exercises': 'breathingExercises',
+      'take-a-walk': 'takeAWalk',
+      'stretching': 'stretching',
+      'yoga-flow': 'yogaFlow',
+      'hydration': 'hydration',
+      'healthy-snack': 'healthySnack',
+      'green-tea': 'greenTea',
+      'evening-routine': 'eveningRoutine',
+      'progressive-relaxation': 'progressiveRelaxation',
+      'sleep-meditation': 'sleepMeditation',
+      'mindfulness-meditation': 'mindfulnessMeditation',
+      'gratitude-practice': 'gratitudePractice',
+      'body-scan': 'bodyScan',
+      'morning-energy': 'morningEnergy',
+      'power-breathing': 'powerBreathing',
+      'dance-break': 'danceBreak',
+    };
+    const key = keyBaseMap[id];
+
+    const fbTitle = suggestion.title;
+    const fbDesc = suggestion.description;
+
+    const title = key ? safeT(`wellnessSuggestions.suggestions.${key}.title`, fbTitle, fbTitle) : fbTitle;
+    const description = key ? safeT(`wellnessSuggestions.suggestions.${key}.description`, fbDesc, fbDesc) : fbDesc;
+
+    // duration
+    let duration = suggestion.duration || '';
+    if (duration === 'Ongoing') {
+      duration = safeT('wellnessSuggestions.duration.ongoing', 'Ongoing', 'In corso');
+    } else if (/\bminutes?\b/.test(duration)) {
+      const minutes = duration.replace(/[^0-9]/g, '') || '0';
+      duration = t('wellnessSuggestions.duration.minutes', { minutes });
+    }
+
+    return { ...suggestion, title, description, duration };
+  };
+
+  // Translate all suggestions and categories using useMemo
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const translatedSuggestions = useMemo(() => 
+    WELLNESS_SUGGESTIONS.map(getTranslatedSuggestion),
+    [t] // Only depend on t, functions will be recreated but that's fine
+  );
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const translatedCategories = useMemo(() =>
+    WELLNESS_CATEGORIES.map(cat => ({
+      ...cat,
+      ...getTranslatedCategory(cat),
+    })),
+    [t] // Only depend on t, functions will be recreated but that's fine
+  );
 
   const handleSuggestionPress = (suggestion: WellnessSuggestion) => {
     // Handle specific suggestions with navigation
-    if (suggestion.id === 'breathing-exercises' || suggestion.title.toLowerCase().includes('breathing')) {
+    if (suggestion.id === 'breathing-exercises' || 
+        suggestion.title.toLowerCase().includes('breathing') || 
+        suggestion.title.toLowerCase().includes('respirazione')) {
       router.push('/breathing-exercise');
     } else {
       // For other suggestions, show a placeholder message for now
@@ -34,8 +132,8 @@ export const WellnessSuggestionsScreen: React.FC = () => {
   };
 
 
-  const renderCategoryCard = (category: typeof WELLNESS_CATEGORIES[0]) => {
-    const suggestions = WELLNESS_SUGGESTIONS.filter(s => s.category.id === category.id);
+  const renderCategoryCard = (category: typeof translatedCategories[0]) => {
+    const suggestions = translatedSuggestions.filter(s => s.category.id === category.id);
     const isSelected = selectedCategory === category.id;
 
     return (
@@ -59,7 +157,9 @@ export const WellnessSuggestionsScreen: React.FC = () => {
               <View style={styles.categoryInfo}>
                 <Text style={styles.categoryTitle}>{category.name}</Text>
                 <Text style={styles.categoryDescription}>{category.description}</Text>
-                <Text style={styles.categoryCount}>{suggestions.length} suggestions</Text>
+                <Text style={styles.categoryCount}>
+                  {t('wellnessSuggestions.categoriesMeta.count', { count: suggestions.length })}
+                </Text>
               </View>
               <FontAwesome 
                 name={isSelected ? 'chevron-up' : 'chevron-down'} 
@@ -104,12 +204,12 @@ export const WellnessSuggestionsScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Wellness Suggestions</Text>
-        <Text style={styles.subtitle}>
-          Explore routines curated by your AI coach to support mood, sleep, and skin health
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>{t('wellnessSuggestions.title')}</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          {t('wellnessSuggestions.subtitle')}
         </Text>
       </View>
 
@@ -117,7 +217,7 @@ export const WellnessSuggestionsScreen: React.FC = () => {
       {/* Categories */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.categoriesContainer}>
-          {WELLNESS_CATEGORIES.map(renderCategoryCard)}
+          {translatedCategories.map(renderCategoryCard)}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -131,7 +231,8 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingTop: 32,
+    paddingBottom: 20,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
@@ -153,6 +254,7 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     paddingHorizontal: 20,
+    paddingTop: 24,
     paddingBottom: 100, // Increased padding to account for bottom navigation bar
     gap: 16,
   },

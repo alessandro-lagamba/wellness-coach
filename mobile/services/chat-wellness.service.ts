@@ -352,8 +352,6 @@ export class WellnessSuggestionService {
     aiContext: any
   ): Promise<{ suggestion: WellnessSuggestion | null; shouldShow: boolean; urgency: 'low' | 'medium' | 'high'; timing: 'immediate' | 'today' | 'this_week' }> {
     try {
-      console.log('🧠 Getting intelligent suggestion for user:', userId);
-      
       // Se abbiamo già un suggerimento suggerito dall'AIContext, usalo
       if (aiContext?.suggestedWellnessSuggestion) {
         const suggestedSuggestion = aiContext.suggestedWellnessSuggestion;
@@ -367,7 +365,6 @@ export class WellnessSuggestionService {
           .single();
 
         if (suggestion && !error) {
-          console.log('✅ Using AI-suggested wellness suggestion:', suggestion.title);
           return {
             suggestion,
             shouldShow: true,

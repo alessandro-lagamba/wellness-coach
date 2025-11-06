@@ -18,6 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useDailyCopilot } from '../hooks/useDailyCopilot';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -35,6 +36,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
   compact = false,
 }) => {
   const { copilotData, loading, error, refreshCopilotData } = useDailyCopilot();
+  const { colors: themeColors } = useTheme();
 
   // Animation values
   const progressValue = useSharedValue(0);
@@ -227,18 +229,18 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
   return (
     <Animated.View style={[styles.container, fadeInStyle]}>
       <LinearGradient
-        colors={['#ffffff', '#f8fafc']}
+        colors={[themeColors.surface, themeColors.surfaceElevated]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.card}
+        style={[styles.card, { borderColor: themeColors.border }]}
       >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.titleRow}>
             <Text style={styles.emoji}>🧠</Text>
             <View style={styles.titleContainer}>
-              <Text style={styles.title}>AI Daily Copilot</Text>
-              <Text style={styles.subtitle}>La tua guida personalizzata per oggi</Text>
+              <Text style={[styles.title, { color: themeColors.text }]}>AI Daily Copilot</Text>
+              <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>La tua guida personalizzata per oggi</Text>
             </View>
           </View>
           
@@ -249,14 +251,14 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
               onPress={onViewHistory}
               activeOpacity={0.7}
             >
-              <MaterialCommunityIcons name="history" size={20} color="#8b5cf6" />
+              <MaterialCommunityIcons name="history" size={20} color={themeColors.primary} />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.refreshButton}
               onPress={refreshCopilotData}
               activeOpacity={0.7}
             >
-              <MaterialCommunityIcons name="refresh" size={20} color="#8b5cf6" />
+              <MaterialCommunityIcons name="refresh" size={20} color={themeColors.primary} />
             </TouchableOpacity>
           </View>
           
@@ -273,7 +275,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                 cx="40"
                 cy="40"
                 r="35"
-                stroke="#e5e7eb"
+                stroke={themeColors.borderLight}
                 strokeWidth="6"
                 fill="none"
               />
@@ -294,15 +296,15 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
               <Text style={[styles.scoreValue, { color: scoreColors[0] }]}>
                 {copilotData.overallScore}
               </Text>
-              <Text style={styles.scoreLabel}>/100</Text>
+              <Text style={[styles.scoreLabel, { color: themeColors.textSecondary }]}>/100</Text>
             </View>
           </Animated.View>
         </View>
 
         {/* Summary */}
         <View style={styles.summaryContainer}>
-          <Text style={styles.focusText}>
-            Oggi focus su: <Text style={styles.focusBold}>{copilotData.summary.focus}</Text>
+          <Text style={[styles.focusText, { color: themeColors.text }]}>
+            Oggi focus su: <Text style={[styles.focusBold, { color: themeColors.text }]}>{copilotData.summary.focus}</Text>
           </Text>
           
           <View style={styles.statusRow}>
@@ -310,32 +312,32 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
               <MaterialCommunityIcons 
                 name="lightning-bolt" 
                 size={16} 
-                color={copilotData.summary.energy === 'high' ? '#10b981' : copilotData.summary.energy === 'medium' ? '#f59e0b' : '#ef4444'} 
+                color={copilotData.summary.energy === 'high' ? themeColors.success : copilotData.summary.energy === 'medium' ? themeColors.warning : themeColors.error} 
               />
-              <Text style={styles.statusText}>Energia</Text>
+              <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>Energia</Text>
             </View>
             <View style={styles.statusItem}>
               <MaterialCommunityIcons 
                 name="bed" 
                 size={16} 
-                color={copilotData.summary.recovery === 'excellent' ? '#10b981' : copilotData.summary.recovery === 'good' ? '#f59e0b' : '#ef4444'} 
+                color={copilotData.summary.recovery === 'excellent' ? themeColors.success : copilotData.summary.recovery === 'good' ? themeColors.warning : themeColors.error} 
               />
-              <Text style={styles.statusText}>Recupero</Text>
+              <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>Recupero</Text>
             </View>
             <View style={styles.statusItem}>
               <MaterialCommunityIcons 
                 name="emoticon-happy" 
                 size={16} 
-                color={copilotData.summary.mood === 'positive' ? '#10b981' : copilotData.summary.mood === 'neutral' ? '#f59e0b' : '#ef4444'} 
+                color={copilotData.summary.mood === 'positive' ? themeColors.success : copilotData.summary.mood === 'neutral' ? themeColors.warning : themeColors.error} 
               />
-              <Text style={styles.statusText}>Umore</Text>
+              <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>Umore</Text>
             </View>
           </View>
         </View>
 
         {/* Recommendations - Simplified */}
         <View style={styles.recommendationsContainer}>
-          <Text style={styles.recommendationsTitle}>Raccomandazioni per oggi</Text>
+          <Text style={[styles.recommendationsTitle, { color: themeColors.text }]}>Raccomandazioni per oggi</Text>
           
           <View style={styles.recommendationsList}>
             {copilotData.recommendations.map((rec, index) => (
@@ -343,7 +345,11 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                 key={rec.id}
                 style={[
                   styles.recommendationCardSimple,
-                  { borderLeftColor: getPriorityColor(rec.priority) }
+                  { 
+                    borderLeftColor: getPriorityColor(rec.priority),
+                    backgroundColor: themeColors.surfaceElevated,
+                    borderColor: themeColors.border,
+                  }
                 ]}
                 onPress={() => onRecommendationPress?.(rec)}
                 activeOpacity={0.7}
@@ -363,11 +369,11 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                   </View>
                 </View>
                 
-                <Text style={styles.recommendationActionSimple}>
+                <Text style={[styles.recommendationActionSimple, { color: themeColors.text }]}>
                   {rec.action}
                 </Text>
                 
-                <Text style={styles.recommendationReasonSimple}>
+                <Text style={[styles.recommendationReasonSimple, { color: themeColors.textSecondary }]}>
                   {rec.reason}
                 </Text>
                 
@@ -386,7 +392,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                     </Text>
                   </View>
                   {rec.estimatedTime && (
-                    <Text style={styles.timeTextSimple}>{rec.estimatedTime}</Text>
+                    <Text style={[styles.timeTextSimple, { color: themeColors.textTertiary }]}>{rec.estimatedTime}</Text>
                   )}
                 </View>
               </TouchableOpacity>

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useWidgetConfig, WidgetConfig } from '../services/widget-config.service';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface WidgetCustomizationModalProps {
   visible: boolean;
@@ -20,6 +21,7 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
   visible,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const { config, toggleWidget, changeSize, reorderWidgets } = useWidgetConfig();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
@@ -27,7 +29,7 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
     try {
       await toggleWidget(widgetId);
     } catch (error) {
-      Alert.alert('Error', 'Failed to toggle widget');
+      Alert.alert(t('widgetCustomization.error'), t('widgetCustomization.toggleError'));
     }
   };
 
@@ -36,7 +38,7 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
       const newSize = currentSize === 'small' ? 'large' : 'small';
       await changeSize(widgetId, newSize);
     } catch (error) {
-      Alert.alert('Error', 'Failed to change widget size');
+      Alert.alert(t('widgetCustomization.error'), t('widgetCustomization.sizeError'));
     }
   };
 
@@ -59,7 +61,7 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
 
       await reorderWidgets(newConfig);
     } catch (error) {
-      Alert.alert('Error', 'Failed to reorder widgets');
+      Alert.alert(t('widgetCustomization.error'), t('widgetCustomization.reorderError'));
     } finally {
       setDraggedIndex(null);
     }
@@ -79,12 +81,12 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
 
   const getWidgetTitle = (widgetId: string) => {
     const titles: { [key: string]: string } = {
-      steps: 'Steps',
-      meditation: 'Meditation',
-      hydration: 'Hydration',
-      sleep: 'Sleep',
-      hrv: 'HRV',
-      analyses: 'Analysis Check-In',
+      steps: t('widgets.steps'),
+      meditation: t('widgets.meditation'),
+      hydration: t('widgets.hydration'),
+      sleep: t('widgets.sleep'),
+      hrv: t('widgets.hrv'),
+      analyses: t('widgets.analyses'),
     };
     return titles[widgetId] || widgetId;
   };
@@ -93,16 +95,16 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Customize Widgets</Text>
+          <Text style={styles.title}>{t('widgetCustomization.title')}</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <MaterialCommunityIcons name="close" size={24} color="#374151" />
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content}>
-          <Text style={styles.sectionTitle}>Widget Settings</Text>
+          <Text style={styles.sectionTitle}>{t('widgetCustomization.sectionTitle')}</Text>
           <Text style={styles.sectionSubtitle}>
-            Tap to toggle visibility, long press to change size
+            {t('widgetCustomization.sectionSubtitle')}
           </Text>
 
           {config.map((widget, index) => (
@@ -118,7 +120,7 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
                     {getWidgetTitle(widget.id)}
                   </Text>
                   <Text style={styles.widgetSubtitle}>
-                    {widget.size === 'large' ? 'Large (65%)' : 'Small (30%)'}
+                    {widget.size === 'large' ? t('widgets.large') : t('widgets.small')}
                   </Text>
                 </View>
               </View>
@@ -157,18 +159,18 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
           ))}
 
           <View style={styles.helpSection}>
-            <Text style={styles.helpTitle}>How to customize:</Text>
+            <Text style={styles.helpTitle}>{t('widgetCustomization.helpTitle')}</Text>
             <Text style={styles.helpText}>
-              • Tap the eye icon to show/hide widgets
+              {t('widgetCustomization.help1')}
             </Text>
             <Text style={styles.helpText}>
-              • Tap the resize icon to change widget size
+              {t('widgetCustomization.help2')}
             </Text>
             <Text style={styles.helpText}>
-              • Drag the handle to reorder widgets
+              {t('widgetCustomization.help3')}
             </Text>
             <Text style={styles.helpText}>
-              • Large widgets show more information
+              {t('widgetCustomization.help4')}
             </Text>
           </View>
         </ScrollView>

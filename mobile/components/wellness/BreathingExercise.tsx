@@ -22,6 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -48,13 +49,16 @@ const TOTAL_CYCLES = 4;
 // File audio di background (sostituisci con il tuo file)
 const BACKGROUND_MUSIC = require('../../assets/audio/breathing-background.mp3');
 
-const phaseColor = (p: Phase) =>
-  p === 'inhale' ? '#10b981' : p === 'hold' ? '#f59e0b' : p === 'exhale' ? '#3b82f6' : '#a855f7';
+// Funzione per ottenere il colore della fase (mantiene i colori originali per coerenza visiva)
+const phaseColor = (p: Phase, colors: any) =>
+  p === 'inhale' ? colors.success : p === 'hold' ? colors.accent : p === 'exhale' ? colors.primary : colors.primaryLight;
 
 const phaseIcon = (p: Phase) =>
   p === 'inhale' ? 'arrow-up' : p === 'hold' ? 'pause' : p === 'exhale' ? 'arrow-down' : 'circle-outline';
 
 export const Breathing478: React.FC<Props> = ({ onComplete, enableMusic = true }) => {
+  const { colors } = useTheme(); // 🆕 Theme hook
+  
   // UI state
   const [active, setActive] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -330,18 +334,18 @@ export const Breathing478: React.FC<Props> = ({ onComplete, enableMusic = true }
   }, [uiStepIndex, uiCountdown]);
 
   const step = PATTERN[uiStepIndex];
-  const color = phaseColor(uiPhase);
+  const color = phaseColor(uiPhase, colors);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#f8fafc', '#e2e8f0']} style={styles.gradient}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <LinearGradient colors={[colors.background, colors.surfaceMuted]} style={styles.gradient}>
         {/* HEADER interno rimosso: la pagina mostrerà solo la freccia del nav */}
 
         <View style={styles.center}>
           {/* Cerchio (alzato: più distanza dai testi sotto) */}
           <View style={styles.circleWrap}>
             <Animated.View style={[styles.halo, { backgroundColor: color }, haloStyle]} />
-            <Animated.View style={[styles.circle, circleStyle]}>
+            <Animated.View style={[styles.circle, circleStyle, { shadowColor: colors.shadowColor }]}>
               <LinearGradient
                 colors={[color, `${color}90`]}
                 style={styles.circleGradient}
@@ -356,15 +360,15 @@ export const Breathing478: React.FC<Props> = ({ onComplete, enableMusic = true }
           {/* Testi + countdown */}
           <Animated.View style={[styles.instructions, instructionStyle]}>
             <Text style={[styles.instruction, { color }]}>{step.instruction}</Text>
-            <Text style={styles.sub}>{step.sub}</Text>
-            <View style={styles.countdownBox}>
+            <Text style={[styles.sub, { color: colors.textSecondary }]}>{step.sub}</Text>
+            <View style={[styles.countdownBox, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
               <Text style={[styles.countdown, { color }]}>{uiCountdown}</Text>
             </View>
           </Animated.View>
 
           {/* Solo contatore ciclo (pill), niente barre */}
-          <View style={styles.cyclePill}>
-            <Text style={styles.cyclePillText}>Ciclo {Math.min(uiCycleIndex + 1, TOTAL_CYCLES)} / {TOTAL_CYCLES}</Text>
+          <View style={[styles.cyclePill, { backgroundColor: colors.primaryMuted }]}>
+            <Text style={[styles.cyclePillText, { color: colors.textSecondary }]}>Ciclo {Math.min(uiCycleIndex + 1, TOTAL_CYCLES)} / {TOTAL_CYCLES}</Text>
           </View>
         </View>
 
@@ -372,14 +376,14 @@ export const Breathing478: React.FC<Props> = ({ onComplete, enableMusic = true }
         <View style={styles.controlsContainer}>
           <TouchableOpacity 
             onPress={toggleMusic}
-            style={[styles.controlButton, musicEnabled && styles.controlButtonActive]}
+            style={[styles.controlButton, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }, musicEnabled && { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
           >
             <MaterialCommunityIcons 
               name={musicEnabled ? "music" : "music-off"} 
               size={18} 
-              color={musicEnabled ? "#10b981" : "#64748b"} 
+              color={musicEnabled ? colors.success : colors.textSecondary} 
             />
-            <Text style={[styles.controlButtonText, musicEnabled && styles.controlButtonTextActive]}>
+            <Text style={[styles.controlButtonText, { color: colors.textSecondary }, musicEnabled && { color: colors.text }]}>
               {musicEnabled ? "Audio ON" : "Audio OFF"}
             </Text>
           </TouchableOpacity>
@@ -392,14 +396,14 @@ export const Breathing478: React.FC<Props> = ({ onComplete, enableMusic = true }
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }
             }}
-            style={[styles.controlButton, hapticsEnabled && styles.controlButtonActive]}
+            style={[styles.controlButton, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }, hapticsEnabled && { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
           >
             <MaterialCommunityIcons 
               name={hapticsEnabled ? "vibrate" : "vibrate-off"} 
               size={18} 
-              color={hapticsEnabled ? "#3b82f6" : "#64748b"} 
+              color={hapticsEnabled ? colors.primary : colors.textSecondary} 
             />
-            <Text style={[styles.controlButtonText, hapticsEnabled && styles.controlButtonTextActive]}>
+            <Text style={[styles.controlButtonText, { color: colors.textSecondary }, hapticsEnabled && { color: colors.text }]}>
               {hapticsEnabled ? "Vibrazione ON" : "Vibrazione OFF"}
             </Text>
           </TouchableOpacity>
@@ -408,23 +412,23 @@ export const Breathing478: React.FC<Props> = ({ onComplete, enableMusic = true }
         {/* CONTROLS: più grandi e più in basso */}
         <View style={styles.footer}>
           {!active && !completed && (
-            <TouchableOpacity onPress={start} style={[styles.cta, styles.ctaStart]}>
+            <TouchableOpacity onPress={start} style={[styles.cta, styles.ctaStart, { shadowColor: colors.shadowColor }]}>
               <MaterialCommunityIcons name="play" size={24} color="white" />
               <Text style={styles.ctaText}>Inizia</Text>
             </TouchableOpacity>
           )}
           {active && (
-            <TouchableOpacity onPress={stop} style={[styles.cta, styles.ctaStop]}>
+            <TouchableOpacity onPress={stop} style={[styles.cta, styles.ctaStop, { shadowColor: colors.shadowColor }]}>
               <MaterialCommunityIcons name="stop" size={24} color="white" />
               <Text style={styles.ctaText}>Ferma</Text>
             </TouchableOpacity>
           )}
           {completed && (
             <View style={{ alignItems: 'center' }}>
-              <MaterialCommunityIcons name="check-circle" size={48} color="#10b981" />
-              <Text style={styles.doneTitle}>Esercizio completato</Text>
-              <Text style={styles.doneSub}>Ottimo lavoro! Respira bene 😊</Text>
-              <TouchableOpacity onPress={start} style={[styles.cta, styles.ctaReplay]}>
+              <MaterialCommunityIcons name="check-circle" size={48} color={colors.success} />
+              <Text style={[styles.doneTitle, { color: colors.success }]}>Esercizio completato</Text>
+              <Text style={[styles.doneSub, { color: colors.textSecondary }]}>Ottimo lavoro! Respira bene 😊</Text>
+              <TouchableOpacity onPress={start} style={[styles.cta, styles.ctaReplay, { backgroundColor: colors.primary, shadowColor: colors.shadowColor }]}>
                 <Text style={styles.ctaText}>Riprova</Text>
               </TouchableOpacity>
             </View>
@@ -439,7 +443,7 @@ export const Breathing478: React.FC<Props> = ({ onComplete, enableMusic = true }
 const CIRCLE_SIZE = Math.min(260, Math.round(width * 0.74));
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1 },
   gradient: { flex: 1 },
 
   // area centrale
@@ -472,7 +476,7 @@ const styles = StyleSheet.create({
     height: CIRCLE_SIZE,
     borderRadius: CIRCLE_SIZE / 2,
     overflow: 'hidden',
-    shadowColor: '#000',
+    // shadowColor sarà impostato dinamicamente
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
@@ -482,15 +486,13 @@ const styles = StyleSheet.create({
 
   instructions: { alignItems: 'center', marginBottom: 16 },
   instruction: { fontSize: 30, fontWeight: '800', letterSpacing: 0.3 },
-  sub: { marginTop: 6, fontSize: 16, color: '#64748b' },
+  sub: { marginTop: 6, fontSize: 16 },
   countdownBox: {
     marginTop: 14,
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: '#f1f5f9',
     borderWidth: 2,
-    borderColor: '#e2e8f0',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -502,12 +504,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: '#eef2ff',
   },
   cyclePillText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#475569',
   },
 
   // footer con bottone in basso e più grande
@@ -524,19 +524,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 36,
     paddingVertical: 18,
     borderRadius: 32,
-    shadowColor: '#000',
+    // shadowColor sarà impostato dinamicamente
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.18,
     shadowRadius: 14,
     elevation: 10,
   },
-  ctaStart: { backgroundColor: '#10b981' },
-  ctaStop: { backgroundColor: '#ef4444' },
-  ctaReplay: { backgroundColor: '#6366f1', marginTop: 12 },
+  ctaStart: { backgroundColor: '#10b981' }, // Mantiene il verde per "Inizia"
+  ctaStop: { backgroundColor: '#ef4444' }, // Mantiene il rosso per "Ferma"
+  ctaReplay: { marginTop: 12 }, // backgroundColor sarà impostato dinamicamente
   ctaText: { color: 'white', fontSize: 18, fontWeight: '800' },
 
-  doneTitle: { marginTop: 10, fontSize: 22, fontWeight: '800', color: '#10b981' },
-  doneSub: { marginTop: 4, fontSize: 15, color: '#64748b' },
+  doneTitle: { marginTop: 10, fontSize: 22, fontWeight: '800' },
+  doneSub: { marginTop: 4, fontSize: 15 },
 
   // Audio & Haptics controls styles
   controlsContainer: {
@@ -554,15 +554,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,
-    backgroundColor: '#f1f5f9',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
     minWidth: 100,
     justifyContent: 'center',
   },
   controlButtonActive: {
-    backgroundColor: '#f8fafc',
-    borderColor: '#cbd5e1',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -572,9 +568,8 @@ const styles = StyleSheet.create({
   controlButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748b',
   },
   controlButtonTextActive: {
-    color: '#475569',
+    // Colore sarà impostato dinamicamente
   },
 });

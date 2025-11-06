@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -13,6 +14,7 @@ interface SkinHealthChartProps {
 }
 
 export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, subtitle }) => {
+  const { colors } = useTheme();
   // Generate sample data if none provided
   const chartData = data.length > 0 ? data : [
     { date: '1/1', texture: 65, redness: 25, hydration: 40, overall: 55 },
@@ -66,20 +68,20 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#ffffff', '#f8fafc']}
+        colors={[colors.surface, colors.surfaceElevated]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.chartCard}
+        style={[styles.chartCard, { borderColor: colors.border }]}
       >
         <View style={styles.header}>
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>{title}</Text>
-            {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+            {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
           </View>
           
           <View style={styles.scoreContainer}>
-            <Text style={styles.scoreValue}>{latestOverall}</Text>
-            <Text style={styles.scoreLabel}>/100</Text>
+            <Text style={[styles.scoreValue, { color: colors.primary }]}>{latestOverall}</Text>
+            <Text style={[styles.scoreLabel, { color: colors.textSecondary }]}>/100</Text>
             {trend !== 0 && (
               <FontAwesome
                 name={trend > 0 ? 'arrow-up' : 'arrow-down'}
@@ -108,7 +110,7 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
                 y={padding + ((100 - value) * (chartHeight - 2 * padding)) / 100}
                 width={chartWidth - 2 * padding}
                 height={1}
-                fill="#e2e8f0"
+                fill={colors.borderLight}
                 opacity={0.5}
               />
             ))}
@@ -147,7 +149,7 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
                   cy={y}
                   r="4"
                   fill="#6366f1"
-                  stroke="#ffffff"
+                  stroke={colors.surface}
                   strokeWidth="2"
                 />
               );
@@ -155,30 +157,30 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
           </Svg>
         </View>
 
-        <View style={styles.metricsRow}>
+        <View style={[styles.metricsRow, { borderTopColor: colors.border }]}>
           <View style={styles.metricItem}>
             <View style={[styles.metricDot, { backgroundColor: '#8b5cf6' }]} />
-            <Text style={styles.metricLabel}>Texture</Text>
-            <Text style={styles.metricValue}>{chartData[chartData.length - 1]?.texture || 0}</Text>
+            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Texture</Text>
+            <Text style={[styles.metricValue, { color: colors.text }]}>{chartData[chartData.length - 1]?.texture || 0}</Text>
           </View>
           
           <View style={styles.metricItem}>
             <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
-            <Text style={styles.metricLabel}>Redness</Text>
-            <Text style={styles.metricValue}>{chartData[chartData.length - 1]?.redness || 0}</Text>
+            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Redness</Text>
+            <Text style={[styles.metricValue, { color: colors.text }]}>{chartData[chartData.length - 1]?.redness || 0}</Text>
           </View>
           
           <View style={styles.metricItem}>
             <View style={[styles.metricDot, { backgroundColor: '#f59e0b' }]} />
-            <Text style={styles.metricLabel}>Hydration</Text>
-            <Text style={styles.metricValue}>{chartData[chartData.length - 1]?.hydration || 0}</Text>
+            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Hydration</Text>
+            <Text style={[styles.metricValue, { color: colors.text }]}>{chartData[chartData.length - 1]?.hydration || 0}</Text>
           </View>
         </View>
 
         {!hasData && (
           <View style={styles.placeholderContainer}>
-            <FontAwesome name="line-chart" size={24} color="#94a3b8" />
-            <Text style={styles.placeholderText}>Start scanning to see your trends</Text>
+            <FontAwesome name="line-chart" size={24} color={colors.textTertiary} />
+            <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>Start scanning to see your trends</Text>
           </View>
         )}
       </LinearGradient>
@@ -200,7 +202,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   header: {
     flexDirection: 'row',
@@ -214,12 +215,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1e293b',
     marginBottom: 2,
   },
   subtitle: {
     fontSize: 12,
-    color: '#64748b',
     fontWeight: '500',
   },
   scoreContainer: {
@@ -230,11 +229,9 @@ const styles = StyleSheet.create({
   scoreValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#6366f1',
   },
   scoreLabel: {
     fontSize: 14,
-    color: '#64748b',
     fontWeight: '500',
   },
   trendIcon: {
@@ -249,7 +246,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
   },
   metricItem: {
     alignItems: 'center',
@@ -262,13 +258,11 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 10,
-    color: '#64748b',
     fontWeight: '500',
   },
   metricValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
   },
   placeholderContainer: {
     alignItems: 'center',
@@ -277,7 +271,6 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 12,
-    color: '#94a3b8',
     fontWeight: '500',
   },
 });

@@ -4,6 +4,7 @@ import Svg, { Circle, Path, Text as SvgText, Defs, LinearGradient as SvgLinearGr
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { GaugePopup } from './GaugePopup';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -32,6 +33,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
   metric,
   icon
 }) => {
+  const { colors } = useTheme();
   const [showPopup, setShowPopup] = useState(false);
   
   // ✅ FIX: Robust value validation and fallback
@@ -76,17 +78,17 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
       <TouchableOpacity 
         activeOpacity={0.8}
         onPress={() => setShowPopup(true)}
-        style={styles.gaugeCard}
+        style={[styles.gaugeCard, { borderColor: colors.border }]}
       >
         <LinearGradient
-          colors={['#ffffff', '#f8fafc']}
+          colors={[colors.surface, colors.surfaceElevated]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.gaugeCardInner}
         >
         <View style={styles.header}>
-          <Text style={styles.label}>{label}</Text>
-          {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+          <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+          {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
         </View>
 
         <View style={styles.chartContainer}>
@@ -103,7 +105,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
               cx="50"
               cy="50"
               r={40}
-              stroke="#e2e8f0"
+              stroke={colors.borderLight}
               strokeWidth={6}
               fill="none"
             />
@@ -138,7 +140,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
               y="60"
               textAnchor="middle"
               fontSize="10"
-              fill="#64748b"
+              fill={colors.textSecondary}
             >
               /<TSpan dx="8">{maxValue}</TSpan>
             </SvgText>
@@ -200,7 +202,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
     minHeight: 160,
   },
   gaugeCardInner: {
@@ -216,12 +217,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13, // Ridotto da 14 a 13
     fontWeight: '600',
-    color: '#1e293b',
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 9, // Ridotto da 10 a 9
-    color: '#64748b',
     fontWeight: '500',
     marginTop: 2,
   },

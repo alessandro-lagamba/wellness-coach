@@ -14,6 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { BiometricAuthService, BiometricCapabilities } from '../services/biometric-auth.service';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 
 const { width, height } = Dimensions.get('window');
 
@@ -32,6 +33,7 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
   userEmail,
   userPassword,
 }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
   const [capabilities, setCapabilities] = useState<BiometricCapabilities | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingUp, setIsSettingUp] = useState(false);
@@ -62,7 +64,7 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
 
   const handleEnableBiometric = async () => {
     if (!userEmail || !userPassword) {
-      Alert.alert('Errore', 'Credenziali non disponibili per la configurazione biometrica');
+      Alert.alert(t('common.error'), t('modals.biometricSetup.credentialsNotAvailable'));
       return;
     }
 
@@ -72,7 +74,7 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
       const enableResult = await BiometricAuthService.enableBiometric();
       
       if (!enableResult.success) {
-        Alert.alert('Errore', enableResult.error || 'Impossibile abilitare l\'autenticazione biometrica');
+        Alert.alert(t('common.error'), enableResult.error || t('modals.biometric.enableError'));
         return;
       }
 
@@ -80,7 +82,7 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
       const saveResult = await BiometricAuthService.saveBiometricCredentials(userEmail, userPassword);
       
       if (!saveResult.success) {
-        Alert.alert('Errore', saveResult.error || 'Impossibile salvare le credenziali');
+        Alert.alert(t('common.error'), saveResult.error || t('modals.biometricSetup.cannotSaveCredentials'));
         return;
       }
 
@@ -88,11 +90,11 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
       Alert.alert(
-        'Successo!',
-        `L'autenticazione ${biometricType} è stata configurata con successo. D'ora in poi potrai accedere rapidamente all'app.`,
+        t('common.success'),
+        t('modals.biometricSetup.setupSuccess', { type: biometricType }),
         [
           {
-            text: 'Perfetto!',
+            text: t('modals.biometricSetup.perfect'),
             onPress: () => {
               onSuccess();
               onClose();
@@ -102,7 +104,7 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
       );
     } catch (error) {
       console.error('Error setting up biometric auth:', error);
-      Alert.alert('Errore', 'Si è verificato un errore durante la configurazione');
+      Alert.alert(t('common.error'), t('modals.biometricSetup.setupError'));
     } finally {
       setIsSettingUp(false);
     }
@@ -138,9 +140,9 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
                     color="#fff" 
                   />
                 </View>
-                <Text style={styles.title}>Autenticazione Biometrica</Text>
+                <Text style={styles.title}>{t('modals.biometricSetup.title')}</Text>
                 <Text style={styles.subtitle}>
-                  Configura {biometricType} per un accesso rapido e sicuro
+                  {t('modals.biometricSetup.subtitle', { type: biometricType })}
                 </Text>
               </View>
 
@@ -149,7 +151,7 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
                 {isLoading ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#fff" />
-                    <Text style={styles.loadingText}>Verifica delle capacità del dispositivo...</Text>
+                    <Text style={styles.loadingText}>{t('modals.biometricSetup.checkingCapabilities')}</Text>
                   </View>
                 ) : capabilities?.isAvailable ? (
                   <View style={styles.availableContainer}>
@@ -157,19 +159,19 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
                       <View style={styles.featureItem}>
                         <MaterialCommunityIcons name="check-circle" size={20} color="#4ade80" />
                         <Text style={styles.featureText}>
-                          {biometricType} disponibile su questo dispositivo
+                          {t('modals.biometricSetup.availableOnDevice', { type: biometricType })}
                         </Text>
                       </View>
                       <View style={styles.featureItem}>
                         <MaterialCommunityIcons name="check-circle" size={20} color="#4ade80" />
                         <Text style={styles.featureText}>
-                          Accesso rapido e sicuro
+                          {t('modals.biometric.benefit1')}
                         </Text>
                       </View>
                       <View style={styles.featureItem}>
                         <MaterialCommunityIcons name="check-circle" size={20} color="#4ade80" />
                         <Text style={styles.featureText}>
-                          Nessuna password da ricordare
+                          {t('modals.biometric.benefit2')}
                         </Text>
                       </View>
                     </View>
@@ -177,7 +179,7 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
                     <View style={styles.securityNote}>
                       <MaterialCommunityIcons name="shield-check" size={16} color="#fbbf24" />
                       <Text style={styles.securityText}>
-                        Le tue credenziali sono protette con crittografia end-to-end
+                        {t('modals.biometricSetup.credentialsProtected')}
                       </Text>
                     </View>
                   </View>
@@ -185,12 +187,12 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
                   <View style={styles.unavailableContainer}>
                     <MaterialCommunityIcons name="alert-circle" size={48} color="#f87171" />
                     <Text style={styles.unavailableTitle}>
-                      Autenticazione biometrica non disponibile
+                      {t('modals.biometricSetup.notAvailable')}
                     </Text>
                     <Text style={styles.unavailableText}>
                       {!capabilities?.hasHardware 
-                        ? 'Il tuo dispositivo non supporta l\'autenticazione biometrica'
-                        : 'Configura l\'autenticazione biometrica nelle impostazioni del dispositivo'
+                        ? t('modals.biometric.notSupported')
+                        : t('modals.biometricSetup.configureInSettings')
                       }
                     </Text>
                   </View>
@@ -206,7 +208,7 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
                       style={styles.skipButton}
                       disabled={isSettingUp}
                     >
-                      <Text style={styles.skipButtonText}>Salta per ora</Text>
+                      <Text style={styles.skipButtonText}>{t('modals.biometricSetup.skipForNow')}</Text>
                     </TouchableOpacity>
                     
                     <TouchableOpacity
@@ -219,7 +221,7 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
                       ) : (
                         <>
                           <MaterialCommunityIcons name="fingerprint" size={20} color="#667eea" />
-                          <Text style={styles.enableButtonText}>Configura {biometricType}</Text>
+                          <Text style={styles.enableButtonText}>{t('modals.biometricSetup.configure', { type: biometricType })}</Text>
                         </>
                       )}
                     </TouchableOpacity>
@@ -229,7 +231,7 @@ export const BiometricSetupModal: React.FC<BiometricSetupModalProps> = ({
                     onPress={handleSkip}
                     style={styles.continueButton}
                   >
-                    <Text style={styles.continueButtonText}>Continua</Text>
+                    <Text style={styles.continueButtonText}>{t('common.continue')}</Text>
                   </TouchableOpacity>
                 )}
               </View>

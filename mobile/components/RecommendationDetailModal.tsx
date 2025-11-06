@@ -14,6 +14,8 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -39,6 +41,8 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
   onClose,
   recommendation,
 }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
+  const { colors: themeColors } = useTheme();
   if (!recommendation) return null;
 
   // Animation styles
@@ -105,7 +109,7 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
           onPress={onClose}
         />
         
-        <Animated.View style={[styles.popupContainer, popupStyle]}>
+        <Animated.View style={[styles.popupContainer, popupStyle, { backgroundColor: themeColors.surface }]}>
           {/* Header */}
           <LinearGradient
             colors={[categoryColor, categoryColor + 'CC']}
@@ -117,8 +121,8 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
               <View style={styles.titleContainer}>
                 <Text style={styles.emoji}>{recommendation.icon}</Text>
                 <View style={styles.titleTextContainer}>
-                  <Text style={styles.title}>Dettagli Raccomandazione</Text>
-                  <Text style={styles.subtitle}>Analisi approfondita</Text>
+                  <Text style={styles.title}>{t('popups.recommendation.title')}</Text>
+                  <Text style={styles.subtitle}>{t('popups.recommendation.subtitle')}</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -130,7 +134,14 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
           {/* Content */}
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {/* Action Card */}
-            <View style={[styles.actionCard, { borderLeftColor: priorityColor }]}>
+            <View style={[
+              styles.actionCard, 
+              { 
+                borderLeftColor: priorityColor,
+                backgroundColor: themeColors.surfaceElevated,
+                borderColor: themeColors.border,
+              }
+            ]}>
               <View style={styles.actionHeader}>
                 <Text style={styles.actionIcon}>{recommendation.icon}</Text>
                 <View style={[
@@ -143,8 +154,8 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
                 </View>
               </View>
               
-              <Text style={styles.actionText}>{recommendation.action}</Text>
-              <Text style={styles.reasonText}>{recommendation.reason}</Text>
+              <Text style={[styles.actionText, { color: themeColors.text }]}>{recommendation.action}</Text>
+              <Text style={[styles.reasonText, { color: themeColors.textSecondary }]}>{recommendation.reason}</Text>
               
               <View style={styles.actionFooter}>
                 <View style={styles.categoryBadge}>
@@ -158,7 +169,7 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
                   </Text>
                 </View>
                 {recommendation.estimatedTime && (
-                  <Text style={styles.timeText}>{recommendation.estimatedTime}</Text>
+                  <Text style={[styles.timeText, { color: themeColors.textTertiary }]}>{recommendation.estimatedTime}</Text>
                 )}
               </View>
             </View>
@@ -167,10 +178,17 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
             {recommendation.detailedExplanation && (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <MaterialCommunityIcons name="brain" size={20} color="#8b5cf6" />
-                  <Text style={styles.sectionTitle}>Spiegazione Scientifica</Text>
+                  <MaterialCommunityIcons name="brain" size={20} color={themeColors.primary} />
+                  <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('popups.recommendation.scientificExplanation')}</Text>
                 </View>
-                <Text style={styles.explanationText}>
+                <Text style={[
+                  styles.explanationText,
+                  {
+                    color: themeColors.text,
+                    backgroundColor: themeColors.surfaceElevated,
+                    borderLeftColor: themeColors.primary,
+                  }
+                ]}>
                   {recommendation.detailedExplanation}
                 </Text>
               </View>
@@ -180,13 +198,13 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
             {recommendation.correlations && recommendation.correlations.length > 0 && (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <MaterialCommunityIcons name="chart-line" size={20} color="#10b981" />
-                  <Text style={styles.sectionTitle}>Correlazioni con i tuoi dati</Text>
+                  <MaterialCommunityIcons name="chart-line" size={20} color={themeColors.success} />
+                  <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('popups.recommendation.correlations')}</Text>
                 </View>
                 {recommendation.correlations.map((correlation, index) => (
                   <View key={index} style={styles.correlationItem}>
-                    <MaterialCommunityIcons name="check-circle" size={16} color="#10b981" />
-                    <Text style={styles.correlationText}>{correlation}</Text>
+                    <MaterialCommunityIcons name="check-circle" size={16} color={themeColors.success} />
+                    <Text style={[styles.correlationText, { color: themeColors.text }]}>{correlation}</Text>
                   </View>
                 ))}
               </View>
@@ -196,13 +214,13 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
             {recommendation.expectedBenefits && recommendation.expectedBenefits.length > 0 && (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <MaterialCommunityIcons name="trending-up" size={20} color="#f59e0b" />
-                  <Text style={styles.sectionTitle}>Benefici Attesi</Text>
+                  <MaterialCommunityIcons name="trending-up" size={20} color={themeColors.warning} />
+                  <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('popups.recommendation.expectedBenefits')}</Text>
                 </View>
                 {recommendation.expectedBenefits.map((benefit, index) => (
                   <View key={index} style={styles.benefitItem}>
-                    <MaterialCommunityIcons name="star" size={16} color="#f59e0b" />
-                    <Text style={styles.benefitText}>{benefit}</Text>
+                    <MaterialCommunityIcons name="star" size={16} color={themeColors.warning} />
+                    <Text style={[styles.benefitText, { color: themeColors.text }]}>{benefit}</Text>
                   </View>
                 ))}
               </View>
@@ -231,7 +249,6 @@ const styles = StyleSheet.create({
   popupContainer: {
     width: width * 0.95,
     height: height * 0.85,
-    backgroundColor: '#ffffff',
     borderRadius: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -239,6 +256,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 20,
     overflow: 'hidden',
+    // Background gestito inline con themeColors.surface
   },
   header: {
     paddingTop: 20,
@@ -287,7 +305,6 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   actionCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
     borderLeftWidth: 4,
@@ -297,8 +314,8 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
     marginBottom: 20,
+    // Background e border gestiti inline con themeColors
   },
   actionHeader: {
     flexDirection: 'row',
@@ -321,15 +338,15 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
     marginBottom: 8,
     lineHeight: 24,
+    // Colore gestito inline con themeColors.text
   },
   reasonText: {
     fontSize: 14,
-    color: '#6b7280',
     marginBottom: 16,
     lineHeight: 20,
+    // Colore gestito inline con themeColors.textSecondary
   },
   actionFooter: {
     flexDirection: 'row',
@@ -363,17 +380,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
+    // Colore gestito inline con themeColors.text
   },
   explanationText: {
     fontSize: 15,
-    color: '#374151',
     lineHeight: 24,
-    backgroundColor: '#f8fafc',
     padding: 16,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#8b5cf6',
+    // Colori gestiti inline con themeColors
   },
   correlationItem: {
     flexDirection: 'row',
@@ -384,8 +399,8 @@ const styles = StyleSheet.create({
   correlationText: {
     flex: 1,
     fontSize: 14,
-    color: '#374151',
     lineHeight: 20,
+    // Colore gestito inline con themeColors.text
   },
   benefitItem: {
     flexDirection: 'row',
@@ -396,8 +411,8 @@ const styles = StyleSheet.create({
   benefitText: {
     flex: 1,
     fontSize: 14,
-    color: '#374151',
     lineHeight: 20,
+    // Colore gestito inline con themeColors.text
   },
 });
 

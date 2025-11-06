@@ -1,10 +1,11 @@
 "use client"
 
 import React, { memo, useMemo } from "react"
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native"
+import { View, Text, StyleSheet, Platform } from "react-native"
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg"
 import { LinearGradient } from "expo-linear-gradient"
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons"
+import { useTheme } from "../contexts/ThemeContext"
 
 type WidgetSize = "small" | "medium" | "large"
 
@@ -28,8 +29,7 @@ interface Props {
   icon?: string
   size?: WidgetSize
   additionalData?: AdditionalData
-  onPress?: () => void
-  onLongPress?: () => void
+  // onPress e onLongPress gestiti da EditableWidget
 }
 
 const CARD_HEIGHT = 140
@@ -47,9 +47,9 @@ const MiniGaugeChart: React.FC<Props> = memo(({
   icon,
   size = "small",
   additionalData,
-  onPress,
-  onLongPress,
+  // onPress e onLongPress gestiti da EditableWidget
 }) => {
+  const { colors } = useTheme()
   const pct = Math.max(0, Math.min(100, value))
   const gaugeSize = GAUGE_SIZES[size]
   const stroke = size === "small" ? 5 : size === "medium" ? 5.5 : 6
@@ -100,9 +100,9 @@ const MiniGaugeChart: React.FC<Props> = memo(({
 
   /** ========== SMALL (immutata) ========== */
   const renderSmall = () => (
-    <LinearGradient colors={[`${color}10`, backgroundColor, `${color}04`]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.innerGradient}>
+    <LinearGradient colors={[colors.surface, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.innerGradient}>
       <View style={styles.smallHeader}>
-        <Text style={styles.smallLabel} numberOfLines={1}>{label}</Text>
+        <Text style={[styles.smallLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
         {trendValue && (
           <View style={[styles.smallTrendBadge, { backgroundColor: `${getTrendColor()}14`, borderColor: `${getTrendColor()}28` }]}>
             <MaterialCommunityIcons name={trendValue.includes("+") ? "trending-up" : trendValue.includes("-") ? "trending-down" : "minus"} size={11} color={getTrendColor()} />
@@ -114,9 +114,9 @@ const MiniGaugeChart: React.FC<Props> = memo(({
         <View style={styles.smallNumberSection}>
           <View style={{ flexDirection: "row", alignItems: "flex-end", marginBottom: 2 }}>
             <Text style={[styles.smallNumber, { color }]}>{Math.round(pct)}</Text>
-            <Text style={styles.smallUnit}>%</Text>
+            <Text style={[styles.smallUnit, { color: colors.textSecondary }]}>%</Text>
           </View>
-          {subtitle && <Text style={styles.smallSubtitle} numberOfLines={2}>{subtitle}</Text>}
+          {subtitle && <Text style={[styles.smallSubtitle, { color: colors.textSecondary }]} numberOfLines={2}>{subtitle}</Text>}
         </View>
 
         <View style={styles.smallGaugeWrapper}>
@@ -140,13 +140,13 @@ const MiniGaugeChart: React.FC<Props> = memo(({
 
   /** ========== MEDIUM (immutata) ========== */
   const renderMedium = () => (
-    <LinearGradient colors={[`${color}12`, backgroundColor, `${color}05`]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.innerGradient}>
+    <LinearGradient colors={[colors.surface, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.innerGradient}>
       <View style={styles.mHeaderRow}>
         <View style={styles.mTitleWrap}>
           <View style={[styles.mIconChip, { backgroundColor: `${color}15`, borderColor: `${color}32` }]}>
             <Text style={styles.mIconEmoji}>{icon ?? "📊"}</Text>
           </View>
-          <Text style={styles.mTitle} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
+          <Text style={[styles.mTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
         </View>
         {trendValue ? (
           <View style={[styles.mTrendBadge, { backgroundColor: `${getTrendColor()}14`, borderColor: `${getTrendColor()}30` }]}>
@@ -175,12 +175,12 @@ const MiniGaugeChart: React.FC<Props> = memo(({
         </View>
 
         <View style={styles.mKpiCol}>
-          {subtitle ? (<><Text style={styles.mKpiTitle} numberOfLines={1}>{subtitle}</Text><View style={styles.mSpacer4} /></>) : null}
+          {subtitle ? (<><Text style={[styles.mKpiTitle, { color: colors.textSecondary }]} numberOfLines={1}>{subtitle}</Text><View style={styles.mSpacer4} /></>) : null}
           {detailChips.length > 0 && (
             <View style={[styles.mDetailChip, { borderColor: `${color}22` }]}>
               <MaterialCommunityIcons name={detailChips[0].icon as any} size={14} color={color} />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.mChipLabel} numberOfLines={1}>{detailChips[0].label}</Text>
+              <Text style={[styles.mChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>{detailChips[0].label}</Text>
                 <Text style={[styles.mChipValue, { color }]} numberOfLines={1}>{detailChips[0].value}</Text>
               </View>
             </View>
@@ -193,7 +193,7 @@ const MiniGaugeChart: React.FC<Props> = memo(({
   /** ========== LARGE (toccata qui: gauge in alto a destra) ========== */
   const renderLarge = () => (
     <LinearGradient
-      colors={[`${color}14`, backgroundColor, `${color}06`]}
+      colors={[`${color}14`, colors.surface, `${color}06`]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       // padding destro extra per non sovrapporre il gauge al testo
@@ -263,10 +263,11 @@ const MiniGaugeChart: React.FC<Props> = memo(({
     </LinearGradient>
   )
 
+  // TouchableOpacity rimosso - gestito da EditableWidget
   return (
-    <TouchableOpacity activeOpacity={0.88} onPress={onPress} onLongPress={onLongPress} delayLongPress={450} style={[styles.card, { backgroundColor }]}>
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {size === "small" ? renderSmall() : size === "medium" ? renderMedium() : renderLarge()}
-    </TouchableOpacity>
+    </View>
   )
 })
 

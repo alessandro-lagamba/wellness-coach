@@ -24,7 +24,7 @@ export interface WidgetData {
   hydration?: { glasses: number; goal: number; ml: number; lastDrink: string };
   meditation?: { minutes: number; goal: number; sessions: number; streak: number; favoriteType: string };
   sleep?: { hours: number; quality: number; goal: number; deepSleep: string; remSleep: string; bedtime: string; wakeTime: string };
-  hrv?: { value: number; restingHR: number; avgHRV: number; recovery: string };
+  hrv?: { value: number; restingHR: number; currentHR?: number; avgHRV: number; recovery: string };
   analyses?: { completed: boolean; emotionAnalysis: boolean; skinAnalysis: boolean; lastCheckIn: string; streak: number };
 }
 
@@ -351,7 +351,7 @@ export class WidgetDataService {
       { id: 'sleep', title: 'Sleep', icon: '🌙', color: '#6366f1', backgroundColor: '#eef2ff', category: 'health',
         sleep: { hours: mock.sleepHours, quality: mock.sleepQuality, goal: sleepGoal, deepSleep: '2h 15m', remSleep: '1h 45m', bedtime: '11:30 PM', wakeTime: '7:30 AM' } },
       { id: 'hrv', title: 'HRV', icon: '🫀', color: '#ef4444', backgroundColor: '#fef2f2', category: 'health',
-        hrv: { value: mock.hrv, restingHR: mock.restingHR, avgHRV: 35, recovery: 'Good' } },
+        hrv: { value: mock.hrv, restingHR: mock.restingHR, currentHR: 72, avgHRV: 35, recovery: 'Good' } },
       { id: 'analyses', title: 'Check-In', icon: '📊', color: '#10b981', backgroundColor: '#f0fdf4', category: 'analysis',
         analyses: { completed: mock.analysesCompleted > 0, emotionAnalysis: true, skinAnalysis: true, lastCheckIn: 'Today', streak: 5 } },
     ];

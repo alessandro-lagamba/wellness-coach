@@ -20,8 +20,18 @@ export interface UserProfile {
   last_name?: string;
   age?: number;
   gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+  weight?: number; // kg
+  height?: number; // cm
+  activity_level?: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extremely_active';
   timezone?: string;
   preferences?: Record<string, any>;
+  nutritional_goals?: {
+    daily_calories?: number;
+    carbs_percentage?: number;
+    proteins_percentage?: number;
+    fats_percentage?: number;
+    source?: 'manual' | 'ai_suggested' | 'nutritionist';
+  };
   created_at: string;
   updated_at: string;
 }
@@ -50,6 +60,27 @@ export interface SkinAnalysis {
   strengths: string[];
   improvements: string[];
   recommendations: string[];
+  analysis_data?: Record<string, any>;
+  image_url?: string;
+  created_at: string;
+}
+
+export interface FoodAnalysis {
+  id: string;
+  user_id: string;
+  meal_type?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other';
+  identified_foods: string[];
+  calories: number;
+  carbohydrates: number;
+  proteins: number;
+  fats: number;
+  fiber?: number;
+  vitamins?: Record<string, number>;
+  minerals?: Record<string, number>;
+  health_score?: number;
+  recommendations: string[];
+  observations: string[];
+  confidence: number;
   analysis_data?: Record<string, any>;
   image_url?: string;
   created_at: string;
@@ -119,6 +150,7 @@ export const Tables = {
   USER_PROFILES: 'user_profiles',
   EMOTION_ANALYSES: 'emotion_analyses',
   SKIN_ANALYSES: 'skin_analyses',
+  FOOD_ANALYSES: 'food_analyses',
   CHAT_SESSIONS: 'chat_sessions',
   CHAT_MESSAGES: 'chat_messages',
   WELLNESS_SUGGESTIONS_CATALOG: 'wellness_suggestions_catalog',

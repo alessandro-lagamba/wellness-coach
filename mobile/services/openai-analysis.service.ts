@@ -2,7 +2,8 @@
 import { API_CONFIG } from '../config/api.config';
 import { 
   EmotionAnalysisResult, 
-  SkinAnalysisResult, 
+  SkinAnalysisResult,
+  FoodAnalysisResult,
   AnalysisRequest, 
   AnalysisResponse,
   AnalysisHistory 
@@ -81,6 +82,73 @@ Schema: {
   }
 }`;
 
+  private readonly FOOD_ANALYSIS_PROMPT = `You are a nutrition expert analyzing food from a photo for wellness coaching.
+Task: identify foods, estimate macronutrients, vitamins, minerals, and provide health insights. Return STRICT JSON per schema.
+Constraints:
+- Identify all visible foods accurately. Estimate portions based on typical serving sizes.
+- Calculate macronutrients (carbs, proteins, fats, fiber, calories) in grams/kcal.
+- Estimate key vitamins (A, C, D, E, K, B-complex) and minerals (calcium, iron, magnesium, potassium, sodium, zinc) when identifiable.
+- Determine meal type (breakfast/lunch/dinner/snack/other) based on foods and context.
+- Provide health score (0-100) based on nutritional balance, variety, and quality.
+- If portions are unclear or foods partially hidden, lower confidence and explain in observations.
+
+Return ONLY JSON. No prose. No code fences.
+Schema: {
+  "type": "object",
+  "required": ["identified_foods", "macronutrients", "recommendations", "observations", "confidence", "version"],
+  "properties": {
+    "identified_foods": {"type": "array", "items": {"type": "string"}},
+    "macronutrients": {
+      "type": "object",
+      "required": ["carbohydrates", "proteins", "fats", "calories"],
+      "properties": {
+        "carbohydrates": {"type": "number", "minimum": 0},
+        "proteins": {"type": "number", "minimum": 0},
+        "fats": {"type": "number", "minimum": 0},
+        "fiber": {"type": "number", "minimum": 0},
+        "calories": {"type": "number", "minimum": 0}
+      }
+    },
+    "vitamins": {
+      "type": "object",
+      "properties": {
+        "vitamin_a": {"type": "number", "minimum": 0},
+        "vitamin_c": {"type": "number", "minimum": 0},
+        "vitamin_d": {"type": "number", "minimum": 0},
+        "vitamin_e": {"type": "number", "minimum": 0},
+        "vitamin_k": {"type": "number", "minimum": 0},
+        "thiamine": {"type": "number", "minimum": 0},
+        "riboflavin": {"type": "number", "minimum": 0},
+        "niacin": {"type": "number", "minimum": 0},
+        "vitamin_b6": {"type": "number", "minimum": 0},
+        "folate": {"type": "number", "minimum": 0},
+        "vitamin_b12": {"type": "number", "minimum": 0}
+      }
+    },
+    "minerals": {
+      "type": "object",
+      "properties": {
+        "calcium": {"type": "number", "minimum": 0},
+        "iron": {"type": "number", "minimum": 0},
+        "magnesium": {"type": "number", "minimum": 0},
+        "phosphorus": {"type": "number", "minimum": 0},
+        "potassium": {"type": "number", "minimum": 0},
+        "sodium": {"type": "number", "minimum": 0},
+        "zinc": {"type": "number", "minimum": 0},
+        "copper": {"type": "number", "minimum": 0},
+        "manganese": {"type": "number", "minimum": 0},
+        "selenium": {"type": "number", "minimum": 0}
+      }
+    },
+    "meal_type": {"type": "string", "enum": ["breakfast", "lunch", "dinner", "snack", "other"]},
+    "health_score": {"type": "number", "minimum": 0, "maximum": 100},
+    "recommendations": {"type": "array", "items": {"type": "string"}, "maxItems": 6},
+    "observations": {"type": "array", "items": {"type": "string"}, "maxItems": 5},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "version": {"type": "string"}
+  }
+}`;
+
   public static getInstance(): OpenAIAnalysisService {
     if (!OpenAIAnalysisService.instance) {
       OpenAIAnalysisService.instance = new OpenAIAnalysisService();
@@ -103,7 +171,6 @@ Schema: {
 
       // Test the API key with a simple request
       await this.testConnection();
-      console.log('OpenAI Analysis Service initialized successfully');
       return true;
     } catch (error) {
       console.error('Failed to initialize OpenAI Analysis Service:', error);
@@ -438,6 +505,200 @@ Schema: {
       return result;
     } catch (error) {
       console.error('Failed to parse skin analysis result:', error);
+      throw new Error('Invalid JSON response from OpenAI');
+    }
+  }
+
+  /**
+   * Analyze food from image
+   * Now uses backend API instead of direct OpenAI call
+   */
+  async analyzeFood(request: AnalysisRequest): Promise<AnalysisResponse<FoodAnalysisResult>> {
+    const startTime = Date.now();
+    
+    try {
+      if (request.analysisType !== 'food') {
+        throw new Error('Invalid analysis type for food analysis');
+      }
+
+      // Import getBackendURL dynamically to avoid circular dependencies
+      const { getBackendURL } = await import('../constants/env');
+      const backendURL = await getBackendURL();
+
+      // Convert image to base64
+      const imageBase64 = await this.convertImageToBase64(request.imageUri);
+      
+      // Call backend nutrition API
+      const response = await fetch(`${backendURL}/api/nutrition/analyze-image`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`,
+          mealType: request.mealType,
+          prefs: request.prefs,
+          allergies: request.allergies,
+          locale: 'it-IT',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Backend request failed: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success || !data.data) {
+        throw new Error(data.error || 'Invalid food analysis response from backend');
+      }
+
+      // Convert backend MealDraft format to FoodAnalysisResult format
+      const mealDraft = data.data;
+      const analysisResult = this.convertMealDraftToFoodResult(mealDraft);
+      
+      const processingTime = Date.now() - startTime;
+      
+      return {
+        success: true,
+        data: analysisResult,
+        processingTime,
+        timestamp: new Date(),
+      };
+
+    } catch (error) {
+      // Error logging handled by backend
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        timestamp: new Date(),
+      };
+    }
+  }
+
+  /**
+   * Convert MealDraft from backend to FoodAnalysisResult format
+   */
+  private convertMealDraftToFoodResult(mealDraft: any): FoodAnalysisResult {
+    // Calculate totals from items if macrosEstimate is not provided
+    const macros = mealDraft.macrosEstimate || {
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      fiber: 0,
+      sugar: 0,
+    };
+
+    // Extract vitamins and minerals from items (basic estimation)
+    const vitamins: any = {};
+    const minerals: any = {};
+
+    // Calculate health score based on macronutrient balance
+    const healthScore = this.calculateHealthScore(macros, mealDraft.qualityTags || []);
+
+    return {
+      identified_foods: mealDraft.items?.map((item: any) => `${item.name} (${item.quantity}${item.unit})`) || [],
+      macronutrients: {
+        carbohydrates: Math.round(macros.carbs || 0),
+        proteins: Math.round(macros.protein || 0),
+        fats: Math.round(macros.fat || 0),
+        calories: Math.round(mealDraft.caloriesEstimate || (macros.protein * 4 + macros.carbs * 4 + macros.fat * 9)),
+        fiber: Math.round(macros.fiber || 0),
+        sugar: Math.round(macros.sugar || 0),
+      },
+      vitamins,
+      minerals,
+      mealType: mealDraft.mealType || 'unknown',
+      healthScore,
+      recommendations: mealDraft.suggestions || [],
+      observations: mealDraft.items?.map((item: any) => item.notes).filter(Boolean) || [],
+      confidence: mealDraft.confidence || 0.7,
+      version: '1.0.0',
+    };
+  }
+
+  /**
+   * Calculate health score based on macronutrients and quality tags
+   */
+  private calculateHealthScore(macros: any, qualityTags: string[]): number {
+    let score = 70; // Base score
+
+    // Adjust based on macronutrient balance
+    const totalCals = macros.protein * 4 + macros.carbs * 4 + macros.fat * 9;
+    if (totalCals > 0) {
+      const proteinPct = (macros.protein * 4 / totalCals) * 100;
+      const carbsPct = (macros.carbs * 4 / totalCals) * 100;
+      const fatPct = (macros.fat * 9 / totalCals) * 100;
+
+      // Ideal ranges: Protein 20-30%, Carbs 40-50%, Fat 20-30%
+      if (proteinPct >= 20 && proteinPct <= 30) score += 5;
+      if (carbsPct >= 40 && carbsPct <= 50) score += 5;
+      if (fatPct >= 20 && fatPct <= 30) score += 5;
+    }
+
+    // Adjust based on quality tags
+    if (qualityTags.includes('high_protein')) score += 5;
+    if (qualityTags.includes('whole_grain')) score += 5;
+    if (qualityTags.includes('vegetable_rich')) score += 5;
+    if (qualityTags.includes('ultra_processed')) score -= 10;
+    if (qualityTags.includes('high_sugar')) score -= 5;
+
+    return Math.max(0, Math.min(100, score));
+  }
+
+  /**
+   * Parse and validate food analysis result
+   */
+  private parseAndValidateFoodResult(content: string): FoodAnalysisResult {
+    try {
+      // Clean the content - remove any markdown formatting
+      const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      
+      const result = JSON.parse(cleanContent) as FoodAnalysisResult;
+      
+      // Validate required fields
+      if (!result.identified_foods || !Array.isArray(result.identified_foods) || 
+          !result.macronutrients || typeof result.confidence !== 'number') {
+        throw new Error('Invalid food analysis result structure');
+      }
+
+      // Validate macronutrients
+      const macroKeys = ['carbohydrates', 'proteins', 'fats', 'calories'];
+      for (const key of macroKeys) {
+        if (typeof result.macronutrients[key] !== 'number' || result.macronutrients[key] < 0) {
+          throw new Error(`Invalid macronutrient value for ${key}`);
+        }
+      }
+
+      // Validate optional health score
+      if (result.health_score !== undefined && 
+          (typeof result.health_score !== 'number' || result.health_score < 0 || result.health_score > 100)) {
+        throw new Error('Health score must be between 0 and 100');
+      }
+
+      // Validate confidence
+      if (result.confidence < 0 || result.confidence > 1) {
+        throw new Error('Confidence must be between 0 and 1');
+      }
+
+      // Ensure arrays exist and have reasonable lengths
+      result.identified_foods = result.identified_foods || [];
+      result.recommendations = result.recommendations || [];
+      result.observations = result.observations || [];
+      result.version = result.version || this.version;
+
+      // Ensure optional fields are properly initialized
+      if (!result.vitamins) {
+        result.vitamins = {};
+      }
+      if (!result.minerals) {
+        result.minerals = {};
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Failed to parse food analysis result:', error);
       throw new Error('Invalid JSON response from OpenAI');
     }
   }

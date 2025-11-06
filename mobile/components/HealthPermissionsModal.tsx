@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,9 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import * as Haptics from 'expo-haptics';
+import { useTheme } from '../contexts/ThemeContext';
 import { HealthPermissionsService, HealthPermissionsState, HealthPermission } from '../services/health-permissions.service';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 
 const { width, height } = Dimensions.get('window');
 
@@ -30,28 +31,109 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
+  const { colors, mode } = useTheme();
   const [state, setState] = useState<HealthPermissionsState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
 
+  const hasCheckedPermissionsRef = useRef<boolean>(false); // 🔥 Previene controlli multipli
+
   useEffect(() => {
-    if (visible) {
+    if (visible && !hasCheckedPermissionsRef.current) {
+      hasCheckedPermissionsRef.current = true;
       loadPermissionsState();
+    } else if (!visible) {
+      // Reset quando il modal viene chiuso
+      hasCheckedPermissionsRef.current = false;
+      isClosingRef.current = false;
     }
   }, [visible]);
 
-  const loadPermissionsState = async () => {
+  // 🔥 RIMOSSO: Il listener AppState causava loop infiniti
+  // Se l'utente concede i permessi manualmente in Health Connect, può usare il pulsante "Ricarica permessi"
+
+  const previousGrantedCountRef = useRef<number>(0);
+  const isClosingRef = useRef<boolean>(false); // 🔥 Previene chiusura multipla
+  const lastHapticTimeRef = useRef<number>(0); // 🔥 Debounce per haptic feedback
+
+  // 🔥 NUOVO: Funzione per sincronizzare i dati dopo aver ottenuto i permessi
+  const syncHealthDataAfterPermissions = React.useCallback(async () => {
+    try {
+      console.log('🔄 Syncing health data after permissions granted...');
+      const { HealthDataService } = await import('../services/health-data.service');
+      const healthService = HealthDataService.getInstance();
+      
+      // Sincronizza i dati
+      const syncResult = await healthService.syncHealthData();
+      if (syncResult.success) {
+        console.log('✅ Health data synced successfully:', syncResult);
+      } else {
+        console.warn('⚠️ Health data sync failed:', syncResult.error);
+      }
+    } catch (error) {
+      console.error('❌ Error syncing health data:', error);
+    }
+  }, []);
+
+  // Rimosso il polling periodico per evitare loop e consumo risorse.
+
+  const loadPermissionsState = async (showSuccessIfChanged = false) => {
+    // 🔥 Previene chiamate multiple mentre si sta chiudendo
+    if (isClosingRef.current) {
+      return;
+    }
+
     setIsLoading(true);
     try {
       const permissionsState = await HealthPermissionsService.getHealthPermissionsState();
+      
+      // Conta quanti permessi sono concessi
+      const grantedCount = permissionsState.permissions.filter(p => p.granted).length;
+      
+      // 🔥 NUOVO: Verifica se tutti i permessi richiesti sono concessi
+      const requiredPermissions = permissionsState.permissions.filter(p => p.required);
+      const allRequiredGranted = requiredPermissions.length > 0 && requiredPermissions.every(p => p.granted);
+      
+      // Se ci sono nuovi permessi concessi rispetto a prima, mostra un messaggio di successo
+      if (showSuccessIfChanged && grantedCount > previousGrantedCountRef.current && previousGrantedCountRef.current > 0) {
+        const newlyGranted = permissionsState.permissions.filter(
+          p => p.granted && !state?.permissions.find(sp => sp.id === p.id && sp.granted)
+        );
+        
+        if (newlyGranted.length > 0) {
+          // 🔥 Debounce haptic feedback (max una volta ogni 2 secondi)
+          const now = Date.now();
+          // haptic disabilitato
+          
+          // Mostra solo un messaggio di successo, l'utente chiude manualmente
+          Alert.alert(
+            t('common.success'),
+            `${t('modals.healthPermissions.permissionsGranted')}\n\n${newlyGranted.map(p => `✅ ${p.name}`).join('\n')}\n\n${t('modals.healthPermissions.permissionsNowActive')}`,
+            [
+              {
+                text: t('common.ok'),
+                onPress: async () => {
+                  // Sincronizza i dati dopo aver ottenuto i permessi
+                  await syncHealthDataAfterPermissions();
+                  // NON chiudere automaticamente - l'utente chiude manualmente
+                },
+              },
+            ]
+          );
+        }
+      }
+      
+      // 🔥 RIMOSSO: Auto-chiusura automatica che causava loop infiniti
+      // L'utente deve chiudere manualmente il modal dopo aver concesso i permessi
+      
+      previousGrantedCountRef.current = grantedCount;
       setState(permissionsState);
       
       // Seleziona automaticamente i permessi richiesti
-      const requiredPermissions = permissionsState.permissions
-        .filter(p => p.required)
-        .map(p => p.id);
-      setSelectedPermissions(requiredPermissions);
+      const requiredPermissionIds = requiredPermissions.map(p => p.id);
+      setSelectedPermissions(requiredPermissionIds);
     } catch (error) {
       console.error('Error loading permissions state:', error);
     } finally {
@@ -71,7 +153,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
 
   const handleRequestPermissions = async () => {
     if (selectedPermissions.length === 0) {
-      Alert.alert('Attenzione', 'Seleziona almeno un permesso per continuare');
+      Alert.alert(t('modals.healthPermissions.warning'), t('modals.healthPermissions.selectAtLeastOne'));
       return;
     }
 
@@ -81,14 +163,41 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
       
       if (result.success) {
         await HealthPermissionsService.markSetupCompleted();
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // haptic disabilitato
+        
+        // 🔥 Sincronizza i dati dopo aver ottenuto i permessi
+        await syncHealthDataAfterPermissions();
+        
+        // Costruisci un messaggio più dettagliato se ci sono permessi negati
+        let message = t('modals.healthPermissions.successMessage', { 
+          granted: result.granted.length, 
+          denied: result.denied.length 
+        });
+        
+        if (result.denied.length > 0) {
+          // Mappa i permessi negati ai loro nomi
+          const deniedNames = result.denied.map(id => {
+            const permission = state.permissions.find(p => p.id === id);
+            return permission ? permission.name : id;
+          }).join(', ');
+          
+          message += `\n\n${t('modals.healthPermissions.deniedPermissions')}: ${deniedNames}\n\n${t('modals.healthPermissions.deniedInstructions')}`;
+        }
         
         Alert.alert(
-          'Successo!',
-          `Permessi concessi: ${result.granted.length}\nPermessi negati: ${result.denied.length}`,
+          result.denied.length > 0 ? t('modals.healthPermissions.partialSuccess') : t('common.success'),
+          message,
           [
+            ...(result.denied.length > 0 ? [{
+              text: t('modals.healthPermissions.openSettings'),
+              onPress: () => {
+                HealthPermissionsService.openHealthSettings();
+                onSuccess();
+                onClose();
+              },
+            }] : []),
             {
-              text: 'Perfetto!',
+              text: t('modals.healthPermissions.perfect'),
               onPress: () => {
                 onSuccess();
                 onClose();
@@ -98,12 +207,12 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
         );
       } else {
         Alert.alert(
-          'Permessi negati',
-          'Alcuni permessi sono stati negati. Puoi configurarli manualmente nelle impostazioni di salute del tuo dispositivo.',
+          t('modals.healthPermissions.deniedTitle'),
+          t('modals.healthPermissions.deniedMessage'),
           [
-            { text: 'Annulla', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
             { 
-              text: 'Apri Impostazioni', 
+              text: t('modals.healthPermissions.openSettings'), 
               onPress: () => HealthPermissionsService.openHealthSettings() 
             },
           ]
@@ -111,14 +220,13 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
       }
     } catch (error) {
       console.error('Error requesting permissions:', error);
-      Alert.alert('Errore', 'Si è verificato un errore durante la richiesta dei permessi');
+      Alert.alert(t('common.error'), t('modals.healthPermissions.errorMessage'));
     } finally {
       setIsRequesting(false);
     }
   };
 
   const handleSkip = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
   };
 
@@ -135,13 +243,13 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
 
   const getCategoryName = (category: string) => {
     const names: { [key: string]: string } = {
-      activity: 'Attività',
-      vitals: 'Parametri Vitali',
-      sleep: 'Sonno',
-      nutrition: 'Nutrizione',
-      mindfulness: 'Mindfulness',
+      activity: t('modals.healthPermissions.categories.activity'),
+      vitals: t('modals.healthPermissions.categories.vitals'),
+      sleep: t('modals.healthPermissions.categories.sleep'),
+      nutrition: t('modals.healthPermissions.categories.nutrition'),
+      mindfulness: t('modals.healthPermissions.categories.mindfulness'),
     };
-    return names[category] || 'Altro';
+    return names[category] || t('modals.healthPermissions.categories.other');
   };
 
   if (!visible || !state) return null;
@@ -154,7 +262,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
       statusBarTranslucent
     >
       <View style={styles.overlay}>
-        <BlurView intensity={20} style={styles.blurContainer}>
+        <BlurView intensity={20} tint={mode === 'dark' ? 'dark' : 'light'} style={styles.blurContainer}>
           <View style={styles.modalContainer}>
             <LinearGradient
               colors={['#4facfe', '#00f2fe']}
@@ -169,18 +277,34 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                     color="#fff" 
                   />
                 </View>
-                <Text style={styles.title}>Permessi di Salute</Text>
+                <Text style={styles.title}>{t('modals.healthPermissions.title')}</Text>
                 <Text style={styles.subtitle}>
-                  Connetti i tuoi dati di salute per un monitoraggio completo del benessere
+                  {t('modals.healthPermissions.subtitle')}
                 </Text>
               </View>
 
               {/* Content */}
               <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                {/* 🔥 Motivational banner */}
+                {(() => {
+                  const required = state?.permissions?.filter(p => p.required) || [];
+                  const allRequiredGranted = required.length > 0 && required.every(p => p.granted);
+                  if (!allRequiredGranted) {
+                    return (
+                      <View style={styles.motivationBox}>
+                        <MaterialCommunityIcons name="shield-check" size={18} color="#16a34a" />
+                        <Text style={styles.motivationText}>
+                          {t('modals.healthPermissions.importanceMessage') || 'Concedere questi permessi ci permette di mostrarti passi, sonno e frequenza cardiaca reali e darti consigli personalizzati. I dati restano sul tuo dispositivo e puoi revocare i permessi in qualsiasi momento.'}
+                        </Text>
+                      </View>
+                    );
+                  }
+                  return null;
+                })()}
                 {isLoading ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#fff" />
-                    <Text style={styles.loadingText}>Caricamento permessi...</Text>
+                    <Text style={styles.loadingText}>{t('modals.healthPermissions.loading')}</Text>
                   </View>
                 ) : (
                   <View style={styles.permissionsContainer}>
@@ -192,7 +316,9 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                         color="#fff" 
                       />
                       <Text style={styles.platformText}>
-                        {Platform.OS === 'ios' ? 'HealthKit' : 'Google Fit'} disponibile
+                        {t('modals.healthPermissions.platformAvailable', { 
+                          platform: Platform.OS === 'ios' ? 'HealthKit' : 'Google Fit' 
+                        })}
                       </Text>
                     </View>
 
@@ -257,7 +383,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                     <View style={styles.infoNote}>
                       <MaterialCommunityIcons name="information" size={16} color="#4ade80" />
                       <Text style={styles.infoText}>
-                        I tuoi dati di salute sono protetti e utilizzati solo per fornirti insights personalizzati
+                        {t('modals.healthPermissions.privacyNote')}
                       </Text>
                     </View>
                   </View>
@@ -266,18 +392,53 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
 
               {/* Footer */}
               <View style={styles.footer}>
+                {/* 🔥 Pulsante Ricarica Permessi - utile quando l'utente torna da Health Connect */}
+                {Platform.OS === 'android' && (
+                  <TouchableOpacity
+                    onPress={async () => {
+                      console.log('🔄 Manual refresh requested by user');
+                      await loadPermissionsState(true);
+                      try {
+                        // Se tutti i required sono concessi, forza una sync immediata
+                        const required = state?.permissions?.filter(p => p.required) || [];
+                        const allRequiredGranted = required.length > 0 && required.every(p => p.granted);
+                        if (allRequiredGranted) {
+                          const { HealthDataService } = await import('../services/health-data.service');
+                          const svc = HealthDataService.getInstance();
+                          const res = await svc.syncHealthData(true);
+                          console.log('🚀 Forced sync after refresh:', res);
+                        }
+                      } catch (e) {
+                        console.warn('⚠️ Forced sync failed:', e);
+                      }
+                    }}
+                    style={styles.refreshButton}
+                    disabled={isLoading}
+                  >
+                    <MaterialCommunityIcons 
+                      name="refresh" 
+                      size={18} 
+                      color="#fff" 
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.refreshButtonText}>
+                      {t('modals.healthPermissions.reloadPermissions') || 'Ricarica permessi'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                
                 <View style={styles.buttonContainer}>
                   <TouchableOpacity
                     onPress={handleSkip}
                     style={styles.skipButton}
                     disabled={isRequesting}
                   >
-                    <Text style={styles.skipButtonText}>Salta per ora</Text>
+                    <Text style={styles.skipButtonText}>{t('modals.healthPermissions.skipForNow')}</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity
                     onPress={handleRequestPermissions}
-                    style={styles.requestButton}
+                    style={[styles.requestButton, { opacity: selectedPermissions.length === 0 ? 0.6 : 1 }]}
                     disabled={isRequesting || selectedPermissions.length === 0}
                   >
                     {isRequesting ? (
@@ -286,7 +447,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                       <>
                         <MaterialCommunityIcons name="heart-pulse" size={20} color="#4facfe" />
                         <Text style={styles.requestButtonText}>
-                          Richiedi Permessi ({selectedPermissions.length})
+                          {t('modals.healthPermissions.requestPermissions', { count: selectedPermissions.length }) || 'Concedi i permessi consigliati'}
                         </Text>
                       </>
                     )}
@@ -469,6 +630,39 @@ const styles = StyleSheet.create({
   },
   footer: {
     // Footer container
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  refreshButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  motivationBox: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: 'rgba(22,163,74,0.15)',
+    borderColor: 'rgba(22,163,74,0.35)',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    alignItems: 'flex-start',
+  },
+  motivationText: {
+    color: '#fff',
+    fontSize: 14,
+    flex: 1,
   },
   buttonContainer: {
     flexDirection: 'row',

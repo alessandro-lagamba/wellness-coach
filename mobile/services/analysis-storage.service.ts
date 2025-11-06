@@ -1,7 +1,7 @@
 // Analysis Storage Service
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../config/api.config';
-import { AnalysisHistory, EmotionAnalysisResult, SkinAnalysisResult } from '../types/analysis.types';
+import { AnalysisHistory, EmotionAnalysisResult, SkinAnalysisResult, FoodAnalysisResult } from '../types/analysis.types';
 
 export class AnalysisStorageService {
   private static instance: AnalysisStorageService;
@@ -19,8 +19,8 @@ export class AnalysisStorageService {
    * Save analysis result to storage
    */
   async saveAnalysis(
-    type: 'emotion' | 'skin',
-    result: EmotionAnalysisResult | SkinAnalysisResult,
+    type: 'emotion' | 'skin' | 'food',
+    result: EmotionAnalysisResult | SkinAnalysisResult | FoodAnalysisResult,
     imageUri: string,
     sessionId?: string
   ): Promise<string> {
@@ -107,7 +107,7 @@ export class AnalysisStorageService {
   /**
    * Get analysis history by type
    */
-  async getAnalysisHistoryByType(type: 'emotion' | 'skin'): Promise<AnalysisHistory[]> {
+  async getAnalysisHistoryByType(type: 'emotion' | 'skin' | 'food'): Promise<AnalysisHistory[]> {
     const history = await this.getAnalysisHistory();
     return history.filter(item => item.type === type);
   }

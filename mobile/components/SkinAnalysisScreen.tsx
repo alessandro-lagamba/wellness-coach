@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, {
@@ -50,6 +51,8 @@ import { InsightService } from '../services/insight.service';
 import { DetailedAnalysisPopup } from './DetailedAnalysisPopup';
 import { IntelligentInsightsSection } from './IntelligentInsightsSection';
 import { VideoHero } from './VideoHero';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
+import { useTheme } from '../contexts/ThemeContext';
 // Removed useInsights - now using IntelligentInsightsSection directly
 
 const { width } = Dimensions.get('window');
@@ -318,6 +321,8 @@ const ImageWithFallback: React.FC<{ uri: string; style: any; fallbackColor?: str
 };
 
 const SkinAnalysisScreen: React.FC = () => {
+  const { t } = useTranslation(); // 🆕 i18n hook
+  const { colors } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
   const [currentImageUri, setCurrentImageUri] = useState(heroImageUri);
   
@@ -353,12 +358,6 @@ const SkinAnalysisScreen: React.FC = () => {
   // Use proper selectors for reactive updates
   const latestSkinCapture = useAnalysisStore(s => s.latestSkinCapture);
   const skinHistory = useAnalysisStore(s => s.skinHistory);
-
-  const headerStats = [
-    { label: 'Hydration readiness', value: results ? `${results.hydration}%` : 'Awaiting scan' },
-    { label: 'Oil balance', value: results ? `${results.oiliness}%` : 'Not measured' },
-    { label: 'Last session', value: results ? 'Just now' : 'Never run' },
-  ];
 
   const startDisabled = permissionChecking || analyzing || !analysisReady || !!analysisError;
   const captureDisabled = !cameraController.ready || cameraController.detecting || permissionChecking || analyzing || cameraSwitching;
@@ -502,13 +501,13 @@ const SkinAnalysisScreen: React.FC = () => {
 
     console.log('Camera permission granted:', granted);
     if (!granted) {
-      alert('Camera permission is required for skin analysis');
+      alert(t('analysis.skin.errors.cameraPermission'));
       cameraController.stopCamera();
       return;
     }
 
     if (!ready) {
-      alert('Analysis service is not ready. Please check your OpenAI configuration.');
+      alert(t('analysis.skin.errors.serviceNotReady'));
       cameraController.stopCamera();
       return;
     }
@@ -527,14 +526,14 @@ const SkinAnalysisScreen: React.FC = () => {
     try {
       const ready = await ensureAnalysisReady();
       if (!ready) {
-        alert('Analysis service is not ready. Please check your OpenAI configuration.');
+        alert(t('analysis.skin.errors.serviceNotReady'));
         return;
       }
 
       // Request image picker permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        alert('Media library permission is required to select photos');
+        alert(t('analysis.skin.errors.mediaLibraryPermission'));
         return;
       }
 
@@ -569,7 +568,7 @@ const SkinAnalysisScreen: React.FC = () => {
           : asset.uri;
 
         if (!dataUrl) {
-          alert('Failed to process selected image');
+          alert(t('analysis.skin.errors.imageProcessingFailed'));
           return;
         }
 
@@ -684,7 +683,7 @@ const SkinAnalysisScreen: React.FC = () => {
           
         } else {
           console.error('Gallery skin analysis failed:', analysisResult.error);
-          alert('Skin analysis failed: ' + (analysisResult.error || 'Unknown error'));
+          alert(t('analysis.skin.errors.analysisFailed', { error: analysisResult.error || 'Unknown error' }));
           setAnalyzing(false);
         }
       } else {
@@ -692,7 +691,7 @@ const SkinAnalysisScreen: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Gallery skin analysis error:', error);
-      alert('Failed to analyze skin image: ' + error.message);
+      alert(t('analysis.skin.errors.failedToAnalyze', { error: error.message }));
       setAnalyzing(false);
     }
   };
@@ -741,7 +740,7 @@ const SkinAnalysisScreen: React.FC = () => {
     });
 
     if (!isCameraReady()) {
-      const errorMsg = error || 'Camera not ready. Please wait a moment...';
+      const errorMsg = error || t('analysis.skin.errors.cameraNotReady');
       console.error('📸 Skin Capture failed:', errorMsg);
       alert(errorMsg);
       return;
@@ -752,14 +751,14 @@ const SkinAnalysisScreen: React.FC = () => {
     }
     if (cameraSwitching) {
       console.log('📸 Skin Capture skipped - camera is switching');
-      alert('Please wait for camera to finish switching');
+      alert(t('analysis.common.processing'));
       return;
     }
 
     try {
       const serviceReady = await ensureAnalysisReady();
       if (!serviceReady) {
-        const errorMsg = 'Analysis service is not ready. Please check your OpenAI configuration.';
+        const errorMsg = t('analysis.skin.errors.serviceNotReady');
         console.error('📸 Skin Capture failed:', errorMsg);
         alert(errorMsg);
         return;
@@ -1061,16 +1060,16 @@ const SkinAnalysisScreen: React.FC = () => {
         error: error,
       });
       
-      let errorMessage = 'Failed to capture image.';
+      let errorMessage = t('analysis.skin.errors.captureFailed');
       if (error?.message) {
         if (error.message.includes('timeout')) {
-          errorMessage = 'Camera capture timed out. Please try again.';
+          errorMessage = t('analysis.skin.errors.captureTimeout');
         } else if (error.message.includes('permission')) {
-          errorMessage = 'Camera permission denied. Please check your settings.';
+          errorMessage = t('analysis.skin.errors.cameraPermission');
         } else if (error.message.includes('not available')) {
-          errorMessage = 'Camera is not available. Please restart the app.';
+          errorMessage = t('analysis.skin.errors.cameraNotReady');
         } else {
-          errorMessage = `Capture failed: ${error.message}`;
+          errorMessage = t('analysis.skin.errors.captureFailed');
         }
       }
       
@@ -1223,63 +1222,67 @@ const SkinAnalysisScreen: React.FC = () => {
 
   if (analyzing) {
     return (
-      <View style={styles.container}>
-        {/* Keep camera mounted but hidden during analysis */}
-        <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}>
-          <CameraFrame />
-        </View>
-        
-        <SkinLoadingScreen onCancel={() => {
-          setAnalyzing(false);
-          setResults(null);
-        }} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["bottom"]}>
+          {/* Keep camera mounted but hidden during analysis */}
+          <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}>
+            <CameraFrame />
+          </View>
+          
+          <SkinLoadingScreen onCancel={() => {
+            setAnalyzing(false);
+            setResults(null);
+          }} />
+        </SafeAreaView>
       </View>
     );
   }
 
   if (cameraController.active && !analyzing) {
     return (
-      <View style={styles.container}>
-        <View style={styles.captureLayout}>
-          <CameraFrame />
-          
-          
-          <View style={styles.cameraControls}>
-            <TouchableOpacity style={styles.ghostButton} onPress={() => cameraController.stopCamera()}>
-              <FontAwesome name="times" size={16} color="#4338ca" />
-              <Text style={styles.ghostButtonText}>Cancel</Text>
-            </TouchableOpacity>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["bottom"]}>
+          <View style={styles.captureLayout}>
+            <CameraFrame />
             
-            {/* Camera Switch Button */}
-            <TouchableOpacity 
-              style={[styles.ghostButton, cameraSwitching && { opacity: 0.5 }]} 
-              onPress={switchCamera}
-              disabled={cameraSwitching}
-            >
-              <FontAwesome name="refresh" size={16} color="#4338ca" />
-              <Text style={styles.ghostButtonText}>
-                {cameraType === 'front' ? 'Back' : 'Front'}
-              </Text>
-            </TouchableOpacity>
             
-            <TouchableOpacity 
-              activeOpacity={0.7} 
-              onPress={captureAndAnalyze}
-              disabled={captureDisabled}
-              style={captureDisabled ? { opacity: 0.5 } : {}}
-            >
-              <LinearGradient
-                colors={['#6366f1', '#8b5cf6']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.primaryButton}
+            <View style={styles.cameraControls}>
+              <TouchableOpacity style={styles.ghostButton} onPress={() => cameraController.stopCamera()}>
+                <FontAwesome name="times" size={16} color="#4338ca" />
+                <Text style={styles.ghostButtonText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              
+              {/* Camera Switch Button */}
+              <TouchableOpacity 
+                style={[styles.ghostButton, cameraSwitching && { opacity: 0.5 }]} 
+                onPress={switchCamera}
+                disabled={cameraSwitching}
               >
-                <FontAwesome name="camera" size={16} color="#ffffff" />
-                <Text style={styles.primaryButtonText}>Capture</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+                <FontAwesome name="refresh" size={16} color="#4338ca" />
+                <Text style={styles.ghostButtonText}>
+                  {cameraType === 'front' ? 'Back' : 'Front'}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                activeOpacity={0.7} 
+                onPress={captureAndAnalyze}
+                disabled={captureDisabled}
+                style={captureDisabled ? { opacity: 0.5 } : {}}
+              >
+                <LinearGradient
+                  colors={['#6366f1', '#8b5cf6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.primaryButton}
+                >
+                  <FontAwesome name="camera" size={16} color="#ffffff" />
+                  <Text style={styles.primaryButtonText}>{t('common.capture')}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </SafeAreaView>
       </View>
     );
   }
@@ -1305,12 +1308,25 @@ const SkinAnalysisScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.overviewContent}
-        showsVerticalScrollIndicator={false}
-      >
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* View assoluto per colorare l'area sotto la tab bar */}
+      <View style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 150,
+        backgroundColor: colors.background,
+        zIndex: 0,
+      }} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["bottom"]}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.overviewContent}
+          showsVerticalScrollIndicator={false}
+          overScrollMode="never"
+          bounces={false}
+        >
         <LinearGradient
           colors={['#22d3ee', '#6366f1']}
           start={{ x: 0, y: 0 }}
@@ -1318,15 +1334,13 @@ const SkinAnalysisScreen: React.FC = () => {
           style={styles.heroCard}
         >
           <View style={styles.heroHeader}>
-            <Text style={styles.heroTitle}>Advanced Skin Analysis</Text>
-            <Text style={styles.heroSubtitle}>
-              Measure hydration, redness, and texture with a guided camera scan. Get recommendations in seconds.
-            </Text>
+            <Text style={styles.heroTitle}>{t('analysis.skin.hero.title')}</Text>
+            <Text style={styles.heroSubtitle}>{t('analysis.skin.hero.subtitle')}</Text>
           </View>
           <VideoHero
             videoUri={heroVideoUri}
-            title="Advanced Skin Analysis"
-            subtitle="Measure hydration, redness, and texture with a guided camera scan. Get recommendations in seconds."
+            title={t('analysis.skin.hero.title')}
+            subtitle={t('analysis.skin.hero.subtitle')}
             onPlayPress={handleStartAnalysis}
             showPlayButton={false}
             autoPlay={true}
@@ -1335,14 +1349,6 @@ const SkinAnalysisScreen: React.FC = () => {
             style={styles.heroVideo}
             fallbackImageUri="https://images.unsplash.com/photo-1557163435-efdb2550fbfb?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
           />
-          <View style={styles.heroStatsRow}>
-            {headerStats.map((item) => (
-              <View key={item.label} style={styles.heroStatChip}>
-                <Text style={styles.heroChipLabel}>{item.label}</Text>
-                <Text style={styles.heroChipValue}>{item.value}</Text>
-              </View>
-            ))}
-          </View>
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={handleStartAnalysis}
@@ -1356,7 +1362,7 @@ const SkinAnalysisScreen: React.FC = () => {
               style={[styles.primaryButton, styles.heroButton]}
             >
               <FontAwesome name="camera" size={16} color="#92400e" />
-              <Text style={[styles.primaryButtonText, styles.heroButtonText]}>Start skin scan</Text>
+              <Text style={[styles.primaryButtonText, styles.heroButtonText]}>{t('analysis.skin.start')}</Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -1372,12 +1378,12 @@ const SkinAnalysisScreen: React.FC = () => {
               style={[styles.primaryButton, styles.heroButton]}
             >
               <FontAwesome name="image" size={16} color="#0ea5e9" />
-              <Text style={[styles.primaryButtonText, { color: '#0ea5e9' }]}>Pick from Gallery</Text>
+              <Text style={[styles.primaryButtonText, { color: '#0ea5e9' }]}>{t('common.pickFromGallery')}</Text>
             </LinearGradient>
           </TouchableOpacity>
 
           {permissionChecking && (
-            <Text style={styles.permissionBanner}>Requesting camera permission…</Text>
+            <Text style={styles.permissionBanner}>{t('analysis.common.requestingPermission')}</Text>
           )}
           {analysisError && !permissionChecking && (
             <Text style={styles.permissionBanner}>{analysisError}</Text>
@@ -1387,8 +1393,8 @@ const SkinAnalysisScreen: React.FC = () => {
 
          {/* Recent Analysis Section - Always visible */}
          <View style={styles.sectionHeader}>
-           <Text style={styles.sectionTitle}>Recent Analysis</Text>
-           <Text style={styles.sectionSubtitle}>Your latest skin scan results</Text>
+           <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.recent.title')}</Text>
+           <Text style={styles.sectionSubtitle}>{t('analysis.skin.recent.subtitle')}</Text>
          </View>
          
          {(() => {
@@ -1478,23 +1484,23 @@ const SkinAnalysisScreen: React.FC = () => {
 
         {/* Quick Stats Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Quick Stats</Text>
-          <Text style={styles.sectionSubtitle}>Your skin health overview</Text>
+         <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.quickStats.title')}</Text>
+          <Text style={styles.sectionSubtitle}>{t('analysis.skin.quickStats.subtitle')}</Text>
         </View>
         
         {/* Gauge Charts Grid 2x2 */}
         <View style={styles.gaugeGrid}>
           <View style={styles.gaugeRow}>
-            <View style={styles.gaugeCard}>
+            <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
               <GaugeChart
                 value={skinHistory.length > 0 
                   ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.texture || 0), 0) / skinHistory.length)
                   : 65
                 }
                 maxValue={100}
-                label="Smoothness"
+                label={t('analysis.skin.metrics.texture')}
                 color="#8b5cf6"
-                subtitle="Skin Texture"
+                subtitle={t('analysis.skin.metrics.textureSubtitle')}
                 trend={2}
                 description="Shows skin surface uniformity. Helps identify dryness, roughness, or damage. High values indicate smooth, healthy skin, while low values may indicate dryness, irregularities, or damage. Good texture is essential for a youthful and healthy appearance."
                 historicalData={skinHistory.map((capture, index) => ({
@@ -1506,16 +1512,16 @@ const SkinAnalysisScreen: React.FC = () => {
               />
             </View>
             
-            <View style={styles.gaugeCard}>
+            <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
               <GaugeChart
                 value={skinHistory.length > 0 
                   ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.redness || 0), 0) / skinHistory.length)
                   : 25
                 }
                 maxValue={100}
-                label="Redness"
+                label={t('analysis.skin.metrics.redness')}
                 color="#ef4444"
-                subtitle="Skin Redness"
+                subtitle={t('analysis.skin.metrics.rednessSubtitle')}
                 trend={-3}
                 description="Measures skin irritation and inflammation. Low values indicate calm, healthy skin, while high values may indicate inflammation, sensitivity, or conditions like rosacea. Monitoring this value helps identify irritating triggers."
                 historicalData={skinHistory.map((capture, index) => ({
@@ -1529,16 +1535,16 @@ const SkinAnalysisScreen: React.FC = () => {
           </View>
           
           <View style={styles.gaugeRow}>
-            <View style={styles.gaugeCard}>
+            <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
               <GaugeChart
                 value={skinHistory.length > 0 
                   ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.hydration || 0), 0) / skinHistory.length)
                   : 45
                 }
                 maxValue={100}
-                label="Hydration"
+                label={t('analysis.skin.metrics.hydration')}
                 color="#f59e0b"
-                subtitle="Water Content"
+                subtitle={t('analysis.skin.metrics.hydrationSubtitle')}
                 trend={1}
                 description="Shows surface water content. Helps prevent dryness and signs of fatigue. High values indicate well-hydrated and elastic skin, while low values indicate dryness and dehydration. Good hydration is essential for maintaining soft, elastic skin resistant to wrinkles."
                 historicalData={skinHistory.map((capture, index) => ({
@@ -1550,16 +1556,16 @@ const SkinAnalysisScreen: React.FC = () => {
               />
             </View>
             
-            <View style={styles.gaugeCard}>
+            <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
               <GaugeChart
                 value={skinHistory.length > 0 
                   ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.oiliness || 0), 0) / skinHistory.length)
                   : 50
                 }
                 maxValue={100}
-                label="Oiliness"
+                label={t('analysis.skin.metrics.oiliness')}
                 color="#8b5cf6"
-                subtitle="Sebaceous Activity"
+                subtitle={t('analysis.skin.metrics.oilinessSubtitle')}
                 trend={0}
                 description="Measures sebaceous activity and oil production. Helps balance skincare routine. High values indicate oily skin, while low values indicate dry skin. Balanced oiliness is essential for healthy skin barrier."
                 historicalData={skinHistory.map((capture, index) => ({
@@ -1594,8 +1600,8 @@ const SkinAnalysisScreen: React.FC = () => {
             hydration: capture.scores?.hydration || 0,  // ✅ FIXED: Use hydration instead of shine
             overall: capture.scores?.overall || 0,
           }))}
-          title="Skin Health Score Trends"
-          subtitle="7-day overview of your skin metrics"
+          title={t('analysis.skin.trends.title')}
+          subtitle={t('analysis.skin.trends.subtitle')}
         />
 
         {/* Intelligent Insights Section - Skin Only */}
@@ -1629,25 +1635,23 @@ const SkinAnalysisScreen: React.FC = () => {
 
         {/* How Skin Analysis Works Video Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>How Skin Analysis Works</Text>
-          <Text style={styles.sectionSubtitle}>Understanding the technology behind our analysis</Text>
+         <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.howItWorks.title')}</Text>
+          <Text style={styles.sectionSubtitle}>{t('analysis.skin.howItWorks.subtitle')}</Text>
         </View>
         
         <LinearGradient
-          colors={['#fef3c7', '#fde68a']}
+          colors={[colors.surface, colors.surfaceElevated]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.howItWorksCard}
+          style={[styles.howItWorksCard, { borderColor: colors.border }]}
         >
           <View style={styles.howItWorksHeader}>
-            <View style={[styles.howItWorksIcon, { backgroundColor: '#f59e0b22' }]}>
-              <FontAwesome name="cogs" size={20} color="#d97706" />
+            <View style={[styles.howItWorksIcon, { backgroundColor: `${colors.accent}22` }]}>
+              <FontAwesome name="cogs" size={20} color={colors.accent} />
             </View>
             <View style={styles.howItWorksContent}>
-              <Text style={styles.howItWorksTitle}>AI-Powered Skin Analysis</Text>
-              <Text style={styles.howItWorksDescription}>
-                Our advanced computer vision algorithms analyze skin smoothness, hydration levels, redness patterns, and oiliness to provide comprehensive skin health insights.
-              </Text>
+              <Text style={[styles.howItWorksTitle, { color: colors.text }]}>{t('analysis.skin.howItWorks.cardTitle')}</Text>
+              <Text style={[styles.howItWorksDescription, { color: colors.textSecondary }]}>{t('analysis.skin.howItWorks.cardDesc')}</Text>
             </View>
           </View>
           
@@ -1664,52 +1668,52 @@ const SkinAnalysisScreen: React.FC = () => {
           
           <View style={styles.howItWorksSteps}>
             <View style={styles.howItWorksStep}>
-              <View style={styles.stepNumber}>
+              <View style={[styles.stepNumber, { backgroundColor: colors.accent }]}>
                 <Text style={styles.stepNumberText}>1</Text>
               </View>
-              <Text style={styles.stepText}>Capture high-resolution skin images using advanced camera technology</Text>
+              <Text style={[styles.stepText, { color: colors.text }]}>{t('analysis.skin.howItWorks.step1')}</Text>
             </View>
             
             <View style={styles.howItWorksStep}>
-              <View style={styles.stepNumber}>
+              <View style={[styles.stepNumber, { backgroundColor: colors.accent }]}>
                 <Text style={styles.stepNumberText}>2</Text>
               </View>
-              <Text style={styles.stepText}>AI analyzes skin smoothness, hydration, redness, and oiliness patterns</Text>
+              <Text style={[styles.stepText, { color: colors.text }]}>{t('analysis.skin.howItWorks.step2')}</Text>
             </View>
             
             <View style={styles.howItWorksStep}>
-              <View style={styles.stepNumber}>
+              <View style={[styles.stepNumber, { backgroundColor: colors.accent }]}>
                 <Text style={styles.stepNumberText}>3</Text>
               </View>
-              <Text style={styles.stepText}>Get detailed skin health report with personalized recommendations</Text>
+              <Text style={[styles.stepText, { color: colors.text }]}>{t('analysis.skin.howItWorks.step3')}</Text>
             </View>
           </View>
         </LinearGradient>
 
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Advanced modules</Text>
-          <Text style={styles.sectionSubtitle}>Unlock deeper diagnostics</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.advancedModules.title')}</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.skin.advancedModules.subtitle')}</Text>
         </View>
         <View style={styles.insightList}>
           {insightCards.map((card) => (
             <TouchableOpacity 
               key={card.id} 
-              style={styles.insightCard}
+              style={[styles.insightCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={() => openSkincareGuide(card.id)}
               activeOpacity={0.8}
             >
               <ImageWithFallback 
                 uri={card.image} 
                 style={styles.insightImage}
-                fallbackColor="#f3f4f6"
+                fallbackColor={colors.surfaceMuted}
               />
               <View style={styles.insightCopy}>
-                <Text style={styles.insightTitle}>{card.title}</Text>
-                <Text style={styles.insightDescription}>{card.description}</Text>
+                <Text style={[styles.insightTitle, { color: colors.text }]}>{t(`analysis.skin.guides.${card.id}.title`, { defaultValue: card.title })}</Text>
+                <Text style={[styles.insightDescription, { color: colors.textSecondary }]}>{t(`analysis.skin.guides.${card.id}.description`, { defaultValue: card.description })}</Text>
                 <View style={styles.guideHint}>
-                  <Text style={styles.guideHintText}>Tap for detailed guide</Text>
-                  <FontAwesome name="chevron-right" size={12} color="#6366f1" />
+                  <Text style={[styles.guideHintText, { color: colors.primary }]}>{t('analysis.skin.advancedModules.tapForGuide')}</Text>
+                  <FontAwesome name="chevron-right" size={12} color={colors.primary} />
                 </View>
               </View>
             </TouchableOpacity>
@@ -1740,20 +1744,25 @@ const SkinAnalysisScreen: React.FC = () => {
           presentationStyle="pageSheet"
           onRequestClose={closeSkincareGuide}
         >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={closeSkincareGuide} style={styles.closeButton}>
-                <FontAwesome name="times" size={20} color="#374151" />
+          <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <TouchableOpacity onPress={closeSkincareGuide} style={[styles.closeButton, { backgroundColor: colors.surfaceMuted }]}>
+                <FontAwesome name="times" size={20} color={colors.text} />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
                 {skincareGuides[selectedGuide as keyof typeof skincareGuides]?.title}
               </Text>
-              <Text style={styles.modalSubtitle}>
+              <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
                 {skincareGuides[selectedGuide as keyof typeof skincareGuides]?.subtitle}
               </Text>
             </View>
             
-            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <ScrollView 
+              style={styles.modalContent} 
+              showsVerticalScrollIndicator={false}
+              overScrollMode="never"
+              bounces={false}
+            >
               {/* Hero Image Section */}
               <View style={styles.heroImageContainer}>
                 <ImageWithFallback 
@@ -1769,20 +1778,20 @@ const SkinAnalysisScreen: React.FC = () => {
               </View>
               
               {/* Quick Stats Row */}
-              <View style={styles.quickStatsRow}>
+              <View style={[styles.quickStatsRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>5</Text>
-                  <Text style={styles.statLabel}>Key Tips</Text>
+                  <Text style={[styles.statNumber, { color: colors.primary }]}>5</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Key Tips</Text>
                 </View>
-                <View style={styles.statDivider} />
+                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>4</Text>
-                  <Text style={styles.statLabel}>Categories</Text>
+                  <Text style={[styles.statNumber, { color: colors.primary }]}>4</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Categories</Text>
                 </View>
-                <View style={styles.statDivider} />
+                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>2-4</Text>
-                  <Text style={styles.statLabel}>Weeks</Text>
+                  <Text style={[styles.statNumber, { color: colors.primary }]}>2-4</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Weeks</Text>
                 </View>
               </View>
               
@@ -1791,9 +1800,10 @@ const SkinAnalysisScreen: React.FC = () => {
                 <View key={key} style={[
                   styles.sectionCard,
                   { 
-                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                    backgroundColor: index % 2 === 0 ? colors.surface : colors.surfaceMuted,
                     borderLeftWidth: 4,
-                    borderLeftColor: getSectionColor(key)
+                    borderLeftColor: getSectionColor(key),
+                    borderColor: colors.border,
                   }
                 ]}>
                   <View style={styles.sectionHeaderRow}>
@@ -1802,16 +1812,16 @@ const SkinAnalysisScreen: React.FC = () => {
                         {getSectionEmoji(key)}
                       </Text>
                     </View>
-                    <Text style={styles.sectionTitle}>{section.title}</Text>
+                   <Text style={[styles.sectionTitle, { color: colors.text }]}>{section.title}</Text>
                   </View>
                   
                   <View style={styles.itemsContainer}>
                     {section.items.map((item, itemIndex) => (
-                      <View key={itemIndex} style={styles.itemCard}>
+                      <View key={itemIndex} style={[styles.itemCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                         <View style={[styles.itemBullet, { backgroundColor: `${getSectionColor(key)}15` }]}>
                           <Text style={[styles.bulletNumber, { color: getSectionColor(key) }]}>{itemIndex + 1}</Text>
                         </View>
-                        <Text style={styles.itemText}>{item}</Text>
+                        <Text style={[styles.itemText, { color: colors.text }]}>{item}</Text>
                       </View>
                     ))}
                   </View>
@@ -1829,6 +1839,7 @@ const SkinAnalysisScreen: React.FC = () => {
           </View>
         </Modal>
       )}
+      </SafeAreaView>
     </View>
   );
 }
@@ -1836,7 +1847,6 @@ const SkinAnalysisScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   scroll: {
     flex: 1,
@@ -2007,7 +2017,6 @@ const styles = StyleSheet.create({
   },
   insightCard: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
     borderRadius: 22,
     overflow: 'hidden',
     shadowColor: '#0f172a',
@@ -2016,6 +2025,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6,
     minHeight: 120,
+    borderWidth: 1,
   },
   insightImage: {
     width: 120,
@@ -2031,12 +2041,10 @@ const styles = StyleSheet.create({
   insightTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#0f172a',
     marginBottom: 8,
   },
   insightDescription: {
     fontSize: 13,
-    color: '#475569',
     lineHeight: 18,
   },
   cameraPreview: {
@@ -2318,6 +2326,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     marginBottom: 8,
+    borderWidth: 1,
   },
   howItWorksHeader: {
     flexDirection: 'row',
@@ -2338,12 +2347,10 @@ const styles = StyleSheet.create({
   howItWorksTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#92400e',
     marginBottom: 4,
   },
   howItWorksDescription: {
     fontSize: 14,
-    color: '#a16207',
     lineHeight: 20,
   },
   videoPlaceholder: {
@@ -2393,7 +2400,6 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 14,
-    color: '#a16207',
     lineHeight: 20,
     flex: 1,
   },
@@ -2420,7 +2426,6 @@ const styles = StyleSheet.create({
   },
   gaugeCard: {
     flex: 1,
-    backgroundColor: '#ffffff',
     borderRadius: 20,
     padding: 16,
     shadowColor: '#000',
@@ -2788,21 +2793,18 @@ const styles = StyleSheet.create({
   },
   guideHintText: {
     fontSize: 12,
-    color: '#6366f1',
     fontWeight: '600',
   },
   
   // ✅ ADD: Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
   },
   modalHeader: {
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
   },
   closeButton: {
     position: 'absolute',
@@ -2811,19 +2813,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f3f4f6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
     marginBottom: 8,
   },
   modalSubtitle: {
     fontSize: 16,
-    color: '#6b7280',
     lineHeight: 24,
   },
   modalContent: {
@@ -2870,7 +2869,6 @@ const styles = StyleSheet.create({
   // ✅ ENHANCED: Quick Stats Row
   quickStatsRow: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -2880,7 +2878,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   statItem: {
     flex: 1,
@@ -2889,19 +2886,16 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#6366f1',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6b7280',
     textAlign: 'center',
   },
   statDivider: {
     width: 1,
     height: 40,
-    backgroundColor: '#e5e7eb',
     marginHorizontal: 16,
   },
   
@@ -2916,7 +2910,6 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -2942,11 +2935,9 @@ const styles = StyleSheet.create({
   itemCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
   },
   itemBullet: {
     width: 28,
@@ -2964,7 +2955,6 @@ const styles = StyleSheet.create({
   itemText: {
     flex: 1,
     fontSize: 16,
-    color: '#374151',
     lineHeight: 24,
     fontWeight: '500',
   },

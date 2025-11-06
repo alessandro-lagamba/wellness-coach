@@ -1,8 +1,10 @@
 import { supabase, Tables, EmotionAnalysis } from '../lib/supabase';
+import cacheService from './cache.service';
 
 export class EmotionAnalysisService {
   /**
    * Salva una nuova analisi emotiva nel database
+   * 🆕 Evita duplicati recenti: se c'è un'analisi simile negli ultimi 2 minuti, aggiorna quella invece di crearne una nuova
    */
   static async saveEmotionAnalysis(
     userId: string,
@@ -16,6 +18,57 @@ export class EmotionAnalysisService {
     }
   ): Promise<EmotionAnalysis | null> {
     try {
+      // 🆕 Check duplicati recenti: analisi simili negli ultimi 2 minuti
+      const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const { data: recentAnalysis, error: checkError } = await supabase
+        .from(Tables.EMOTION_ANALYSES)
+        .select('id, created_at, dominant_emotion, valence, arousal')
+        .eq('user_id', userId)
+        .gte('created_at', twoMinutesAgo)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // 🆕 Se esiste un'analisi recente simile, aggiornala invece di crearne una nuova
+      if (recentAnalysis && !checkError) {
+        const isSimilar = 
+          recentAnalysis.dominant_emotion === analysis.dominantEmotion &&
+          Math.abs(recentAnalysis.valence - analysis.valence) < 0.1 &&
+          Math.abs(recentAnalysis.arousal - analysis.arousal) < 0.1;
+
+        if (isSimilar) {
+          console.log(`📝 Found similar emotion analysis from ${recentAnalysis.created_at}, updating instead of inserting`);
+          
+          const { data: updated, error: updateError } = await supabase
+            .from(Tables.EMOTION_ANALYSES)
+            .update({
+              dominant_emotion: analysis.dominantEmotion,
+              valence: analysis.valence,
+              arousal: analysis.arousal,
+              confidence: analysis.confidence,
+              analysis_data: analysis.analysisData || {},
+              session_duration: analysis.sessionDuration,
+            })
+            .eq('id', recentAnalysis.id)
+            .select()
+            .single();
+
+          if (updateError) {
+            console.error('Error updating emotion analysis:', updateError);
+            return null;
+          }
+
+          console.log('✅ Emotion analysis updated (duplicate prevented):', updated.id);
+          
+          // 🆕 Invalida cache quando si aggiorna un'analisi
+          await cacheService.invalidatePrefix(`emotion:${userId}`);
+          await cacheService.invalidate(`ai_context:${userId}`);
+          
+          return updated;
+        }
+      }
+
+      // 🆕 Nessun duplicato trovato, inserisci nuova analisi
       const { data, error } = await supabase
         .from(Tables.EMOTION_ANALYSES)
         .insert({
@@ -36,6 +89,11 @@ export class EmotionAnalysisService {
       }
 
       console.log('✅ Emotion analysis saved:', data.id);
+      
+      // 🆕 Invalida cache quando si salva una nuova analisi
+      await cacheService.invalidatePrefix(`emotion:${userId}`);
+      await cacheService.invalidate(`ai_context:${userId}`);
+      
       return data;
     } catch (error) {
       console.error('Error in saveEmotionAnalysis:', error);
@@ -45,9 +103,20 @@ export class EmotionAnalysisService {
 
   /**
    * Ottiene l'ultima analisi emotiva di un utente
+   * 🆕 Con cache: cache di 5 minuti
    */
-  static async getLatestEmotionAnalysis(userId: string): Promise<EmotionAnalysis | null> {
+  static async getLatestEmotionAnalysis(userId: string, forceRefresh: boolean = false): Promise<EmotionAnalysis | null> {
     try {
+      const cacheKey = `emotion:${userId}:latest`;
+      
+      // 🆕 Prova cache prima
+      if (!forceRefresh) {
+        const cached = await cacheService.get<EmotionAnalysis>(cacheKey);
+        if (cached) {
+          return cached;
+        }
+      }
+      
       const { data, error } = await supabase
         .from(Tables.EMOTION_ANALYSES)
         .select('*')
@@ -59,6 +128,11 @@ export class EmotionAnalysisService {
       if (error) {
         console.error('Error getting latest emotion analysis:', error);
         return null;
+      }
+
+      // 🆕 Cache per 5 minuti
+      if (data) {
+        await cacheService.set(cacheKey, data, 5 * 60 * 1000);
       }
 
       return data;

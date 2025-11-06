@@ -1,6 +1,7 @@
 import { EmotionAnalysisService } from './emotion-analysis.service';
 import { SkinAnalysisService } from './skin-analysis.service';
 import { WellnessSuggestionService } from './chat-wellness.service';
+import cacheService from './cache.service';
 
 export interface AIContext {
   userId: string;
@@ -328,10 +329,21 @@ export class AIContextService {
 
   /**
    * Ottiene il contesto completo per l'AI basato su tutte le analisi dell'utente
+   * 🆕 Con cache: cache di 10 minuti per ridurre chiamate DB
    */
-  static async getCompleteContext(userId: string): Promise<AIContext> {
+  static async getCompleteContext(userId: string, forceRefresh: boolean = false): Promise<AIContext> {
     try {
-      console.log('🧠 Building complete AI context for user:', userId);
+      const cacheKey = `ai_context:${userId}`;
+      
+      // 🆕 Prova cache prima (se non forceRefresh)
+      if (!forceRefresh) {
+        const cached = await cacheService.get<AIContext>(cacheKey);
+        if (cached) {
+          return cached;
+        }
+      }
+      
+      // Building AI context (logging handled by backend)
 
       // Ottieni contesto emotivo e della pelle in parallelo
       const [emotionContext, skinContext, correlations] = await Promise.all([
@@ -445,13 +457,10 @@ export class AIContextService {
         generatedAt: new Date().toISOString()
       };
 
-      console.log('✅ AI context built successfully:', {
-        hasEmotion: !!context.currentEmotion,
-        hasSkin: !!context.currentSkin,
-        emotionHistoryCount: context.emotionHistory.length,
-        skinHistoryCount: context.skinHistory.length,
-        hasSuggestion: !!context.suggestedWellnessSuggestion
-      });
+      // AI context built successfully (logging handled by backend)
+
+      // 🆕 Cache per 10 minuti
+      await cacheService.set(cacheKey, context, 10 * 60 * 1000);
 
       return context;
     } catch (error) {

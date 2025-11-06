@@ -239,6 +239,94 @@ export class ChartDataService {
   }
 
   /**
+   * Carica e sincronizza i dati delle analisi del cibo dal database
+   */
+  static async loadFoodDataForCharts(): Promise<void> {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser) {
+        console.warn('⚠️ No authenticated user found, skipping food data load');
+        return;
+      }
+
+      console.log('📊 Loading food data for charts from Supabase...');
+
+      // Carica gli ultimi 30 giorni di analisi del cibo
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data, error } = await supabase
+        .from(Tables.FOOD_ANALYSES)
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error loading food data:', error);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        console.log('📊 No food data found in database');
+        return;
+      }
+
+      console.log(`📊 Loaded ${data.length} food analyses from database`);
+
+      // Validate and clean data before processing
+      const validData = data.filter(analysis => {
+        if (!analysis.id || !analysis.created_at) {
+          console.warn('⚠️ Skipping invalid food analysis:', analysis);
+          return false;
+        }
+        return true;
+      });
+
+      if (validData.length === 0) {
+        console.warn('⚠️ No valid food data found after validation');
+        return;
+      }
+
+      // Converti i dati del database nel formato dello store
+      const foodSessions = validData.map((analysis) => ({
+        id: analysis.id,
+        timestamp: new Date(analysis.created_at),
+        macronutrients: {
+          carbohydrates: analysis.carbohydrates || 0,
+          proteins: analysis.proteins || 0,
+          fats: analysis.fats || 0,
+          fiber: analysis.fiber || 0,
+          calories: analysis.calories || 0,
+        },
+        meal_type: analysis.meal_type || 'other',
+        health_score: analysis.health_score || 70,
+        confidence: analysis.confidence || 0.8,
+        identified_foods: analysis.identified_foods || [],
+      }));
+
+      // Sincronizza con lo store
+      const store = useAnalysisStore.getState();
+      if (foodSessions.length > 0) {
+        // Aggiorna latest session
+        store.addFoodSession(foodSessions[0]);
+        
+        // Aggiungi tutte le sessioni alla history (lo store gestisce il limite)
+        foodSessions.forEach((session) => {
+          store.addFoodSession(session);
+        });
+        
+        console.log(`📊 Synced ${foodSessions.length} food sessions to store`);
+      }
+
+      console.log('✅ Food data loaded successfully');
+
+    } catch (error) {
+      console.error('❌ Error in loadFoodDataForCharts:', error);
+    }
+  }
+
+  /**
    * Carica tutti i dati per i grafici
    */
   static async loadAllChartData(): Promise<void> {
@@ -247,6 +335,7 @@ export class ChartDataService {
     await Promise.all([
       this.loadEmotionDataForCharts(),
       this.loadSkinDataForCharts(),
+      this.loadFoodDataForCharts(),
     ]);
     
     console.log('✅ All chart data loaded and synchronized');

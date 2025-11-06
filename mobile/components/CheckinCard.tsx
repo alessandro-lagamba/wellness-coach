@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import type { StyleProp, ViewStyle } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = {
   title: string;
@@ -24,24 +25,31 @@ export default function CheckinCard({
   title, subtitle, tint, rightPill, headerIcon, children, onPress,
   minHeight, bodyMinHeight, style,
 }: Props) {
+  const { mode, colors: themeColors } = useTheme();
+  
+  // 🆕 Gradient temato: usa colori scuri per dark mode
   const gradient: [string, string] =
     tint === 'mint'
-      ? ['#ECFDF5', '#D1FAE5']
-      : ['#EFF6FF', '#DBEAFE'];
+      ? mode === 'dark'
+        ? [themeColors.surface, themeColors.surfaceElevated]
+        : ['#ECFDF5', '#D1FAE5']
+      : mode === 'dark'
+        ? [themeColors.surface, themeColors.surfaceElevated]
+        : ['#EFF6FF', '#DBEAFE'];
 
   return (
     <Pressable onPress={onPress} style={({pressed}) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
-      <LinearGradient colors={gradient} start={{x:0,y:0}} end={{x:1,y:1}} style={[s.card, minHeight && {minHeight}, style]}>
-        {/* Glass layer */}
-        <BlurView intensity={15} tint="light" style={s.glass} />
+      <LinearGradient colors={gradient} start={{x:0,y:0}} end={{x:1,y:1}} style={[s.card, minHeight && {minHeight}, { borderColor: themeColors.border }, style]}>
+        {/* Glass layer - solo in light mode */}
+        {mode === 'light' && <BlurView intensity={15} tint="light" style={s.glass} />}
 
         {/* Header */}
         <View style={s.header}>
           <View style={s.headerLeft}>
-            <View style={s.headerIcon}>{headerIcon}</View>
+            <View style={[s.headerIcon, { backgroundColor: mode === 'dark' ? themeColors.surfaceElevated : 'rgba(255,255,255,0.8)' }]}>{headerIcon}</View>
             <View>
-              <Text style={s.title}>{title}</Text>
-              {!!subtitle && <Text style={s.subtitle}>{subtitle}</Text>}
+              <Text style={[s.title, { color: themeColors.text }]}>{title}</Text>
+              {!!subtitle && <Text style={[s.subtitle, { color: themeColors.textSecondary }]}>{subtitle}</Text>}
             </View>
           </View>
           {rightPill}
@@ -77,7 +85,7 @@ const s = StyleSheet.create({
     width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.8)',
     alignItems: 'center', justifyContent: 'center',
   },
-  title: { fontSize: 16, fontWeight: '800', color: '#0f172a' },
+  title: { fontSize: 13, fontWeight: '800', color: '#0f172a' },
   subtitle: { fontSize: 11, color: '#64748b', marginTop: 2 },
   body: { flex: 1 },
 });

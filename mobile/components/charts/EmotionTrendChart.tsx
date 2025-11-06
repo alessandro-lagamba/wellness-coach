@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -13,6 +14,7 @@ interface EmotionTrendChartProps {
 }
 
 export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, title, subtitle }) => {
+  const { colors } = useTheme();
   // Generate sample data if none provided
   const chartData = data.length > 0 ? data : [
     { date: '1/1', valence: 0.2, arousal: 0.6, emotion: 'neutral' },
@@ -91,15 +93,15 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#ffffff', '#f8fafc']}
+        colors={[colors.surface, colors.surfaceElevated]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.chartCard}
+        style={[styles.chartCard, { borderColor: colors.border }]}
       >
         <View style={styles.header}>
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>{title}</Text>
-            {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+            {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
           </View>
           
           <View style={styles.emotionContainer}>
@@ -138,7 +140,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
                   y={y}
                   width={chartWidth - 2 * padding}
                   height={1}
-                  fill="#e2e8f0"
+                  fill={colors.borderLight}
                   opacity={0.5}
                 />
               );
@@ -182,7 +184,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
                   cy={y}
                   r="3"
                   fill="#10b981"
-                  stroke="#ffffff"
+                  stroke={colors.surface}
                   strokeWidth="2"
                 />
               );
@@ -202,7 +204,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
                   cy={y}
                   r="3"
                   fill="#ef4444"
-                  stroke="#ffffff"
+                  stroke={colors.surface}
                   strokeWidth="2"
                 />
               );
@@ -210,24 +212,24 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
           </Svg>
         </View>
 
-        <View style={styles.metricsRow}>
+        <View style={[styles.metricsRow, { borderTopColor: colors.border }]}>
           <View style={styles.metricItem}>
             <View style={[styles.metricDot, { backgroundColor: '#10b981' }]} />
-            <Text style={styles.metricLabel}>Valence</Text>
-            <Text style={styles.metricValue}>{latestValence.toFixed(2)}</Text>
+            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Valence</Text>
+            <Text style={[styles.metricValue, { color: colors.text }]}>{latestValence.toFixed(2)}</Text>
           </View>
           
           <View style={styles.metricItem}>
             <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
-            <Text style={styles.metricLabel}>Arousal</Text>
-            <Text style={styles.metricValue}>{latestArousal.toFixed(2)}</Text>
+            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Arousal</Text>
+            <Text style={[styles.metricValue, { color: colors.text }]}>{latestArousal.toFixed(2)}</Text>
           </View>
         </View>
 
         {!hasData && (
           <View style={styles.placeholderContainer}>
-            <FontAwesome name="heart" size={24} color="#94a3b8" />
-            <Text style={styles.placeholderText}>Start sessions to see your emotional trends</Text>
+            <FontAwesome name="heart" size={24} color={colors.textTertiary} />
+            <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>Start sessions to see your emotional trends</Text>
           </View>
         )}
       </LinearGradient>
@@ -249,7 +251,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   header: {
     flexDirection: 'row',
@@ -263,12 +264,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1e293b',
     marginBottom: 2,
   },
   subtitle: {
     fontSize: 12,
-    color: '#64748b',
     fontWeight: '500',
   },
   emotionContainer: {
@@ -289,7 +288,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
   },
   metricItem: {
     alignItems: 'center',
@@ -302,13 +300,11 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 10,
-    color: '#64748b',
     fontWeight: '500',
   },
   metricValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
   },
   placeholderContainer: {
     alignItems: 'center',
@@ -317,7 +313,6 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 12,
-    color: '#94a3b8',
     fontWeight: '500',
   },
 });

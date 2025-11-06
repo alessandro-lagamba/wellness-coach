@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-nati
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { EmotionSession } from '../stores/analysis.store';
+import { useTranslation } from '../hooks/useTranslation';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -18,14 +20,14 @@ interface EmotionSessionCardProps {
 // -----------------------------------------------------
 const EMOTION_DEFINITIONS = {
   valence: {
-    label: 'Valence',
+    label: 'analysis.emotion.metrics.valence',
     whyItMatters: 'Misura la positività/negatività del tuo stato emotivo.',
     howItWorks: "Stima basata su segnali facciali (bocca/occhi/sopracciglia).",
     color: '#10b981',
     icon: 'sentiment-very-satisfied' as const,
   },
   arousal: {
-    label: 'Arousal',
+    label: 'analysis.emotion.metrics.arousal',
     whyItMatters: "Indica quanta attivazione/energia emotiva c'è in questo momento.",
     howItWorks: "Valutazione dell'intensità dei segnali espressivi.",
     color: '#f59e0b',
@@ -61,11 +63,11 @@ const EMOTION_MC_ICONS: Record<string, string> = {
 // -----------------------------------------------------
 // Utility
 // -----------------------------------------------------
-const getConfidenceLabel = (confidence: number) => {
-  if (confidence >= 0.8) return 'Excellent';
-  if (confidence >= 0.6) return 'Good';
-  if (confidence >= 0.4) return 'Fair';
-  return 'Poor';
+const getConfidenceLabel = (confidence: number, t: (k: string)=>string) => {
+  if (confidence >= 0.8) return t('rating.excellent');
+  if (confidence >= 0.6) return t('rating.good');
+  if (confidence >= 0.4) return t('rating.fair');
+  return t('rating.poor');
 };
 
 const getConfidenceColor = (confidence: number) => {
@@ -82,6 +84,7 @@ const prettyEmotion = (e?: string) =>
 // Collapsible (misura invisibile + maxHeight animata)
 // -----------------------------------------------------
 const Collapsible: React.FC<{ expanded: boolean; children: React.ReactNode }> = ({ expanded, children }) => {
+  const { colors } = useTheme();
   const measured = useSharedValue(0);
 
   const onLayout = (e: any) => {
@@ -104,7 +107,7 @@ const Collapsible: React.FC<{ expanded: boolean; children: React.ReactNode }> = 
       >
         {children}
       </View>
-      <Animated.View style={[styles.expandedContent, style]}>{children}</Animated.View>
+      <Animated.View style={[styles.expandedContent, { borderTopColor: colors.border }, style]}>{children}</Animated.View>
     </>
   );
 };
@@ -121,6 +124,8 @@ const MetricTile: React.FC<{
   value: number;
 }> = ({ metricKey, value }) => {
   const def = EMOTION_DEFINITIONS[metricKey];
+  const { t } = useTranslation();
+  const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
 
   const valueColor =
@@ -139,35 +144,35 @@ const MetricTile: React.FC<{
       : Math.max(0, Math.min(100, value * 100));
 
   return (
-    <View style={[styles.tile, { borderColor: `${valueColor}22` }]}>
+    <View style={[styles.tile, { borderColor: `${valueColor}22`, backgroundColor: colors.surface }]}>
       <TouchableOpacity onPress={() => setExpanded((v) => !v)} activeOpacity={0.9} style={styles.tileHeader}>
         <View style={styles.titleRowLeft}>
           <MaterialIcons name={def.icon} size={18} color={valueColor} />
-          <Text style={[styles.tileLabel, { color: valueColor }]}>{def.label.toUpperCase()}</Text>
+          <Text style={[styles.tileLabel, { color: valueColor }]}>{t(def.label).toUpperCase()}</Text>
         </View>
 
         <View style={styles.valueRow}>
           <Text style={[styles.tileValue, { color: valueColor }]}>{display}</Text>
         </View>
 
-        <View style={styles.progressTrack}>
+        <View style={[styles.progressTrack, { backgroundColor: colors.borderLight }]}>
           <View style={[styles.progressFill, { width: `${percent}%`, backgroundColor: valueColor }]} />
         </View>
 
         <View style={styles.tapRow}>
-          <Text style={styles.tapHint}>{expanded ? 'Tap to collapse' : 'Tap to expand'}</Text>
-          <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={18} color="#6366f1" />
+          <Text style={[styles.tapHint, { color: colors.primary }]}>{expanded ? t('ui.tapToCollapse') : t('ui.tapToExpand')}</Text>
+          <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={18} color={colors.primary} />
         </View>
       </TouchableOpacity>
 
       <Collapsible expanded={expanded}>
         <View style={styles.definitionSection}>
-          <Text style={styles.definitionTitle}>Why it matters</Text>
-          <Text style={styles.definitionText}>{def.whyItMatters}</Text>
+          <Text style={[styles.definitionTitle, { color: colors.text }]}>{t('ui.whyItMatters')}</Text>
+          <Text style={[styles.definitionText, { color: colors.textSecondary }]}>{def.whyItMatters}</Text>
         </View>
         <View style={styles.definitionSection}>
-          <Text style={styles.definitionTitle}>How it works</Text>
-          <Text style={styles.definitionText}>{def.howItWorks}</Text>
+          <Text style={[styles.definitionTitle, { color: colors.text }]}>{t('ui.howItWorks')}</Text>
+          <Text style={[styles.definitionText, { color: colors.textSecondary }]}>{def.howItWorks}</Text>
         </View>
       </Collapsible>
     </View>
@@ -178,6 +183,7 @@ const MetricTile: React.FC<{
 // Banner emozione dominante (migliorato)
 // -----------------------------------------------------
 const DominantBanner: React.FC<{ emotion?: string }> = ({ emotion }) => {
+  const { colors } = useTheme();
   const key = (emotion || 'neutral').toLowerCase();
   const color = EMOTION_COLORS[key] ?? '#6b7280';
   const iconName = (EMOTION_MC_ICONS[key] ?? 'emoticon-neutral-outline') as any;
@@ -188,9 +194,9 @@ const DominantBanner: React.FC<{ emotion?: string }> = ({ emotion }) => {
         <MaterialCommunityIcons name={iconName} size={30} color={color} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.bannerEyebrow}>DOMINANT EMOTION</Text>
+        <Text style={[styles.bannerEyebrow, { color: colors.textSecondary }]}>DOMINANT EMOTION</Text>
         <Text style={[styles.bannerEmotion, { color }]}>{prettyEmotion(emotion)}</Text>
-        <Text style={styles.bannerSubtitle}>Rilevata nell’ultima sessione</Text>
+        <Text style={[styles.bannerSubtitle, { color: colors.textSecondary }]}>Rilevata nell'ultima sessione</Text>
       </View>
     </View>
   );
@@ -200,6 +206,8 @@ const DominantBanner: React.FC<{ emotion?: string }> = ({ emotion }) => {
 // EmotionSessionCard (principale)
 // -----------------------------------------------------
 export const EmotionSessionCard: React.FC<EmotionSessionCardProps> = ({ session }) => {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
   const confidence = session.confidence ?? 0.8;
   
   // Check if this is fallback data
@@ -214,23 +222,23 @@ export const EmotionSessionCard: React.FC<EmotionSessionCardProps> = ({ session 
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>
-            {isFallback ? 'Sample emotion analysis' : 'Last emotion analysis'}
+          <Text style={[styles.title, { color: colors.text }]}>
+            {isFallback ? t('analysis.emotion.card.sampleTitle') : t('analysis.emotion.card.lastTitle')}
           </Text>
-          <View style={styles.confidenceBadge}>
+          <View style={[styles.confidenceBadge, { backgroundColor: colors.surfaceMuted }]}>
             <View style={[styles.confidenceDot, { backgroundColor: getConfidenceColor(confidence) }]} />
-            <Text style={styles.confidenceText}>
-              {isFallback ? 'Sample' : getConfidenceLabel(confidence)} ({Math.round(confidence * 100)}%)
+            <Text style={[styles.confidenceText, { color: colors.text }]}>
+              {isFallback ? t('analysis.common.sample') : getConfidenceLabel(confidence, t)} ({Math.round(confidence * 100)}%)
             </Text>
           </View>
         </View>
         {isFallback && (
-          <Text style={styles.fallbackText}>
-            Complete your first emotion analysis to see your real results
+          <Text style={[styles.fallbackText, { color: colors.textSecondary }]}>
+            {t('analysis.emotion.card.sampleHint')}
           </Text>
         )}
       </View>
@@ -255,7 +263,6 @@ export const EmotionSessionCard: React.FC<EmotionSessionCardProps> = ({ session 
 // -----------------------------------------------------
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
     borderRadius: 18,
     padding: 16,
     marginHorizontal: 16,
@@ -266,25 +273,22 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.06)',
   },
   header: { marginBottom: 8 },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  title: { fontSize: 16, fontWeight: '700' },
   confidenceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 14,
     gap: 6,
   },
   confidenceDot: { width: 8, height: 8, borderRadius: 4 },
-  confidenceText: { fontSize: 12, fontWeight: '600', color: '#374151' },
+  confidenceText: { fontSize: 12, fontWeight: '600' },
   fallbackText: {
     fontSize: 12,
-    color: '#6b7280',
     fontStyle: 'italic',
     marginTop: 6,
     textAlign: 'center',
@@ -308,9 +312,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bannerEyebrow: { fontSize: 12, fontWeight: '800', color: '#111827', letterSpacing: 0.2 },
+  bannerEyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 0.2 },
   bannerEmotion: { fontSize: 22, fontWeight: '900', letterSpacing: -0.2, marginTop: 2 },
-  bannerSubtitle: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  bannerSubtitle: { fontSize: 12, marginTop: 2 },
 
   // Grid 2 colonne uguali
   gridRow: {
@@ -324,7 +328,6 @@ const styles = StyleSheet.create({
 
   // Tile
   tile: {
-    backgroundColor: '#fff',
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
@@ -342,22 +345,19 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 6,
     width: '100%',
-    backgroundColor: '#eef2ff',
     borderRadius: 999,
     overflow: 'hidden',
     marginTop: 8,
   },
   progressFill: { height: '100%', borderRadius: 999 },
   tapRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 },
-  tapHint: { fontSize: 11, fontWeight: '700', color: '#6366f1' },
+  tapHint: { fontSize: 11, fontWeight: '700' },
 
   expandedContent: {
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    backgroundColor: '#fff',
     overflow: 'hidden',
   },
   definitionSection: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8 },
-  definitionTitle: { fontSize: 13, fontWeight: '800', color: '#111827', marginBottom: 4 },
-  definitionText: { fontSize: 12.5, color: '#4b5563', lineHeight: 18 },
+  definitionTitle: { fontSize: 13, fontWeight: '800', marginBottom: 4 },
+  definitionText: { fontSize: 12.5, lineHeight: 18 },
 });

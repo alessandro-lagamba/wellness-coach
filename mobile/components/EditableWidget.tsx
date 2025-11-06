@@ -8,6 +8,7 @@ import Animated, {
   withRepeat,
   withTiming,
   runOnJS,
+  useAnimatedReaction,
 } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useWidgetConfig } from '../services/widget-config.service';
@@ -47,16 +48,35 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
   const isDraggingSV = useSharedValue(false);
+  const lastTargetPositionSV = useSharedValue<number | null>(null); // 🆕 Traccia ultima posizione per evitare chiamate duplicate
+  const targetPositionSV = useSharedValue<number | null>(null); // 🆕 Posizione target calcolata (usata per throttling)
+
+  // 🆕 Throttle le chiamate a onDragTargetChange usando useAnimatedReaction
+  useAnimatedReaction(
+    () => targetPositionSV.value,
+    (currentPos, previousPos) => {
+      // Solo se la posizione è cambiata, chiama runOnJS
+      if (currentPos !== previousPos && isDraggingSV.value) {
+        lastTargetPositionSV.value = currentPos;
+        if (onDragTargetChange) {
+          runOnJS(onDragTargetChange)(currentPos);
+        }
+      }
+    },
+    [onDragTargetChange]
+  );
 
   // JIGGLE (solo quando in edit mode e non stai trascinando)
   const jiggle = useSharedValue(0);
+  
+  // Gestisce jiggle quando cambia editMode o isDragging
   useEffect(() => {
     if (editMode && !isDragging) {
       jiggle.value = withRepeat(withTiming(1, { duration: 120 }), -1, true);
     } else {
       jiggle.value = withTiming(0, { duration: 120 });
     }
-  }, [editMode, isDragging, jiggle]);
+  }, [editMode, isDragging]);
 
   const widgetConfig = useMemo(
     () => config.find(w => w.id === widgetId),
@@ -73,7 +93,7 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
   const computeNewPosition = (fromPos: number, tx: number, ty: number) => {
     const curRow = Math.floor(fromPos / 3);
     const curCol = fromPos % 3;
-    const threshold = 50;
+    const threshold = 60; // 🆕 Aumentata threshold per ridurre cambiamenti frequenti
 
     let newCol = curCol;
     if (Math.abs(tx) > threshold) newCol = tx > 0 ? Math.min(2, curCol + 1) : Math.max(0, curCol - 1);
@@ -104,10 +124,12 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
       // reset visual
       runOnJS(setIsDragging)(false);
       isDraggingSV.value = false;
+      lastTargetPositionSV.value = null; // 🆕 Reset
+      targetPositionSV.value = null; // 🆕 Reset
       onDragTargetChange && runOnJS(onDragTargetChange)(null);
-      translateX.value = withSpring(0);
-      translateY.value = withSpring(0);
-      scale.value = withSpring(1);
+      translateX.value = withSpring(0, { damping: 20, stiffness: 300 });
+      translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
+      scale.value = withSpring(1, { damping: 20, stiffness: 300 });
     }
   };
 
@@ -115,17 +137,26 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
   const onGestureEvent = (event: any) => {
     'worklet';
     if (!editMode || !isDraggingSV.value) return;
+    
+    // 🆕 Aggiorna direttamente i valori animati (worklet thread, nessun bridge)
     translateX.value = event.nativeEvent.translationX;
     translateY.value = event.nativeEvent.translationY;
 
     const tx = event.nativeEvent.translationX;
     const ty = event.nativeEvent.translationY;
 
-    if (Math.abs(tx) > 50 || Math.abs(ty) > 50) {
+    // 🆕 Calcola nuova posizione solo quando necessario (threshold aumentata)
+    if (Math.abs(tx) > 80 || Math.abs(ty) > 80) {
       const newPos = computeNewPosition(positionSV.value, tx, ty);
-      onDragTargetChange && runOnJS(onDragTargetChange)(newPos);
+      // 🆕 Aggiorna solo se diversa dall'ultima (evita calcoli inutili)
+      if (targetPositionSV.value !== newPos) {
+        targetPositionSV.value = newPos;
+      }
     } else {
-      onDragTargetChange && runOnJS(onDragTargetChange)(null);
+      // 🆕 Resetta solo se non era già null
+      if (targetPositionSV.value !== null) {
+        targetPositionSV.value = null;
+      }
     }
   };
 
@@ -135,7 +166,9 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
       if (editMode) {
         runOnJS(setIsDragging)(true);
         isDraggingSV.value = true;
-        scale.value = withSpring(1.05);
+        scale.value = withSpring(1.05, { damping: 15, stiffness: 300 }); // 🆕 Animazione più veloce
+        lastTargetPositionSV.value = null; // 🆕 Reset al inizio del drag
+        targetPositionSV.value = null; // 🆕 Reset
       }
     } else if (
       event.nativeEvent.state === State.END ||
@@ -145,16 +178,18 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
       if (isDraggingSV.value) {
         const tx = event.nativeEvent.translationX;
         const ty = event.nativeEvent.translationY;
-        if (Math.abs(tx) > 50 || Math.abs(ty) > 50) {
+        if (Math.abs(tx) > 60 || Math.abs(ty) > 60) {
           const newPos = computeNewPosition(positionSV.value, tx, ty);
           runOnJS(updateWidgetPosition)(newPos);
         } else {
           runOnJS(setIsDragging)(false);
           isDraggingSV.value = false;
+          lastTargetPositionSV.value = null; // 🆕 Reset
+          targetPositionSV.value = null; // 🆕 Reset
           onDragTargetChange && runOnJS(onDragTargetChange)(null);
-          translateX.value = withSpring(0);
-          translateY.value = withSpring(0);
-          scale.value = withSpring(1);
+          translateX.value = withSpring(0, { damping: 20, stiffness: 300 });
+          translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
+          scale.value = withSpring(1, { damping: 20, stiffness: 300 });
         }
       }
     }
@@ -198,10 +233,10 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
 
   return (
     <PanGestureHandler
-      enabled={true}
+      enabled={editMode}
       onGestureEvent={onGestureEvent}
       onHandlerStateChange={onHandlerStateChange}
-      minDist={10}
+      activeOffsetY={[-10, 10]}
     >
       <Animated.View style={animatedStyle}>
         <TouchableOpacity

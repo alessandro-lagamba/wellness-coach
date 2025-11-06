@@ -5,14 +5,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import PrimaryCTA from './PrimaryCTA';
 import * as Haptics from 'expo-haptics';
 import Slider from '@react-native-community/slider';
-
-const REST_LEVELS = [
-  { v:1, emoji:'😴', label:'Exhausted', color:'#ef4444' },
-  { v:2, emoji:'😑', label:'Tired',      color:'#f59e0b' },
-  { v:3, emoji:'😐', label:'Okay',      color:'#6b7280' },
-  { v:4, emoji:'😊', label:'Rested',    color:'#10b981' },
-  { v:5, emoji:'😄', label:'Energized', color:'#059669' },
-] as const;
+import { useTranslation } from '../hooks/useTranslation';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = {
   hours: number;
@@ -21,20 +15,69 @@ type Props = {
   waketime: string;
   note?: string;
   onSave: (payload:{ hours:number; quality:number; note:string })=>Promise<void>|void;
-  editing: boolean;
-  onToggleEdit: ()=>void;
-  onChangeQuality?: (q:number)=>void;
+  restLevel?: 1|2|3|4|5;
+  onChangeRestLevel?: (level:1|2|3|4|5)=>void;
 };
 
 export default function SleepCheckinCard({
-  hours, quality, bedtime, waketime, note: initialNote='', onSave, editing, onToggleEdit,
+  hours, quality, bedtime, waketime, note: initialNote='', onSave, restLevel: initialRestLevel=3, onChangeRestLevel,
 }: Props) {
+  const { t } = useTranslation();
+  const { colors: themeColors, mode } = useTheme();
+  const REST_LEVELS = [
+    { v:1, emoji:'😴', label:t('dailyCheckIn.sleep.exhausted'), color:'#ef4444' },
+    { v:2, emoji:'😑', label:t('dailyCheckIn.sleep.tired'),      color:'#f59e0b' },
+    { v:3, emoji:'😐', label:t('dailyCheckIn.sleep.okay'),      color:'#6b7280' },
+    { v:4, emoji:'😊', label:t('dailyCheckIn.sleep.rested'),    color:'#10b981' },
+    { v:5, emoji:'😄', label:t('dailyCheckIn.sleep.energized'), color:'#059669' },
+  ] as const;
+  
   const [note, setNote] = useState(initialNote);
   const [saving, setSaving] = useState(false);
-  const [restLevel, setRestLevel] = useState<1|2|3|4|5>(3); // Default to "Okay"
-  const dirty = note !== initialNote;
+  const [restLevel, setRestLevel] = useState<1|2|3|4|5>(initialRestLevel);
+  const [hasNoteText, setHasNoteText] = useState(false);
 
   const currentRest = REST_LEVELS.find(r => r.v === restLevel) ?? REST_LEVELS[2];
+
+  // Salva automaticamente quando si cambia il livello di riposo (solo il valore, senza note)
+  const handleRestLevelChange = async (newLevel: 1|2|3|4|5) => {
+    Haptics.selectionAsync();
+    setRestLevel(newLevel);
+    if (onChangeRestLevel) {
+      onChangeRestLevel(newLevel);
+    }
+    
+    // Salva automaticamente il valore senza note
+    // Mappa il restLevel (1-5) a quality (0-100) per compatibilità
+    const qualityFromRestLevel = ((newLevel - 1) / 4) * 100; // 1->0%, 2->25%, 3->50%, 4->75%, 5->100%
+    
+    try {
+      setSaving(true);
+      await Promise.resolve(onSave({ hours, quality: qualityFromRestLevel, note: '' }));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error('Error saving sleep level:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Salva quando l'utente clicca sul pulsante (solo se ci sono note)
+  const handleSaveWithNote = async () => {
+    if (!hasNoteText) return;
+    
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    try {
+      setSaving(true);
+      await Promise.resolve(onSave({ hours, quality, note: note.trim() }));
+    } finally { setSaving(false); }
+  };
+
+  // Controlla se c'è testo nelle note
+  const handleNoteChange = (text: string) => {
+    setNote(text);
+    setHasNoteText(text.trim().length > 0);
+  };
 
   // animazione per i pallini
   const anim = useRef(new Animated.Value(restLevel)).current;
@@ -59,18 +102,11 @@ export default function SleepCheckinCard({
   return (
     <CheckinCard
       tint="indigo"
-      title="Restful Sleep"
-      subtitle="How rested do you feel?"
+      title={t('dailyCheckIn.sleep.title')}
+      subtitle={t('dailyCheckIn.sleep.subtitle')}
       headerIcon={<Text style={{fontSize:22}}>🌙</Text>}
       minHeight={350}
       bodyMinHeight={220}
-      rightPill={
-        <Pressable onPress={onToggleEdit} style={[styles.pill, editing && styles.pillOn]}>
-          <MaterialCommunityIcons name={editing ? 'check-circle' : 'pencil'} size={16}
-            color={editing ? '#fff' : '#1E3A8A'} />
-          <Text style={[styles.pillText, editing && {color:'#fff'}]}>{editing ? 'Done' : 'Edit'}</Text>
-        </Pressable>
-      }
     >
       {/* --- Slider custom --- */}
       <View style={styles.sliderWrap}>
@@ -80,8 +116,12 @@ export default function SleepCheckinCard({
           <Text style={styles.sliderEmoji}>😄</Text>
         </View>
 
-        {/* Rail visivo */}
-        <View style={styles.rail} />
+        {/* Rail visivo - più chiaro in dark mode */}
+        <View style={[styles.rail, { 
+          backgroundColor: mode === 'dark' 
+            ? 'rgba(255,255,255,0.3)' // Bianco semi-trasparente in dark mode
+            : themeColors.borderLight 
+        }]} />
         
         {/* Pallini + halo sopra il rail */}
         <View style={styles.dotsBar} pointerEvents="none">
@@ -103,7 +143,13 @@ export default function SleepCheckinCard({
                 )}
                 <Animated.View style={[
                   styles.dot,
-                  isActive && styles.dotActive,
+                  {
+                    backgroundColor: isActive 
+                      ? '#3b82f6' 
+                      : mode === 'dark' 
+                        ? 'rgba(255,255,255,0.4)' // Più chiaro in dark mode
+                        : themeColors.border,
+                  },
                   { transform:[{scale}], opacity }
                 ]}/>
               </View>
@@ -117,7 +163,7 @@ export default function SleepCheckinCard({
             <Pressable
               key={v}
               style={styles.tapHit}
-              onPress={() => { Haptics.selectionAsync(); setRestLevel(v as 1|2|3|4|5); }}
+              onPress={() => handleRestLevelChange(v as 1|2|3|4|5)}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={`Select ${v}`}
@@ -132,7 +178,7 @@ export default function SleepCheckinCard({
           maximumValue={5}
           step={1}
           value={restLevel}
-          onValueChange={(v) => { Haptics.selectionAsync(); setRestLevel(Math.round(v) as 1|2|3|4|5); }}
+          onValueChange={(v) => handleRestLevelChange(Math.round(v) as 1|2|3|4|5)}
           minimumTrackTintColor="transparent"
           maximumTrackTintColor="transparent"
           thumbTintColor="transparent"
@@ -141,26 +187,36 @@ export default function SleepCheckinCard({
 
       {/* note */}
       <View style={{marginTop:20}}>
-        <Text style={styles.fieldLabel}>Notes</Text>
+        <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>{t('dailyCheckIn.sleep.notes')}</Text>
         <TextInput
           value={note}
-          onChangeText={setNote}
-          placeholder="How did you feel when you woke up?"
-          placeholderTextColor="#94a3b8"
+          onChangeText={handleNoteChange}
+          placeholder={t('dailyCheckIn.sleep.notesPlaceholder')}
+          placeholderTextColor={themeColors.textTertiary}
           multiline
           numberOfLines={4}
-          style={styles.textarea}
+          style={[
+            styles.textarea,
+            {
+              backgroundColor: themeColors.surfaceElevated,
+              borderColor: themeColors.border,
+              color: themeColors.text,
+            }
+          ]}
         />
       </View>
 
-      {/* footer */}
-      <View style={{height:12}} />
-      <PrimaryCTA
-        label="Save Rest Level"
-        onPress={handleSave}
-        loading={saving}
-        disabled={!editing && !dirty}
-      />
+      {/* footer - mostra solo se ci sono note */}
+      {hasNoteText && (
+        <>
+          <View style={{height:12}} />
+          <PrimaryCTA
+            label={t('dailyCheckIn.sleep.saveRestLevel')}
+            onPress={handleSaveWithNote}
+            loading={saving}
+          />
+        </>
+      )}
     </CheckinCard>
   );
 }
@@ -179,8 +235,8 @@ const styles = StyleSheet.create({
   // === rail + dots ===
   rail:{
     height:4, borderRadius:2,
-    backgroundColor:'#e2e8f0',
     marginHorizontal:12,
+    // Background gestito inline con themeColors.borderLight
   },
   dotsBar:{
     position:'absolute',
@@ -190,8 +246,8 @@ const styles = StyleSheet.create({
     flexDirection:'row', justifyContent:'space-between',
   },
   dotSlot:{ width:1, alignItems:'center', justifyContent:'center' },
-  dot:{ width:8, height:8, borderRadius:4, backgroundColor:'#cbd5e1' },
-  dotActive:{ backgroundColor:'#3b82f6' },
+  dot:{ width:8, height:8, borderRadius:4 }, // Background gestito inline
+  dotActive:{ backgroundColor:'#3b82f6' }, // Sempre blu quando attivo
   dotHalo:{
     position:'absolute',
     width:22, height:22, borderRadius:11,
@@ -212,7 +268,7 @@ const styles = StyleSheet.create({
     zIndex:2,
   },
 
-  fieldLabel:{ fontSize:13, fontWeight:'700', color:'#64748b', marginBottom:6 },
-  textarea:{ borderWidth:1, borderColor:'#e2e8f0', backgroundColor:'#fff', borderRadius:16, padding:12, minHeight:96,
-    fontSize:14, color:'#0f172a' },
+  fieldLabel:{ fontSize:13, fontWeight:'700', marginBottom:6 },
+  textarea:{ borderWidth:1, borderRadius:16, padding:12, minHeight:96,
+    fontSize:14 },
 });

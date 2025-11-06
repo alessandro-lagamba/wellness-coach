@@ -25,13 +25,14 @@ import { AnalysisIntentService } from '../services/analysis-intent.service';
 import { AIContextService } from '../services/ai-context.service';
 import { AuthService } from '../services/auth.service';
 import { DetailedAnalysisDBService } from '../services/detailed-analysis-db.service';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 
 const { width, height } = Dimensions.get('window');
 
 interface DetailedAnalysisPopupProps {
   visible: boolean;
   onClose: () => void;
-  analysisType: 'emotion' | 'skin';
+  analysisType: 'emotion' | 'skin' | 'food';
   analysisData?: any;
 }
 
@@ -41,6 +42,7 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
   analysisType,
   analysisData,
 }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
   const [analysis, setAnalysis] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
     if (visible && analysisData) {
       loadOrGenerateDetailedAnalysis();
     } else if (visible && !analysisData) {
-      setError('Nessun dato di analisi disponibile');
+      setError(t('popups.detailedAnalysis.noData'));
     }
   }, [visible, analysisData]);
 
@@ -66,13 +68,13 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
     const timeoutId = setTimeout(() => {
       console.warn('⏰ Detailed analysis timeout - forcing loading to false');
       setLoading(false);
-      setError('Timeout durante la generazione dell\'analisi. Riprova.');
+      setError(t('popups.detailedAnalysis.timeout'));
     }, 30000); // 30 secondi
 
     try {
       const currentUser = await AuthService.getCurrentUser();
       if (!currentUser) {
-        setError('Utente non autenticato');
+        setError(t('popups.detailedAnalysis.notAuthenticated'));
         setLoading(false);
         return;
       }
@@ -97,7 +99,7 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
     } catch (error) {
       console.error('Error in loadOrGenerateDetailedAnalysis:', error);
       clearTimeout(timeoutId);
-      setError('Errore durante il caricamento dell\'analisi');
+      setError(t('popups.detailedAnalysis.loadingError'));
       setLoading(false);
     } finally {
       clearTimeout(timeoutId);
@@ -152,6 +154,7 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
 
       const emotionContext = analysisType === 'emotion' ? analysisData : undefined;
       const skinContext = analysisType === 'skin' ? analysisData : undefined;
+      const foodContext = analysisType === 'food' ? analysisData : undefined;
 
       console.log('🌐 Making request to backend...');
       console.log('📊 Analysis data:', analysisData);
@@ -178,6 +181,7 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
           userId: currentUser?.id,
           emotionContext: emotionContext,
           skinContext: skinContext,
+          foodContext: foodContext,
           userContext: userContext,
           analysisIntent: analysisIntent.confidence > 0.3 ? analysisIntent : undefined,
         }),
@@ -216,11 +220,11 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
           // Non bloccare l'operazione se il salvataggio fallisce
         }
       } else {
-        setError('Impossibile generare l\'analisi dettagliata. Riprova più tardi.');
+        setError(t('popups.detailedAnalysis.generationFailed'));
       }
     } catch (err) {
       console.error('❌ Error in generateDetailedAnalysis:', err);
-      setError('Errore durante la generazione dell\'analisi. Controlla la connessione e riprova.');
+      setError(t('popups.detailedAnalysis.generationError'));
     } finally {
       console.log('🏁 Setting loading to false');
       setLoading(false);
@@ -228,19 +232,33 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
   };
 
   const getPopupTitle = () => {
-    return analysisType === 'emotion' 
-      ? 'Analisi Dettagliata Emozioni' 
-      : 'Analisi Dettagliata Pelle';
+    if (analysisType === 'emotion') {
+      return t('popups.detailedAnalysis.emotionTitle');
+    } else if (analysisType === 'skin') {
+      return t('popups.detailedAnalysis.skinTitle');
+    } else {
+      return t('popups.detailedAnalysis.foodTitle') || 'Analisi Nutrizionale Avanzata';
+    }
   };
 
   const getPopupIcon = () => {
-    return analysisType === 'emotion' ? 'emoticon-happy' : 'face-woman-shimmer';
+    if (analysisType === 'emotion') {
+      return 'emoticon-happy';
+    } else if (analysisType === 'skin') {
+      return 'face-woman-shimmer';
+    } else {
+      return 'food-apple';
+    }
   };
 
   const getPopupColors = () => {
-    return analysisType === 'emotion' 
-      ? ['#8b5cf6', '#a855f7'] 
-      : ['#22d3ee', '#6366f1'];
+    if (analysisType === 'emotion') {
+      return ['#8b5cf6', '#a855f7'];
+    } else if (analysisType === 'skin') {
+      return ['#22d3ee', '#6366f1'];
+    } else {
+      return ['#f59e0b', '#ef4444'];
+    }
   };
 
   // Animation styles - Simple fade in

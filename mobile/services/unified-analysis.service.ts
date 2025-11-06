@@ -6,6 +6,7 @@ import {
   AnalysisResponse, 
   EmotionAnalysisResult, 
   SkinAnalysisResult,
+  FoodAnalysisResult,
   AnalysisHistory 
 } from '../types/analysis.types';
 
@@ -41,12 +42,6 @@ export class UnifiedAnalysisService {
       ]);
 
       const overall = openaiResult && storageResult;
-
-      console.log('Unified Analysis Service initialized:', {
-        openai: openaiResult,
-        storage: storageResult,
-        overall,
-      });
 
       return {
         openai: openaiResult,
@@ -157,6 +152,50 @@ export class UnifiedAnalysisService {
   }
 
   /**
+   * Analyze food from image
+   */
+  async analyzeFood(
+    imageUri: string, 
+    sessionId?: string
+  ): Promise<AnalysisResponse<FoodAnalysisResult>> {
+    try {
+      const request: AnalysisRequest = {
+        imageUri,
+        analysisType: 'food',
+        sessionId,
+        timestamp: new Date(),
+      };
+
+      // Perform analysis
+      const result = await this.openaiService.analyzeFood(request);
+
+      // Save to storage if successful
+      if (result.success && result.data) {
+        try {
+          await this.storageService.saveAnalysis(
+            'food',
+            result.data,
+            imageUri,
+            sessionId
+          );
+        } catch (storageError) {
+          console.warn('Failed to save food analysis to storage:', storageError);
+          // Don't fail the whole operation if storage fails
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Unified food analysis failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        timestamp: new Date(),
+      };
+    }
+  }
+
+  /**
    * Get analysis history
    */
   async getAnalysisHistory(): Promise<AnalysisHistory[]> {
@@ -166,7 +205,7 @@ export class UnifiedAnalysisService {
   /**
    * Get analysis history by type
    */
-  async getAnalysisHistoryByType(type: 'emotion' | 'skin'): Promise<AnalysisHistory[]> {
+  async getAnalysisHistoryByType(type: 'emotion' | 'skin' | 'food'): Promise<AnalysisHistory[]> {
     return await this.storageService.getAnalysisHistoryByType(type);
   }
 

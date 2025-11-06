@@ -2,14 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import Colors from '../constants/Colors';
 import { AuthService } from '../services/auth.service';
 import { BiometricAuthService } from '../services/biometric-auth.service';
-import { UserProfile } from '../types/database.types';
+import { UserProfile } from '../lib/supabase';
 import { PersonalInformationScreen } from './settings/PersonalInformationScreen';
 import { HealthPermissionsModal } from './HealthPermissionsModal';
 import { BiometricSecurityModal } from './BiometricSecurityModal';
 import { useHealthData } from '../hooks/useHealthData';
+import { useTranslation } from '../hooks/useTranslation';
+import { saveLanguage } from '../i18n';
+import { Switch } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext'; // 🆕 Theme hook
 
 interface SettingsItem {
   id: string;
@@ -23,67 +26,65 @@ interface SettingsScreenProps {
   onLogout: () => void;
 }
 
-const accountItems: SettingsItem[] = [
-  { id: 'profile', label: 'Personal Information', description: 'Manage your personal info', icon: 'user-circle' },
-  { id: 'preferences', label: 'Preferences', description: 'Update your wellness focus', icon: 'sliders' },
-];
+// 🆕 Items verranno costruiti dinamicamente con traduzioni nel componente
 
-const appItems: SettingsItem[] = [
-  { id: 'health-permissions', label: 'Health Data Permissions', description: 'Manage access to your health data', icon: 'heart' },
-  { id: 'biometric-security', label: 'Biometric Security', description: 'Manage Face ID / Touch ID login', icon: 'shield' },
-  { id: 'app-config', label: 'App Configuration', description: 'Control app experience', icon: 'wrench' },
-  { id: 'notifications', label: 'Notifications', description: 'Define reminders & alerts', icon: 'bell' },
-  { id: 'subscription', label: 'Subscription', description: 'Manage your plan', icon: 'credit-card' },
-  { id: 'about', label: 'About', description: 'Learn more about Wellness Coach', icon: 'info-circle' },
-];
-
-const UserProfileCard = ({ userProfile, isLoading }: { userProfile: UserProfile | null; isLoading: boolean }) => {
+const UserProfileCard = ({ 
+  userProfile, 
+  isLoading, 
+  t, 
+  colors 
+}: { 
+  userProfile: UserProfile | null; 
+  isLoading: boolean; 
+  t: (key: string) => string;
+  colors: any; // 🆕 Theme colors
+}) => {
   if (isLoading) {
     return (
-      <View style={styles.profileCard}>
-        <ActivityIndicator size="small" color={Colors.palette.primary} />
-        <Text style={styles.profileLoadingText}>Loading profile...</Text>
+      <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <ActivityIndicator size="small" color={colors.primary} />
+        <Text style={[styles.profileLoadingText, { color: colors.textSecondary }]}>{t('settings.profile.loading')}</Text>
       </View>
     );
   }
 
   if (!userProfile) {
     return (
-      <View style={styles.profileCard}>
-        <Text style={styles.profileErrorText}>Unable to load profile</Text>
+      <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.profileErrorText, { color: colors.error }]}>{t('settings.profile.error')}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.profileCard}>
+    <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.profileHeader}>
-        <View style={styles.profileAvatar}>
-          <FontAwesome name="user" size={24} color="#fff" />
+        <View style={[styles.profileAvatar, { backgroundColor: colors.primary }]}>
+          <FontAwesome name="user" size={24} color={colors.textInverse} />
         </View>
         <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>{userProfile.full_name || 'User'}</Text>
-          <Text style={styles.profileEmail}>{userProfile.email}</Text>
+          <Text style={[styles.profileName, { color: colors.text }]}>{userProfile.full_name || 'User'}</Text>
+          <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>{userProfile.email}</Text>
         </View>
       </View>
       
-      <View style={styles.profileDetails}>
+      <View style={[styles.profileDetails, { borderTopColor: colors.divider }]}>
         <View style={styles.profileDetailRow}>
-          <Text style={styles.profileDetailLabel}>Age</Text>
-          <Text style={styles.profileDetailValue}>{userProfile.age || 'Not specified'}</Text>
+          <Text style={[styles.profileDetailLabel, { color: colors.textSecondary }]}>{t('settings.profile.age')}</Text>
+          <Text style={[styles.profileDetailValue, { color: colors.text }]}>{userProfile.age || t('settings.profile.notSpecified')}</Text>
         </View>
         <View style={styles.profileDetailRow}>
-          <Text style={styles.profileDetailLabel}>Gender</Text>
-          <Text style={styles.profileDetailValue}>
-            {userProfile.gender === 'male' ? 'Male' : 
-             userProfile.gender === 'female' ? 'Female' : 
-             userProfile.gender === 'other' ? 'Other' : 
-             'Prefer not to say'}
+          <Text style={[styles.profileDetailLabel, { color: colors.textSecondary }]}>{t('settings.profile.gender')}</Text>
+          <Text style={[styles.profileDetailValue, { color: colors.text }]}>
+            {userProfile.gender === 'male' ? t('settings.profile.male') : 
+             userProfile.gender === 'female' ? t('settings.profile.female') : 
+             userProfile.gender === 'other' ? t('settings.profile.other') : 
+             t('settings.profile.preferNotToSay')}
           </Text>
         </View>
         <View style={styles.profileDetailRow}>
-          <Text style={styles.profileDetailLabel}>Member since</Text>
-          <Text style={styles.profileDetailValue}>
+          <Text style={[styles.profileDetailLabel, { color: colors.textSecondary }]}>{t('settings.profile.memberSince')}</Text>
+          <Text style={[styles.profileDetailValue, { color: colors.text }]}>
             {new Date(userProfile.created_at).toLocaleDateString()}
           </Text>
         </View>
@@ -92,40 +93,239 @@ const UserProfileCard = ({ userProfile, isLoading }: { userProfile: UserProfile 
   );
 };
 
-const SettingsSection = ({ title, items, onItemPress }: { title: string; items: SettingsItem[]; onItemPress: (itemId: string) => void }) => {
+const SettingsSection = ({ 
+  title, 
+  items, 
+  onItemPress, 
+  colors, 
+  darkModeValue 
+}: { 
+  title: string; 
+  items: SettingsItem[]; 
+  onItemPress: (itemId: string) => void;
+  colors: any; // 🆕 Theme colors
+  darkModeValue?: boolean; // 🆕 Value for dark mode toggle
+}) => {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
       {items.map((item) => (
         <TouchableOpacity 
           key={item.id} 
-          style={styles.row} 
+          style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]} 
           activeOpacity={0.85}
           onPress={() => onItemPress(item.id)}
         >
-          <View style={styles.rowIconWrapper}>
-            <FontAwesome name={item.icon as any} size={16} color={Colors.palette.primary} />
+          <View style={[styles.rowIconWrapper, { backgroundColor: `${colors.primary}15` }]}>
+            <FontAwesome name={item.icon as any} size={16} color={colors.primary} />
           </View>
           <View style={styles.rowCopy}>
-            <Text style={styles.rowTitle}>{item.label}</Text>
-            <Text style={styles.rowSubtitle}>{item.description}</Text>
+            <Text style={[styles.rowTitle, { color: colors.text }]}>{item.label}</Text>
+            <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]}>{item.description}</Text>
           </View>
-          <FontAwesome name="chevron-right" size={14} color="#9ca3af" />
+          {/* 🆕 Mostra Switch per dark-mode, altrimenti chevron */}
+          {item.id === 'dark-mode' ? (
+            <Switch
+              value={darkModeValue || false}
+              onValueChange={() => onItemPress(item.id)}
+              trackColor={{ false: colors.border, true: colors.primaryMuted }}
+              thumbColor={darkModeValue ? colors.primary : colors.textSecondary}
+            />
+          ) : (
+            <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
+          )}
         </TouchableOpacity>
       ))}
     </View>
   );
 };
 
+// ---------------- Notifications Settings Subscreen ----------------
+const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const [loading, setLoading] = useState(false);
+
+  // Toggles
+  const [emotionSkin, setEmotionSkin] = useState(true);
+  const [diary, setDiary] = useState(true);
+  const [fridgeExpiry, setFridgeExpiry] = useState(true);
+  const [breathing, setBreathing] = useState(true);
+  const [hydration, setHydration] = useState(false);
+  const [morningGreeting, setMorningGreeting] = useState(false);
+  const [eveningWinddown, setEveningWinddown] = useState(false);
+  const [sleepPreparation, setSleepPreparation] = useState(false);
+
+  // Simple time customization: Diary time (HH:MM)
+  const [diaryHour, setDiaryHour] = useState(21);
+  const [diaryMinute, setDiaryMinute] = useState(30);
+
+  const inc = (setter: (v: number) => void, value: number, max: number) => setter((value + 1) > max ? 0 : (value + 1));
+  const dec = (setter: (v: number) => void, value: number, max: number) => setter((value - 1) < 0 ? max : (value - 1));
+
+  const format2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      const { NotificationService } = await import('../services/notifications.service');
+      await NotificationService.initialize();
+      await NotificationService.cancelAll();
+
+      // Schedule selected
+      if (emotionSkin) await NotificationService.scheduleEmotionSkinWeekly();
+      if (diary) {
+        // Custom diary time
+        await NotificationService.schedule(
+          'journal_reminder',
+          t('settings.notifications.diaryTitle') || 'Diario',
+          t('settings.notifications.diaryBody') || 'Ti va di scrivere una breve voce nel diario?',
+          { hour: diaryHour, minute: diaryMinute, repeats: true },
+          { screen: 'journal' }
+        );
+      }
+      if (fridgeExpiry) await NotificationService.scheduleFridgeExpiryCheck(); // Daily check at 18:00
+      if (breathing) await NotificationService.scheduleBreathingNudges();
+      if (hydration) await NotificationService.scheduleHydrationReminders();
+      if (morningGreeting) await NotificationService.scheduleMorningGreeting();
+      if (eveningWinddown) await NotificationService.scheduleEveningWinddown();
+      if (sleepPreparation) await NotificationService.scheduleSleepPreparation();
+
+      Alert.alert(t('common.success'), t('settings.notifications.saved') || 'Notifiche aggiornate');
+      onBack();
+    } catch (e) {
+      Alert.alert(t('common.error'), (e as any)?.message || 'Impossibile aggiornare le notifiche');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={["top"]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
+        <Text style={[styles.title, { color: colors.text }]}>{t('settings.notificationsTitle')}</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          {t('settings.notificationsDescription')}
+        </Text>
+      </View>
+
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          {/* Category toggles */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('settings.notificationsCategories') || 'Categorie'}</Text>
+
+            {[{ id: 'emotionSkin', label: t('settings.notifications.emotionSkin') || 'Analisi Emozioni/Pelle', value: emotionSkin, setter: setEmotionSkin },
+              { id: 'diary', label: t('settings.notifications.diary') || 'Diario', value: diary, setter: setDiary },
+              { id: 'fridge', label: t('settings.notifications.fridgeExpiry') || 'Ingredienti in scadenza', value: fridgeExpiry, setter: setFridgeExpiry },
+              { id: 'breathing', label: t('settings.notifications.breathing') || 'Pausa/Respirazione', value: breathing, setter: setBreathing },
+              { id: 'hydration', label: t('settings.notifications.hydration') || 'Idratazione', value: hydration, setter: setHydration },
+              { id: 'morning', label: t('settings.notifications.morningGreeting') || 'Saluto mattutino', value: morningGreeting, setter: setMorningGreeting },
+              { id: 'evening', label: t('settings.notifications.eveningWinddown') || 'Buona serata', value: eveningWinddown, setter: setEveningWinddown },
+              { id: 'sleep', label: t('settings.notifications.sleepPreparation') || 'Preparazione al sonno', value: sleepPreparation, setter: setSleepPreparation },
+            ].map((row) => (
+              <View key={row.id} style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+                <View style={styles.rowCopy}>
+                  <Text style={[styles.rowTitle, { color: colors.text }]}>{row.label}</Text>
+                </View>
+                <Switch
+                  value={row.value}
+                  onValueChange={() => row.setter(!row.value)}
+                  trackColor={{ false: colors.border, true: colors.primaryMuted }}
+                  thumbColor={row.value ? colors.primary : colors.textSecondary}
+                />
+              </View>
+            ))}
+          </View>
+
+          {/* Diary time customization */}
+          {diary && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('settings.notifications.diaryTimeTitle') || 'Orario Diario'}</Text>
+              <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border, justifyContent: 'space-between' }]}> 
+                <Text style={[styles.rowTitle, { color: colors.text }]}>
+                  {format2(diaryHour)}:{format2(diaryMinute)}
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <TouchableOpacity onPress={() => inc(setDiaryHour, diaryHour, 23)} style={[styles.smallBtn, { borderColor: colors.border }]}>
+                    <Text style={{ color: colors.text }}>+H</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => dec(setDiaryHour, diaryHour, 23)} style={[styles.smallBtn, { borderColor: colors.border }]}>
+                    <Text style={{ color: colors.text }}>-H</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => inc(setDiaryMinute, diaryMinute, 59)} style={[styles.smallBtn, { borderColor: colors.border }]}>
+                    <Text style={{ color: colors.text }}>+M</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => dec(setDiaryMinute, diaryMinute, 59)} style={[styles.smallBtn, { borderColor: colors.border }]}>
+                    <Text style={{ color: colors.text }}>
+                      -M
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Actions */}
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+            <TouchableOpacity 
+              style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.primary + '40' }]}
+              onPress={handleSave}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <>
+                  <FontAwesome name="check" size={16} color={colors.primary} />
+                  <Text style={[styles.logoutText, { color: colors.primary }]}>{t('common.save')}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.border }]} 
+              onPress={onBack}
+              disabled={loading}
+            >
+              <FontAwesome name="chevron-left" size={16} color={colors.textSecondary} />
+              <Text style={[styles.logoutText, { color: colors.textSecondary }]}>{t('common.back')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }) => {
+  const { t, language, changeLanguage } = useTranslation(); // 🆕 Hook traduzioni
+  const { mode, colors, toggleTheme } = useTheme(); // 🆕 Theme hook
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentScreen, setCurrentScreen] = useState<'main' | 'personal-info'>('main');
+  const [currentScreen, setCurrentScreen] = useState<'main' | 'personal-info' | 'notifications'>('main');
   const [healthPermissionsModal, setHealthPermissionsModal] = useState<boolean>(false);
   const [biometricSecurityModal, setBiometricSecurityModal] = useState<boolean>(false);
   
   // Health data hook
   const { permissions: healthPermissions, hasData: hasHealthData, isInitialized } = useHealthData();
+  
+  // 🆕 Costruisci items con traduzioni
+  const accountItems: SettingsItem[] = [
+    { id: 'profile', label: t('settings.personalInfo'), description: t('settings.personalInfoDescription'), icon: 'user-circle' },
+    { id: 'preferences', label: t('settings.preferences'), description: t('settings.preferencesDescription'), icon: 'sliders' },
+  ];
+
+  const appItems: SettingsItem[] = [
+    { id: 'health-permissions', label: t('settings.healthPermissions'), description: t('settings.healthPermissionsDescription'), icon: 'heart' },
+    { id: 'biometric-security', label: t('settings.biometricSecurity'), description: t('settings.biometricSecurityDescription'), icon: 'shield' },
+    { id: 'language', label: t('settings.language'), description: t('settings.languageDescription'), icon: 'globe' },
+    { id: 'dark-mode', label: t('settings.darkMode'), description: t('settings.darkModeDescription'), icon: 'moon-o' }, // 🆕 Dark mode toggle
+    { id: 'app-config', label: t('settings.appConfig'), description: t('settings.appConfigDescription'), icon: 'wrench' },
+    { id: 'notifications', label: t('settings.notificationsTitle'), description: t('settings.notificationsDescription'), icon: 'bell' },
+    { id: 'subscription', label: t('settings.subscription'), description: t('settings.subscriptionDescription'), icon: 'credit-card' },
+    { id: 'about', label: t('settings.about'), description: t('settings.aboutDescription'), icon: 'info-circle' },
+  ];
 
   useEffect(() => {
     loadUserProfile();
@@ -155,12 +355,22 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
 
   const handleLogout = () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      t('settings.logout'),
+      t('settings.logoutConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: onLogout }
+        { text: t('settings.logoutCancel'), style: 'cancel' },
+        { text: t('settings.logout'), style: 'destructive', onPress: onLogout }
       ]
+    );
+  };
+  
+  // 🆕 Handler per cambio lingua
+  const handleLanguageChange = async (newLang: 'it' | 'en') => {
+    await saveLanguage(newLang);
+    await changeLanguage(newLang);
+    Alert.alert(
+      t('common.success'),
+      t('settings.languageChanged', { lang: newLang === 'it' ? 'Italiano' : 'English' })
     );
   };
 
@@ -175,20 +385,44 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       case 'biometric-security':
         setBiometricSecurityModal(true);
         break;
+      case 'language':
+        // 🆕 Mostra dialog per selezione lingua
+        Alert.alert(
+          t('settings.language'),
+          t('settings.chooseLanguage'),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            { 
+              text: 'English', 
+              onPress: () => handleLanguageChange('en'),
+              style: language === 'en' ? 'default' : 'default'
+            },
+            { 
+              text: 'Italiano', 
+              onPress: () => handleLanguageChange('it'),
+              style: language === 'it' ? 'default' : 'default'
+            },
+          ]
+        );
+        break;
+      case 'dark-mode':
+        // 🆕 Toggle dark mode
+        toggleTheme();
+        break;
       case 'preferences':
-        Alert.alert('Coming Soon', 'Preferences will be available in a future update');
+        Alert.alert(t('settings.comingSoon'), t('settings.comingSoonMessage'));
         break;
       case 'app-config':
-        Alert.alert('Coming Soon', 'App Configuration will be available in a future update');
+        Alert.alert(t('settings.comingSoon'), t('settings.comingSoonMessage'));
         break;
       case 'notifications':
-        Alert.alert('Coming Soon', 'Notifications settings will be available in a future update');
+        setCurrentScreen('notifications');
         break;
       case 'subscription':
-        Alert.alert('Coming Soon', 'Subscription management will be available in a future update');
+        Alert.alert(t('settings.comingSoon'), t('settings.comingSoonMessage'));
         break;
       case 'about':
-        Alert.alert('About Wellness Coach', 'Version 1.0.0\n\nYour personal AI wellness coach powered by advanced emotion and skin analysis.');
+        Alert.alert(t('settings.aboutTitle'), t('settings.aboutMessage'));
         break;
       default:
         break;
@@ -201,18 +435,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
     loadUserProfile();
   };
 
-  // Show Personal Information Screen
+  // Show sub-screens
   if (currentScreen === 'personal-info') {
     return <PersonalInformationScreen user={user} onBack={handleBackToMain} />;
   }
+  if (currentScreen === 'notifications') {
+    return <NotificationsSettings onBack={handleBackToMain} />;
+  }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={["top"]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
-        <Text style={styles.subtitle}>
-          Personalize your experience, manage notifications, and configure your AI coach.
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>{t('settings.title')}</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          {t('settings.subtitle')}
         </Text>
       </View>
 
@@ -220,20 +457,34 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           {/* User Profile Card */}
-          <UserProfileCard userProfile={userProfile} isLoading={isLoading} />
+          <UserProfileCard userProfile={userProfile} isLoading={isLoading} t={t} colors={colors} />
           
-          <SettingsSection title="Account" items={accountItems} onItemPress={handleItemPress} />
-          <SettingsSection title="App Settings" items={appItems} onItemPress={handleItemPress} />
+          <SettingsSection 
+            title={t('settings.account')} 
+            items={accountItems} 
+            onItemPress={handleItemPress}
+            colors={colors}
+          />
+          <SettingsSection 
+            title={t('settings.appSettings')} 
+            items={appItems} 
+            onItemPress={handleItemPress}
+            colors={colors}
+            darkModeValue={mode === 'dark'} // 🆕 Pass dark mode value
+          />
 
           {/* Logout Button */}
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <FontAwesome name="sign-out" size={16} color="#ef4444" />
-            <Text style={styles.logoutText}>Logout</Text>
+          <TouchableOpacity 
+            style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.error + '40' }]} 
+            onPress={handleLogout}
+          >
+            <FontAwesome name="sign-out" size={16} color={colors.error} />
+            <Text style={[styles.logoutText, { color: colors.error }]}>{t('settings.logout')}</Text>
           </TouchableOpacity>
 
-          <View style={styles.versionCard}>
-            <Text style={styles.versionLabel}>App Version</Text>
-            <Text style={styles.versionValue}>1.0.0</Text>
+          <View style={[styles.versionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.versionLabel, { color: colors.textSecondary }]}>{t('settings.version')}</Text>
+            <Text style={[styles.versionValue, { color: colors.primary }]}>{t('settings.versionValue')}</Text>
           </View>
         </View>
       </ScrollView>
@@ -242,12 +493,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       <HealthPermissionsModal
         visible={healthPermissionsModal}
         onClose={() => setHealthPermissionsModal(false)}
-        onPermissionsGranted={(permissions) => {
-          console.log('Health permissions granted from settings:', permissions);
+        onSuccess={() => {
+          // 🆕 Rimossi log per performance
           Alert.alert(
-            'Permissions Updated',
-            'Your health data permissions have been updated successfully.',
-            [{ text: 'OK' }]
+            t('settings.healthPermissionsUpdated'),
+            t('settings.healthPermissionsUpdatedMessage'),
+            [{ text: t('common.ok') }]
           );
         }}
       />
@@ -269,7 +520,8 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingTop: 32,
+    paddingBottom: 20,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
@@ -291,6 +543,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
+    paddingTop: 24,
     paddingBottom: 100, // Increased padding to account for bottom navigation bar
   },
   section: {
@@ -389,7 +642,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: Colors.palette.primary,
+    // backgroundColor sarà sovrascritto dinamicamente con colors.primary
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -462,6 +715,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ef4444',
     marginLeft: 8,
+  },
+  smallBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    minWidth: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

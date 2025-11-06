@@ -14,6 +14,8 @@ import Animated, {
   withTiming,
   withDelay,
 } from 'react-native-reanimated';
+import { useTranslation } from '../hooks/useTranslation';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface WellnessSuggestion {
   id: string;
@@ -29,7 +31,54 @@ interface WellnessSuggestionProps {
 
 export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context }) => {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { colors: themeColors } = useTheme();
   
+  // Helper functions to get translated titles and descriptions
+  const getTranslatedTitle = (id: string): string => {
+    const keyMap: { [key: string]: string } = {
+      'breathing-exercises': 'wellnessSuggestions.suggestions.breathingExercises.title',
+      'take-a-walk': 'wellnessSuggestions.suggestions.takeAWalk.title',
+      'stretching': 'wellnessSuggestions.suggestions.stretching.title',
+      'yoga-flow': 'wellnessSuggestions.suggestions.yogaFlow.title',
+      'hydration': 'wellnessSuggestions.suggestions.hydration.title',
+      'healthy-snack': 'wellnessSuggestions.suggestions.healthySnack.title',
+      'green-tea': 'wellnessSuggestions.suggestions.greenTea.title',
+      'evening-routine': 'wellnessSuggestions.suggestions.eveningRoutine.title',
+      'progressive-relaxation': 'wellnessSuggestions.suggestions.progressiveRelaxation.title',
+      'sleep-meditation': 'wellnessSuggestions.suggestions.sleepMeditation.title',
+      'mindfulness-meditation': 'wellnessSuggestions.suggestions.mindfulnessMeditation.title',
+      'gratitude-practice': 'wellnessSuggestions.suggestions.gratitudePractice.title',
+      'body-scan': 'wellnessSuggestions.suggestions.bodyScan.title',
+      'morning-energy': 'wellnessSuggestions.suggestions.morningEnergy.title',
+      'power-breathing': 'wellnessSuggestions.suggestions.powerBreathing.title',
+      'dance-break': 'wellnessSuggestions.suggestions.danceBreak.title',
+    };
+    return keyMap[id] ? t(keyMap[id]) : id;
+  };
+
+  const getTranslatedDescription = (id: string): string => {
+    const keyMap: { [key: string]: string } = {
+      'breathing-exercises': 'wellnessSuggestions.suggestions.breathingExercises.description',
+      'take-a-walk': 'wellnessSuggestions.suggestions.takeAWalk.description',
+      'stretching': 'wellnessSuggestions.suggestions.stretching.description',
+      'yoga-flow': 'wellnessSuggestions.suggestions.yogaFlow.description',
+      'hydration': 'wellnessSuggestions.suggestions.hydration.description',
+      'healthy-snack': 'wellnessSuggestions.suggestions.healthySnack.description',
+      'green-tea': 'wellnessSuggestions.suggestions.greenTea.description',
+      'evening-routine': 'wellnessSuggestions.suggestions.eveningRoutine.description',
+      'progressive-relaxation': 'wellnessSuggestions.suggestions.progressiveRelaxation.description',
+      'sleep-meditation': 'wellnessSuggestions.suggestions.sleepMeditation.description',
+      'mindfulness-meditation': 'wellnessSuggestions.suggestions.mindfulnessMeditation.description',
+      'gratitude-practice': 'wellnessSuggestions.suggestions.gratitudePractice.description',
+      'body-scan': 'wellnessSuggestions.suggestions.bodyScan.description',
+      'morning-energy': 'wellnessSuggestions.suggestions.morningEnergy.description',
+      'power-breathing': 'wellnessSuggestions.suggestions.powerBreathing.description',
+      'dance-break': 'wellnessSuggestions.suggestions.danceBreak.description',
+    };
+    return keyMap[id] ? t(keyMap[id]) : id;
+  };
+
   // Get contextual suggestions based on user input
   const getSuggestionsByContext = () => {
     if (!context) return defaultSuggestions;
@@ -47,28 +96,32 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
   };
   
   // Default suggestions - use first 3 items from main data for consistency
-  const defaultSuggestions = WELLNESS_SUGGESTIONS.slice(0, 3);
+  const defaultSuggestions = WELLNESS_SUGGESTIONS.slice(0, 3).map(s => ({
+    ...s,
+    title: getTranslatedTitle(s.id),
+    description: getTranslatedDescription(s.id),
+  }));
   
   // Stress-related suggestions
   const stressSuggestions: WellnessSuggestion[] = [
     {
       id: 's1',
-      title: 'Take a Nature Break',
-      description: 'Spending 20 minutes in a park or green space can significantly reduce stress hormones.',
+      title: t('wellnessSuggestions.suggestions.natureBreak.title'),
+      description: t('wellnessSuggestions.suggestions.natureBreak.description'),
       icon: 'leaf',
       category: 'activity'
     },
     {
       id: 's2',
-      title: 'Deep Breathing Exercise',
-      description: 'Try 4-7-8 breathing: Inhale for 4 seconds, hold for 7, exhale for 8. Repeat 5 times.',
+      title: t('wellnessSuggestions.suggestions.deepBreathing.title'),
+      description: t('wellnessSuggestions.suggestions.deepBreathing.description'),
       icon: 'cloud',
       category: 'emotion'
     },
     {
       id: 's3',
-      title: 'Hydration Check',
-      description: 'Dehydration can worsen stress. Drink a glass of water with lemon to refresh.',
+      title: t('wellnessSuggestions.suggestions.hydrationCheck.title'),
+      description: t('wellnessSuggestions.suggestions.hydrationCheck.description'),
       icon: 'tint',
       category: 'nutrition'
     }
@@ -78,15 +131,15 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
   const skinSuggestions: WellnessSuggestion[] = [
     {
       id: 'sk1',
-      title: 'Gentle Cleansing',
-      description: 'Use a pH-balanced cleanser twice daily to maintain healthy skin barrier.',
+      title: t('wellnessSuggestions.suggestions.gentleCleansing.title'),
+      description: t('wellnessSuggestions.suggestions.gentleCleansing.description'),
       icon: 'star',
       category: 'skin'
     },
     {
       id: 'sk2',
-      title: 'Sun Protection',
-      description: 'Apply SPF 30+ sunscreen daily, even on cloudy days.',
+      title: t('wellnessSuggestions.suggestions.sunProtection.title'),
+      description: t('wellnessSuggestions.suggestions.sunProtection.description'),
       icon: 'sun-o',
       category: 'skin'
     }
@@ -96,15 +149,15 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
   const sleepSuggestions: WellnessSuggestion[] = [
     {
       id: 'sl1',
-      title: 'Consistent Schedule',
-      description: 'Go to bed and wake up at the same time every day, even on weekends.',
+      title: t('wellnessSuggestions.suggestions.consistentSchedule.title'),
+      description: t('wellnessSuggestions.suggestions.consistentSchedule.description'),
       icon: 'clock-o',
       category: 'sleep'
     },
     {
       id: 'sl2',
-      title: 'Screen-Free Hour',
-      description: 'Avoid screens 1 hour before bedtime to improve sleep quality.',
+      title: t('wellnessSuggestions.suggestions.screenFreeHour.title'),
+      description: t('wellnessSuggestions.suggestions.screenFreeHour.description'),
       icon: 'tablet',
       category: 'sleep'
     }
@@ -161,8 +214,8 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
             />
           </View>
           <View style={styles.suggestionContent}>
-            <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
-            <Text style={styles.suggestionDescription}>{suggestion.description}</Text>
+            <Text style={[styles.suggestionTitle, { color: themeColors.text }]}>{suggestion.title}</Text>
+            <Text style={[styles.suggestionDescription, { color: themeColors.textSecondary }]}>{suggestion.description}</Text>
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -170,14 +223,14 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Personalized Wellness Insights</Text>
+        <Text style={[styles.title, { color: themeColors.text }]}>{t('wellnessSuggestions.personalizedInsights')}</Text>
         <TouchableOpacity 
           style={styles.viewAllButton}
           onPress={() => router.push('/(tabs)/suggestions')}
         >
-          <Text style={styles.viewAllText}>View All</Text>
+          <Text style={[styles.viewAllText, { color: themeColors.primary }]}>{t('wellnessSuggestions.viewAll')}</Text>
         </TouchableOpacity>
       </View>
       
@@ -196,9 +249,8 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white', // HeroUI bg-content1
-    borderRadius: 12, // HeroUI rounded-medium
-    padding: 16, // HeroUI p-4
+    borderRadius: 12,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -207,6 +259,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
+    borderWidth: 1,
+    // Background e border gestiti inline con themeColors
   },
   header: {
     flexDirection: 'row',
@@ -215,17 +269,17 @@ const styles = StyleSheet.create({
     marginBottom: 12, // HeroUI mb-3
   },
   title: {
-    fontSize: 16, // HeroUI text-medium
-    fontWeight: '500', // HeroUI font-medium
-    color: '#374151', // HeroUI text-foreground
+    fontSize: 16,
+    fontWeight: '500',
+    // Colore gestito inline con themeColors.text
   },
   viewAllButton: {
-    paddingHorizontal: 8, // HeroUI px-2
-    paddingVertical: 4, // HeroUI py-1
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   viewAllText: {
-    fontSize: 12, // HeroUI text-small
-    color: '#6366f1', // HeroUI primary
+    fontSize: 12,
+    // Colore gestito inline con themeColors.primary
   },
   scrollContent: {
     paddingRight: 16, // HeroUI pr-4
@@ -248,14 +302,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   suggestionTitle: {
-    fontSize: 12, // HeroUI text-small
-    fontWeight: '500', // HeroUI font-medium
-    color: '#374151', // HeroUI text-foreground
-    marginBottom: 4, // HeroUI mb-1
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 4,
+    // Colore gestito inline con themeColors.text
   },
   suggestionDescription: {
-    fontSize: 10, // HeroUI text-xs
-    color: '#6b7280', // HeroUI text-default-500
-    lineHeight: 14, // HeroUI leading-3.5
+    fontSize: 10,
+    lineHeight: 14,
+    // Colore gestito inline con themeColors.textSecondary
   },
 });

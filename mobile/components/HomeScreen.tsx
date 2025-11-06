@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   View,
@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from './Avatar';
 import { WellnessSuggestions } from './WellnessSuggestions';
 import Colors from '../constants/Colors';
+import { useTheme } from '../contexts/ThemeContext';
 import WellnessSyncService from '../services/wellness-sync.service';
 import { MomentumService, MomentumData } from '../services/momentum.service';
 import { AuthService } from '../services/auth.service';
@@ -42,6 +43,7 @@ import Slider from '@react-native-community/slider';
 import MoodCheckinCard from './MoodCheckinCard';
 import SleepCheckinCard from './SleepCheckinCard';
 import PrimaryCTA from './PrimaryCTA';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 
 const { width } = Dimensions.get('window');
 
@@ -71,51 +73,9 @@ interface DailyActivity {
 
 // Stats will be generated dynamically based on momentum data
 
-const highlightCards: HighlightCard[] = [
-  { id: 'mood', label: 'Mood Balance', value: 'Positive', delta: '+6% vs yesterday', colors: ['#6366f1', '#8b5cf6'], icon: 'smile-o' },
-  { id: 'sleep', label: 'Restful Sleep', value: '7h 45m', delta: '+15m today', colors: ['#0ea5e9', '#22d3ee'], icon: 'moon-o' },
-  { id: 'hydration', label: 'Hydration', value: '5 / 8 cups', delta: 'Sip water now', colors: ['#10b981', '#34d399'], icon: 'tint' },
-];
+// 🆕 highlightCards verranno costruiti dinamicamente con traduzioni
 
-const todaysActivities: DailyActivity[] = [
-  {
-    id: 'morning-meditation',
-    title: 'Morning Meditation',
-    description: '5-minute breathing exercise',
-    icon: 'leaf',
-    completed: true,
-    time: '8:00 AM',
-    category: 'mindfulness',
-  },
-  {
-    id: 'water-intake',
-    title: 'Hydration Goal',
-    description: 'Drink 8 glasses of water',
-    icon: 'tint',
-    completed: false,
-    progress: 62,
-    time: 'Ongoing',
-    category: 'nutrition',
-  },
-  {
-    id: 'walk',
-    title: 'Evening Walk',
-    description: '20-minute outdoor walk',
-    icon: 'road',
-    completed: false,
-    time: '6:00 PM',
-    category: 'movement',
-  },
-  {
-    id: 'journal',
-    title: 'Gratitude Journal',
-    description: 'Write 3 things you\'re grateful for',
-    icon: 'book',
-    completed: false,
-    time: '9:00 PM',
-    category: 'mindfulness',
-  },
-];
+// 🆕 todaysActivities verranno costruiti dinamicamente con traduzioni nel componente
 
 // Removed quickLinks and QuickLink interface - replaced with Today at a glance widgets
 
@@ -128,10 +88,53 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   user, 
   onLogout
 }) => {
+  const { t, language } = useTranslation(); // 🆕 i18n hook
+  const { colors: themeColors } = useTheme();
   const { setShowTutorial } = useTutorial();
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
-  const [activities, setActivities] = useState<DailyActivity[]>(todaysActivities);
+  // 🆕 Costruisci activities dinamicamente con traduzioni usando useMemo per riapplicare quando cambia la lingua
+  const todaysActivities = useMemo<DailyActivity[]>(() => [
+    {
+      id: 'morning-meditation',
+      title: t('home.activities.morningMeditation'),
+      description: t('home.activities.breathingExercise'),
+      icon: 'leaf',
+      completed: true,
+      time: '8:00 AM',
+      category: 'mindfulness',
+    },
+    {
+      id: 'water-intake',
+      title: t('home.activities.hydrationGoal'),
+      description: t('home.activities.drinkGlasses', { count: 8 }),
+      icon: 'tint',
+      completed: false,
+      progress: 62,
+      time: t('home.activities.ongoing'),
+      category: 'nutrition',
+    },
+    {
+      id: 'walk',
+      title: t('home.activities.eveningWalk'),
+      description: t('home.activities.outdoorWalk'),
+      icon: 'road',
+      completed: false,
+      time: '6:00 PM',
+      category: 'movement',
+    },
+    {
+      id: 'journal',
+      title: t('home.activities.gratitudeJournal'),
+      description: t('home.activities.gratefulThings'),
+      icon: 'book',
+      completed: false,
+      time: '9:00 PM',
+      category: 'mindfulness',
+    },
+  ], [t, language]);
+  
+  const [activities, setActivities] = useState<DailyActivity[]>(() => todaysActivities);
   const [syncService] = useState(() => WellnessSyncService.getInstance());
   const [permissions, setPermissions] = useState({ calendar: false, notifications: false });
   const [userFirstName, setUserFirstName] = useState<string>('User');
@@ -155,13 +158,155 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [showHistory, setShowHistory] = useState<boolean>(false);
   
   // Health data hook
-  const { permissions: healthPermissions, hasData: hasHealthData, isInitialized } = useHealthData();
+  const { permissions: healthPermissions, hasData: hasHealthData, isInitialized, healthData, syncData } = useHealthData();
+  const hasAnyHealthPermission =
+    healthPermissions.steps ||
+    healthPermissions.heartRate ||
+    healthPermissions.sleep ||
+    healthPermissions.hrv;
+  const initialHealthSyncAttempted = useRef(false);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+    if (!hasAnyHealthPermission) return;
+    if (healthData && Object.keys(healthData).length > 0) return;
+    if (initialHealthSyncAttempted.current) return;
+
+    initialHealthSyncAttempted.current = true;
+    syncData().catch((error) => {
+      console.error('❌ Failed to sync health data for widgets:', error);
+    });
+  }, [
+    isInitialized,
+    hasAnyHealthPermission,
+    healthData,
+    syncData,
+  ]);
+
+  useEffect(() => {
+    if (!hasAnyHealthPermission) {
+      initialHealthSyncAttempted.current = false;
+    }
+  }, [hasAnyHealthPermission]);
+
+  // Costruisce i dati dei widget partendo dai dati reali di salute + goals
+  const buildWidgetDataFromHealth = async (): Promise<WidgetData[]> => {
+    const goals = await widgetGoalsService.getGoals();
+    const stepsGoal = goals?.steps ?? 10000;
+    const hydrationGoal = goals?.hydration ?? 8;
+    const meditationGoal = goals?.meditation ?? 30;
+    const sleepGoal = goals?.sleep ?? 8;
+
+    const hd = healthData!;
+    const normalizeHrv = (value?: number | null) => {
+      if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) return 0;
+      return value >= 100 ? Math.round(value) : Math.round(value * 10) / 10;
+    };
+    const normalizedHrv = normalizeHrv(hd.hrv);
+    const normalizedResting = typeof hd.restingHeartRate === 'number' && hd.restingHeartRate > 0
+      ? Math.round(hd.restingHeartRate)
+      : 0;
+    const normalizedCurrentHR = typeof hd.heartRate === 'number' && hd.heartRate > 0
+      ? Math.round(hd.heartRate)
+      : 0;
+    const rawDistance = typeof hd.distance === 'number' && hd.distance > 0 ? hd.distance : 0;
+    const fallbackDistanceKm = Math.round(((hd.steps || 0) * 0.0008) * 100) / 100;
+    const distanceKm = rawDistance > 0
+      ? rawDistance >= 100
+        ? Math.round((rawDistance / 1000) * 100) / 100
+        : Math.round(rawDistance * 100) / 100
+      : fallbackDistanceKm;
+    const resolvedDistanceKm = distanceKm > 0 ? distanceKm : fallbackDistanceKm;
+    const estimatedCalories = typeof hd.calories === 'number' && hd.calories > 0
+      ? hd.calories
+      : (hd.steps || 0) * 0.04;
+
+    return [
+      { id: 'steps', title: t('widgets.steps'), icon: '🚶', color: '#10b981', backgroundColor: '#f0fdf4', category: 'health',
+        steps: {
+          current: Math.max(0, hd.steps || 0),
+          goal: stepsGoal,
+          km: resolvedDistanceKm,
+          calories: Math.round(estimatedCalories),
+        } },
+      { id: 'meditation', title: t('widgets.meditation'), icon: '🧘', color: '#8b5cf6', backgroundColor: '#f3f4f6', category: 'wellness',
+        meditation: { minutes: Math.max(0, hd.mindfulnessMinutes || 0), goal: meditationGoal, sessions: 0, streak: 0, favoriteType: 'Breathing' } },
+      { id: 'hydration', title: t('widgets.hydration'), icon: '💧', color: '#3b82f6', backgroundColor: '#eff6ff', category: 'health',
+        hydration: { glasses: Math.round((hd.hydration || 0) / 250), goal: hydrationGoal, ml: Math.max(0, hd.hydration || 0), lastDrink: '' } },
+      { id: 'sleep', title: t('widgets.sleep'), icon: '🌙', color: '#6366f1', backgroundColor: '#eef2ff', category: 'health',
+        sleep: { hours: Math.round((hd.sleepHours || 0) * 10) / 10, quality: Math.max(0, hd.sleepQuality || 0), goal: sleepGoal, deepSleep: hd.deepSleepMinutes ? `${Math.floor(hd.deepSleepMinutes/60)}h ${Math.round(hd.deepSleepMinutes%60)}m` : '—', remSleep: hd.remSleepMinutes ? `${Math.floor(hd.remSleepMinutes/60)}h ${Math.round(hd.remSleepMinutes%60)}m` : '—', bedtime: '', wakeTime: '' } },
+      { id: 'hrv', title: t('widgets.hrv'), icon: '🫀', color: '#ef4444', backgroundColor: '#fef2f2', category: 'health',
+        hrv: {
+          value: normalizedHrv,
+          avgHRV: normalizedHrv,
+          currentHR: normalizedCurrentHR,
+          restingHR: normalizedResting,
+          recovery: 'Good',
+        } },
+      { id: 'analyses', title: t('widgets.analyses'), icon: '📊', color: '#10b981', backgroundColor: '#f0fdf4', category: 'analysis',
+        analyses: { completed: true, emotionAnalysis: true, skinAnalysis: true, lastCheckIn: t('home.analyses.today'), streak: 0 } },
+    ];
+  };
+  
+  // Aggiorna i widget quando i dati di salute cambiano
+  useEffect(() => {
+    (async () => {
+      // 🔥 Aggiorna sempre i widget se abbiamo dati di salute reali
+      // Verifica se ci sono dati reali (non solo hasHealthData che richiede permessi)
+      if (healthData !== null && Object.keys(healthData).length > 0) {
+        // Aggiorna i widget con dati reali
+        try {
+          const data = await buildWidgetDataFromHealth();
+          setWidgetData(data);
+          console.log('📊 Widget data updated with real health data:', {
+            steps: data.find(w => w.id === 'steps')?.steps?.current,
+            heartRate: healthData.heartRate,
+            sleepHours: healthData.sleepHours,
+            hrv: healthData.hrv,
+            restingHeartRate: healthData.restingHeartRate,
+          });
+        } catch (error) {
+          console.error('❌ Error building widget data from health:', error);
+        }
+        // Aggiorna anche la sezione Today At a Glance
+        loadTodayGlanceData();
+      } else if (isInitialized && (healthData === null || Object.keys(healthData).length === 0)) {
+        // Se non ci sono dati, usa i mock ma solo se non ci sono permessi
+        if (!hasAnyHealthPermission) {
+          // Fallback a mock data se non ci sono permessi
+          const goals = await widgetGoalsService.getGoals();
+          const widgetData = WidgetDataService.generateWidgetData(goals);
+          const translatedWidgetData = widgetData.map(w => ({
+            ...w,
+            title: w.id === 'steps' ? t('widgets.steps') :
+                   w.id === 'meditation' ? t('widgets.meditation') :
+                   w.id === 'hydration' ? t('widgets.hydration') :
+                   w.id === 'sleep' ? t('widgets.sleep') :
+                   w.id === 'hrv' ? t('widgets.hrv') :
+                   w.id === 'analyses' ? t('widgets.analyses') : w.title
+          }));
+          setWidgetData(translatedWidgetData);
+          console.log('📊 Widget data updated with mock (no health data available)');
+        }
+      }
+    })();
+  }, [
+    healthData,
+    healthData?.steps,
+    healthData?.heartRate,
+    healthData?.sleepHours,
+    healthData?.hrv,
+    healthData?.restingHeartRate,
+    isInitialized,
+    healthPermissions.steps,
+    healthPermissions.heartRate,
+    healthPermissions.sleep,
+    healthPermissions.hrv,
+  ]);
   
   // Intelligent insights are now handled by DailyCopilot component
 
   // --- Self check (Mood & Sleep)
-  const [showMoodCheckin, setShowMoodCheckin] = useState(false);
-  const [showSleepCheckin, setShowSleepCheckin] = useState(false);
   const [moodValue, setMoodValue] = useState<number>(3);        // 1..5
   const [sleepQuality, setSleepQuality] = useState<number>(80); // 0..100
   // NEW
@@ -169,12 +314,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [sleepNote, setSleepNote] = useState('');
   const [restLevel, setRestLevel] = useState<1|2|3|4|5>(3);
 
+  // 🆕 moodDescriptors con traduzioni
   const moodDescriptors = [
-    { value: 1, emoji: '☁️', label: 'Very low', suggestion: 'Take a mindful pause' },
-    { value: 2, emoji: '🌧️', label: 'Low', suggestion: 'A short walk could help' },
-    { value: 3, emoji: '⛅️', label: 'Neutral', suggestion: 'Keep noticing your cues' },
-    { value: 4, emoji: '🌤️', label: 'Good', suggestion: 'Celebrate the little wins' },
-    { value: 5, emoji: '🌞', label: 'Great', suggestion: 'Share the positive energy' },
+    { value: 1, emoji: '☁️', label: t('home.moodDescriptors.veryLow'), suggestion: t('home.moodDescriptors.suggestions.veryLow') },
+    { value: 2, emoji: '🌧️', label: t('home.moodDescriptors.low'), suggestion: t('home.moodDescriptors.suggestions.low') },
+    { value: 3, emoji: '⛅️', label: t('home.moodDescriptors.neutral'), suggestion: t('home.moodDescriptors.suggestions.neutral') },
+    { value: 4, emoji: '🌤️', label: t('home.moodDescriptors.good'), suggestion: t('home.moodDescriptors.suggestions.good') },
+    { value: 5, emoji: '🌞', label: t('home.moodDescriptors.great'), suggestion: t('home.moodDescriptors.suggestions.great') },
   ] as const;
 
   const computeGaugeProgress = (info: any) => {
@@ -185,15 +331,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   const computeGaugeSubtitle = (info: any) => {
-    if (info?.steps) return `Goal • ${info.steps.goal.toLocaleString()} steps`;
-    if (info?.hydration) return `Goal • ${info.hydration.goal} glasses`;
-    if (info?.meditation) return `Goal • ${info.meditation.goal} mins`;
+    if (info?.steps) return `${t('home.goal')} • ${info.steps.goal.toLocaleString()} steps`;
+    if (info?.hydration) return `${t('home.goal')} • ${info.hydration.goal} glasses`;
+    if (info?.meditation) return `${t('home.goal')} • ${info.meditation.goal} mins`;
     return '';
   };
 
   const computeGaugeTrend = (progress: number) => {
-    if (progress >= 85) return 'Excellent';
-    if (progress >= 60) return 'Good';
+    if (progress >= 85) return t('home.status.excellent');
+    if (progress >= 60) return t('home.status.good');
     if (progress >= 40) return `+${Math.max(1, Math.round((progress - 40) / 2))}%`;
     return '!';
   };
@@ -201,11 +347,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const getInfoCardValue = (id: string, info: any) => {
     switch (id) {
       case 'sleep':
-        return `${info.sleep?.hours ?? 7.5}h`;
-      case 'hrv':
-        return `${info.hrv?.value ?? info.hrv?.avgHRV ?? 35}ms`;
+        return t('home.sleep.hours', { hours: info.sleep?.hours ?? 7.5 });
+      case 'hrv': {
+        const rawValue = Number(info.hrv?.value ?? info.hrv?.avgHRV ?? 0);
+        if (!Number.isFinite(rawValue) || rawValue <= 0) {
+          return t('home.hrv.value', { value: 0 });
+        }
+        const formatted =
+          rawValue >= 100
+            ? Math.round(rawValue).toString()
+            : (Math.round(rawValue * 10) / 10).toString();
+        return t('home.hrv.value', { value: formatted });
+      }
       case 'analyses':
-        return info.analyses?.completed ? 'Complete' : 'Pending';
+        return info.analyses?.completed ? t('home.status.complete') : t('home.status.pending');
       default:
         return info.value ?? '--';
     }
@@ -214,11 +369,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const getInfoCardSubtitle = (id: string, info: any) => {
     switch (id) {
       case 'sleep':
-        return `Quality • ${info.sleep?.quality ?? 82}%`;
-      case 'hrv':
-        return `Resting HR • ${info.hrv?.restingHR ?? 66} bpm`;
+        return `${t('home.sleep.quality')} • ${info.sleep?.quality ?? 82}%`;
+      case 'hrv': {
+        const currentHr = Number(info.hrv?.currentHR ?? info.hrv?.restingHR ?? 0);
+        const hasCurrent = Number.isFinite(currentHr) && currentHr > 0;
+        return `${t('home.hrv.currentHR')} • ${
+          hasCurrent ? `${Math.round(currentHr)} ${t('home.bpm')}` : '—'
+        }`;
+      }
       case 'analyses':
-        return info.analyses?.lastCheckIn ?? 'Today';
+        return info.analyses?.lastCheckIn ?? t('home.analyses.today');
       default:
         return info.subtitle ?? '';
     }
@@ -228,15 +388,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     switch (id) {
       case 'sleep': {
         const quality = info.sleep?.quality ?? 0;
-        if (quality >= 85) return 'Excellent';
-        if (quality >= 70) return 'Good';
+        if (quality >= 85) return t('home.status.excellent');
+        if (quality >= 70) return t('home.status.good');
         if (quality >= 50) return '+5%';
         return '!';
       }
       case 'hrv': {
         const hrvScore = info.hrv?.value ?? 0;
-        if (hrvScore >= 45) return 'Excellent';
-        if (hrvScore >= 30) return 'Good';
+        if (hrvScore >= 45) return t('home.status.excellent');
+        if (hrvScore >= 30) return t('home.status.good');
         return '!';
       }
       case 'analyses':
@@ -250,19 +410,34 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     switch (id) {
       case 'sleep':
         return [
-          { icon: '💤', label: 'Deep sleep', value: info.sleep?.deepSleep ?? '2h 15m' },
-          { icon: '🧠', label: 'REM', value: info.sleep?.remSleep ?? '1h 45m' },
-          { icon: '⏰', label: 'Wake time', value: info.sleep?.wakeTime ?? '7:30 AM' },
+          { icon: '💤', label: t('home.sleep.deepSleep'), value: info.sleep?.deepSleep ?? '2h 15m' },
+          { icon: '🧠', label: t('home.sleep.rem'), value: info.sleep?.remSleep ?? '1h 45m' },
+          { icon: '⏰', label: t('home.sleep.wakeTime'), value: info.sleep?.wakeTime ?? '7:30 AM' },
         ];
       case 'hrv':
         return [
-          { icon: '💓', label: 'Resting HR', value: `${info.hrv?.restingHR ?? 66} bpm` },
-          { icon: '🛡️', label: 'Recovery', value: info.hrv?.recovery ?? 'Good' },
+          {
+            icon: '❤️',
+            label: t('home.hrv.currentHR'),
+            value:
+              info.hrv?.currentHR && info.hrv.currentHR > 0
+                ? `${info.hrv.currentHR} ${t('home.bpm')}`
+                : '—',
+          },
+          {
+            icon: '💓',
+            label: t('home.hrv.restingHR'),
+            value:
+              info.hrv?.restingHR && info.hrv.restingHR > 0
+                ? `${info.hrv.restingHR} ${t('home.bpm')}`
+                : '—',
+          },
+          { icon: '🛡️', label: t('home.hrv.recovery'), value: info.hrv?.recovery ?? t('home.status.good') },
         ];
       case 'analyses':
         return [
-          { icon: '🔥', label: 'Streak', value: `${info.analyses?.streak ?? 0} days` },
-          { icon: info.analyses?.completed ? '✅' : '🕒', label: 'Status', value: info.analyses?.completed ? 'Logged today' : 'Complete check-ins' },
+          { icon: '🔥', label: t('home.analyses.streak'), value: t('home.analyses.days', { count: info.analyses?.streak ?? 0 }) },
+          { icon: info.analyses?.completed ? '✅' : '🕒', label: t('home.analyses.status'), value: info.analyses?.completed ? t('home.status.loggedToday') : t('home.status.completeCheckIns') },
         ];
       default:
         return undefined;
@@ -275,9 +450,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const sleepWidget = widgetData.find(w => w.id === 'sleep');
   const sleepStats = sleepWidget?.sleep;
   const displayedSleepHours = sleepStats?.hours ?? 7.5;
-  const displayedSleepQuality = showSleepCheckin
-    ? sleepQuality
-    : (sleepStats?.quality ?? sleepQuality);
+  const displayedSleepQuality = sleepStats?.quality ?? sleepQuality;
 
   // chiavi giornaliere
   const dayKey = () => new Date().toISOString().slice(0,10);
@@ -302,15 +475,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     }
   };
 
-  // Debug: log quando widgetConfig cambia
-  useEffect(() => {
-    console.log('🔄 HOMESCREEN WIDGET CONFIG CHANGED:', widgetConfig.map(w => ({ 
-      id: w.id, 
-      position: w.position, 
-      enabled: w.enabled, 
-      size: w.size 
-    })));
-  }, [widgetConfig]);
+  // 🆕 Rimosso log widget config per performance (useEffect completo rimosso)
 
   // Setup global scroll functions for tutorial
   useEffect(() => {
@@ -327,14 +492,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   }, []);
 
   // Show health permissions modal if no health data is available
+  // 🔥 MA solo se non ci sono permessi concessi (steps, heartRate, sleep)
   useEffect(() => {
-    if (isInitialized && !hasHealthData && !healthPermissionsModal) {
-      const timer = setTimeout(() => {
-        setHealthPermissionsModal(true);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [isInitialized, hasHealthData, healthPermissionsModal]);
+    (async () => {
+      if (!isInitialized || healthPermissionsModal) return;
+      if (hasHealthData) return;
+
+      try {
+        const { HealthPermissionsService } = await import('../services/health-permissions.service');
+        const [allRequiredGranted, setupCompleted] = await Promise.all([
+          HealthPermissionsService.hasAllRequiredPermissions(),
+          HealthPermissionsService.isSetupCompleted(),
+        ]);
+
+        // Mostra il modal solo se mancano required e non abbiamo completato il setup
+        if (!allRequiredGranted && !setupCompleted) {
+          const timer = setTimeout(() => {
+            setHealthPermissionsModal(true);
+          }, 1200);
+          return () => clearTimeout(timer);
+        }
+      } catch {}
+    })();
+  }, [isInitialized, hasHealthData, healthPermissionsModal, healthPermissions.steps, healthPermissions.heartRate, healthPermissions.sleep]);
 
   // carica eventuali check-in del giorno all'apertura
   useEffect(() => {
@@ -402,7 +582,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   // Handle widget interactions
   const handleWidgetPress = (widgetId: string) => {
-    console.log('Widget pressed:', widgetId);
+    // 🆕 Rimosso log per performance
     switch (widgetId) {
       case 'steps':
         break;
@@ -433,7 +613,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   const handleEmptySpaceLongPress = (position: number) => {
-    console.log(`Long press on empty space at position: ${position}`);
+    // 🆕 Rimosso log per performance
     // Qui potremmo aprire un modal per aggiungere un widget
     // Per ora, mostriamo un alert
     Alert.alert(
@@ -450,13 +630,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     try {
       // Trova un widget disabilitato da riabilitare
       const disabledWidget = widgetConfig.find(w => !w.enabled);
-      console.log('Disabled widget found:', disabledWidget);
+      // 🆕 Rimosso log per performance
   
       if (disabledWidget) {
         // forza la dimensione iniziale a 'small' e posiziona nello slot scelto
         await addWidget(disabledWidget.id, 'small', position);
       } else {
-        console.log('All widgets are enabled:', widgetConfig.filter(w => w.enabled).length);
+        // 🆕 Rimosso log per performance
         Alert.alert('Nessun Widget Disponibile', 'Tutti i widget sono già attivi.');
       }
     } catch (error) {
@@ -481,12 +661,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         slots.push(
           <TouchableOpacity
             key={`empty-${pos}`}
-            style={[styles.emptySlot, { width: getWidgetWidth('small') }]}
+            style={[
+              styles.emptySlot, 
+              { 
+                width: getWidgetWidth('small'),
+                backgroundColor: themeColors.surfaceMuted,
+                borderColor: themeColors.border,
+              }
+            ]}
             onLongPress={() => handleEmptySpaceLongPress(pos)}
             activeOpacity={0.7}
           >
-            <Text style={styles.emptySlotText}>+</Text>
-            <Text style={styles.emptySlotHint}>Long press to add widget</Text>
+            <Text style={[styles.emptySlotText, { color: themeColors.textTertiary }]}>+</Text>
+            <Text style={[styles.emptySlotHint, { color: themeColors.textTertiary }]}>{t('home.emptySlot.addWidget')}</Text>
           </TouchableOpacity>
         );
       }
@@ -498,12 +685,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const getStats = () => {
     const momentumValue = momentumData 
       ? MomentumService.formatMomentumValue(momentumData)
-      : 'Loading...';
+      : t('home.stats.loading');
     
     return [
-      { icon: 'fire', label: 'Streak', value: '12 days' },
-      { icon: 'line-chart', label: 'Momentum', value: momentumValue },
-      { icon: 'calendar', label: 'Next Session', value: 'Today • 6:00 PM' },
+      { id: 'streak', icon: 'fire', label: t('home.stats.streak'), value: t('home.stats.days', { count: 12 }) },
+      { id: 'momentum', icon: 'line-chart', label: t('home.stats.momentum'), value: momentumValue },
+      { id: 'next-session', icon: 'calendar', label: t('home.stats.nextSession'), value: `${t('home.analyses.today')} • 6:00 PM` },
     ];
   };
 
@@ -541,12 +728,60 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           // Load today glance widgets
           const widgets = await TodayGlanceService.getTodayGlanceData(currentUser.id);
-          setTodayGlanceWidgets(widgets);
+          // Translate widget titles
+          const translatedWidgets = widgets.map(w => ({
+            ...w,
+            title: w.id === 'steps' ? t('widgets.steps') :
+                   w.id === 'meditation' || w.id === 'mindfulness' ? t('widgets.meditation') :
+                   w.id === 'hydration' ? t('widgets.hydration') :
+                   w.id === 'sleep' ? t('widgets.sleep') :
+                   w.id === 'hrv' ? t('widgets.hrv') :
+                   w.id === 'analyses' ? t('widgets.analyses') : w.title
+          }));
+          setTodayGlanceWidgets(translatedWidgets);
           
-          // Load widget data with saved goals
-          const goals = await widgetGoalsService.getGoals();
-          const widgetData = WidgetDataService.generateWidgetData(goals);
-          setWidgetData(widgetData);
+          // Widget data: se abbiamo dati salute usa quelli, altrimenti mock con goals
+          // Verifica se ci sono dati reali (non solo hasHealthData che richiede permessi)
+          if (healthData !== null && Object.keys(healthData).length > 0) {
+            try {
+              const realData = await buildWidgetDataFromHealth();
+              setWidgetData(realData);
+              console.log('📊 Widget data loaded from real health data:', {
+                steps: realData.find(w => w.id === 'steps')?.steps?.current,
+                heartRate: healthData.heartRate,
+                sleepHours: healthData.sleepHours,
+              });
+            } catch (error) {
+              console.error('❌ Error building widget data from health:', error);
+              // Fallback a mock data in caso di errore
+              const goals = await widgetGoalsService.getGoals();
+              const widgetData = WidgetDataService.generateWidgetData(goals);
+              const translatedWidgetData = widgetData.map(w => ({
+                ...w,
+                title: w.id === 'steps' ? t('widgets.steps') :
+                       w.id === 'meditation' ? t('widgets.meditation') :
+                       w.id === 'hydration' ? t('widgets.hydration') :
+                       w.id === 'sleep' ? t('widgets.sleep') :
+                       w.id === 'hrv' ? t('widgets.hrv') :
+                       w.id === 'analyses' ? t('widgets.analyses') : w.title
+              }));
+              setWidgetData(translatedWidgetData);
+            }
+          } else {
+            const goals = await widgetGoalsService.getGoals();
+            const widgetData = WidgetDataService.generateWidgetData(goals);
+            const translatedWidgetData = widgetData.map(w => ({
+              ...w,
+              title: w.id === 'steps' ? t('widgets.steps') :
+                     w.id === 'meditation' ? t('widgets.meditation') :
+                     w.id === 'hydration' ? t('widgets.hydration') :
+                     w.id === 'sleep' ? t('widgets.sleep') :
+                     w.id === 'hrv' ? t('widgets.hrv') :
+                     w.id === 'analyses' ? t('widgets.analyses') : w.title
+            }));
+            setWidgetData(translatedWidgetData);
+            console.log('📊 Widget data loaded from mock (no health data available)');
+          }
         }
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -556,6 +791,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     loadUserData();
   }, []);
 
+  // 🆕 Aggiorna le attività quando cambia la lingua (non l'array stesso per evitare loop infiniti)
+  useEffect(() => {
+    setActivities(todaysActivities);
+  }, [language]);
+
   const syncActivityToCalendar = async (activity: DailyActivity) => {
     try {
       const wellnessActivity = syncService.createWellnessActivityFromToday(
@@ -563,7 +803,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           id: activity.id,
           title: activity.title,
           description: activity.description,
-          time: activity.time || 'Ongoing',
+          time: activity.time || t('home.activities.ongoing'),
           category: activity.category,
         },
         true, // syncToCalendar
@@ -582,15 +822,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         ));
         
         Alert.alert(
-          'Synced to Calendar',
-          `${activity.title} has been added to your calendar!`,
-          [{ text: 'OK' }]
+          t('home.calendar.synced'),
+          t('home.calendar.addedMessage', { title: activity.title }),
+          [{ text: t('common.ok') }]
         );
       } else {
         Alert.alert(
-          'Sync Failed',
-          result.error || 'Failed to sync to calendar. Please check your permissions.',
-          [{ text: 'OK' }]
+          t('home.calendar.syncFailed'),
+          result.error || t('home.calendar.syncFailedMessage'),
+          [{ text: t('common.ok') }]
         );
       }
     } catch (error) {
@@ -609,9 +849,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     
     if (!result.calendar && !result.notifications) {
       Alert.alert(
-        'Permissions Required',
-        'To sync activities with your calendar and reminders, please enable permissions in Settings.',
-        [{ text: 'OK' }]
+        t('home.permissions.required'),
+        t('home.permissions.requiredMessage'),
+        [{ text: t('common.ok') }]
       );
     }
   };
@@ -672,7 +912,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     const totalCount = todaysActivities.length;
 
     return (
-      <Animated.View key={activity.id} style={[styles.activityCard, animatedStyle]}>
+      <Animated.View key={activity.id} style={[styles.activityCard, animatedStyle, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
         <TouchableOpacity activeOpacity={0.85}>
           <View style={styles.activityContent}>
             <View style={styles.activityLeft}>
@@ -683,13 +923,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   color={activity.completed ? '#ffffff' : colors[0]} 
                 />
               </View>
-              <View style={styles.activityText}>
-                <Text style={[styles.activityTitle, activity.completed && styles.activityCompleted]}>
-                  {activity.title}
-                </Text>
-                <Text style={styles.activityDescription}>{activity.description}</Text>
-                <Text style={styles.activityTime}>{activity.time}</Text>
-              </View>
+            <View style={styles.activityText}>
+              <Text style={[styles.activityTitle, { color: themeColors.text }, activity.completed && styles.activityCompleted]}>
+                {activity.title}
+              </Text>
+              <Text style={[styles.activityDescription, { color: themeColors.textSecondary }]}>{activity.description}</Text>
+              <Text style={[styles.activityTime, { color: themeColors.textTertiary }]}>{activity.time}</Text>
+            </View>
             </View>
             <View style={styles.activityRight}>
               <View style={styles.statusContainer}>
@@ -783,14 +1023,14 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} ref={scrollViewRef}>
-        <LinearGradient colors={[Colors.palette.primary, Colors.palette.primaryBright]} style={styles.heroCard}>
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={["top"]}>
+      <ScrollView style={{ backgroundColor: themeColors.background }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} ref={scrollViewRef}>
+        <LinearGradient colors={[themeColors.primaryDark, themeColors.primary]} style={styles.heroCard}>
           {/* Header with buttons inside the purple box */}
           <View style={styles.heroTopRow}>
             <View style={styles.heroGreeting}>
-              <Text style={styles.greeting}>Hello, {userFirstName}</Text>
-              <Text style={styles.tagline}>Here's a quick pulse on your wellness journey.</Text>
+              <Text style={styles.greeting}>{t('home.hello', { name: userFirstName })}</Text>
+              <Text style={styles.tagline}>{t('home.tagline')}</Text>
             </View>
             <View style={styles.heroActions}>
               <TouchableOpacity
@@ -810,27 +1050,22 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
 
           <View style={styles.heroAvatarRow}>
             <Avatar onMicPress={() => {
-              console.log('Mic button pressed - navigating to voice chat');
+              // 🆕 Rimosso log per performance
               // Force navigation by using a unique timestamp parameter
               const timestamp = Date.now();
               router.push(`/(tabs)/coach?voiceMode=true&t=${timestamp}`);
             }} />
             <View style={styles.heroStats}>
-              {getStats().map((item) => {
-                const isMomentum = item.label === 'Momentum';
-                const isStreak = item.label === 'Streak';
-                const isNextSession = item.label === 'Next Session';
-                
-                let trendColor = '#6366f1'; // Default purple
-                if (isStreak) trendColor = '#f97316'; // Orange
-                else if (isMomentum && momentumData) trendColor = MomentumService.getTrendColor(momentumData.trend);
-                else if (isNextSession) trendColor = '#3b82f6'; // Blue
+              {getStats().map((item: any) => {
+                const isMomentum = item.id === 'momentum';
+                const isStreak = item.id === 'streak';
+                const isNextSession = item.id === 'next-session';
                 
                 // Determine pill type for popup
                 let pillType: 'streak' | 'momentum' | 'next-session' | null = null;
-                if (item.label === 'Streak') pillType = 'streak';
-                else if (item.label === 'Momentum') pillType = 'momentum';
-                else if (item.label === 'Next Session') pillType = 'next-session';
+                if (item.id === 'streak') pillType = 'streak';
+                else if (item.id === 'momentum') pillType = 'momentum';
+                else if (item.id === 'next-session') pillType = 'next-session';
                 
                 return (
                   <TouchableOpacity 
@@ -839,12 +1074,13 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                     onPress={() => pillType && handlePillPress(pillType)}
                     activeOpacity={0.7}
                   >
-                  <View style={[styles.heroChipIcon, { backgroundColor: isMomentum ? `${trendColor}30` : 'rgba(255,255,255,0.18)' }]}>
-                      <FontAwesome name={item.icon as any} size={12} color={isMomentum ? trendColor : '#ffffff'} />
+                  <View style={[styles.heroChipIcon, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
+                      <FontAwesome name={item.icon as any} size={12} color="#ffffff" />
                   </View>
                   <View style={styles.heroChipTextContainer}>
                     <Text style={styles.heroChipLabel} numberOfLines={1} ellipsizeMode="tail">{item.label}</Text>
-                      <Text style={styles.heroChipValue} numberOfLines={2} ellipsizeMode="tail">{item.value}</Text>
+                      {/* Forza bianco perché è su gradiente viola */}
+                      <Text style={[styles.heroChipValue, { color: '#ffffff' }]} numberOfLines={2} ellipsizeMode="tail">{item.value}</Text>
                   </View>
                   </TouchableOpacity>
                 );
@@ -856,19 +1092,19 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderContent}>
             <View>
-              <Text style={styles.sectionTitle}>Today at a Glance</Text>
-              <Text style={styles.sectionSubtitle}>Your wellness snapshot</Text>
+              <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.todayAtGlance')}</Text>
+              <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.todaySubtitle')}</Text>
         </View>
             <View style={styles.headerActions}>
               {editMode ? (
                 <TouchableOpacity 
                   onPress={() => {
-                    console.log('🟢 EXITING EDIT MODE');
+                      // 🆕 Rimosso log per performance
                     setEditMode(false);
                   }}
                   style={styles.exitEditButton}
                 >
-                  <Text style={styles.exitEditButtonText}>Done</Text>
+                  <Text style={styles.exitEditButtonText}>{t('home.done')}</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.headerButtons}>
@@ -877,12 +1113,18 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                   
                   <TouchableOpacity 
                     onPress={() => {
-                      console.log('🟢 ENTERING EDIT MODE');
+                      // 🆕 Rimosso log per performance
                       setEditMode(true);
                     }}
-                    style={styles.editModeButton}
+                    style={[
+                      styles.editModeButton,
+                      {
+                        backgroundColor: themeColors.primary,
+                        borderColor: themeColors.primaryDark,
+                      }
+                    ]}
                   >
-                    <Text style={styles.editModeButtonText}>Edit</Text>
+                    <Text style={styles.editModeButtonText}>{t('home.edit')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -893,7 +1135,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
           {/* Protezione per evitare crash se widgetData è vuoto */}
           {widgetData.length === 0 || configLoading ? (
             <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading widgets...</Text>
+              <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>{t('home.loadingWidgets')}</Text>
             </View>
           ) : (
             <>
@@ -961,8 +1203,6 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                                   ? { meditation: widgetInfo.meditation }
                                   : undefined
                               }
-                              onPress={() => handleWidgetPress(widget.id)}
-                              onLongPress={() => handleWidgetLongPress(widget.id)}
                             />
                           ) : (
                             <MiniInfoCard
@@ -977,8 +1217,6 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                               showStatus={widget.id === 'analyses'}
                               status={widgetInfo.analyses?.completed ? 'completed' : 'pending'}
                               detailChips={infoDetails}
-                              onPress={() => handleWidgetPress(widget.id)}
-                              onLongPress={() => handleWidgetLongPress(widget.id)}
                             />
                           )}
                         </EditableWidget>
@@ -1082,8 +1320,8 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
       
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Daily Check-In</Text>
-          <Text style={styles.sectionSubtitle}>A glance at how your body and mind feel</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCheckIn.title')}</Text>
+          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCheckIn.subtitle')}</Text>
         </View>
 
         {/* Self-check: Mood & Sleep */}
@@ -1094,8 +1332,6 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               note={moodNote}
               onChange={(v) => { setMoodValue(v); }}
               onSave={async ({value, note}) => { setMoodValue(value); setMoodNote(note); await saveMoodCheckin(value, note); }}
-              editing={showMoodCheckin}
-              onToggleEdit={() => setShowMoodCheckin(v => !v)}
             />
           </View>
 
@@ -1106,17 +1342,20 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               bedtime={sleepStats?.bedtime ?? '11:30 PM'}
               waketime={sleepStats?.wakeTime ?? '7:30 AM'}
               note={sleepNote}
+              restLevel={restLevel}
+              onChangeRestLevel={(level) => { setRestLevel(level); }}
               onSave={async ({quality, note}) => { setSleepQuality(quality); setSleepNote(note); await saveSleepCheckin(quality, note, restLevel); }}
-              editing={showSleepCheckin}
-              onToggleEdit={() => setShowSleepCheckin(v => !v)}
             />
           </View>
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today's Activities</Text>
-          <Text style={styles.sectionSubtitle}>
-            {activities.filter(a => a.completed).length} of {activities.length} completed
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.activities.title')}</Text>
+          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
+            {t('home.calendar.ofCompleted', { 
+              completed: activities.filter(a => a.completed).length, 
+              total: activities.length 
+            })}
           </Text>
         </View>
         <View style={styles.activityContainer}>
@@ -1133,8 +1372,8 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
 
         {/* AI Daily Copilot Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>AI Daily Copilot</Text>
-          <Text style={styles.sectionSubtitle}>La tua guida personalizzata per oggi</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>AI Daily Copilot</Text>
+          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>La tua guida personalizzata per oggi</Text>
         </View>
         
         <DailyCopilot
@@ -1147,8 +1386,8 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
 
         <View style={styles.sectionFooter}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Suggested For You</Text>
-            <Text style={styles.sectionSubtitle}>Curated routines to keep momentum going</Text>
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('wellnessSuggestions.title')}</Text>
+            <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('wellnessSuggestions.subtitle')}</Text>
           </View>
           <WellnessSuggestions context="general" />
         </View>
@@ -1185,7 +1424,17 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
             // ricarica widget data con i nuovi goal
             const goals = await widgetGoalsService.getGoals();
             const data = WidgetDataService.generateWidgetData(goals);
-            setWidgetData(data);
+            // Translate widget titles
+            const translatedData = data.map(w => ({
+              ...w,
+              title: w.id === 'steps' ? t('widgets.steps') :
+                     w.id === 'meditation' ? t('widgets.meditation') :
+                     w.id === 'hydration' ? t('widgets.hydration') :
+                     w.id === 'sleep' ? t('widgets.sleep') :
+                     w.id === 'hrv' ? t('widgets.hrv') :
+                     w.id === 'analyses' ? t('widgets.analyses') : w.title
+            }));
+            setWidgetData(translatedData);
             setGoalModal({ visible: false, widgetId: null });
           }}
         />
@@ -1195,9 +1444,32 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
       <HealthPermissionsModal
         visible={healthPermissionsModal}
         onClose={() => setHealthPermissionsModal(false)}
-        onSuccess={() => {
+        onSuccess={async () => {
           console.log('Health permissions granted');
-          // Refresh widget data to show real health data
+          // 🔥 Chiudi il modal PRIMA di fare sync per evitare loop
+          setHealthPermissionsModal(false);
+          
+          // 🔥 Forza sync dei dati e aggiornamento widget
+          try {
+            const syncResult = await syncData();
+            // 🔥 Se abbiamo dati, aggiorna i widget immediatamente
+            if (syncResult.success && syncResult.data) {
+              const data = await buildWidgetDataFromHealth();
+              setWidgetData(data);
+              console.log('📊 Widget data refreshed after permissions granted:', {
+                steps: syncResult.data.steps,
+                heartRate: syncResult.data.heartRate,
+                sleepHours: syncResult.data.sleepHours,
+              });
+            } else if (hasHealthData && healthData) {
+              // Fallback: usa i dati già disponibili
+              const data = await buildWidgetDataFromHealth();
+              setWidgetData(data);
+              console.log('📊 Widget data refreshed from existing health data');
+            }
+          } catch (error) {
+            console.error('Error syncing after permissions:', error);
+          }
           loadTodayGlanceData();
         }}
       />
@@ -1230,6 +1502,7 @@ const MoodFocusCard: React.FC<{
   onPress?: () => void;
   onLongPress?: () => void;
 }> = ({ moodLabel, deltaPct = 0, onPress, onLongPress }) => {
+  const { t } = useTranslation(); // 🆕 i18n
   const isPositive = moodLabel === 'Positive';
   const isNeutral  = moodLabel === 'Neutral';
   const gradient   = isPositive
@@ -1258,9 +1531,9 @@ const MoodFocusCard: React.FC<{
           </View>
         </View>
 
-        <Text style={styles.focusTitle}>Mood Balance</Text>
+        <Text style={styles.focusTitle}>{t('home.moodBalance')}</Text>
         <Text style={styles.focusPrimaryValue}>{moodLabel}</Text>
-        <Text style={styles.focusSubtext}>vs yesterday</Text>
+        <Text style={styles.focusSubtext}>{t('home.vsYesterday')}</Text>
       </LinearGradient>
     </Pressable>
   );
@@ -1275,6 +1548,7 @@ const SleepFocusCard: React.FC<{
   onPress?: () => void;
   onLongPress?: () => void;
 }> = ({ hoursLabel, quality = 0, deep, rem, onPress, onLongPress }) => {
+  const { t } = useTranslation(); // 🆕 i18n
   return (
     <Pressable onPress={onPress} onLongPress={onLongPress} style={{ flex: 1 }}>
       <LinearGradient colors={['#BFDBFE', '#93C5FD'] as const} start={{x:0,y:0}} end={{x:1,y:1}} style={styles.focusCard}>
@@ -1288,7 +1562,7 @@ const SleepFocusCard: React.FC<{
           )}
         </View>
 
-        <Text style={styles.focusTitle}>Restful Sleep</Text>
+        <Text style={styles.focusTitle}>{t('home.restfulSleep')}</Text>
         <Text style={styles.focusPrimaryValue}>{hoursLabel}</Text>
 
         {(deep || rem) && (
@@ -1316,6 +1590,7 @@ const ActivityItem: React.FC<{
   onSync: (a: DailyActivity) => void;
   permissions: { calendar: boolean; notifications: boolean };
 }> = ({ activity, index, onSync, permissions }) => {
+  const { colors: themeColors } = useTheme();
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: withDelay(index * 80, withTiming(1, { duration: 320 })),
     transform: [{ translateY: withDelay(index * 80, withTiming(0, { duration: 320 })) }],
@@ -1332,7 +1607,7 @@ const ActivityItem: React.FC<{
   })();
 
   return (
-    <Animated.View style={[styles.activityCard, animatedStyle]}>
+    <Animated.View style={[styles.activityCard, animatedStyle, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
       <TouchableOpacity activeOpacity={0.85}>
         <View style={styles.activityContent}>
           <View style={styles.activityLeft}>
@@ -1344,11 +1619,11 @@ const ActivityItem: React.FC<{
               />
             </View>
             <View style={styles.activityText}>
-              <Text style={[styles.activityTitle, activity.completed && styles.activityCompleted]}>
+              <Text style={[styles.activityTitle, { color: themeColors.text }, activity.completed && styles.activityCompleted]}>
                 {activity.title}
               </Text>
-              <Text style={styles.activityDescription}>{activity.description}</Text>
-              <Text style={styles.activityTime}>{activity.time}</Text>
+              <Text style={[styles.activityDescription, { color: themeColors.textSecondary }]}>{activity.description}</Text>
+              <Text style={[styles.activityTime, { color: themeColors.textTertiary }]}>{activity.time}</Text>
             </View>
           </View>
 
@@ -1398,7 +1673,7 @@ const ActivityItem: React.FC<{
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     paddingBottom: 120,
@@ -1409,12 +1684,13 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 28,
     marginHorizontal: 20,
+    marginTop: 8,
     marginBottom: 24,
-    shadowColor: '#312e81',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.4,
     shadowRadius: 24,
-    elevation: 8,
+    elevation: 12,
   },
   heroTopRow: {
     flexDirection: 'row',
@@ -1453,11 +1729,11 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#ffffff', // Sempre bianco sul gradient viola
   },
   tagline: {
     marginTop: 6,
-    color: 'rgba(255,255,255,0.85)',
+    color: 'rgba(255,255,255,0.9)', // Più leggibile
     fontSize: 13,
     lineHeight: 18,
   },
@@ -1472,39 +1748,42 @@ const styles = StyleSheet.create({
     maxWidth: '70%', // Increased max width for wider boxes
   },
   heroChip: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)', // Più trasparente per eleganza
     borderRadius: 16,
-    paddingVertical: 12, // Increased from 10
-    paddingHorizontal: 16, // Increased from 14
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 52, // Increased from 48 for more spacious feel
-    maxWidth: '100%', // Prevent overflow
+    minHeight: 52,
+    maxWidth: '100%',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)', // Bordo sottile per definizione
   },
   heroChipIcon: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   heroChipTextContainer: {
-    flex: 1, // Take remaining space
+    flex: 1,
     justifyContent: 'center',
   },
   heroChipLabel: {
-    color: 'rgba(255,255,255,0.72)',
+    color: 'rgba(255,255,255,0.75)', // Più leggibile
     fontSize: 11,
     marginBottom: 2,
+    fontWeight: '500',
   },
   heroChipValue: {
-    color: '#ffffff',
+    color: '#ffffff', // Sarà sovrascritto inline per dark mode
     fontSize: 14,
     fontWeight: '600',
-    lineHeight: 16, // Better line height for readability
+    lineHeight: 16,
   },
   sectionHeader: {
     paddingHorizontal: 20,
@@ -1518,12 +1797,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
+    // Colore gestito inline con themeColors.text
   },
   sectionSubtitle: {
     marginTop: 4,
     fontSize: 12,
-    color: '#6b7280',
+    // Colore gestito inline con themeColors.textSecondary
   },
   widgetGrid: {
     marginHorizontal: 20,
@@ -1669,21 +1948,21 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0f172a',
+    // Colore gestito inline con themeColors.text
     marginBottom: 2,
   },
   activityCompleted: {
     textDecorationLine: 'line-through',
-    color: '#6b7280',
+    // Colore gestito inline con themeColors.textSecondary
   },
   activityDescription: {
     fontSize: 14,
-    color: '#64748b',
+    // Colore gestito inline con themeColors.textSecondary
     marginBottom: 2,
   },
   activityTime: {
     fontSize: 12,
-    color: '#94a3b8',
+    // Colore gestito inline con themeColors.textTertiary
   },
   activityRight: {
     alignItems: 'center',
@@ -1756,32 +2035,31 @@ const styles = StyleSheet.create({
   },
   emptySlot: {
     height: 140,
-    backgroundColor: '#f8fafc',
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#e2e8f0',
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
+    // Colori gestiti inline con themeColors
   },
   emptySlotText: {
     fontSize: 32,
-    color: '#94a3b8',
     fontWeight: '300',
     marginBottom: 4,
+    // Colore gestito inline con themeColors.textTertiary
   },
   emptySlotHint: {
     fontSize: 10,
-    color: '#94a3b8',
     textAlign: 'center',
     fontWeight: '500',
+    // Colore gestito inline con themeColors.textTertiary
   },
   headerActions: {
     flexDirection: 'row',
     gap: 8,
   },
   exitEditButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#10b981', // Success sempre verde
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -1794,16 +2072,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   editModeButton: {
-    backgroundColor: '#3b82f6',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#2563eb',
+    // Colori gestiti inline con themeColors.primary
   },
   editModeButtonText: {
     fontSize: 12,
-    color: '#ffffff',
+    color: '#ffffff', // Sempre bianco sul bottone primario
     fontWeight: '600',
   },
   /** ---- Focus Cards ---- */

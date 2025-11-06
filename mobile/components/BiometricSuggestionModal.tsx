@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { BiometricAuthService } from '../services/biometric-auth.service';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 
 interface BiometricSuggestionModalProps {
   visible: boolean;
@@ -28,6 +29,7 @@ export const BiometricSuggestionModal: React.FC<BiometricSuggestionModalProps> =
   userEmail,
   userPassword,
 }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
   const [biometricType, setBiometricType] = useState<string>('');
   const [canUseBiometric, setCanUseBiometric] = useState(false);
   const [isSettingUp, setIsSettingUp] = useState(false);
@@ -110,16 +112,16 @@ export const BiometricSuggestionModal: React.FC<BiometricSuggestionModalProps> =
 
   const getBiometricTitle = () => {
     if (!canUseBiometric) {
-      return 'Autenticazione Biometrica';
+      return t('modals.biometricSuggestion.title');
     }
-    return `Abilita ${biometricType}`;
+    return t('modals.biometricSuggestion.enableTitle', { type: biometricType });
   };
 
   const getBiometricDescription = () => {
     if (!canUseBiometric) {
-      return 'I dati biometrici non sono disponibili su questo dispositivo.';
+      return t('modals.biometric.notSupported');
     }
-    return `Usa ${biometricType} per accedere rapidamente all'app senza inserire password.`;
+    return t('modals.biometricSuggestion.description', { type: biometricType });
   };
 
   return (
@@ -161,15 +163,15 @@ export const BiometricSuggestionModal: React.FC<BiometricSuggestionModalProps> =
                 <View style={styles.benefitsContainer}>
                   <View style={styles.benefitItem}>
                     <MaterialCommunityIcons name="shield-check" size={20} color="#fff" />
-                    <Text style={styles.benefitText}>Accesso sicuro e veloce</Text>
+                    <Text style={styles.benefitText}>{t('modals.biometric.benefit1')}</Text>
                   </View>
                   <View style={styles.benefitItem}>
                     <MaterialCommunityIcons name="lightning-bolt" size={20} color="#fff" />
-                    <Text style={styles.benefitText}>Nessuna password da ricordare</Text>
+                    <Text style={styles.benefitText}>{t('modals.biometric.benefit2')}</Text>
                   </View>
                   <View style={styles.benefitItem}>
                     <MaterialCommunityIcons name="lock" size={20} color="#fff" />
-                    <Text style={styles.benefitText}>Protezione avanzata</Text>
+                    <Text style={styles.benefitText}>{t('modals.biometric.benefit3')}</Text>
                   </View>
                 </View>
               )}
@@ -179,7 +181,7 @@ export const BiometricSuggestionModal: React.FC<BiometricSuggestionModalProps> =
                   style={styles.skipButton}
                   onPress={onSkip}
                 >
-                  <Text style={styles.skipButtonText}>Salta</Text>
+                  <Text style={styles.skipButtonText}>{t('common.skip')}</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity
@@ -206,7 +208,7 @@ export const BiometricSuggestionModal: React.FC<BiometricSuggestionModalProps> =
                         color="#667eea" 
                       />
                       <Text style={styles.enableButtonText}>
-                        {canUseBiometric ? 'Abilita' : 'Non Disponibile'}
+                        {canUseBiometric ? t('modals.biometric.enable') : t('modals.biometric.notAvailable')}
                       </Text>
                     </>
                   )}

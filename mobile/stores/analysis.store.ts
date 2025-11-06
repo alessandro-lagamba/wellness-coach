@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SkinAnalysisResults, EmotionData } from '../types/analysis.types';
+import { SkinAnalysisResults, EmotionData, FoodAnalysisResult } from '../types/analysis.types';
 
 // Types for our store
 interface SkinCapture {
@@ -31,6 +31,22 @@ export interface EmotionSession {
   duration: number; // in seconds
 }
 
+export interface FoodSession {
+  id: string;
+  timestamp: Date;
+  macronutrients: {
+    carbohydrates: number;
+    proteins: number;
+    fats: number;
+    fiber?: number;
+    calories: number;
+  };
+  meal_type: string;
+  health_score: number;
+  confidence: number;
+  identified_foods: string[];
+}
+
 interface AnalysisStore {
   // Skin Analysis
   latestSkinCapture: SkinCapture | null;
@@ -40,14 +56,20 @@ interface AnalysisStore {
   latestEmotionSession: EmotionSession | null;
   emotionHistory: EmotionSession[];
   
+  // Food Analysis
+  latestFoodSession: FoodSession | null;
+  foodHistory: FoodSession[];
+  
   // Actions
   addSkinCapture: (capture: SkinCapture) => void;
   addEmotionSession: (session: EmotionSession) => void;
+  addFoodSession: (session: FoodSession) => void;
   clearHistory: () => void;
   
   // ✅ FIX: Add safe getters for empty state handling
   getSafeSkinHistory: () => SkinCapture[];
   getSafeEmotionHistory: () => EmotionSession[];
+  getSafeFoodHistory: () => FoodSession[];
 }
 
 export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
@@ -56,6 +78,8 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   skinHistory: [],
   latestEmotionSession: null,
   emotionHistory: [],
+  latestFoodSession: null,
+  foodHistory: [],
   
   // Actions
   addSkinCapture: (capture: SkinCapture) => {
@@ -74,6 +98,14 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
     }));
   },
   
+  addFoodSession: (session: FoodSession) => {
+    console.log('📊 Adding food session to store:', session.id);
+    set((state) => ({
+      latestFoodSession: session,
+      foodHistory: [session, ...state.foodHistory.slice(0, 29)], // Keep last 30
+    }));
+  },
+  
   clearHistory: () => {
     console.log('📊 Clearing analysis history');
     set({
@@ -81,6 +113,8 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       skinHistory: [],
       latestEmotionSession: null,
       emotionHistory: [],
+      latestFoodSession: null,
+      foodHistory: [],
     });
   },
   
@@ -93,5 +127,10 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   getSafeEmotionHistory: () => {
     const state = get();
     return Array.isArray(state.emotionHistory) ? state.emotionHistory : [];
+  },
+  
+  getSafeFoodHistory: () => {
+    const state = get();
+    return Array.isArray(state.foodHistory) ? state.foodHistory : [];
   },
 }));

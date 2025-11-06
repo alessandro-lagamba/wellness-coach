@@ -14,6 +14,7 @@ import {
 import { FontAwesome } from '@expo/vector-icons';
 import { AuthService } from '../../services/auth.service';
 import { User } from '@supabase/supabase-js';
+import { useTranslation } from '../../hooks/useTranslation'; // 🆕 i18n
 
 interface PersonalInformationScreenProps {
   user: User;
@@ -24,6 +25,7 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
   user,
   onBack,
 }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState({
@@ -31,6 +33,9 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
     email: '',
     age: '',
     gender: 'prefer_not_to_say' as 'male' | 'female' | 'prefer_not_to_say',
+    weight: '',
+    height: '',
+    activity_level: 'sedentary' as 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extremely_active',
   });
 
   useEffect(() => {
@@ -47,11 +52,14 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
           email: userProfile.email || user.email || '',
           age: userProfile.age ? userProfile.age.toString() : '',
           gender: userProfile.gender || 'prefer_not_to_say',
+          weight: userProfile.weight ? userProfile.weight.toString() : '',
+          height: userProfile.height ? userProfile.height.toString() : '',
+          activity_level: userProfile.activity_level || 'sedentary',
         });
       }
     } catch (error) {
       console.error('Error loading profile:', error);
-      Alert.alert('Errore', 'Impossibile caricare il profilo');
+      Alert.alert(t('common.error'), t('profile.loadError'));
     } finally {
       setIsLoading(false);
     }
@@ -59,7 +67,7 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
 
   const handleSave = async () => {
     if (!profile.full_name.trim()) {
-      Alert.alert('Errore', 'Il nome completo è obbligatorio');
+      Alert.alert(t('common.error'), t('profile.fullNameRequired'));
       return;
     }
 
@@ -69,14 +77,17 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
         full_name: profile.full_name.trim(),
         age: profile.age ? parseInt(profile.age) : undefined,
         gender: profile.gender,
+        weight: profile.weight ? parseFloat(profile.weight) : undefined,
+        height: profile.height ? parseFloat(profile.height) : undefined,
+        activity_level: profile.activity_level,
       });
 
-      Alert.alert('Successo', 'Profilo aggiornato con successo', [
-        { text: 'OK', onPress: onBack }
+      Alert.alert(t('common.success'), t('profile.updateSuccess'), [
+        { text: t('common.ok'), onPress: onBack }
       ]);
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('Errore', 'Impossibile aggiornare il profilo');
+      Alert.alert(t('common.error'), t('profile.updateError'));
     } finally {
       setIsSaving(false);
     }
@@ -85,11 +96,28 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
   const getGenderLabel = (gender: string) => {
     switch (gender) {
       case 'male':
-        return 'Maschio';
+        return t('auth.gender.male');
       case 'female':
-        return 'Femmina';
+        return t('auth.gender.female');
       default:
-        return 'Preferisco non dire';
+        return t('auth.gender.preferNotToSay');
+    }
+  };
+
+  const getActivityLevelLabel = (level: string) => {
+    switch (level) {
+      case 'sedentary':
+        return t('profile.activityLevels.sedentary');
+      case 'lightly_active':
+        return t('profile.activityLevels.lightlyActive');
+      case 'moderately_active':
+        return t('profile.activityLevels.moderatelyActive');
+      case 'very_active':
+        return t('profile.activityLevels.veryActive');
+      case 'extremely_active':
+        return t('profile.activityLevels.extremelyActive');
+      default:
+        return t('profile.activityLevels.sedentary');
     }
   };
 
@@ -97,7 +125,7 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#8B5CF6" />
-        <Text style={styles.loadingText}>Caricamento profilo...</Text>
+        <Text style={styles.loadingText}>{t('profile.loading')}</Text>
       </View>
     );
   }
@@ -113,7 +141,7 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
           <TouchableOpacity style={styles.backButton} onPress={onBack}>
             <FontAwesome name="arrow-left" size={20} color="#8B5CF6" />
           </TouchableOpacity>
-          <Text style={styles.title}>Informazioni Personali</Text>
+          <Text style={styles.title}>{t('profile.title')}</Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -121,14 +149,14 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
         <View style={styles.form}>
           {/* Nome Completo */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nome Completo</Text>
+            <Text style={styles.label}>{t('profile.fullName')}</Text>
             <View style={styles.inputWrapper}>
               <FontAwesome name="user" size={16} color="#8B5CF6" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={profile.full_name}
                 onChangeText={(text) => setProfile({ ...profile, full_name: text })}
-                placeholder="Inserisci il tuo nome completo"
+                placeholder={t('profile.fullNamePlaceholder')}
                 placeholderTextColor="#9CA3AF"
               />
             </View>
@@ -143,23 +171,23 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
                 style={[styles.input, styles.disabledText]}
                 value={profile.email}
                 editable={false}
-                placeholder="Email"
+                placeholder={t('auth.email')}
                 placeholderTextColor="#9CA3AF"
               />
             </View>
-            <Text style={styles.helpText}>L'email non può essere modificata</Text>
+            <Text style={styles.helpText}>{t('profile.emailCannotBeChanged')}</Text>
           </View>
 
           {/* Età */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Età</Text>
+            <Text style={styles.label}>{t('auth.age')}</Text>
             <View style={styles.inputWrapper}>
               <FontAwesome name="calendar" size={16} color="#8B5CF6" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={profile.age}
                 onChangeText={(text) => setProfile({ ...profile, age: text })}
-                placeholder="Inserisci la tua età"
+                placeholder={t('auth.agePlaceholder')}
                 placeholderTextColor="#9CA3AF"
                 keyboardType="numeric"
                 maxLength={3}
@@ -169,18 +197,18 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
 
           {/* Genere */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Genere</Text>
+            <Text style={styles.label}>{t('auth.gender.label')}</Text>
             <TouchableOpacity 
               style={styles.inputWrapper}
               onPress={() => {
                 Alert.alert(
-                  'Seleziona Genere',
-                  'Scegli il tuo genere',
+                  t('auth.gender.selectTitle'),
+                  t('profile.selectGender'),
                   [
-                    { text: 'Maschio', onPress: () => setProfile({ ...profile, gender: 'male' }) },
-                    { text: 'Femmina', onPress: () => setProfile({ ...profile, gender: 'female' }) },
-                    { text: 'Preferisco non dire', onPress: () => setProfile({ ...profile, gender: 'prefer_not_to_say' }) },
-                    { text: 'Annulla', style: 'cancel' }
+                    { text: t('auth.gender.male'), onPress: () => setProfile({ ...profile, gender: 'male' }) },
+                    { text: t('auth.gender.female'), onPress: () => setProfile({ ...profile, gender: 'female' }) },
+                    { text: t('auth.gender.preferNotToSay'), onPress: () => setProfile({ ...profile, gender: 'prefer_not_to_say' }) },
+                    { text: t('common.cancel'), style: 'cancel' }
                   ]
                 );
               }}
@@ -189,6 +217,67 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
               <Text style={styles.inputText}>{getGenderLabel(profile.gender)}</Text>
               <FontAwesome name="chevron-down" size={14} color="#9CA3AF" />
             </TouchableOpacity>
+          </View>
+
+          {/* Peso */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t('profile.weight')}</Text>
+            <View style={styles.inputWrapper}>
+              <FontAwesome name="balance-scale" size={16} color="#8B5CF6" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={profile.weight}
+                onChangeText={(text) => setProfile({ ...profile, weight: text })}
+                placeholder={t('profile.weightPlaceholder')}
+                placeholderTextColor="#9CA3AF"
+                keyboardType="decimal-pad"
+              />
+              <Text style={styles.unitText}>kg</Text>
+            </View>
+          </View>
+
+          {/* Altezza */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t('profile.height')}</Text>
+            <View style={styles.inputWrapper}>
+              <FontAwesome name="ruler-vertical" size={16} color="#8B5CF6" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={profile.height}
+                onChangeText={(text) => setProfile({ ...profile, height: text })}
+                placeholder={t('profile.heightPlaceholder')}
+                placeholderTextColor="#9CA3AF"
+                keyboardType="decimal-pad"
+              />
+              <Text style={styles.unitText}>cm</Text>
+            </View>
+          </View>
+
+          {/* Livello di Attività */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t('profile.activityLevel')}</Text>
+            <TouchableOpacity 
+              style={styles.inputWrapper}
+              onPress={() => {
+                Alert.alert(
+                  t('profile.selectActivityLevel'),
+                  t('profile.selectActivityLevelDesc'),
+                  [
+                    { text: t('profile.activityLevels.sedentary'), onPress: () => setProfile({ ...profile, activity_level: 'sedentary' }) },
+                    { text: t('profile.activityLevels.lightlyActive'), onPress: () => setProfile({ ...profile, activity_level: 'lightly_active' }) },
+                    { text: t('profile.activityLevels.moderatelyActive'), onPress: () => setProfile({ ...profile, activity_level: 'moderately_active' }) },
+                    { text: t('profile.activityLevels.veryActive'), onPress: () => setProfile({ ...profile, activity_level: 'very_active' }) },
+                    { text: t('profile.activityLevels.extremelyActive'), onPress: () => setProfile({ ...profile, activity_level: 'extremely_active' }) },
+                    { text: t('common.cancel'), style: 'cancel' }
+                  ]
+                );
+              }}
+            >
+              <FontAwesome name="tachometer" size={16} color="#8B5CF6" style={styles.inputIcon} />
+              <Text style={styles.inputText}>{getActivityLevelLabel(profile.activity_level)}</Text>
+              <FontAwesome name="chevron-down" size={14} color="#9CA3AF" />
+            </TouchableOpacity>
+            <Text style={styles.helpText}>{t('profile.activityLevelHelp')}</Text>
           </View>
         </View>
 
@@ -203,7 +292,7 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
           ) : (
             <>
               <FontAwesome name="save" size={16} color="#FFFFFF" style={styles.buttonIcon} />
-              <Text style={styles.saveButtonText}>Salva Modifiche</Text>
+              <Text style={styles.saveButtonText}>{t('profile.saveChanges')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -305,6 +394,12 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 4,
     fontStyle: 'italic',
+  },
+  unitText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 8,
+    fontWeight: '500',
   },
   saveButton: {
     flexDirection: 'row',

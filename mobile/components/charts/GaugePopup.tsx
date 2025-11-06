@@ -6,6 +6,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { MetricsService } from '../../services/metrics.service';
 import { ActionsService } from '../../services/actions.service';
+import { useTranslation } from '../../hooks/useTranslation'; // 🆕 i18n
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -38,6 +40,8 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
   metric,
   icon
 }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
+  const { colors } = useTheme();
   // Calcola bucket e trend personalizzato
   const getBucketAndTrend = () => {
     if (!metric) return { bucket: null, trendInfo: null, action: null };
@@ -141,7 +145,7 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
     >
       <View style={styles.overlay}>
         <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.popupContainer}>
+          <View style={[styles.popupContainer, { backgroundColor: colors.surface, shadowColor: colors.shadowColor }]}>
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.titleContainer}>
@@ -158,7 +162,7 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
                 </View>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <FontAwesome name="times" size={20} color="#64748b" />
+                <FontAwesome name="times" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -177,14 +181,14 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
               {/* Trend Section */}
               {trendInfo && (
                 <View style={styles.trendSection}>
-                  <Text style={styles.sectionTitle}>Trend vs tuo solito</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.trend')}</Text>
                   <View style={styles.trendRow}>
                     <FontAwesome
                       name={trendInfo.trend === '↑' ? 'arrow-up' : trendInfo.trend === '↓' ? 'arrow-down' : 'arrow-right'}
                       size={16}
                       color={trendInfo.trend === '↑' ? '#10b981' : trendInfo.trend === '↓' ? '#ef4444' : '#6b7280'}
                     />
-                    <Text style={styles.trendText}>{trendInfo.text}</Text>
+                    <Text style={[styles.trendText, { color: colors.textSecondary }]}>{trendInfo.text}</Text>
                     {trendInfo.percentage !== 0 && (
                       <Text style={styles.trendPercentage}>{trendInfo.percentage}%</Text>
                     )}
@@ -194,24 +198,24 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
 
               {/* Why it matters */}
               <View style={styles.infoSection}>
-                <Text style={styles.sectionTitle}>Perché è importante</Text>
-                <Text style={styles.infoText}>{metricInfo.whyItMatters}</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.whyImportant')}</Text>
+                <Text style={[styles.infoText, { color: colors.textSecondary }]}>{metricInfo.whyItMatters}</Text>
               </View>
 
               {/* How it works */}
               <View style={styles.infoSection}>
-                <Text style={styles.sectionTitle}>Come funziona</Text>
-                <Text style={styles.infoText}>{metricInfo.howItWorks}</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.howItWorks')}</Text>
+                <Text style={[styles.infoText, { color: colors.textSecondary }]}>{metricInfo.howItWorks}</Text>
               </View>
 
               {/* Examples */}
               {Object.keys(metricInfo.examples).length > 0 && (
                 <View style={styles.infoSection}>
-                  <Text style={styles.sectionTitle}>Esempi</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.examples')}</Text>
                   {Object.entries(metricInfo.examples).map(([key, example]) => (
                     <View key={key} style={styles.exampleRow}>
                       <Text style={styles.exampleLabel}>{key === 'positive' || key === 'good' || key === 'balanced' ? '✓' : '⚠'}</Text>
-                      <Text style={styles.exampleText}>{example}</Text>
+                      <Text style={[styles.exampleText, { color: colors.textSecondary }]}>{example}</Text>
                     </View>
                   ))}
                 </View>
@@ -220,15 +224,15 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
               {/* Action Section */}
               {action && action.actionable && (
                 <View style={styles.actionSection}>
-                  <Text style={styles.sectionTitle}>Azione consigliata</Text>
-                  <View style={styles.actionCard}>
-                    <Text style={styles.actionTitle}>{action.title}</Text>
-                    <Text style={styles.actionDescription}>{action.description}</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.recommendedAction')}</Text>
+                  <View style={[styles.actionCard, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
+                    <Text style={[styles.actionTitle, { color: colors.text }]}>{action.title}</Text>
+                    <Text style={[styles.actionDescription, { color: colors.textSecondary }]}>{action.description}</Text>
                     {action.resources && action.resources.length > 0 && (
                       <View style={styles.resourcesContainer}>
-                        <Text style={styles.resourcesLabel}>Risorse:</Text>
+                        <Text style={[styles.resourcesLabel, { color: colors.text }]}>{t('popups.gauge.resources')}:</Text>
                         {action.resources.map((resource, index) => (
-                          <Text key={index} style={styles.resourceItem}>• {resource}</Text>
+                          <Text key={index} style={[styles.resourceItem, { color: colors.textSecondary }]}>• {resource}</Text>
                         ))}
                       </View>
                     )}
@@ -238,8 +242,8 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
 
               {/* Disclaimer */}
               <View style={styles.disclaimerSection}>
-                <Text style={styles.disclaimerText}>
-                  ⚠️ Valutazione cosmetica, non diagnostica. Per dubbi clinici rivolgiti a un professionista.
+                <Text style={[styles.disclaimerText, { color: colors.textSecondary }]}>
+                  {t('popups.gauge.disclaimer')}
                 </Text>
               </View>
             </View>

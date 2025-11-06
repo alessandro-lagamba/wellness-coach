@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
+import { useTheme } from '../contexts/ThemeContext';
 
 type WidgetKey = 'steps' | 'hydration' | 'meditation' | 'sleep';
 
@@ -11,14 +13,18 @@ interface Props {
   onSave: (value: number) => void;
 }
 
-const labels: Record<WidgetKey, { title: string; unit: string; hint: string; min: number; max: number; step: number }> = {
-  steps:      { title: 'Daily Steps Goal',     unit: 'steps',   hint: 'e.g. 10000', min: 1000,  max: 40000, step: 500 },
-  hydration:  { title: 'Hydration Goal',       unit: 'glasses', hint: 'e.g. 8',     min: 1,     max: 20,    step: 1   },
-  meditation: { title: 'Meditation Goal',      unit: 'minutes', hint: 'e.g. 30',    min: 1,     max: 180,   step: 5   },
-  sleep:      { title: 'Sleep Goal',           unit: 'hours',   hint: 'e.g. 8',     min: 4,     max: 12,    step: 0.5 },
-};
+// 🆕 labels verranno costruiti dinamicamente con traduzioni
 
 const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onClose, onSave }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
+  const { colors } = useTheme();
+  // 🆕 Costruisci labels dinamicamente con traduzioni
+  const labels: Record<WidgetKey, { title: string; unit: string; hint: string; min: number; max: number; step: number }> = {
+    steps:      { title: t('modals.widgetGoal.steps.title'),     unit: t('modals.widgetGoal.steps.unit'),   hint: t('modals.widgetGoal.steps.hint'), min: 1000,  max: 40000, step: 500 },
+    hydration:  { title: t('modals.widgetGoal.hydration.title'), unit: t('modals.widgetGoal.hydration.unit'), hint: t('modals.widgetGoal.hydration.hint'), min: 1,     max: 20,    step: 1   },
+    meditation: { title: t('modals.widgetGoal.meditation.title'), unit: t('modals.widgetGoal.meditation.unit'), hint: t('modals.widgetGoal.meditation.hint'), min: 1,     max: 180,   step: 5   },
+    sleep:      { title: t('modals.widgetGoal.sleep.title'),     unit: t('modals.widgetGoal.sleep.unit'),   hint: t('modals.widgetGoal.sleep.hint'), min: 4,     max: 12,    step: 0.5 },
+  };
   const meta = labels[widgetId];
   const [value, setValue] = useState<string>(initialValue ? String(initialValue) : '');
 
@@ -37,9 +43,9 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.scrim}>
-        <View style={styles.sheet}>
-          <Text style={styles.title}>{meta.title}</Text>
-          <Text style={styles.subtitle}>Set your preferred daily target.</Text>
+        <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.title, { color: colors.text }]}>{meta.title}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('modals.widgetGoal.subtitle')}</Text>
 
           <View style={styles.inputRow}>
             <TextInput
@@ -47,24 +53,28 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
               onChangeText={setValue}
               keyboardType="numeric"
               placeholder={meta.hint}
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.surfaceMuted, color: colors.text, borderColor: colors.border }]}
               returnKeyType="done"
             />
-            <View style={styles.unitPill}>
-              <Text style={styles.unitText}>{meta.unit}</Text>
+            <View style={[styles.unitPill, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}> 
+              <Text style={[styles.unitText, { color: colors.text }]}>{meta.unit}</Text>
             </View>
           </View>
 
-          <Text style={styles.rangeHint}>
-            Min {meta.min} • Max {meta.max} ({meta.step}{meta.unit === 'hours' ? 'h' : ''} step)
+          <Text style={[styles.rangeHint, { color: colors.textSecondary }]}>
+            {t('modals.widgetGoal.rangeHint', { 
+              min: meta.min, 
+              max: meta.max, 
+              step: `${meta.step}${meta.unit === t('modals.widgetGoal.sleep.unit') ? 'h' : ''}`
+            })}
           </Text>
 
           <View style={styles.buttons}>
-            <TouchableOpacity style={[styles.btn, styles.btnGhost]} onPress={onClose}>
-              <Text style={[styles.btnText, styles.btnGhostText]}>Cancel</Text>
+            <TouchableOpacity style={[styles.btn, styles.btnGhost, { backgroundColor: colors.surfaceMuted }]} onPress={onClose}>
+              <Text style={[styles.btnText, { color: colors.text }]}>{t('common.cancel')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.btn, styles.btnPrimary]} onPress={handleSave}>
-              <Text style={[styles.btnText, styles.btnPrimaryText]}>Save</Text>
+            <TouchableOpacity style={[styles.btn, styles.btnPrimary, { backgroundColor: colors.primary }]} onPress={handleSave}>
+              <Text style={[styles.btnText, styles.btnPrimaryText]}>{t('common.save')}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -12,9 +12,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { IntelligentInsightCard } from './IntelligentInsightCard';
 import IntelligentInsightService, { IntelligentInsight, InsightAnalysisResponse } from '../services/intelligent-insight.service';
 import IntelligentInsightDBService from '../services/intelligent-insight-db.service';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface IntelligentInsightsSectionProps {
-  category: 'emotion' | 'skin';
+  category: 'emotion' | 'skin' | 'food';
   data: any;
   maxInsights?: number;
   showTitle?: boolean;
@@ -32,6 +33,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
   onInsightPress,
   onActionPress,
 }) => {
+  const { colors } = useTheme();
   const [insights, setInsights] = useState<IntelligentInsight[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -146,11 +148,19 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
         };
       case 'skin':
         return {
-          title: 'Intelligent Insights Cutanei',
+          title: 'Intelligent Insights Pelle',
           subtitle: 'Analisi AI personalizzata della salute della tua pelle',
           icon: 'face-woman-shimmer',
           colors: ['#22d3ee', '#6366f1'],
-          bgColors: ['#f0f9ff', '#e0f2fe'],
+          bgColors: ['#f0fdfa', '#e0f2fe'],
+        };
+      case 'food':
+        return {
+          title: 'Intelligent Insights Nutrizionali',
+          subtitle: 'Analisi AI personalizzata della tua alimentazione',
+          icon: 'food-apple',
+          colors: ['#f59e0b', '#ef4444'],
+          bgColors: ['#fef3c7', '#fee2e2'],
         };
       default:
         return {
@@ -240,11 +250,11 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
         <View style={styles.header}>
           <View style={styles.titleRow}>
             <View style={styles.titleContainer}>
-              <Text style={styles.title}>{categoryInfo.title}</Text>
-              <Text style={styles.subtitle}>{categoryInfo.subtitle}</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{categoryInfo.title}</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{categoryInfo.subtitle}</Text>
             </View>
             <TouchableOpacity 
-              style={styles.refreshButton}
+              style={[styles.refreshButton, { backgroundColor: `${categoryInfo.colors[0]}22` }]}
               onPress={loadIntelligentInsights}
             >
               <MaterialCommunityIcons name="refresh" size={20} color={categoryInfo.colors[0]} />
@@ -310,19 +320,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#64748b',
     lineHeight: 20,
   },
   refreshButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
@@ -381,7 +388,6 @@ const styles = StyleSheet.create({
   },
   loadingSubtext: {
     fontSize: 14,
-    color: '#64748b',
     textAlign: 'center',
   },
   errorCard: {
@@ -398,7 +404,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
-    color: '#64748b',
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -423,11 +428,9 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0f172a',
   },
   emptyText: {
     fontSize: 14,
-    color: '#64748b',
     textAlign: 'center',
     lineHeight: 20,
   },

@@ -16,12 +16,16 @@ import {
   Keyboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+// Removed status bar manipulation to restore original behavior
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AuthService } from '../../services/auth.service';
 import { BiometricAuthService } from '../../services/biometric-auth.service';
 import { BiometricSetupModal } from '../BiometricSetupModal';
 import { BiometricSuggestionModal } from '../BiometricSuggestionModal';
+import { useTranslation } from '../../hooks/useTranslation'; // 🆕 i18n
+import { useStatusBarColor } from '../../contexts/StatusBarContext'; // 🆕 StatusBar override
 
 const { width } = Dimensions.get('window');
 
@@ -32,7 +36,19 @@ interface AuthScreenProps {
 type AuthMode = 'login' | 'signup';
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
+  const { setStatusBarColor } = useStatusBarColor(); // 🆕 Override status bar color
   const [mode, setMode] = useState<AuthMode>('login');
+  const insets = useSafeAreaInsets();
+  
+  // 🆕 AuthWrapper gestisce già il colore della status bar durante loading/!isAuthenticated
+  // Questo useEffect assicura che il colore sia impostato anche se AuthScreen viene renderizzato direttamente
+  useEffect(() => {
+    // Colore del gradiente: '#667eea' (primo colore)
+    setStatusBarColor('#667eea');
+    
+    // Non facciamo cleanup qui perché AuthWrapper gestisce già il cambio quando isAuthenticated diventa true
+  }, [setStatusBarColor]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -91,25 +107,26 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [keyboardHeightValue, setKeyboardHeightValue] = useState(0);
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
+  // No status bar side-effects here (original behavior)
 
   const validateForm = () => {
     if (!email || !password || (mode === 'signup' && (!firstName || !lastName))) {
-      Alert.alert('Errore', 'Compila tutti i campi obbligatori');
+      Alert.alert(t('auth.error'), t('auth.fillAllFields'));
       return false;
     }
 
     if (mode === 'signup') {
       if (password !== confirmPassword) {
-        Alert.alert('Errore', 'Le password non coincidono');
+        Alert.alert(t('auth.error'), t('auth.passwordsDoNotMatch'));
         return false;
       }
       if (password.length < 6) {
-        Alert.alert('Errore', 'La password deve essere di almeno 6 caratteri');
+        Alert.alert(t('auth.error'), t('auth.passwordMinLength'));
         return false;
       }
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        Alert.alert('Errore', 'Inserisci un indirizzo email valido');
+        Alert.alert(t('auth.error'), t('auth.invalidEmail'));
         return false;
       }
     }
@@ -119,21 +136,21 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   const handleBiometricSuggestionEnable = () => {
     console.log('✅ Biometric authentication enabled for new user');
     setShowBiometricSuggestion(false);
-    Alert.alert(
-      'Registrazione Completata',
-      "Controlla la tua email per confermare l'account",
-      [{ text: 'OK', onPress: () => onAuthSuccess({ email: newUserCredentials?.email, id: 'temp-id' }) }],
-    );
+      Alert.alert(
+        t('auth.signupCompleted'),
+        t('auth.checkEmail'),
+        [{ text: t('common.ok'), onPress: () => onAuthSuccess({ email: newUserCredentials?.email, id: 'temp-id' }) }],
+      );
   };
 
   const handleBiometricSuggestionSkip = () => {
     console.log('⏭️ User skipped biometric setup');
     setShowBiometricSuggestion(false);
-    Alert.alert(
-      'Registrazione Completata',
-      "Controlla la tua email per confermare l'account",
-      [{ text: 'OK', onPress: () => onAuthSuccess({ email: newUserCredentials?.email, id: 'temp-id' }) }],
-    );
+      Alert.alert(
+        t('auth.signupCompleted'),
+        t('auth.checkEmail'),
+        [{ text: t('common.ok'), onPress: () => onAuthSuccess({ email: newUserCredentials?.email, id: 'temp-id' }) }],
+      );
   };
 
   // Biometric login removed - only AuthWrapper handles biometrics for authenticated users
@@ -146,11 +163,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       if (mode === 'login') {
         const { user, error } = await AuthService.signIn(email, password, rememberMe);
         if (error) {
-          Alert.alert('Errore Login', error.message || 'Credenziali non valide');
+          Alert.alert(t('auth.loginError'), error.message || t('auth.invalidCredentials'));
           return;
         }
         if (user) {
-          Alert.alert('Successo', 'Login effettuato con successo!');
+          Alert.alert(t('common.success'), t('auth.loginSuccess'));
           
           // Show biometric setup if available and not already configured
           const biometricEnabled = await BiometricAuthService.isBiometricEnabled();
@@ -163,7 +180,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       } else {
         const { user, error } = await AuthService.signUp(email, password, `${firstName} ${lastName}`);
         if (error) {
-          Alert.alert('Errore Registrazione', error.message || 'Errore durante la registrazione');
+          Alert.alert(t('auth.signupError'), error.message || t('auth.signupFailed'));
           return;
         }
         if (user) {
@@ -203,9 +220,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
               setShowBiometricSuggestion(true);
             } else {
               Alert.alert(
-                'Registrazione Completata',
-                "Controlla la tua email per confermare l'account",
-                [{ text: 'OK', onPress: () => onAuthSuccess(user) }],
+                t('auth.signupCompleted'),
+                t('auth.checkEmail'),
+                [{ text: t('common.ok'), onPress: () => onAuthSuccess(user) }],
               );
             }
           } catch (error) {
@@ -218,7 +235,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
         }
       }
     } catch {
-      Alert.alert('Errore', "Si è verificato un errore durante l'operazione");
+      Alert.alert(t('common.error'), t('auth.operationError'));
     } finally {
       setIsLoading(false);
     }
@@ -226,18 +243,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      Alert.alert('Errore', 'Inserisci prima la tua email');
+      Alert.alert(t('common.error'), t('auth.enterEmailFirst'));
       return;
     }
     try {
       const { error } = await AuthService.resetPassword(email);
       if (error) {
-        Alert.alert('Errore', error.message || 'Errore durante il reset password');
+        Alert.alert(t('common.error'), error.message || t('auth.resetPasswordError'));
         return;
       }
-      Alert.alert('Email Inviata', 'Controlla la tua casella di posta per le istruzioni');
+      Alert.alert(t('auth.emailSent'), t('auth.checkEmailForInstructions'));
     } catch {
-      Alert.alert('Errore', 'Si è verificato un errore');
+      Alert.alert(t('common.error'), t('auth.genericError'));
     }
   };
 
@@ -276,11 +293,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
   const getGenderLabel = (value: string) => {
     switch (value) {
-      case 'male': return 'Uomo';
-      case 'female': return 'Donna';
-      case 'other': return 'Altro';
-      case 'prefer_not_to_say': return 'Preferisco non dire';
-      default: return 'Seleziona genere';
+      case 'male': return t('auth.gender.male');
+      case 'female': return t('auth.gender.female');
+      case 'other': return t('auth.gender.other');
+      case 'prefer_not_to_say': return t('auth.gender.preferNotToSay');
+      default: return t('auth.gender.select');
     }
   };
 
@@ -377,7 +394,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#667eea', '#764ba2', '#f093fb']} style={styles.gradient}>
+      {/* Safe padding to ensure top area is painted on all devices */}
+      <LinearGradient colors={['#667eea', '#764ba2', '#f093fb']} style={[styles.gradient, { paddingTop: insets.top }] }>
         <ScrollView
           ref={scrollViewRef}
           contentContainerStyle={[
@@ -396,9 +414,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                   <FontAwesome name="heart" size={32} color="#667eea" />
                 </LinearGradient>
               </View>
-              <Text style={styles.title}>{mode === 'login' ? 'Benvenuto' : 'Crea Account'}</Text>
+              <Text style={styles.title}>{mode === 'login' ? t('auth.welcome') : t('auth.createAccount')}</Text>
               <Text style={styles.subtitle}>
-                {mode === 'login' ? 'Accedi al tuo account WellnessCoach' : 'Inizia il tuo percorso di benessere'}
+                {mode === 'login' ? t('auth.loginSubtitle') : t('auth.signupSubtitle')}
               </Text>
             </View>
 
@@ -426,10 +444,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                   ]}
                 />
                 <TouchableOpacity style={styles.toggleButton} onPress={() => switchMode('login')}>
-                  <Text style={[styles.toggleText, mode === 'login' && styles.toggleTextActive]}>Accedi</Text>
+                  <Text style={[styles.toggleText, mode === 'login' && styles.toggleTextActive]}>{t('auth.login')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.toggleButton} onPress={() => switchMode('signup')}>
-                  <Text style={[styles.toggleText, mode === 'signup' && styles.toggleTextActive]}>Registrati</Text>
+                  <Text style={[styles.toggleText, mode === 'signup' && styles.toggleTextActive]}>{t('auth.signup')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -442,12 +460,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                     {/* ROW: Nome + Cognome */}
                     <View style={styles.row}>
                       <View style={[styles.inputContainer, styles.halfWidth]}>
-                        <Text style={styles.inputLabel}>Nome *</Text>
+                        <Text style={styles.inputLabel}>{t('auth.firstName')} *</Text>
                         <View style={styles.inputWrapperTransparent}>
                           <FontAwesome name="user" size={16} color="#e5e7eb" style={styles.inputIcon} />
                           <TextInput
                             style={styles.inputTransparent}
-                            placeholder="Nome"
+                            placeholder={t('auth.firstName')}
                             placeholderTextColor="#e5e7ebaa"
                             value={firstName}
                             onChangeText={setFirstName}
@@ -459,12 +477,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                       </View>
 
                       <View style={[styles.inputContainer, styles.halfWidth]}>
-                        <Text style={styles.inputLabel}>Cognome *</Text>
+                        <Text style={styles.inputLabel}>{t('auth.lastName')} *</Text>
                         <View style={styles.inputWrapperTransparent}>
                           <FontAwesome name="user" size={16} color="#e5e7eb" style={styles.inputIcon} />
                           <TextInput
                             style={styles.inputTransparent}
-                            placeholder="Cognome"
+                            placeholder={t('auth.lastName')}
                             placeholderTextColor="#e5e7ebaa"
                             value={lastName}
                             onChangeText={setLastName}
@@ -479,7 +497,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                     {/* ROW: Genere + Età */}
                     <View style={styles.row}>
                       <View style={[styles.inputContainer, styles.fieldHalf, { marginBottom: 0 }]}>
-                        <Text style={styles.inputLabel}>Genere</Text>
+                        <Text style={styles.inputLabel}>{t('auth.gender.label')}</Text>
                         <TouchableOpacity style={styles.inputWrapperTransparent} onPress={() => setShowGenderModal(true)}>
                           <FontAwesome name="venus-mars" size={16} color="#e5e7eb" style={styles.inputIcon} />
                           <Text style={[styles.inputTransparent, { color: gender === 'male' ? '#e5e7ebaa' : '#fff' }]}>
@@ -490,12 +508,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                       </View>
 
                       <View style={[styles.inputContainer, styles.fieldHalf, { marginBottom: 0 }]}>
-                        <Text style={styles.inputLabel}>Età</Text>
+                        <Text style={styles.inputLabel}>{t('auth.age')}</Text>
                         <View style={styles.inputWrapperTransparent}>
                           <FontAwesome name="calendar" size={16} color="#e5e7eb" style={styles.inputIcon} />
                           <TextInput
                             style={styles.inputTransparent}
-                            placeholder="Es. 28"
+                            placeholder={t('auth.agePlaceholder')}
                             placeholderTextColor="#e5e7ebaa"
                             value={age}
                             onChangeText={setAge}
@@ -511,12 +529,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                 )}
 
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Email *</Text>
+                  <Text style={styles.inputLabel}>{t('auth.email')} *</Text>
                   <View style={styles.inputWrapperTransparent}>
                     <FontAwesome name="envelope" size={16} color="#e5e7eb" style={styles.inputIcon} />
                     <TextInput
                       style={styles.inputTransparent}
-                      placeholder="Inserisci la tua email"
+                      placeholder={t('auth.emailPlaceholder')}
                       placeholderTextColor="#e5e7ebaa"
                       value={email}
                       onChangeText={setEmail}
@@ -530,12 +548,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                 </View>
 
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Password *</Text>
+                  <Text style={styles.inputLabel}>{t('auth.password')} *</Text>
                   <View style={styles.inputWrapperTransparent}>
                     <FontAwesome name="lock" size={16} color="#e5e7eb" style={styles.inputIcon} />
                     <TextInput
                       style={styles.inputTransparent}
-                      placeholder={mode === 'login' ? 'Inserisci la tua password' : 'Crea una password sicura'}
+                      placeholder={mode === 'login' ? t('auth.passwordPlaceholder') : t('auth.passwordPlaceholderSignup')}
                       placeholderTextColor="#e5e7ebaa"
                       value={password}
                       onChangeText={setPassword}
@@ -562,19 +580,19 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                           <FontAwesome name="check" size={12} color="#fff" />
                         )}
                       </View>
-                      <Text style={styles.rememberMeText}>Ricordami</Text>
+                      <Text style={styles.rememberMeText}>{t('auth.rememberMe')}</Text>
                     </TouchableOpacity>
                   </View>
                 )}
 
                 {mode === 'signup' && (
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Conferma Password *</Text>
+                    <Text style={styles.inputLabel}>{t('auth.confirmPassword')} *</Text>
                     <View style={styles.inputWrapperTransparent}>
                       <FontAwesome name="lock" size={16} color="#e5e7eb" style={styles.inputIcon} />
                       <TextInput
                         style={styles.inputTransparent}
-                        placeholder="Conferma la tua password"
+                        placeholder={t('auth.confirmPasswordPlaceholder')}
                         placeholderTextColor="#e5e7ebaa"
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
@@ -590,7 +608,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
                 {mode === 'login' && (
                   <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword}>
-                    <Text style={styles.forgotPasswordText}>Password dimenticata?</Text>
+                    <Text style={styles.forgotPasswordText}>{t('auth.forgotPassword')}</Text>
                   </TouchableOpacity>
                 )}
               </Animated.View>
@@ -605,7 +623,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
               ) : (
                 <>
                   <FontAwesome name={mode === 'login' ? 'sign-in' : 'user-plus'} size={18} color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.authButtonText}>{mode === 'login' ? 'Accedi' : 'Registrati'}</Text>
+                  <Text style={styles.authButtonText}>{mode === 'login' ? t('auth.login') : t('auth.signup')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -617,7 +635,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Seleziona Genere</Text>
+                <Text style={styles.modalTitle}>{t('auth.gender.selectTitle')}</Text>
                 <TouchableOpacity onPress={() => setShowGenderModal(false)} style={styles.modalCloseButton}>
                   <FontAwesome name="times" size={20} color="#666" />
                 </TouchableOpacity>
@@ -625,10 +643,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
               <View style={styles.genderOptions}>
                 {[
-                  { value: 'male', label: 'Uomo', icon: 'male' },
-                  { value: 'female', label: 'Donna', icon: 'female' },
-                  { value: 'other', label: 'Altro', icon: 'question' },
-                  { value: 'prefer_not_to_say', label: 'Preferisco non dire', icon: 'eye-slash' },
+                  { value: 'male', label: t('auth.gender.male'), icon: 'male' },
+                  { value: 'female', label: t('auth.gender.female'), icon: 'female' },
+                  { value: 'other', label: t('auth.gender.other'), icon: 'question' },
+                  { value: 'prefer_not_to_say', label: t('auth.gender.preferNotToSay'), icon: 'eye-slash' },
                 ].map((option) => (
                   <TouchableOpacity
                     key={option.value}

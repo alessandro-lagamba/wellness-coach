@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, {
@@ -53,8 +54,10 @@ import { InsightSection } from './InsightSection';
 import { DetailedAnalysisPopup } from './DetailedAnalysisPopup';
 import { IntelligentInsightsSection } from './IntelligentInsightsSection';
 import { VideoHero } from './VideoHero';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
+import { useTheme } from '../contexts/ThemeContext';
 
-import Colors from '../constants/Colors';
+// Removed Colors import - using theme colors instead
 
 const { width } = Dimensions.get('window');
 
@@ -91,6 +94,8 @@ const INITIAL_EMOTION_SCORES: Record<Emotion, number> = {
 const heroVideoUri = require('../assets/videos/emotion-detection-video.mp4');
 
 export const EmotionDetectionScreen: React.FC = () => {
+  const { t } = useTranslation(); // 🆕 i18n hook
+  const { colors: themeColors } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
   const router = useRouter();
   
@@ -136,11 +141,6 @@ export const EmotionDetectionScreen: React.FC = () => {
     return mapped;
   }, [emotionScores]);
 
-  const headerStats = [
-    { label: 'Current mood', value: currentEmotion ? capitalise(currentEmotion) : 'Ready to scan' },
-    { label: 'Recent logs', value: emotionHistory.length ? `${emotionHistory.length} saved` : 'None yet' },
-  ];
-
   const startDisabled = permissionChecking || detecting || !analysisReady || !!analysisError;
   const captureDisabled = !cameraController.ready || permissionChecking || detecting;
 
@@ -168,7 +168,7 @@ export const EmotionDetectionScreen: React.FC = () => {
       const ready = !!result?.overall;
       if (isMountedRef.current) {
         setAnalysisReady(ready);
-        setAnalysisError(ready ? null : 'Unable to initialize analysis service. Check OpenAI settings.');
+        setAnalysisError(ready ? null : t('analysis.emotion.errors.initializationFailed'));
       }
       return ready;
     } catch (error) {
@@ -286,13 +286,13 @@ export const EmotionDetectionScreen: React.FC = () => {
     const granted = await ensureCameraPermission();
     console.log('📷 Camera permission granted:', granted);
     if (!granted) {
-      alert('Camera permission is required for emotion detection');
+      alert(t('analysis.emotion.errors.cameraPermission'));
       return;
     }
 
     const ready = await ensureAnalysisReady();
     if (!ready) {
-      alert('Analysis service is not ready. Please check your OpenAI configuration.');
+      alert(t('analysis.emotion.errors.serviceNotReady'));
       return;
     }
 
@@ -314,14 +314,14 @@ export const EmotionDetectionScreen: React.FC = () => {
     try {
       const ready = await ensureAnalysisReady();
       if (!ready) {
-        alert('Analysis service is not ready. Please check your OpenAI configuration.');
+        alert(t('analysis.emotion.errors.serviceNotReady'));
         return;
       }
 
       // Request image picker permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        alert('Media library permission is required to select photos');
+        alert(t('analysis.emotion.errors.mediaLibraryPermission'));
         return;
       }
 
@@ -356,7 +356,7 @@ export const EmotionDetectionScreen: React.FC = () => {
           : asset.uri;
 
         if (!dataUrl) {
-          alert('Failed to process selected image');
+          alert(t('analysis.emotion.errors.imageProcessingFailed'));
           return;
         }
 
@@ -394,7 +394,7 @@ export const EmotionDetectionScreen: React.FC = () => {
           
         } else {
           console.error('Gallery emotion analysis failed:', analysisResult.error);
-          alert('Analysis failed: ' + (analysisResult.error || 'Unknown error'));
+          alert(t('analysis.emotion.errors.analysisFailed', { error: analysisResult.error || 'Unknown error' }));
           setDetecting(false);
         }
       } else {
@@ -402,7 +402,7 @@ export const EmotionDetectionScreen: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Gallery analysis error:', error);
-      alert('Failed to analyze image: ' + error.message);
+      alert(t('analysis.emotion.errors.failedToAnalyze', { error: error.message }));
       setDetecting(false);
     }
   };
@@ -422,7 +422,7 @@ export const EmotionDetectionScreen: React.FC = () => {
     });
 
     if (!isCameraReady()) {
-      const errorMsg = error || 'Camera not ready. Please wait a moment...';
+      const errorMsg = error || t('analysis.emotion.errors.cameraNotReady');
       console.error('📸 Capture failed:', errorMsg);
       alert(errorMsg);
       return;
@@ -435,7 +435,7 @@ export const EmotionDetectionScreen: React.FC = () => {
     try {
       const serviceReady = await ensureAnalysisReady();
       if (!serviceReady) {
-        const errorMsg = 'Analysis service is not ready. Please check your OpenAI configuration.';
+        const errorMsg = t('analysis.emotion.errors.serviceNotReady');
         console.error('📸 Capture failed:', errorMsg);
         alert(errorMsg);
         return;
@@ -682,16 +682,16 @@ export const EmotionDetectionScreen: React.FC = () => {
         error: error,
       });
       
-      let errorMessage = 'Failed to capture image.';
+      let errorMessage = t('analysis.emotion.errors.captureFailed');
       if (error?.message) {
         if (error.message.includes('timeout')) {
-          errorMessage = 'Camera capture timed out. Please try again.';
+          errorMessage = t('analysis.emotion.errors.captureTimeout');
         } else if (error.message.includes('permission')) {
-          errorMessage = 'Camera permission denied. Please check your settings.';
+          errorMessage = t('analysis.emotion.errors.cameraPermission');
         } else if (error.message.includes('not available')) {
-          errorMessage = 'Camera is not available. Please restart the app.';
+          errorMessage = t('analysis.emotion.errors.cameraNotReady');
         } else {
-          errorMessage = `Capture failed: ${error.message}`;
+          errorMessage = t('analysis.emotion.errors.captureFailed');
         }
       }
       
@@ -961,9 +961,9 @@ export const EmotionDetectionScreen: React.FC = () => {
         
         {/* Text content */}
         <View style={styles.loadingTextContainer}>
-          <Text style={styles.detectingTitle}>Analyzing expressions</Text>
+          <Text style={styles.detectingTitle}>{t('analysis.emotion.analyzingExpressions')}</Text>
           <Text style={styles.detectingSubtitle}>
-            Processing facial micro-expressions and emotional patterns...
+            {t('analysis.emotion.processingSubtitle')}
           </Text>
           
           <View style={styles.loadingDots}>
@@ -1013,17 +1013,19 @@ export const EmotionDetectionScreen: React.FC = () => {
   // Priority 1: Show detecting screen
   if (detecting) {
     return (
-      <View style={styles.container}>
-        {/* Keep camera mounted but hidden during analysis */}
-        <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}>
-          <CameraFrame />
-        </View>
-        
-        <EmotionLoadingScreen onCancel={() => {
-          setDetecting(false);
-          setCurrentEmotion(null);
-          setShowingResults(false);
-        }} />
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={["bottom"]}>
+          {/* Keep camera mounted but hidden during analysis */}
+          <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}>
+            <CameraFrame />
+          </View>
+          
+          <EmotionLoadingScreen onCancel={() => {
+            setDetecting(false);
+            setCurrentEmotion(null);
+            setShowingResults(false);
+          }} />
+        </SafeAreaView>
       </View>
     );
   }
@@ -1051,34 +1053,36 @@ export const EmotionDetectionScreen: React.FC = () => {
   // Priority 3: Show camera when active
   if (cameraController.active) {
     return (
-      <View style={styles.container}>
-        <View style={styles.captureLayout}>
-          <CameraFrame />
-          
-          
-          <View style={styles.cameraControls}>
-            <TouchableOpacity style={styles.ghostButton} onPress={() => cameraController.stopCamera()}>
-              <FontAwesome name="times" size={16} color="#4338ca" />
-              <Text style={styles.ghostButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              activeOpacity={0.7} 
-              onPress={captureAndAnalyze}
-              disabled={captureDisabled}
-              style={captureDisabled ? { opacity: 0.5 } : {}}
-            >
-              <LinearGradient
-                colors={['#6366f1', '#8b5cf6']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.primaryButton}
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={["bottom"]}>
+          <View style={styles.captureLayout}>
+            <CameraFrame />
+            
+            
+            <View style={styles.cameraControls}>
+              <TouchableOpacity style={styles.ghostButton} onPress={() => cameraController.stopCamera()}>
+                <FontAwesome name="times" size={16} color="#4338ca" />
+                <Text style={styles.ghostButtonText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                activeOpacity={0.7} 
+                onPress={captureAndAnalyze}
+                disabled={captureDisabled}
+                style={captureDisabled ? { opacity: 0.5 } : {}}
               >
-                <FontAwesome name="camera" size={18} color="#ffffff" />
-                <Text style={styles.primaryButtonText}>Capture</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={['#6366f1', '#8b5cf6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.primaryButton}
+                >
+                  <FontAwesome name="camera" size={18} color="#ffffff" />
+                  <Text style={styles.primaryButtonText}>{t('common.capture')}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </SafeAreaView>
       </View>
     );
   }
@@ -1086,19 +1090,36 @@ export const EmotionDetectionScreen: React.FC = () => {
   // Priority 4: Overview screen (only show when no other state is active)
   // Overview screen
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.overviewContent} showsVerticalScrollIndicator={false}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      {/* View assoluto per colorare l'area sotto la tab bar */}
+      <View style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 150,
+        backgroundColor: themeColors.background,
+        zIndex: 0,
+      }} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={["bottom"]}>
+        <ScrollView 
+          style={styles.scroll} 
+          contentContainerStyle={styles.overviewContent} 
+          showsVerticalScrollIndicator={false}
+          overScrollMode="never"
+          bounces={false}
+        >
         <LinearGradient colors={['#6366f1', '#7c3aed']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
           <View style={styles.heroHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.heroTitle}>Real-time Emotion Detection</Text>
-              <Text style={styles.heroSubtitle}>Capture a quick scan to understand how you feel and keep track of mood trends.</Text>
+              <Text style={styles.heroTitle}>{t('analysis.emotion.hero.title')}</Text>
+              <Text style={styles.heroSubtitle}>{t('analysis.emotion.hero.subtitle')}</Text>
             </View>
           </View>
           <VideoHero
             videoUri={heroVideoUri}
-            title="Real-time Emotion Detection"
-            subtitle="Capture a quick scan to understand how you feel and keep track of mood trends."
+            title={t('analysis.emotion.hero.title')}
+            subtitle={t('analysis.emotion.hero.subtitle')}
             onPlayPress={handleStartDetection}
             showPlayButton={false}
             autoPlay={true}
@@ -1107,14 +1128,6 @@ export const EmotionDetectionScreen: React.FC = () => {
             style={styles.heroVideo}
             fallbackImageUri="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80"
           />
-          <View style={styles.heroStatsRow}>
-            {headerStats.map((stat) => (
-              <View key={stat.label} style={styles.heroStatChip}>
-                <Text style={styles.heroChipLabel}>{stat.label}</Text>
-                <Text style={styles.heroChipValue}>{stat.value}</Text>
-              </View>
-            ))}
-          </View>
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={handleStartDetection}
@@ -1128,7 +1141,7 @@ export const EmotionDetectionScreen: React.FC = () => {
               style={[styles.primaryButton, styles.heroButton]}
             >
               <FontAwesome name="camera" size={16} color="#312e81" />
-              <Text style={[styles.primaryButtonText, styles.heroButtonText]}>Start detection</Text>
+              <Text style={[styles.primaryButtonText, styles.heroButtonText]}>{t('analysis.emotion.startDetection')}</Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -1144,12 +1157,12 @@ export const EmotionDetectionScreen: React.FC = () => {
               style={[styles.primaryButton, styles.heroButton]}
             >
               <FontAwesome name="image" size={16} color="#0ea5e9" />
-              <Text style={[styles.primaryButtonText, { color: '#0ea5e9' }]}>Pick from Gallery</Text>
+              <Text style={[styles.primaryButtonText, { color: '#0ea5e9' }]}>{t('common.pickFromGallery')}</Text>
             </LinearGradient>
           </TouchableOpacity>
 
           {permissionChecking && (
-            <Text style={styles.permissionBanner}>Requesting camera permission…</Text>
+            <Text style={styles.permissionBanner}>{t('analysis.common.requestingPermission')}</Text>
           )}
           {analysisError && !permissionChecking && (
             <Text style={styles.permissionBanner}>{analysisError}</Text>
@@ -1162,8 +1175,8 @@ export const EmotionDetectionScreen: React.FC = () => {
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View>
-              <Text style={styles.sectionTitle}>Recent Session</Text>
-              <Text style={styles.sectionSubtitle}>Your latest emotion analysis results</Text>
+              <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.recent.title')}</Text>
+              <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.recent.subtitle')}</Text>
             </View>
             <TouchableOpacity
               onPress={async () => {
@@ -1178,13 +1191,13 @@ export const EmotionDetectionScreen: React.FC = () => {
               }}
               style={{
                 padding: 8,
-                backgroundColor: '#f3f4f6',
+                backgroundColor: themeColors.surfaceMuted,
                 borderRadius: 8,
                 borderWidth: 1,
-                borderColor: '#d1d5db'
+                borderColor: themeColors.border
               }}
             >
-              <FontAwesome name="refresh" size={16} color="#6b7280" />
+              <FontAwesome name="refresh" size={16} color={themeColors.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -1262,8 +1275,8 @@ export const EmotionDetectionScreen: React.FC = () => {
 
         {/* Quick Stats Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Quick Stats</Text>
-          <Text style={styles.sectionSubtitle}>Your emotional wellness overview</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.quickStats.title')}</Text>
+          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.quickStats.subtitle')}</Text>
         </View>
 
         {/* Gauge Charts Row */}
@@ -1286,9 +1299,9 @@ export const EmotionDetectionScreen: React.FC = () => {
                         : 65
                     }
                     maxValue={100}
-                    label="Valence"
+                    label={t('analysis.emotion.metrics.valence')}
                     color="#10b981"
-                    subtitle="Positivity"
+                    subtitle={t('analysis.emotion.metrics.positivity')}
                     trend={2}
                     description="Valence misura quanto positive o negative sono le tue emozioni. Valori alti indicano felicità e soddisfazione, mentre valori bassi indicano tristezza o preoccupazione. Questo metrico ti aiuta a capire il tuo stato emotivo generale."
                     historicalData={emotionHistory.map((session, index) => ({
@@ -1310,9 +1323,9 @@ export const EmotionDetectionScreen: React.FC = () => {
                         : 45
                     }
                     maxValue={100}
-                    label="Arousal"
+                    label={t('analysis.emotion.metrics.arousal')}
                     color="#ef4444"
-                    subtitle="Intensity"
+                    subtitle={t('analysis.emotion.metrics.intensity')}
                     trend={-1}
                     description="Arousal misura l'intensità delle tue emozioni, indipendentemente dal fatto che siano positive o negative. Valori alti indicano eccitazione o stress, mentre valori bassi indicano calma o rilassamento. Ti aiuta a capire il tuo livello di attivazione emotiva."
                     historicalData={emotionHistory.map((session, index) => ({
@@ -1326,9 +1339,9 @@ export const EmotionDetectionScreen: React.FC = () => {
                   <GaugeChart
                     value={emotionHistory.length}
                     maxValue={30}
-                    label="Sessions"
+                    label={t('analysis.emotion.metrics.sessions')}
                     color="#6366f1"
-                    subtitle="This month"
+                    subtitle={t('analysis.emotion.metrics.thisMonth')}
                     trend={1}
                     description="Il numero di sessioni di analisi emotiva che hai completato questo mese..."
                     historicalData={emotionHistory.map((session, index) => ({
@@ -1345,9 +1358,9 @@ export const EmotionDetectionScreen: React.FC = () => {
                   <GaugeChart 
                     value={65} 
                     maxValue={100} 
-                    label="Valence" 
+                    label={t('analysis.emotion.metrics.valence')} 
                     color="#10b981" 
-                    subtitle="Positivity" 
+                    subtitle={t('analysis.emotion.metrics.positivity')} 
                     trend={2} 
                     description="Valence measuring" 
                     historicalData={[]} 
@@ -1357,16 +1370,16 @@ export const EmotionDetectionScreen: React.FC = () => {
                   <GaugeChart 
                     value={45} 
                     maxValue={100} 
-                    label="Arousal" 
+                    label={t('analysis.emotion.metrics.arousal')} 
                     color="#ef4444" 
-                    subtitle="Intensity" 
+                    subtitle={t('analysis.emotion.metrics.intensity')} 
                     trend={-1} 
                     description="Arousal measuring" 
                     historicalData={[]} 
                     metric="arousal"
                     icon="trending-up"
                   />
-                  <GaugeChart value={0} maxValue={30} label="Sessions" color="#6366f1" subtitle="This month" trend={1} description="Analysis sessions" historicalData={[]} />
+                  <GaugeChart value={0} maxValue={30} label={t('analysis.emotion.metrics.sessions')} color="#6366f1" subtitle={t('analysis.emotion.metrics.thisMonth')} trend={1} description="Analysis sessions" historicalData={[]} />
                 </>
               );
             }
@@ -1389,8 +1402,8 @@ export const EmotionDetectionScreen: React.FC = () => {
                   arousal: session.avg_arousal || 0,
                   emotion: session.dominant || 'neutral',
                 }))}
-                title="Emotional Trends"
-                subtitle="7-day overview of your emotional state"
+                title={t('analysis.emotion.trends.title')}
+                subtitle={t('analysis.emotion.trends.subtitle')}
               />
             );
           } catch (error) {
@@ -1398,8 +1411,8 @@ export const EmotionDetectionScreen: React.FC = () => {
             return (
               <EmotionTrendChart
                 data={[]}
-                title="Emotional Trends"
-                subtitle="7-day overview of your emotional state"
+                title={t('analysis.emotion.trends.title')}
+                subtitle={t('analysis.emotion.trends.subtitle')}
               />
             );
           }
@@ -1435,65 +1448,63 @@ export const EmotionDetectionScreen: React.FC = () => {
         />
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Valence & Arousal</Text>
-          <Text style={styles.sectionSubtitle}>Understand emotional positivity and intensity</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.valenceArousal.title')}</Text>
+          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.valenceArousal.subtitle')}</Text>
         </View>
 
         <View style={styles.metricGrid}>
-          <LinearGradient colors={['#ecfdf5', '#d1fae5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.metricCard}>
-            <View style={[styles.metricIconWrap, { backgroundColor: '#bbf7d022' }]}>
-              <FontAwesome name="line-chart" size={18} color="#047857" />
+          <LinearGradient colors={[themeColors.surface, themeColors.surfaceElevated]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.metricCard, { borderColor: themeColors.border }]}>
+            <View style={[styles.metricIconWrap, { backgroundColor: `${themeColors.success}22` }]}>
+              <FontAwesome name="line-chart" size={18} color={themeColors.success} />
             </View>
-            <Text style={styles.metricTitle}>Valence</Text>
-            <Text style={styles.metricBody}>Tracks the positivity of your expression and overall affect.</Text>
+            <Text style={[styles.metricTitle, { color: themeColors.text }]}>{t('analysis.emotion.metrics.valence')}</Text>
+            <Text style={[styles.metricBody, { color: themeColors.textSecondary }]}>{t('analysis.emotion.metrics.valenceDesc')}</Text>
           </LinearGradient>
 
-          <LinearGradient colors={['#e0f2fe', '#bae6fd']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.metricCard}>
-            <View style={[styles.metricIconWrap, { backgroundColor: '#bfdbfe22' }]}>
-              <FontAwesome name="area-chart" size={18} color="#0ea5e9" />
+          <LinearGradient colors={[themeColors.surface, themeColors.surfaceElevated]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.metricCard, { borderColor: themeColors.border }]}>
+            <View style={[styles.metricIconWrap, { backgroundColor: `${themeColors.info}22` }]}>
+              <FontAwesome name="area-chart" size={18} color={themeColors.info} />
             </View>
-            <Text style={styles.metricTitle}>Arousal</Text>
-            <Text style={styles.metricBody}>Measures the intensity or energy level detected at the moment.</Text>
+            <Text style={[styles.metricTitle, { color: themeColors.text }]}>{t('analysis.emotion.metrics.arousal')}</Text>
+            <Text style={[styles.metricBody, { color: themeColors.textSecondary }]}>{t('analysis.emotion.metrics.arousalDesc')}</Text>
           </LinearGradient>
         </View>
 
         {/* How It Works */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>How Emotion Detection Works</Text>
-          <Text style={styles.sectionSubtitle}>Understanding the technology behind our analysis</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.howItWorks.title')}</Text>
+          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.howItWorks.subtitle')}</Text>
         </View>
 
-        <LinearGradient colors={['#fef3c7', '#fde68a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.howItWorksCard}>
+        <LinearGradient colors={[themeColors.surface, themeColors.surfaceElevated]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.howItWorksCard, { borderColor: themeColors.border }]}>
           <View style={styles.howItWorksHeader}>
-            <View style={[styles.howItWorksIcon, { backgroundColor: '#f59e0b22' }]}>
-              <FontAwesome name="cogs" size={20} color="#d97706" />
+            <View style={[styles.howItWorksIcon, { backgroundColor: `${themeColors.accent}22` }]}>
+              <FontAwesome name="cogs" size={20} color={themeColors.accent} />
             </View>
             <View style={styles.howItWorksContent}>
-              <Text style={styles.howItWorksTitle}>AI-Powered Analysis</Text>
-              <Text style={styles.howItWorksDescription}>
-                Our advanced neural networks analyze facial expressions, micro-movements, and emotional cues to provide accurate emotion detection in real-time.
-              </Text>
+              <Text style={[styles.howItWorksTitle, { color: themeColors.text }]}>{t('analysis.emotion.howItWorks.cardTitle')}</Text>
+              <Text style={[styles.howItWorksDescription, { color: themeColors.textSecondary }]}>{t('analysis.emotion.howItWorks.cardDesc')}</Text>
             </View>
           </View>
 
           <View style={styles.howItWorksSteps}>
             <View style={styles.howItWorksStep}>
-              <View style={styles.stepNumber}>
+              <View style={[styles.stepNumber, { backgroundColor: themeColors.accent }]}>
                 <Text style={styles.stepNumberText}>1</Text>
               </View>
-              <Text style={styles.stepText}>Capture your facial expression using the camera</Text>
+              <Text style={[styles.stepText, { color: themeColors.text }]}>{t('analysis.emotion.howItWorks.step1')}</Text>
             </View>
             <View style={styles.howItWorksStep}>
-              <View style={styles.stepNumber}>
+              <View style={[styles.stepNumber, { backgroundColor: themeColors.accent }]}>
                 <Text style={styles.stepNumberText}>2</Text>
               </View>
-              <Text style={styles.stepText}>AI analyzes facial landmarks and micro-expressions</Text>
+              <Text style={[styles.stepText, { color: themeColors.text }]}>{t('analysis.emotion.howItWorks.step2')}</Text>
             </View>
             <View style={styles.howItWorksStep}>
-              <View style={styles.stepNumber}>
+              <View style={[styles.stepNumber, { backgroundColor: themeColors.accent }]}>
                 <Text style={styles.stepNumberText}>3</Text>
               </View>
-              <Text style={styles.stepText}>Get detailed emotion breakdown and mood insights</Text>
+              <Text style={[styles.stepText, { color: themeColors.text }]}>{t('analysis.emotion.howItWorks.step3')}</Text>
             </View>
           </View>
         </LinearGradient>
@@ -1514,6 +1525,7 @@ export const EmotionDetectionScreen: React.FC = () => {
           }
         })()}
       />
+      </SafeAreaView>
     </View>
   );
 };
@@ -1523,7 +1535,6 @@ const capitalise = (value: string) => value.charAt(0).toUpperCase() + value.slic
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.palette.surfaceMuted,
   },
   scroll: { flex: 1 },
   overviewContent: {
@@ -1611,10 +1622,9 @@ const styles = StyleSheet.create({
   },
 
   sectionHeader: { gap: 6 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a', marginBottom: 8 },
-  sectionSubtitle: { fontSize: 14, color: '#64748b', marginBottom: 16, lineHeight: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  sectionSubtitle: { fontSize: 14, marginBottom: 16, lineHeight: 20 },
   emotionIconRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sectionSubtitle: { fontSize: 13, color: '#64748b' },
 
   // Metrics
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
@@ -1629,10 +1639,11 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 6,
     minWidth: (width - 72) / 2,
+    borderWidth: 1,
   },
   metricIconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  metricTitle: { fontSize: 15, fontWeight: '600', color: '#0f172a' },
-  metricBody: { fontSize: 13, lineHeight: 18, color: '#475569' },
+  metricTitle: { fontSize: 15, fontWeight: '600' },
+  metricBody: { fontSize: 13, lineHeight: 18 },
 
   // Chart card (overview)
   chartCard: {
@@ -1872,22 +1883,23 @@ const styles = StyleSheet.create({
   howItWorksCard: {
     borderRadius: 20,
     padding: 20,
-    shadowColor: '#f59e0b',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 6,
+    borderWidth: 1,
   },
   howItWorksHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
   howItWorksIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   howItWorksContent: { flex: 1 },
-  howItWorksTitle: { fontSize: 16, fontWeight: '600', color: '#92400e', marginBottom: 6 },
-  howItWorksDescription: { fontSize: 13, color: '#a16207', lineHeight: 18 },
+  howItWorksTitle: { fontSize: 16, fontWeight: '600', marginBottom: 6 },
+  howItWorksDescription: { fontSize: 13, lineHeight: 18 },
   howItWorksSteps: { gap: 12 },
   howItWorksStep: { flexDirection: 'row', alignItems: 'center' },
-  stepNumber: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#f59e0b', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  stepNumber: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   stepNumberText: { fontSize: 12, fontWeight: '600', color: '#ffffff' },
-  stepText: { flex: 1, fontSize: 13, color: '#92400e', lineHeight: 18 },
+  stepText: { flex: 1, fontSize: 13, lineHeight: 18 },
 
   // Gauge row
   gaugeRow: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 20, gap: 4 },

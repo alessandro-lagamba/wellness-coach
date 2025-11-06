@@ -51,9 +51,9 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({
 
   // Timer for recording duration
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (voiceChat.isRecording) {
-      interval = setInterval(() => {
+    interval = setInterval(() => {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
     } else {

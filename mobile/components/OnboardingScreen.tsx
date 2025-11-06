@@ -16,6 +16,7 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HealthPermissionsModal } from './HealthPermissionsModal';
+import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,90 +35,94 @@ interface OnboardingStep {
   actionText: string;
 }
 
-const ONBOARDING_STEPS: OnboardingStep[] = [
+// 🆕 Steps verranno costruiti dinamicamente con traduzioni
+const getOnboardingSteps = (t: any): OnboardingStep[] => [
   {
     id: 'welcome',
-    title: 'Benvenuto in Wellness Coach',
-    subtitle: 'Il tuo compagno AI per il benessere',
-    description: 'Scopri come l\'intelligenza artificiale può trasformare la tua routine di benessere quotidiana.',
+    title: t('onboarding.welcome.title'),
+    subtitle: t('onboarding.welcome.subtitle'),
+    description: t('onboarding.welcome.description'),
     icon: '🤖',
     gradient: ['#667eea', '#764ba2'],
     features: [
-      'Analisi emotiva in tempo reale',
-      'Monitoraggio della pelle avanzato',
-      'Coaching personalizzato 24/7'
+      t('onboarding.welcome.features.0'),
+      t('onboarding.welcome.features.1'),
+      t('onboarding.welcome.features.2')
     ],
-    actionText: 'Iniziamo!'
+    actionText: t('onboarding.welcome.actionText')
   },
   {
     id: 'features',
-    title: 'Funzionalità Principali',
-    subtitle: 'Tutto quello che ti serve in un\'app',
-    description: 'Esplora le potenti funzionalità progettate per migliorare il tuo benessere.',
+    title: t('onboarding.features.title'),
+    subtitle: t('onboarding.features.subtitle'),
+    description: t('onboarding.features.description'),
     icon: '✨',
     gradient: ['#f093fb', '#f5576c'],
     features: [
-      'Dashboard personalizzabile con widget',
-      'Analisi della pelle con AI',
-      'Rilevamento emozioni avanzato',
-      'Journaling intelligente',
-      'Esercizi di respirazione guidati'
+      t('onboarding.features.features.0'),
+      t('onboarding.features.features.1'),
+      t('onboarding.features.features.2'),
+      t('onboarding.features.features.3'),
+      t('onboarding.features.features.4')
     ],
-    actionText: 'Continua'
+    actionText: t('onboarding.features.actionText')
   },
   {
     id: 'health',
-    title: 'Integrazione Salute',
-    subtitle: 'Connetti i tuoi dati di salute',
-    description: 'Sincronizza con Apple Health o Google Fit per un monitoraggio completo del tuo benessere.',
+    title: t('onboarding.health.title'),
+    subtitle: t('onboarding.health.subtitle'),
+    description: t('onboarding.health.description'),
     icon: '❤️',
     gradient: ['#4facfe', '#00f2fe'],
     features: [
-      'Sincronizzazione automatica con HealthKit',
-      'Monitoraggio sonno e attività',
-      'Analisi HRV e frequenza cardiaca',
-      'Tracking passi e calorie'
+      t('onboarding.health.features.0'),
+      t('onboarding.health.features.1'),
+      t('onboarding.health.features.2'),
+      t('onboarding.health.features.3')
     ],
-    actionText: 'Abilita Salute'
+    actionText: t('onboarding.health.actionText')
   },
   {
     id: 'ai',
-    title: 'AI Daily Copilot',
-    subtitle: 'Il tuo assistente personale',
-    description: 'Ricevi consigli personalizzati basati sui tuoi dati di salute e preferenze.',
+    title: t('onboarding.ai.title'),
+    subtitle: t('onboarding.ai.subtitle'),
+    description: t('onboarding.ai.description'),
     icon: '🧠',
     gradient: ['#43e97b', '#38f9d7'],
     features: [
-      'Analisi giornaliera del tuo stato',
-      'Raccomandazioni personalizzate',
-      'Insights intelligenti sui tuoi dati',
-      'Piano di benessere adattivo'
+      t('onboarding.ai.features.0'),
+      t('onboarding.ai.features.1'),
+      t('onboarding.ai.features.2'),
+      t('onboarding.ai.features.3')
     ],
-    actionText: 'Scopri AI Copilot'
+    actionText: t('onboarding.ai.actionText')
   },
   {
     id: 'privacy',
-    title: 'Privacy e Sicurezza',
-    subtitle: 'I tuoi dati sono al sicuro',
-    description: 'Utilizziamo crittografia end-to-end e non condividiamo mai i tuoi dati personali.',
+    title: t('onboarding.privacy.title'),
+    subtitle: t('onboarding.privacy.subtitle'),
+    description: t('onboarding.privacy.description'),
     icon: '🔒',
     gradient: ['#fa709a', '#fee140'],
     features: [
-      'Crittografia end-to-end',
-      'Dati salvati localmente',
-      'Nessuna condivisione con terzi',
-      'Controllo completo sui tuoi dati'
+      t('onboarding.privacy.features.0'),
+      t('onboarding.privacy.features.1'),
+      t('onboarding.privacy.features.2'),
+      t('onboarding.privacy.features.3')
     ],
-    actionText: 'Accetta e Continua'
+    actionText: t('onboarding.privacy.actionText')
   }
 ];
 
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
+  const { t } = useTranslation(); // 🆕 i18n hook
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [showHealthPermissions, setShowHealthPermissions] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
-
+  
+  // 🆕 Costruisci steps dinamicamente con traduzioni
+  const ONBOARDING_STEPS = getOnboardingSteps(t);
   const currentStepData = ONBOARDING_STEPS[currentStep];
   const isLastStep = currentStep === ONBOARDING_STEPS.length - 1;
 
@@ -225,7 +230,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
         )}
         
         <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
-          <Text style={styles.skipText}>Salta</Text>
+          <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -285,7 +290,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
               style={styles.nextButtonGradient}
             >
               <Text style={styles.nextButtonText}>
-                {isLastStep ? 'Inizia il tuo viaggio' : currentStepData.actionText}
+                {isLastStep ? t('onboarding.startJourney') : currentStepData.actionText}
               </Text>
               <MaterialCommunityIcons 
                 name={isLastStep ? "rocket-launch" : "arrow-right"} 

@@ -83,7 +83,6 @@ class DailyCopilotService {
       
       const dbResult = await this.dbService.getDailyCopilotData(currentUser.id, today);
       if (dbResult.success && dbResult.data) {
-        console.log('📋 Using saved Daily Copilot data from database for today');
         const savedData = this.convertDBRecordToCopilotData(dbResult.data);
         this.setCachedAnalysis(cacheKey, savedData);
         return savedData;
@@ -92,11 +91,10 @@ class DailyCopilotService {
       // Check cache as fallback
       const cached = this.getCachedAnalysis(cacheKey);
       if (cached) {
-        console.log('📋 Using cached Daily Copilot analysis for today');
         return cached;
       }
 
-      console.log('🧠 Generating new Daily Copilot analysis...');
+      // Generating analysis (logging handled by backend)
 
       // Raccoglie tutti i dati necessari
       const analysisData = await this.collectAnalysisData(currentUser.id);
@@ -114,23 +112,13 @@ class DailyCopilotService {
 
       // Save to database
       const saveResult = await this.dbService.saveDailyCopilotData(currentUser.id, copilotData);
-      if (saveResult.success) {
-        console.log('✅ Daily Copilot data saved to database');
-      } else {
+      if (!saveResult.success) {
         console.warn('⚠️ Failed to save Daily Copilot data to database:', saveResult.error);
       }
 
       // Cache the result
       this.setCachedAnalysis(cacheKey, copilotData);
 
-      console.log('✅ Daily Copilot analysis generated successfully');
-      console.log('📋 Generated recommendations with details:', copilotData.recommendations.map(r => ({
-        id: r.id,
-        action: r.action,
-        hasDetailedExplanation: !!r.detailedExplanation,
-        hasCorrelations: !!r.correlations?.length,
-        hasExpectedBenefits: !!r.expectedBenefits?.length
-      })));
       return copilotData;
 
     } catch (error) {
@@ -314,14 +302,11 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
    * Parsing dell'analisi AI
    */
   private parseAIAnalysis(analysisText: string, data: CopilotAnalysisRequest): DailyCopilotData {
-    console.log('🤖 Parsing AI analysis:', analysisText);
-    
     try {
       // Try to parse the entire response as JSON first
       let parsedData = null;
       try {
         parsedData = JSON.parse(analysisText);
-        console.log('📋 Direct JSON parse successful:', parsedData);
       } catch {
         // Try to extract JSON from the response with better handling of incomplete JSON
         const jsonMatch = analysisText.match(/\{[\s\S]*?\}(?=\s*$|\s*[^}])/);
@@ -335,7 +320,6 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
           if (openBraces > closeBraces) {
             const missingBraces = openBraces - closeBraces;
             jsonString += '}'.repeat(missingBraces);
-            console.log('🔧 Fixed missing braces:', missingBraces);
           }
           
           // Try to fix incomplete strings within JSON
@@ -344,15 +328,12 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
             const lastArrayMatch = jsonString.match(/"correlations":\s*\[([^\]]*?)(?:\]|$)/);
             if (lastArrayMatch && !lastArrayMatch[0].endsWith(']')) {
               jsonString = jsonString.replace(lastArrayMatch[0], lastArrayMatch[0] + ']');
-              console.log('🔧 Fixed incomplete correlations array');
             }
           }
           
           try {
             parsedData = JSON.parse(jsonString);
-            console.log('📋 Extracted and fixed JSON parse successful:', parsedData);
           } catch (fixError) {
-            console.log('⚠️ Could not fix JSON, trying partial parsing:', fixError);
             // Try to extract individual recommendations even if the overall JSON is broken
             parsedData = this.extractPartialRecommendations(analysisText);
           }
@@ -360,8 +341,6 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
       }
       
       if (parsedData && parsedData.recommendations) {
-        console.log('🎯 Using AI-generated data');
-        
         return {
           overallScore: parsedData.overallScore || this.calculateOverallScore(data),
           mood: data.mood,
@@ -389,7 +368,7 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
         };
       }
     } catch (error) {
-      console.log('⚠️ Could not parse AI JSON, using fallback:', error);
+      // Fallback to basic recommendations on parse error
     }
     
     // Fallback to basic analysis
@@ -488,7 +467,7 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
 
     // Se abbiamo dati AI, usali per arricchire le raccomandazioni
     if (aiData && aiData.recommendations) {
-      console.log('🎯 Using AI-generated recommendations');
+      // Using AI-generated recommendations
       return aiData.recommendations.map((rec: any, index: number) => ({
         id: rec.id || `ai-rec-${index}`,
         priority: rec.priority || 'medium',

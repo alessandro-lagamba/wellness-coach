@@ -1,8 +1,10 @@
 import { supabase, Tables, SkinAnalysis } from '../lib/supabase';
+import cacheService from './cache.service';
 
 export class SkinAnalysisService {
   /**
    * Salva una nuova analisi della pelle nel database
+   * 🆕 Evita duplicati recenti: se c'è un'analisi simile negli ultimi 2 minuti, aggiorna quella invece di crearne una nuova
    */
   static async saveSkinAnalysis(
     userId: string,
@@ -21,6 +23,61 @@ export class SkinAnalysisService {
     }
   ): Promise<SkinAnalysis | null> {
     try {
+      // 🆕 Check duplicati recenti: analisi simili negli ultimi 2 minuti
+      const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const { data: recentAnalysis, error: checkError } = await supabase
+        .from(Tables.SKIN_ANALYSES)
+        .select('id, created_at, overall_score, image_url')
+        .eq('user_id', userId)
+        .gte('created_at', twoMinutesAgo)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // 🆕 Se esiste un'analisi recente con stesso imageUrl o punteggio molto simile, aggiornala
+      if (recentAnalysis && !checkError) {
+        const isSimilar = 
+          (analysis.imageUrl && recentAnalysis.image_url === analysis.imageUrl) || // Stessa immagine
+          (Math.abs(recentAnalysis.overall_score - analysis.overallScore) < 5 && !analysis.imageUrl); // Punteggio simile e senza nuova immagine
+
+        if (isSimilar) {
+          console.log(`📝 Found similar skin analysis from ${recentAnalysis.created_at}, updating instead of inserting`);
+          
+          const { data: updated, error: updateError } = await supabase
+            .from(Tables.SKIN_ANALYSES)
+            .update({
+              overall_score: analysis.overallScore,
+              hydration_score: analysis.hydrationScore,
+              oiliness_score: analysis.oilinessScore,
+              texture_score: analysis.textureScore,
+              pigmentation_score: analysis.pigmentationScore,
+              redness_score: analysis.rednessScore,
+              strengths: analysis.strengths,
+              improvements: analysis.improvements,
+              recommendations: analysis.recommendations,
+              analysis_data: analysis.analysisData || {},
+              image_url: analysis.imageUrl || recentAnalysis.image_url, // Mantieni immagine esistente se non fornita nuova
+            })
+            .eq('id', recentAnalysis.id)
+            .select()
+            .single();
+
+          if (updateError) {
+            console.error('Error updating skin analysis:', updateError);
+            return null;
+          }
+
+          console.log('✅ Skin analysis updated (duplicate prevented):', updated.id);
+          
+          // 🆕 Invalida cache quando si aggiorna un'analisi
+          await cacheService.invalidatePrefix(`skin:${userId}`);
+          await cacheService.invalidate(`ai_context:${userId}`);
+          
+          return updated;
+        }
+      }
+
+      // 🆕 Nessun duplicato trovato, inserisci nuova analisi
       const { data, error } = await supabase
         .from(Tables.SKIN_ANALYSES)
         .insert({
@@ -46,6 +103,11 @@ export class SkinAnalysisService {
       }
 
       console.log('✅ Skin analysis saved:', data.id);
+      
+      // 🆕 Invalida cache quando si salva una nuova analisi
+      await cacheService.invalidatePrefix(`skin:${userId}`);
+      await cacheService.invalidate(`ai_context:${userId}`);
+      
       return data;
     } catch (error) {
       console.error('Error in saveSkinAnalysis:', error);
@@ -55,9 +117,20 @@ export class SkinAnalysisService {
 
   /**
    * Ottiene l'ultima analisi della pelle di un utente
+   * 🆕 Con cache: cache di 5 minuti
    */
-  static async getLatestSkinAnalysis(userId: string): Promise<SkinAnalysis | null> {
+  static async getLatestSkinAnalysis(userId: string, forceRefresh: boolean = false): Promise<SkinAnalysis | null> {
     try {
+      const cacheKey = `skin:${userId}:latest`;
+      
+      // 🆕 Prova cache prima
+      if (!forceRefresh) {
+        const cached = await cacheService.get<SkinAnalysis>(cacheKey);
+        if (cached) {
+          return cached;
+        }
+      }
+      
       const { data, error } = await supabase
         .from(Tables.SKIN_ANALYSES)
         .select('*')
@@ -69,6 +142,11 @@ export class SkinAnalysisService {
       if (error) {
         console.error('Error getting latest skin analysis:', error);
         return null;
+      }
+
+      // 🆕 Cache per 5 minuti
+      if (data) {
+        await cacheService.set(cacheKey, data, 5 * 60 * 1000);
       }
 
       return data;
