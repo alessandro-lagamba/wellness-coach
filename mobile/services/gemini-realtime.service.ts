@@ -49,7 +49,12 @@ export class GeminiRealtimeService {
         console.log('[Gemini Realtime] 🔌 Connecting to backend proxy...');
         
         this.options = options;
-        const { backendUrl = 'ws://10.163.94.238:8080' } = options;
+        // Note: Gemini Realtime service uses WebSocket, not HTTP
+        // If backendUrl is not provided, this service won't work (needs WebSocket endpoint)
+        const { backendUrl } = options;
+        if (!backendUrl) {
+          throw new Error('Gemini Realtime service requires backendUrl (WebSocket endpoint)');
+        }
 
         // Connetti al backend proxy WebSocket
         this.ws = new WebSocket(backendUrl);

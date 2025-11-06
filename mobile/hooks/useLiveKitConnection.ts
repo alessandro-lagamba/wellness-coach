@@ -24,10 +24,10 @@ export interface LiveKitAudioLevels {
 }
 
 export const useLiveKitConnection = () => {
-  // Backend base URL: prefer env, fallback to sensible defaults per platform
+  // Backend base URL: prefer env, fallback to Railway production URL
   const BACKEND_URL =
     process.env.EXPO_PUBLIC_BACKEND_URL ||
-    (Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://10.163.94.238:3000');
+    'https://wellness-coach-production.up.railway.app';
   const [connectionState, setConnectionState] = useState<LiveKitConnectionState>({
     isConnected: false,
     isConnecting: false,

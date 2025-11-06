@@ -327,7 +327,7 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
       
       try {
         // Get token from backend - following the exact pattern from working implementation
-        const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://10.163.94.238:3000';
+        const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://wellness-coach-production.up.railway.app';
         
         // 🆕 Load user profile directly from database if not passed as prop (ensure fresh data)
         let userProfile = currentUserProfile;
