@@ -8,7 +8,7 @@ COPY package*.json ./
 COPY tsconfig.json ./
 
 # Installa dipendenze
-RUN npm ci
+RUN npm install
 
 # Copia sorgenti
 COPY src ./src
@@ -25,7 +25,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Installa solo production dependencies
-RUN npm ci --only=production
+RUN npm install --only=production
 
 # Copia built files
 COPY --from=builder /app/dist ./dist
