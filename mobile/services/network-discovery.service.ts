@@ -230,6 +230,7 @@ export class NetworkDiscoveryService {
 
   /**
    * Trova il backend funzionante provando diversi IP
+   * ⚠️ DISABILITATO IN PRODUZIONE: Se l'URL è HTTPS, non cercare localmente
    */
   async findWorkingBackend(port: number = 3000): Promise<string | null> {
     console.log('🔍 Searching for working backend...');
@@ -238,6 +239,15 @@ export class NetworkDiscoveryService {
     const envBackendURL = process.env.EXPO_PUBLIC_BACKEND_URL;
     if (envBackendURL && envBackendURL !== '' && !envBackendURL.includes('discovering')) {
       console.log('🎯 Trying backend URL from .env first:', envBackendURL);
+      
+      // 🚀 Se l'URL è HTTPS (produzione), usa sempre quello e non cercare localmente
+      if (envBackendURL.startsWith('https://')) {
+        console.log('  ✅ Production URL detected, using Railway backend:', envBackendURL);
+        const isWorking = await this.testBackendConnection(envBackendURL);
+        return isWorking ? envBackendURL : null;
+      }
+      
+      // 🛠️ Se è HTTP (sviluppo), testa la connessione
       const isWorking = await this.testBackendConnection(envBackendURL);
       if (isWorking) {
         console.log('  ✅ Found working backend from .env:', envBackendURL);

@@ -25,25 +25,30 @@ export const useBackendDiscovery = () => {
     try {
       console.log('🔍 Starting backend discovery...');
       
-      const networkService = NetworkDiscoveryService.getInstance();
-      const discoveredURL = await networkService.findWorkingBackend(3000);
+      // 🚀 Usa getBackendURL() invece di findWorkingBackend() per rispettare la modalità produzione
+      const discoveredURL = await getBackendURL();
       
       if (discoveredURL) {
-        console.log('✅ Backend discovered:', discoveredURL);
+        console.log('✅ Backend URL obtained:', discoveredURL);
+        
+        // Testa la connessione
+        const networkService = NetworkDiscoveryService.getInstance();
+        const isConnected = await networkService.testBackendConnection(discoveredURL);
+        
         setState({
           url: discoveredURL,
-          isConnected: true,
+          isConnected,
           isLoading: false,
           error: null,
           lastChecked: new Date(),
         });
       } else {
-        console.log('❌ No backend found');
+        console.log('❌ No backend URL found');
         setState({
           url: null,
           isConnected: false,
           isLoading: false,
-          error: 'No working backend found',
+          error: 'No backend URL configured',
           lastChecked: new Date(),
         });
       }
