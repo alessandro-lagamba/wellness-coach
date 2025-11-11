@@ -1,13 +1,13 @@
 import { ensureAvatarBucket, supabaseAdmin, AVATAR_BUCKET } from './supabase.service';
-
-// Bucket separato per input temporanei (privato, con signed URL)
-const INPUT_BUCKET = process.env.AVATAR_INPUT_BUCKET || AVATAR_BUCKET;
 import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
 import Replicate from 'replicate';
 import sharp from 'sharp';
 import { fileTypeFromBuffer } from 'file-type';
+
+// Bucket separato per input temporanei (privato, con signed URL)
+const INPUT_BUCKET = process.env.AVATAR_INPUT_BUCKET || AVATAR_BUCKET;
 
 // Prompt di stile (testuale) — niente più Vision step
 const AVATAR_STYLE_PROMPT = `
