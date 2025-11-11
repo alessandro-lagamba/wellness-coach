@@ -16,6 +16,7 @@ export function validateEnvironment(): EnvValidationResult {
   // Variabili critiche (crashano se mancanti)
   const criticalVars = [
     'OPENAI_API_KEY', // Usato in più servizi
+    'REPLICATE_API_TOKEN', // Usato per generazione avatar
   ];
 
   // Variabili importanti (funzionalità limitate se mancanti)

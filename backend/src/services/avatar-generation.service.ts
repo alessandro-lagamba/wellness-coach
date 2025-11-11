@@ -1,22 +1,26 @@
-import OpenAI from 'openai';
 import { ensureAvatarBucket, supabaseAdmin, AVATAR_BUCKET } from './supabase.service';
 import * as fs from 'fs';
 import * as path from 'path';
+import Replicate from 'replicate';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Prompt di stile (testuale) — niente più Vision step
+const AVATAR_STYLE_PROMPT = `
+Create a clean, modern wellness coach avatar illustration in a soft vector style:
 
-// Base prompt for avatar generation - style reference
-const AVATAR_PROMPT = `
-Create a clean, modern wellness coach avatar illustration in soft vector style matching the reference style exactly:
 - Flat design with clean lines and minimal shading
 - Soft gradients and smooth lighting
-- Circular purple background with gradient from #6b21a8 (darker purple) to #9d4edd (lighter purple)
+- Circular purple background (gradient from #6b21a8 to #9d4edd)
 - Simple teal/turquoise crew-neck t-shirt
-- Cartoon-like but professional aesthetic
 - Friendly, approachable expression
-- Vector illustration quality, modern and clean
+- Professional, modern, cartoon-like
+- Vector-like quality, smooth shapes, minimal noise
+
+IMPORTANT:
+
+- Preserve the person's identity and facial features from the input photo (same face, skin tone, eye color, hair/baldness, beard/mustache if present).
+- Keep proportions realistic but in a clean, simplified vector aesthetic.
+- The result MUST clearly look like the same person, just stylized.
+- CRITICAL: The avatar MUST match the person's GENDER from the photo (MALE with beard/mustache = MALE avatar, FEMALE = FEMALE avatar).
 `;
 
 interface GenerateAvatarParams {
@@ -25,154 +29,121 @@ interface GenerateAvatarParams {
   mimeType?: string;
 }
 
-export const generateAvatarFromPhoto = async ({ userId, photoBuffer, mimeType = 'image/jpeg' }: GenerateAvatarParams) => {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not configured');
+export const generateAvatarFromPhoto = async ({
+  userId,
+  photoBuffer,
+  mimeType = 'image/jpeg',
+}: GenerateAvatarParams) => {
+  if (!process.env.REPLICATE_API_TOKEN) {
+    throw new Error('REPLICATE_API_TOKEN is not configured');
   }
 
   await ensureAvatarBucket();
 
+  const replicate = new Replicate({
+    auth: process.env.REPLICATE_API_TOKEN!,
+  });
+
   try {
-    // Step 0: Load the reference avatar-icon.png for style reference
-    // Try multiple possible paths (development and production)
+    // (Facoltativo) se troviamo il file "avatar-icon.png" lo usiamo per arricchire il prompt con un riferimento testuale
     const possiblePaths = [
       path.join(__dirname, '../../mobile/assets/avatar-icon.png'),
       path.join(__dirname, '../assets/avatar-icon.png'),
       path.join(process.cwd(), 'mobile/assets/avatar-icon.png'),
       path.join(process.cwd(), 'assets/avatar-icon.png'),
     ];
-    
-    let avatarIconBase64: string | null = null;
-    let avatarIconPath: string | null = null;
-    
-    // Find the avatar icon file
-    for (const testPath of possiblePaths) {
-      if (fs.existsSync(testPath)) {
-        avatarIconPath = testPath;
-        const avatarIconBuffer = fs.readFileSync(testPath);
-        avatarIconBase64 = avatarIconBuffer.toString('base64');
+
+    let hasLocalStyleRef = false;
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        hasLocalStyleRef = true;
         break;
       }
     }
-    
-    // Step 1: Analyze BOTH images together with GPT-4 Vision
-    // - The user's photo for facial features
-    // - The avatar-icon.png for style reference
-    const photoBase64 = photoBuffer.toString('base64');
-    const photoMimeType = mimeType || 'image/jpeg';
-    
-    const content: any[] = [
-      {
-        type: 'text',
-        text: `Analyze these two images carefully:
-1. The FIRST image is a REAL PHOTOGRAPH of a person - this is the PRIMARY REFERENCE for the person's actual appearance
-2. The SECOND image is a reference avatar illustration showing the desired artistic STYLE only
 
-CRITICAL INSTRUCTIONS:
-- The person's PHYSICAL APPEARANCE must be EXACTLY as shown in the first photo:
-  * CRITICAL: Identify and describe the person's GENDER (male/female) - this is ESSENTIAL
-  * If the person is MALE, the avatar MUST be MALE with masculine features
-  * If the person is FEMALE, the avatar MUST be FEMALE with feminine features
-  * If the person has a BEARD or MUSTACHE, describe it EXACTLY - these are MALE characteristics
-  * If the person is BALD (no hair), the avatar MUST be BALD - no hair at all
-  * If the person has hair, describe the EXACT hair color, length, and style
-  * Describe the EXACT facial features: eye color, skin tone, face shape, any distinctive features
-  * Describe the EXACT clothing if visible
-  * Be extremely precise about physical characteristics - the avatar must look like the SAME PERSON with the CORRECT GENDER
+    const styleRefHint = hasLocalStyleRef
+      ? `Match the style of the internal reference icon (clean vector look, soft gradients, circular purple background, teal t-shirt).`
+      : `Use the described style precisely (clean vector look, soft gradients, circular purple background, teal t-shirt).`;
 
-- The artistic STYLE must match the second image (reference avatar):
-  * Flat vector illustration style
-  * Soft gradients and lighting
-  * Circular purple background with gradient (#6b21a8 to #9d4edd)
-  * Clean, modern, cartoon-like but professional
-  * Simple teal crew-neck t-shirt
-  * Minimal shading, clean lines
+    // 1) Carica la foto dell'utente su Replicate come file (SDK recente)
+    const filename =
+      mimeType.includes('png') ? `photo-${Date.now()}.png` : `photo-${Date.now()}.jpg`;
 
-Generate a detailed description that prioritizes the PERSON'S ACTUAL APPEARANCE from the photo, then applies the artistic style from the reference.`
-      },
-      {
-        type: 'image_url',
-        image_url: {
-          url: `data:${photoMimeType};base64,${photoBase64}`,
-          detail: 'high'
-        }
+    // Type assertion per files.upload che può non essere nel tipo ma esiste nell'SDK
+    const replicateWithFiles = replicate as any;
+    const uploadedInput = await replicateWithFiles.files?.upload?.(photoBuffer, {
+      filename,
+      contentType: mimeType,
+    });
+
+    // Fallback: se il metodo non esiste, error chiaro
+    if (!uploadedInput) {
+      throw new Error(
+        'replicate.files.upload is not available in your SDK version. Update the Replicate SDK or provide a public URL for input_image.'
+      );
+    }
+
+    // 2) Costruisci l'input del modello
+    //    FLUX Kontext Pro è un img2img/stylizer: diamo un prompt "descrittivo dello stile" e la foto come conditioning
+    const input = {
+      prompt: `${AVATAR_STYLE_PROMPT}\n${styleRefHint}\nMake sure the background is a neat purple gradient circle and the shirt is a simple teal crew-neck.`,
+      input_image: uploadedInput, // URL gestito da Replicate (oppure "replicate://..." handle)
+      // Opzioni utili: dipendono dal modello
+      output_format: 'png',
+      width: 1024,
+      height: 1024,
+      // Seed per riproducibilità
+      seed: 42,
+    };
+
+    // 3) Esecuzione del modello
+    const output = await replicate.run('black-forest-labs/flux-kontext-pro', { input });
+
+    // 4) Normalizzazione output -> otteniamo un Buffer PNG
+    let avatarBuffer: Buffer | null = null;
+    let imageUrl: string | null = null;
+
+    // Case A: SDK nuovo con helper .url()
+    if (output && typeof (output as any).url === 'function') {
+      imageUrl = (output as any).url();
+    }
+
+    // Case B: output = string URL
+    if (!imageUrl && typeof output === 'string') {
+      const outputStr = output as string;
+      if (outputStr.startsWith('http')) {
+        imageUrl = outputStr;
       }
-    ];
-    
-    // Add reference style image if available
-    if (avatarIconBase64) {
-      content.push({
-        type: 'image_url',
-        image_url: {
-          url: `data:image/png;base64,${avatarIconBase64}`,
-          detail: 'high'
-        }
-      });
-      console.log('[Avatar] Using avatar-icon.png as style reference');
-    } else {
-      console.warn('[Avatar] Reference avatar-icon.png not found, generating without style reference');
-    }
-    
-    const visionResponse = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'user',
-          content
-        }
-      ],
-      max_tokens: 400
-    });
-    
-    const combinedDescription = visionResponse.choices[0]?.message?.content || '';
-    
-    // Step 2: Build the enhanced prompt with STRONG emphasis on physical appearance
-    const enhancedPrompt = `${AVATAR_PROMPT}
-
-CRITICAL: The person's physical appearance from the photo is the MOST IMPORTANT aspect. Follow these priorities:
-1. FIRST: Accurately represent the person's physical features from the photo (especially hair/baldness, facial features, skin tone, eye color)
-2. SECOND: Apply the artistic style from the reference avatar
-
-Detailed description from photo analysis:
-${combinedDescription}
-
-IMPORTANT REMINDERS:
-- CRITICAL: The avatar MUST match the person's GENDER from the photo:
-  * If the person is MALE (has beard, mustache, masculine features), the avatar MUST be MALE
-  * If the person is FEMALE (feminine features, no facial hair), the avatar MUST be FEMALE
-  * DO NOT confuse or swap genders - this is the MOST IMPORTANT aspect
-- If the person is BALD in the photo, the avatar MUST be completely BALD (no hair, no stubble, smooth head)
-- If the person has a BEARD or MUSTACHE, the avatar MUST have the SAME facial hair
-- If the person has hair, show the EXACT hair color, length, and style from the photo
-- Match the EXACT skin tone, eye color, and facial features from the photo
-- The person's likeness must be clearly recognizable as the SAME PERSON with the CORRECT GENDER
-- Apply the reference style's color palette, gradients, and illustration technique
-- Use the circular purple gradient background as shown in the reference
-- Keep the simple teal crew-neck t-shirt style
-
-Generate an avatar that is FIRST AND FOREMOST an accurate representation of the person from the photo with the CORRECT GENDER, styled in the reference illustration aesthetic.`;
-    
-    // Step 3: Generate the avatar using DALL-E 3 (doesn't require billing/verification)
-    const generateResponse = await openai.images.generate({
-      model: 'dall-e-3',
-      prompt: enhancedPrompt,
-      quality: 'standard',
-      n: 1,
-      size: '1024x1024',
-    });
-
-    const imageUrl = generateResponse.data?.[0]?.url;
-    if (!imageUrl) {
-      throw new Error('No image URL returned from OpenAI');
     }
 
-    // Download the image from the URL
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to download image from OpenAI: ${imageResponse.statusText}`);
+    // Case C: output = array di URL/string/oggetti
+    if (!imageUrl && Array.isArray(output) && output.length > 0) {
+      const first = output[0];
+      if (typeof first === 'string' && first.startsWith('http')) {
+        imageUrl = first;
+      } else if (first && typeof (first as any).url === 'function') {
+        imageUrl = (first as any).url();
+      }
     }
 
-    const avatarBuffer = Buffer.from(await imageResponse.arrayBuffer());
+    // Case D: alcuni wrapper ritornano direttamente bytes (Uint8Array)
+    if (!imageUrl && output instanceof Uint8Array) {
+      avatarBuffer = Buffer.from(output);
+    }
+
+    // Se abbiamo un URL: scarichiamo
+    if (!avatarBuffer && imageUrl) {
+      const res = await fetch(imageUrl);
+      if (!res.ok) {
+        throw new Error(`Failed to download image from Replicate: ${res.status} ${res.statusText}`);
+      }
+      const arr = await res.arrayBuffer();
+      avatarBuffer = Buffer.from(arr);
+    }
+
+    if (!avatarBuffer) {
+      throw new Error('No image produced by Replicate (missing URL or bytes).');
+    }
     const avatarPath = `${userId}/avatar-${Date.now()}.png`;
 
     const { error: uploadError } = await supabaseAdmin.storage
