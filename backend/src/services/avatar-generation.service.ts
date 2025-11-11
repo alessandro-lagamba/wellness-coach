@@ -114,20 +114,46 @@ Be very specific about both the person's appearance and the style characteristic
       max_tokens: 400
     });
     
-    const combinedDescription = visionResponse.choices[0]?.message?.content || '';
+    // Step 2: Generate the avatar using gemini-2.5-flash-image
+    // Gemini 2.5 Flash Image supports multimodal input, so we can pass images directly
+    const imageModel = gemini.getGenerativeModel({ model: 'gemini-2.5-flash-image-preview' });
     
-    // Step 2: Build the enhanced prompt with the combined description
-    const enhancedPrompt = `${AVATAR_PROMPT}\n\n${combinedDescription}\n\nGenerate an avatar that exactly matches these specifications.`;
+    // Build multimodal content: text prompt + user photo + style reference
+    const geminiContent: any[] = [
+      {
+        text: `Generate an avatar illustration that:
+- Maintains the person's facial features, skin tone, hair color and style, eye color, and overall likeness from the first image (portrait photo)
+- Matches the exact artistic style, color palette, illustration technique, lighting, and aesthetic of the second image (reference avatar style)
+
+${AVATAR_PROMPT}
+
+Create a clean, modern wellness coach illustration that combines the person's likeness with the reference style.`
+      },
+      {
+        inlineData: {
+          mimeType: photoMimeType,
+          data: photoBase64
+        }
+      }
+    ];
     
-    // Step 3: Generate the avatar using gemini-2.5-flash-image
+    // Add style reference image if available
+    if (avatarIconBase64) {
+      geminiContent.push({
+        inlineData: {
+          mimeType: 'image/png',
+          data: avatarIconBase64
+        }
+      });
+    }
+    
     // Try different model names in case the exact name differs
     let generateResponse;
     let avatarBuffer: Buffer;
     
     try {
       // Try gemini-2.5-flash-image-preview first
-      const imageModel = gemini.getGenerativeModel({ model: 'gemini-2.5-flash-image-preview' });
-      generateResponse = await imageModel.generateContent(enhancedPrompt);
+      generateResponse = await imageModel.generateContent(geminiContent);
       
       // Extract image from response
       const response = generateResponse.response;
@@ -142,8 +168,8 @@ Be very specific about both the person's appearance and the style characteristic
       // If preview model doesn't work, try without -preview
       console.warn('[Avatar] Preview model failed, trying without -preview:', error);
       try {
-        const imageModel = gemini.getGenerativeModel({ model: 'gemini-2.5-flash-image' });
-        generateResponse = await imageModel.generateContent(enhancedPrompt);
+        const imageModelFallback = gemini.getGenerativeModel({ model: 'gemini-2.5-flash-image' });
+        generateResponse = await imageModelFallback.generateContent(geminiContent);
         
         const response = generateResponse.response;
         const imagePart = response.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData);
