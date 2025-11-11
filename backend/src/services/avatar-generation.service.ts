@@ -34,7 +34,7 @@ interface GenerateAvatarParams {
   mimeType?: string;
 }
 
-type ReplicateOutput = string | Uint8Array | { url: () => string } | Array<string | { url: () => string }>;
+type ReplicateOutput = string | Uint8Array | ArrayBuffer | { url: () => string } | Array<string | { url: () => string }>;
 
 interface AvatarGenerationResult {
   avatarUrl: string;
@@ -45,11 +45,46 @@ interface AvatarGenerationResult {
   size: string;
 }
 
+// Retry utility con exponential backoff per errori transient
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 2,
+  retryableStatuses = [429, 500, 502, 503, 504]
+): Promise<T> {
+  let lastErr: unknown;
+
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (e: any) {
+      lastErr = e;
+      const status = e?.status ?? e?.response?.status ?? e?.statusCode;
+      
+      // Se non è un errore retryable, break immediatamente
+      if (status && !retryableStatuses.includes(status)) {
+        break;
+      }
+      
+      // Se è l'ultimo tentativo, throw
+      if (i === retries) {
+        break;
+      }
+      
+      // Exponential backoff: 800ms, 1600ms, 2400ms...
+      const delay = 800 * (i + 1);
+      console.log(`[Avatar] Retry attempt ${i + 1}/${retries} after ${delay}ms (status: ${status})`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastErr;
+}
+
 export const generateAvatarFromPhoto = async ({
   userId,
   photoBuffer,
   mimeType = 'image/jpeg',
-}: GenerateAvatarParams) => {
+}: GenerateAvatarParams): Promise<AvatarGenerationResult> => {
   if (!process.env.REPLICATE_API_TOKEN) {
     throw new Error('REPLICATE_API_TOKEN is not configured');
   }
@@ -66,12 +101,12 @@ export const generateAvatarFromPhoto = async ({
   try {
     // 1) Preprocessing: rilevamento MIME e square crop + resize
     const type = await fileTypeFromBuffer(photoBuffer);
-    const safeMime = type?.mime ?? mimeType ?? 'image/jpeg';
+    const detectedMime = type?.mime ?? mimeType ?? 'image/jpeg';
     
     console.log('[Avatar] Processing image:', { 
       detectedMime: type?.mime, 
       providedMime: mimeType, 
-      finalMime: safeMime,
+      finalMime: detectedMime,
       bufferSize: photoBuffer.length 
     });
 
@@ -115,18 +150,27 @@ export const generateAvatarFromPhoto = async ({
     const replicateWithFiles = replicate as any;
     let uploadedInput: string | null = null;
 
+    // Log SDK version per debugging
+    const sdkVersion = (replicate as any).version || 'unknown';
+    console.log('[Avatar] Replicate SDK version:', sdkVersion);
+
     try {
       uploadedInput = await replicateWithFiles.files?.upload?.(processedBuffer, {
         filename,
         contentType: 'image/png',
       });
+      if (uploadedInput) {
+        console.log('[Avatar] Image uploaded via Replicate files.upload');
+      }
     } catch (uploadError) {
-      console.warn('[Avatar] Replicate files.upload failed, using fallback:', uploadError);
+      console.warn('[Avatar] Replicate files.upload failed, using Supabase fallback:', uploadError);
+      console.warn('[Avatar] Tip: Update Replicate SDK to @latest if this persists');
     }
 
-    // 5) Fallback: se files.upload non esiste, carica temporaneamente su Supabase
+    // 5) Fallback: se files.upload non esiste, carica temporaneamente su Supabase con SIGNED URL
+    // Usa signed URL per privacy (TTL 15 minuti) invece di public URL
     if (!uploadedInput) {
-      console.log('[Avatar] Using Supabase fallback for input image');
+      console.log('[Avatar] Using Supabase fallback with signed URL for input image');
       tempInputPath = `${userId}/inputs/${Date.now()}-input.png`;
       
       const { error: tempUploadError } = await supabaseAdmin.storage
@@ -140,21 +184,22 @@ export const generateAvatarFromPhoto = async ({
         throw new Error(`Failed to upload temp input to Supabase: ${tempUploadError.message}`);
       }
 
-      const { data: tempUrlData } = supabaseAdmin.storage
+      // Crea signed URL con TTL di 15 minuti (900 secondi) per privacy
+      const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
         .from(AVATAR_BUCKET)
-        .getPublicUrl(tempInputPath);
+        .createSignedUrl(tempInputPath, 15 * 60); // 15 minuti
       
-      uploadedInput = tempUrlData?.publicUrl || null;
-      
-      if (!uploadedInput) {
-        throw new Error('Failed to get public URL for temp input');
+      if (signedUrlError || !signedUrlData?.signedUrl) {
+        throw new Error(`Failed to create signed URL for temp input: ${signedUrlError?.message || 'unknown error'}`);
       }
       
-      console.log('[Avatar] Temp input uploaded to Supabase:', tempInputPath);
+      uploadedInput = signedUrlData.signedUrl;
+      console.log('[Avatar] Temp input uploaded to Supabase with signed URL (TTL: 15min):', tempInputPath);
     }
 
     // 6) Costruisci l'input del modello
     //    FLUX Kontext Pro è un img2img/stylizer: diamo un prompt "descrittivo dello stile" e la foto come conditioning
+    const seed = Number(process.env.AVATAR_SEED ?? 42);
     const input = {
       prompt: `${AVATAR_STYLE_PROMPT}
 
@@ -162,28 +207,35 @@ ${styleRefHint}
 
 Preserve facial geometry and distinctive features (eye spacing, nose shape, jawline, beard density if present).
 Avoid over-smoothing facial structure. Use a clean vector look with soft gradients.
-Background: circular purple gradient. Shirt: simple teal crew-neck.`,
-      input_image: uploadedInput, // URL gestito da Replicate o Supabase
+Background: circular purple gradient. Shirt: simple teal crew-neck.
+No accessories not present in the input photo. Keep a clean, uncluttered composition.
+Compose as a head-and-shoulders portrait centered within the circular background.`,
+      input_image: uploadedInput, // URL gestito da Replicate o Supabase (signed se fallback)
       // Opzioni utili: dipendono dal modello
       output_format: 'png',
       width: 1024,
       height: 1024,
-      // Seed per riproducibilità
-      seed: 42,
+      // Seed per riproducibilità (configurabile via ENV)
+      seed,
+      // Nota: strength/guidance potrebbero essere supportati dal modello, ma non li forziamo
+      // per compatibilità. Se necessario, aggiungere dopo test.
     };
 
-    console.log('[Avatar] Running Replicate model: black-forest-labs/flux-kontext-pro');
+    console.log('[Avatar] Running Replicate model: black-forest-labs/flux-kontext-pro', { seed });
     const modelStartTime = Date.now();
 
-    // 7) Esecuzione del modello con timeout
-    const modelPromise = replicate.run('black-forest-labs/flux-kontext-pro', { input });
-    const timeoutPromise = new Promise((_, reject) => 
+    // 7) Esecuzione del modello con timeout e retry logic
+    const modelPromise = withRetry(
+      () => replicate.run('black-forest-labs/flux-kontext-pro', { input }),
+      2 // 2 retry attempts (totale 3 tentativi)
+    );
+    const timeoutPromise = new Promise<never>((_, reject) => 
       setTimeout(() => reject(new Error('Replicate model timeout after 120s')), 120_000)
     );
 
     const output = await Promise.race([modelPromise, timeoutPromise]) as ReplicateOutput;
     const modelDuration = Date.now() - modelStartTime;
-    console.log('[Avatar] Model completed:', { duration: `${modelDuration}ms` });
+    console.log('[Avatar] Model completed:', { duration: `${modelDuration}ms`, seed });
 
     // 8) Normalizzazione output -> otteniamo un Buffer PNG
     let avatarBuffer: Buffer | null = null;
@@ -212,14 +264,23 @@ Background: circular purple gradient. Shirt: simple teal crew-neck.`,
       }
     }
 
-    // Case D: alcuni wrapper ritornano direttamente bytes (Uint8Array)
+    // Case D: alcuni wrapper ritornano direttamente bytes (Uint8Array o ArrayBuffer)
     if (!imageUrl && output instanceof Uint8Array) {
+      avatarBuffer = Buffer.from(output);
+    } else if (!imageUrl && output instanceof ArrayBuffer) {
       avatarBuffer = Buffer.from(output);
     }
 
     // Se abbiamo un URL: scarichiamo con timeout
     if (!avatarBuffer && imageUrl) {
       console.log('[Avatar] Downloading image from:', imageUrl.substring(0, 50) + '...');
+      
+      // Verifica che fetch sia disponibile (Node >=18 ha fetch globale)
+      if (typeof globalThis.fetch === 'undefined') {
+        console.warn('[Avatar] fetch not available, attempting to use node-fetch');
+        // In produzione, considera di importare node-fetch come fallback
+      }
+      
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30_000);
       
@@ -292,22 +353,28 @@ Background: circular purple gradient. Shirt: simple teal crew-neck.`,
       }
     }
 
-    // 12) Pulizia input temporaneo se usato
+    // 12) Pulizia input temporaneo se usato (con delay per evitare race condition)
+    // Aspettiamo 5 secondi dopo il download per assicurarci che Replicate abbia finito di leggere
     if (tempInputPath) {
+      // Delay per evitare race condition: Replicate potrebbe ancora star leggendo l'URL
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
       try {
         await supabaseAdmin.storage.from(AVATAR_BUCKET).remove([tempInputPath]);
         console.log('[Avatar] Temp input cleaned up:', tempInputPath);
       } catch (cleanupError) {
         console.warn('[Avatar] Failed to cleanup temp input (non-critical):', cleanupError);
+        // Nota: Il signed URL scadrà comunque dopo 15 minuti, quindi non è critico
       }
     }
 
     const totalDuration = Date.now() - startTime;
+    const modelName = 'black-forest-labs/flux-kontext-pro';
     console.log('[Avatar] Generation completed:', {
-      userId,
+      userId: userId.substring(0, 8) + '...', // Log parziale per privacy
       duration: `${totalDuration}ms`,
-      model: 'black-forest-labs/flux-kontext-pro',
-      seed: 42,
+      model: modelName,
+      seed,
       size: '1024x1024',
     });
 
@@ -316,8 +383,8 @@ Background: circular purple gradient. Shirt: simple teal crew-neck.`,
       avatarUrl: publicUrl,
       storagePath: avatarPath,
       bucket: AVATAR_BUCKET,
-      model: 'black-forest-labs/flux-kontext-pro',
-      seed: 42,
+      model: modelName,
+      seed,
       size: '1024x1024',
     };
 
