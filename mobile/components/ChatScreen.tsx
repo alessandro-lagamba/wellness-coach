@@ -7,13 +7,12 @@ import {
   ScrollView,
   StyleSheet,
   Dimensions,
-  KeyboardAvoidingView,
-  Platform,
   Image,
   AppState,
   Alert,
-  Keyboard,
   Switch,
+  useColorScheme,
+  FlatList,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -31,7 +30,8 @@ import Animated, {
   withSequence,
   runOnJS
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AvoidSoftInput, AvoidSoftInputView } from 'react-native-avoid-softinput';
 import WellnessSuggestionPopup from './WellnessSuggestionPopup';
 
 import { BACKEND_URL, getBackendURL } from '../constants/env';
@@ -164,10 +164,20 @@ const extractSuggestionFromAIResponse = (aiResponse: string) => {
 };
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
-  const { t } = useTranslation(); // 🆕 i18n hook
+  const { t, language } = useTranslation(); // 🆕 i18n hook
   const { colors, mode: themeMode } = useTheme();
   const router = useRouter();
   const { voiceMode } = useLocalSearchParams(); // 🆕 Rimossa t da qui (era in conflitto)
+  const insets = useSafeAreaInsets();
+  const surfaceSecondary = (colors as any).surfaceSecondary ?? colors.surface;
+  
+  useEffect(() => {
+    AvoidSoftInput.setEnabled(true);
+    AvoidSoftInput.setShouldMimicIOSBehavior(true);
+    return () => {
+      AvoidSoftInput.setEnabled(false);
+    };
+  }, []);
   
   // 🆕 Rimossi log per performance
   useEffect(() => {
@@ -176,28 +186,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       voiceInterfaceOpacity.value = withTiming(1, { duration: 300 });
     }
   }, [voiceMode]);
-  // 🔧 FIX: Messaggio iniziale personalizzato con traduzione
-  const getInitialMessage = () => {
-    let userName: string | undefined;
-    if (currentUserProfile?.first_name) {
-      userName = currentUserProfile.first_name;
-    } else if (user?.user_metadata?.full_name) {
-      userName = user.user_metadata.full_name.split(' ')[0];
-    } else if (user?.email) {
-      userName = user.email.split('@')[0].split('.')[0];
-    }
-    
-    if (userName) {
-      return t('chat.welcomeMessage.withName', { name: userName });
-    }
-    return t('chat.welcomeMessage.default');
-  };
-
+  
   const [mode, setMode] = useState<'chat' | 'journal'>('chat');
+  // 🔥 FIX: Inizializziamo messages con un messaggio di default, poi lo aggiorniamo nel useEffect
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
-      text: getInitialMessage(),
+      text: t('chat.welcomeMessage.default'), // 🔥 FIX: Usa messaggio di default inizialmente
       sender: 'ai',
       timestamp: new Date(Date.now() - 60000),
     },
@@ -224,6 +219,24 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [monthJournalMap, setMonthJournalMap] = useState<Record<string, { hasEntry: boolean; aiScore?: number }>>({}); // 🆕 Map per journal entries dal DB
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const monthStripScrollRef = useRef<ScrollView>(null); // 🆕 Ref per scroll automatico
+
+  // 🔧 FIX: Messaggio iniziale personalizzato con traduzione
+  // 🔥 FIX: Memoizziamo getInitialMessage per evitare ricreazioni
+  const getInitialMessage = useCallback(() => {
+    let userName: string | undefined;
+    if (currentUserProfile?.first_name) {
+      userName = currentUserProfile.first_name;
+    } else if (user?.user_metadata?.full_name) {
+      userName = user.user_metadata.full_name.split(' ')[0];
+    } else if (user?.email) {
+      userName = user.email.split('@')[0].split('.')[0];
+    }
+    
+    if (userName) {
+      return t('chat.welcomeMessage.withName', { name: userName });
+    }
+    return t('chat.welcomeMessage.default');
+  }, [currentUserProfile, user, t]);
 
   // Persist and restore mode
   useEffect(() => {
@@ -275,12 +288,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     if (monthStripScrollRef.current && selectedDayKey && monthDays.includes(selectedDayKey)) {
       const index = monthDays.indexOf(selectedDayKey);
       // Delay per permettere al layout di completarsi
-      setTimeout(() => {
+      // 🔥 FIX: Memory leak - aggiungiamo cleanup per setTimeout
+      const timer = setTimeout(() => {
         monthStripScrollRef.current?.scrollTo({ 
           x: Math.max(0, index * 60 - width / 4), // Scroll per centrare approssimativamente
           animated: true 
         });
       }, 100);
+      
+      return () => clearTimeout(timer);
     }
   }, [selectedDayKey, monthDays]);
 
@@ -348,34 +364,84 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [transcript, setTranscript] = useState('');
 
   // 🔧 FIX: Aggiorna currentUser quando user cambia
+  // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // 🔥 FIX: Usiamo useRef per tracciare l'ultimo user.id per evitare loop infiniti
+  const lastUserIdRef = useRef<string | null>(null);
+  const lastProfileIdRef = useRef<string | null>(null);
+  
   useEffect(() => {
     // 🆕 Rimosso log per performance
-    setCurrentUser(user);
+    // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
+    if (!isMountedRef.current) return;
+    
+    // 🔥 FIX: Evita setState se user.id non è cambiato
+    if (user?.id !== lastUserIdRef.current) {
+      lastUserIdRef.current = user?.id || null;
+      setCurrentUser(user);
+    }
     
     // 🔧 Carica il profilo utente per ottenere first_name e last_name
     if (user?.id) {
+      // 🔥 FIX: Evita chiamate duplicate se il profilo è già stato caricato
+      if (currentUserProfile?.id === user.id) {
+        // Profilo già caricato, non serve fare nulla
+        return;
+      }
+      
       AuthService.getUserProfile(user.id).then(profile => {
-        setCurrentUserProfile(profile);
-        // 🆕 Rimosso log per performance
+        // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
+        if (!isMountedRef.current) return;
+        
+        // 🔥 FIX: Evita setState se il profilo non è cambiato
+        if (profile?.id !== lastProfileIdRef.current) {
+          lastProfileIdRef.current = profile?.id || null;
+          setCurrentUserProfile(profile);
+          
+          // Aggiorna il messaggio iniziale
+          if (user) {
+            const personalizedMessage = getInitialMessage();
+            if (isMountedRef.current) {
+              setMessages(prev => {
+                const welcomeMsg = prev.find(msg => msg.id === 'welcome');
+                if (welcomeMsg?.text === personalizedMessage) {
+                  return prev; // Nessun cambiamento necessario
+                }
+                return prev.map(msg => 
+                  msg.id === 'welcome' 
+                    ? { ...msg, text: personalizedMessage }
+                    : msg
+                );
+              });
+            }
+          }
+        }
+      }).catch(error => {
+        // 🔥 FIX: Solo errori critici in console
+        console.error('❌ Error loading user profile:', error);
       });
     } else {
-      setCurrentUserProfile(null);
+      // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
+      if (isMountedRef.current && currentUserProfile !== null) {
+        lastProfileIdRef.current = null;
+        setCurrentUserProfile(null);
+      }
     }
-    
-    // 🔧 Aggiorna anche il messaggio iniziale con il nome se user è disponibile
-    if (user) {
-      const personalizedMessage = getInitialMessage();
-      setMessages(prev => prev.map(msg => 
-        msg.id === 'welcome' 
-          ? { ...msg, text: personalizedMessage }
-          : msg
-      ));
-    }
-  }, [user]);
+  }, [user?.id]); // 🔥 FIX: Dipendiamo solo da user.id, non da user o getInitialMessage
   const [aiContext, setAiContext] = useState<any>(null);
   const [wellnessSuggestion, setWellnessSuggestion] = useState<any>(null);
   const [showWellnessPopup, setShowWellnessPopup] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [inputBarHeight, setInputBarHeight] = useState(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   // Wellness popup handlers
   const handleAddToToday = async (suggestion: any) => {
@@ -388,34 +454,34 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     
     // Show completion feedback
     Alert.alert(
-      'Ottimo!',
-      'Suggerimento applicato. Come ti senti dopo averlo provato?',
+      t('chat.suggestionFeedback.title'),
+      t('chat.suggestionFeedback.message'),
       [
-        { text: 'Molto bene', onPress: async () => {
+        { text: t('chat.suggestionFeedback.veryGood'), onPress: async () => {
           await WellnessSuggestionService.learnFromUserInteraction(
             currentUser.id,
             suggestion.id,
             'completed',
             5,
-            'Molto efficace'
+            t('chat.suggestionFeedback.veryEffective')
           );
         }},
-        { text: 'Bene', onPress: async () => {
+        { text: t('chat.suggestionFeedback.good'), onPress: async () => {
           await WellnessSuggestionService.learnFromUserInteraction(
             currentUser.id,
             suggestion.id,
             'completed',
             4,
-            'Utile'
+            t('chat.suggestionFeedback.useful')
           );
         }},
-        { text: 'Così così', onPress: async () => {
+        { text: t('chat.suggestionFeedback.soSo'), onPress: async () => {
           await WellnessSuggestionService.learnFromUserInteraction(
             currentUser.id,
             suggestion.id,
             'completed',
             3,
-            'Normale'
+            t('chat.suggestionFeedback.neutral')
           );
         }}
       ]
@@ -452,15 +518,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   };
 
   // Keyboard management states - 🔧 SPOSTATO PRIMA DEGLI useEffect CHE LI USANO
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const scrollViewRef = useRef<ScrollView>(null);
   const inputContainerRef = useRef<View>(null);
-  const [inputFocused, setInputFocused] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false); // 🔥 FIX: Solo per sapere se tastiera è aperta (per UI state)
 
   // 🆕 Rimossi log debug per performance
 
-  const scrollRef = useRef<ScrollView>(null);
   const tts = useMemo(() => UnifiedTTSService.getInstance(), []);
 
   // Animation values
@@ -508,26 +570,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     return '#e2e8f0'; // Neutral gray
   };
 
-  // Initialize TTS and Database
-  useEffect(() => {
-    const initializeServices = async () => {
-      try {
-        await tts.initialize();
-        // 🆕 Rimosso log per performance
-        
-        // Initialize database services if user is authenticated
-        if (currentUser) {
-          await initializeDatabaseServices();
-        }
-      } catch (error) {
-        console.error('Failed to initialize services:', error);
-      }
-    };
-    initializeServices();
-  }, [currentUser]);
-
   // Initialize database services
-  const initializeDatabaseServices = async () => {
+  // 🔥 FIX: Memoizziamo initializeDatabaseServices per evitare ricreazioni
+  const initializeDatabaseServices = useCallback(async () => {
     try {
       // 🆕 Rimosso log per performance
       
@@ -541,9 +586,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       setWellnessSuggestion(null);
       
       // Create or get current chat session
+      // 🔥 FIX: Usa la lingua dell'utente per il formato data
+      const dateLocale = language === 'it' ? 'it-IT' : 'en-US';
+      const sessionDate = new Date().toLocaleDateString(dateLocale);
       const session = await ChatService.createChatSession(
         currentUser.id,
-        `Chat ${new Date().toLocaleDateString('it-IT')}`,
+        t('chat.sessionName', { date: sessionDate }),
         context.currentEmotion ? {
           dominantEmotion: context.currentEmotion.emotion,
           valence: context.currentEmotion.valence,
@@ -567,7 +615,25 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     } catch (error) {
       console.error('Error initializing database services:', error);
     }
-  };
+  }, [currentUser]);
+
+  // Initialize TTS and Database
+  useEffect(() => {
+    const initializeServices = async () => {
+      try {
+        await tts.initialize();
+        // 🆕 Rimosso log per performance
+        
+        // Initialize database services if user is authenticated
+        if (currentUser) {
+          await initializeDatabaseServices();
+        }
+      } catch (error) {
+        console.error('Failed to initialize services:', error);
+      }
+    };
+    initializeServices();
+  }, [currentUser, tts, initializeDatabaseServices]);
 
   // Auto-start voice mode when coming from Avatar mic button
   useEffect(() => {
@@ -596,67 +662,39 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
   // Listen for app state changes to handle navigation
   useEffect(() => {
+    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare i timeout
+    const timeoutRefs: ReturnType<typeof setTimeout>[] = [];
+    
     const handleAppStateChange = (nextAppState: string) => {
       // 🆕 Rimosso log per performance
       if (nextAppState === 'active' && voiceMode === 'true' && !showVoiceInterface) {
-        setTimeout(() => {
+        // 🔥 FIX: Memory leak - salviamo il timeout per cleanup
+        const timer = setTimeout(() => {
           setShowVoiceInterface(true);
           voiceInterfaceOpacity.value = withTiming(1, { duration: 300 });
         }, 200);
+        timeoutRefs.push(timer);
       }
     };
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
-    return () => subscription?.remove();
+    return () => {
+      subscription?.remove();
+      // 🔥 FIX: Memory leak - puliamo tutti i timeout
+      timeoutRefs.forEach(timer => clearTimeout(timer));
+    };
   }, [voiceMode, showVoiceInterface]);
 
-  const scrollToBottom = useCallback(() => {
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    });
-  }, []);
-
+  // Keyboard management via AvoidSoftInput events
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Keyboard management
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
-      // 🆕 Rimosso log per performance
-      setKeyboardVisible(true);
-      setKeyboardHeight(e.endCoordinates.height);
-      
-      // Scroll to bottom when keyboard appears
-      setTimeout(() => {
-        if (scrollViewRef.current) {
-          scrollViewRef.current.scrollToEnd({ animated: true });
-        }
-      }, 100);
-    });
-
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      // 🆕 Rimosso log per performance
-      setKeyboardVisible(false);
-      setKeyboardHeight(0);
-      setInputFocused(false);
-      
-      // 🔧 FIX: Forza il reset completo del layout
-      setTimeout(() => {
-        // Reset scroll position
-        if (scrollViewRef.current) {
-          scrollViewRef.current.scrollToEnd({ animated: true });
-        }
-        
-        // 🔧 FIX: Forza il re-render per tornare alla posizione iniziale
-        setKeyboardVisible(false);
-        setKeyboardHeight(0);
-      }, 100);
-    });
+    const showSubscription = AvoidSoftInput.onSoftInputShown(() => setIsKeyboardVisible(true));
+    const hideSubscription = AvoidSoftInput.onSoftInputHidden(() => setIsKeyboardVisible(false));
+    const offsetSubscription = AvoidSoftInput.onSoftInputAppliedOffsetChange(() => {});
 
     return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
+      showSubscription.remove();
+      hideSubscription.remove();
+      offsetSubscription.remove();
     };
   }, []);
 
@@ -771,10 +809,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       setIsSpeaking(true);
       
       try {
+        // 🔥 FIX: Usa la lingua dell'utente invece di 'it-IT' hardcoded
+        const ttsLanguage = language === 'it' ? 'it-IT' : 'en-US';
         await tts.speak(reply, {
           rate: 0.5,
           pitch: 1.0,
-          language: 'it-IT',
+          language: ttsLanguage,
         });
       } catch (error) {
         console.error('TTS error:', error);
@@ -846,27 +886,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     }
   }, [aiContext, currentUser, currentUserProfile, currentSessionId, messages, setMessages, setIsProcessing, setWellnessSuggestion]);
 
-  // Keyboard management functions
+  // Keyboard management functions (non più necessari con FlatList invertita)
   const handleInputFocus = useCallback(() => {
-    setInputFocused(true);
-    
-    // Scroll to bottom when input is focused
-    setTimeout(() => {
-      if (scrollViewRef.current) {
-        scrollViewRef.current.scrollToEnd({ animated: true });
-      }
-    }, 100);
+    // FlatList invertita gestisce automaticamente lo scroll
   }, []);
 
   const handleInputBlur = useCallback(() => {
-    setInputFocused(false);
-    
-    // Small delay to ensure smooth transition
-    setTimeout(() => {
-      if (scrollViewRef.current) {
-        scrollViewRef.current.scrollToEnd({ animated: true });
-      }
-    }, 100);
+    // FlatList invertita gestisce automaticamente lo scroll
   }, []);
 
   const handleSendMessage = async () => {
@@ -1005,10 +1031,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       if (isVoiceMode) {
         try {
           setIsSpeaking(true);
+          // 🔥 FIX: Usa la lingua dell'utente invece di 'it-IT' hardcoded
+          const ttsLanguage = language === 'it' ? 'it-IT' : 'en-US';
           await tts.speak(reply, {
             rate: 0.5,
             pitch: 1.0,
-            language: 'it-IT',
+            language: ttsLanguage,
           });
         } catch (error) {
           console.error('TTS error:', error);
@@ -1099,7 +1127,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         
         await speechService.startListening(
           (result) => {
-            console.log('Speech recognition result:', result);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             setTranscript(result.transcript);
             
             if (result.isFinal) {
@@ -1125,16 +1153,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             setIsProcessing(false);
             
             // Show error message
+            // 🔥 FIX: Usa traduzione invece di stringa hardcoded
             const errorMessage: Message = {
               id: `${Date.now()}-voice-error`,
-              text: "Sorry, I couldn't understand what you said. Please try again.",
+              text: t('chat.speechError'),
               sender: 'ai',
               timestamp: new Date(),
             };
             setMessages((prev) => [...prev, errorMessage]);
           },
           {
-            language: 'it-IT',
+            // 🔥 FIX: Usa la lingua dell'utente invece di 'it-IT' hardcoded
+            language: language === 'it' ? 'it-IT' : 'en-US',
             silenceTimeout: 3000, // 3 seconds of silence before processing
           }
         );
@@ -1187,6 +1217,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     },
   }), [colors.background]);
 
+  // scrollContentStyle non più necessario per FlatList; il paddingBottom viene messo direttamente in contentContainerStyle della FlatList
+
   // 🆕 Voice input handler memoizzato
   const handleVoiceInput = useCallback(async (text: string) => {
     // ✅ REAL VOICE INPUT - No more simulation!
@@ -1226,22 +1258,41 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     // This will be implemented later with proper data storage
   }, []);
 
+  // 🔥 FIX: Fallback color per SafeAreaView per evitare flash bianco
+  const systemColorScheme = useColorScheme();
+  const fallbackBackground = systemColorScheme === 'dark' ? '#1a1625' : '#f8fafc';
+  const safeAreaBackground = colors?.background || fallbackBackground;
+
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]}> 
-      <KeyboardAvoidingView 
-        style={styles.flex} 
-        behavior={keyboardVisible ? "height" : "padding"}  // 🔧 FIX: Comportamento dinamico
-        keyboardVerticalOffset={0}   
-        enabled={keyboardVisible}  // 🔧 FIX: Disabilita quando tastiera chiusa
+    <SafeAreaView
+      edges={['top', 'left', 'right']}
+      style={[styles.container, dynamicStyles.container, { backgroundColor: safeAreaBackground }]}
+    > 
+      <AvoidSoftInputView
+        style={styles.flex}
+        avoidOffset={36}
+        showAnimationDelay={0}
+        hideAnimationDelay={0}
+        showAnimationDuration={100}
+        hideAnimationDuration={100}
+        easing="easeOut"
       >
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.push('/(tabs)')} style={[styles.headerButton, { backgroundColor: colors.surfaceSecondary }]}>
+        <View
+          style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
+          onLayout={({ nativeEvent }) => {
+            const { height } = nativeEvent.layout;
+            if (Math.abs(height - headerHeight) > 0.5) {
+              setHeaderHeight(height);
+            }
+          }}
+        >
+          <TouchableOpacity onPress={() => router.push('/(tabs)')} style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}>
             <FontAwesome name="chevron-left" size={18} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.headerContent}>
             {/* Segmented toggle: Chat | Journal */}
-            <View style={[styles.segmentedWrap, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+            <View style={[styles.segmentedWrap, { backgroundColor: surfaceSecondary, borderColor: colors.border }]}>
               <TouchableOpacity
                 style={[styles.segmentBtn, mode === 'chat' && [styles.segmentBtnActive, { backgroundColor: colors.surface }]]}
                 onPress={() => setMode('chat')}
@@ -1260,7 +1311,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               </TouchableOpacity>
             </View>
           </View>
-          <TouchableOpacity style={[styles.headerButton, { backgroundColor: colors.surfaceSecondary }]}>
+          <TouchableOpacity style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}>
             <FontAwesome name="cog" size={18} color={colors.text} />
           </TouchableOpacity>
         </View>
@@ -1330,29 +1381,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         />
 
         {/* Chat/Journal Content */}
-        <ScrollView
-          ref={scrollViewRef}
-          style={[
-            styles.scrollArea,
-            // 🔧 FIX: Riduci l'altezza dell'area scroll quando la tastiera è aperta
-            keyboardVisible && {
-              height: height - keyboardHeight - 120, // 🔧 FIX: Spazio ottimizzato per input bar
-            }
-          ]}
-          contentContainerStyle={[
-            styles.scrollContent,
-            // 🔧 FIX: Padding dinamico per ottimizzare spazio
-            {
-              paddingBottom: keyboardVisible ? 0 : 20
-            }
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          scrollEnabled={true}
-          nestedScrollEnabled={true}
-          automaticallyAdjustKeyboardInsets={false} // 🔧 DISABILITATO: Gestiamo manualmente
-          removeClippedSubviews={true} // 🆕 Ottimizzazione performance
-        >
+        <View style={styles.scrollArea}>
           {mode === 'chat' ? (
             <>
               {/* Quick Replies */}
@@ -1372,15 +1401,35 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 </View>
               </View>
 
-              {/* Messages */}
-              <View style={styles.messagesContainer}>
-                {messages.map((message) => (
+              {/* Messages - FlatList invertita */}
+              <FlatList
+                data={messages}
+                keyExtractor={(item) => item.id}
+                inverted
+                contentContainerStyle={[
+                  styles.messagesContainer,
+                  // lasciamo sempre un "respiro" pari all'altezza dell'input
+                  { paddingBottom: inputBarHeight + (isKeyboardVisible ? 0 : insets.bottom) + 20 },
+                ]}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                maintainVisibleContentPosition={{
+                  minIndexForVisible: 1, // mantiene la posizione quando si aggiungono nuovi messaggi
+                }}
+                renderItem={({ item: message }) => (
                   <View
-                    key={message.id}
-                    style={[styles.messageWrapper, message.sender === 'user' ? styles.userWrapper : styles.aiWrapper]}
+                    style={[
+                      styles.messageWrapper,
+                      message.sender === 'user' ? styles.userWrapper : styles.aiWrapper,
+                    ]}
                   >
                     <View
-                      style={[styles.messageBubble, message.sender === 'user' ? styles.userBubble : [styles.aiBubble, { backgroundColor: colors.surface, borderColor: colors.border }]]}
+                      style={[
+                        styles.messageBubble,
+                        message.sender === 'user'
+                          ? styles.userBubble
+                          : [styles.aiBubble, { backgroundColor: colors.surface, borderColor: colors.border }],
+                      ]}
                     >
                       {message.sender === 'ai' ? (
                         <Markdown style={chatMarkdownStyles(themeMode, colors)}>{message.text}</Markdown>
@@ -1399,25 +1448,32 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       )}
                     </View>
                   </View>
-                ))}
-                {showLoadingCloud && (
-                  <View style={[styles.messageWrapper, styles.aiWrapper]}>
-                    <View style={[styles.messageBubble, styles.aiBubble]}>
-                      <MessageLoadingDots isVisible={showLoadingCloud} />
-                    </View>
-                  </View>
                 )}
-              </View>
+                ListFooterComponent={
+                  showLoadingCloud ? (
+                    <View style={[styles.messageWrapper, styles.aiWrapper]}>
+                      <View style={[styles.messageBubble, styles.aiBubble]}>
+                        <MessageLoadingDots isVisible={showLoadingCloud} />
+                      </View>
+                    </View>
+                  ) : null
+                }
+              />
             </>
           ) : (
-            <>
+            <ScrollView
+              style={styles.scrollArea}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               {/* Month header + navigation */}
               <View style={styles.monthHeader}>
                 <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth()-1, 1))} style={styles.monthNavBtn}>
                   <Text style={styles.monthNavTxt}>{'<'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setShowMonthPicker(true)} style={styles.monthTitleWrap}>
-                  <Text style={styles.monthTitle}>{currentMonth.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}</Text>
+                  <Text style={styles.monthTitle}>{currentMonth.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', { month: 'long', year: 'numeric' })}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth()+1, 1))} style={styles.monthNavBtn}>
                   <Text style={styles.monthNavTxt}>{'>'}</Text>
@@ -1471,7 +1527,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth()-1, 1))} style={styles.monthNavBtn}>
                         <Text style={styles.monthNavTxt}>{'<'}</Text>
                       </TouchableOpacity>
-                      <Text style={styles.modalTitle}>{currentMonth.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}</Text>
+                      <Text style={styles.modalTitle}>{currentMonth.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', { month: 'long', year: 'numeric' })}</Text>
                       <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth()+1, 1))} style={styles.monthNavBtn}>
                         <Text style={styles.monthNavTxt}>{'>'}</Text>
                       </TouchableOpacity>
@@ -1484,10 +1540,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                         const year = baseYear - 2 + idx;
                         const active = year === currentMonth.getFullYear();
                         return (
-                          <TouchableOpacity key={year} style={[styles.yearBtn, active && styles.yearBtnActive]}
+                          <TouchableOpacity 
+                            key={year} 
+                            style={[
+                              styles.yearBtn, 
+                              { backgroundColor: colors.surfaceMuted, borderColor: colors.border },
+                              active && { backgroundColor: colors.primaryMuted, borderColor: colors.primary }
+                            ]}
                             onPress={() => setCurrentMonth(new Date(year, currentMonth.getMonth(), 1))}
                           >
-                            <Text style={[styles.yearTxt, active && styles.yearTxtActive]}>{year}</Text>
+                            <Text style={[styles.yearTxt, { color: colors.textSecondary }, active && { color: colors.primary }]}>{year}</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -1523,7 +1585,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                         for (let i=0;i<totalCells;i++){
                           const dayNum = i - startOffset + 1;
                           if (dayNum < 1 || dayNum > daysInMonth) {
-                            cells.push(<View key={`e-${i}`} style={styles.calCellEmpty} />);
+                            cells.push(<View key={`e-${i}`} style={[styles.calCellEmpty, { backgroundColor: colors.surfaceMuted, borderColor: colors.borderLight }]} />);
                           } else {
                             // 🆕 Usa helper per evitare problemi timezone
                             const iso = toISODateSafe(y, m, dayNum);
@@ -1550,13 +1612,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                             cells.push(
                               <TouchableOpacity 
                                 key={`d-${i}`} 
-                                style={[styles.calCell, { backgroundColor: colors.surface, borderColor: colors.border }, active && { borderColor:'#6366f1', backgroundColor:'#eef2ff' }]} 
+                                style={[
+                                  styles.calCell, 
+                                  { backgroundColor: colors.surface, borderColor: colors.border }, 
+                                  active && { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
+                                ]} 
                                 onPress={() => { 
                                   setSelectedDayKey(iso); 
                                   setShowMonthPicker(false); 
                                 }}
                               >
-                                <Text style={[styles.calDayTxt, active && { color:'#3730a3', fontWeight:'800' }]}>{dayNum}</Text>
+                                <Text style={[styles.calDayTxt, { color: colors.text }, active && { color: colors.primary, fontWeight:'800' }]}>{dayNum}</Text>
                                 {hasEntry && <View style={[styles.calDot, { backgroundColor: color }]} />} {/* 🆕 Mostra pallino solo se c'è entry */}
                               </TouchableOpacity>
                             );
@@ -1580,7 +1646,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 >
                   <View style={styles.journalPromptHeader}>
                     <Text style={[styles.journalPromptTitle, { color: colors.text }]}>{t('journal.dailyPrompt')}</Text>
-                    <TouchableOpacity style={[styles.pillSecondary, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]} onPress={() => setJournalPrompt(journalPrompt)}>
+                    <TouchableOpacity style={[styles.pillSecondary, { backgroundColor: surfaceSecondary, borderColor: colors.border }]} onPress={() => setJournalPrompt(journalPrompt)}>
                       <Text style={[styles.pillSecondaryText, { color: colors.primary }]}>{t('journal.regeneratePrompt')}</Text>
                     </TouchableOpacity>
                   </View>
@@ -1594,7 +1660,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   <View style={styles.journalEditorHeader}>
                   <View style={{ flexDirection:'row', alignItems:'center', gap:8 }}>
                     <Text style={[styles.editorTitle, { color: colors.text }]}>{t('journal.entryTitle')}</Text>
-                    <View style={[styles.dateChip, { backgroundColor: colors.surfaceSecondary }]}>
+                    <View style={[styles.dateChip, { backgroundColor: surfaceSecondary }]}>
                       <Text style={[styles.dateChipText, { color: colors.textSecondary }]}>{selectedDayKey}</Text>
                     </View>
                   </View>
@@ -1740,9 +1806,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   ))}
                 </View>
               ) : null}
-            </>
+            </ScrollView>
           )}
-        </ScrollView>
+        </View>
 
         {/* Full Analysis Modal */}
         <Modal visible={showFullAnalysis} animationType="fade" transparent>
@@ -1767,28 +1833,24 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         {mode === 'chat' && !showVoiceInterface && (
         <View 
           ref={inputContainerRef}
+          onLayout={({ nativeEvent }) => {
+            const { height } = nativeEvent.layout;
+            if (Math.abs(height - inputBarHeight) > 0.5) {
+              setInputBarHeight(height);
+            }
+          }}
           style={[
             styles.inputContainer,
-            { backgroundColor: colors.surface, borderTopColor: colors.border },
-            // 🔧 FIX: Posizionamento fisso APPENA sopra la tastiera
-            keyboardVisible && {
-              position: 'absolute',
-              bottom: keyboardHeight - 400,
-              left: 0,
-              right: 0,
-              marginBottom: 0,
+            {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
+              // 🔥 FIX: Quando la tastiera è aperta, non aggiungere padding extra (KAV gestisce già lo spazio)
+              // Quando la tastiera è chiusa, usa solo insets.bottom per rispettare safe area
+              paddingBottom: isKeyboardVisible ? 0 : insets.bottom,
             },
-            // 🔧 FIX: Reset completo quando tastiera chiusa
-            !keyboardVisible && {
-              position: 'relative',
-              bottom: 'auto',
-              left: 'auto',
-              right: 'auto',
-              marginBottom: 0,
-            }
           ]}
         >
-          <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+          <View style={[styles.inputWrapper, { backgroundColor: surfaceSecondary, borderColor: colors.border }]}>
             <TextInput
               style={[styles.textInput, { color: colors.text }, isVoiceMode && styles.voiceInput]}
               placeholder={isVoiceMode ? t('chat.voicePlaceholder') : t('chat.placeholder')}
@@ -1816,7 +1878,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           </View>
         </View>
         )}
-      </KeyboardAvoidingView>
+      </AvoidSoftInputView>
 
       {/* Wellness Suggestion Popup */}
       <WellnessSuggestionPopup
@@ -1833,7 +1895,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor sarà sovrascritto dinamicamente con colors.background
+    // 🔥 FIX: backgroundColor rimosso - viene applicato dinamicamente con colors.background
   },
   flex: {
     flex: 1,
@@ -1843,9 +1905,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#ffffff',
+    // 🔥 FIX: backgroundColor rimosso - viene applicato dinamicamente
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    // 🔥 FIX: borderBottomColor rimosso - viene applicato dinamicamente
   },
   headerButton: {
     width: 40,
@@ -2061,18 +2123,18 @@ const styles = StyleSheet.create({
   monthTitleWrap: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, backgroundColor: '#eef2ff', borderWidth: 1, borderColor: '#c7d2fe' },
   monthTitle: { fontSize: 14, fontWeight: '800', color: '#3730a3', textTransform: 'capitalize' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'center', justifyContent: 'center' },
-  monthPickerCard: { width: '86%', borderRadius: 16, backgroundColor: '#fff', padding: 16, borderWidth: 1, borderColor: '#e2e8f0' },
+  monthPickerCard: { width: '86%', borderRadius: 16, padding: 16, borderWidth: 1 },
   modalTitle: { fontSize: 16, fontWeight: '800', color: '#0f172a', marginBottom: 0, textTransform: 'capitalize' },
   yearRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, marginBottom: 8 },
-  yearBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0' },
-  yearBtnActive: { backgroundColor: '#eef2ff', borderColor: '#c7d2fe' },
+  yearBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
+  yearBtnActive: { },
   yearTxt: { fontSize: 13, fontWeight: '700', color: '#334155' },
   yearTxtActive: { color: '#3730a3' },
   weekHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, marginBottom: 6, paddingHorizontal: 6 },
   weekHeaderTxt: { width: `${100/7}%`, textAlign: 'center', fontSize: 12, fontWeight: '800', color: '#64748b' },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 4, paddingBottom: 6 },
-  calCell: { width: `${100/7}%`, height: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#ffffff' },
-  calCellEmpty: { width: `${100/7}%`, height: 52, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#f1f5f9' },
+  calCell: { width: `${100/7}%`, height: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  calCellEmpty: { width: `${100/7}%`, height: 52, borderWidth: 1 },
   calDayTxt: { fontSize: 13, color: '#0f172a', marginBottom: 8 },
   calDot: { width: 10, height: 10, borderRadius: 5 },
   modalCloseBtn: { alignSelf: 'flex-end', marginTop: 12, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: '#e0e7ff' },
@@ -2357,9 +2419,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#ffffff',
+    // 🔥 FIX: backgroundColor rimosso - viene applicato dinamicamente
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
+    // 🔥 FIX: borderTopColor rimosso - viene applicato dinamicamente
     // 🔧 FIX: Supporto per posizionamento assoluto
     position: 'relative',
     zIndex: 1000,
@@ -2373,12 +2435,12 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: '#f8fafc',
+    // 🔥 FIX: backgroundColor rimosso - viene applicato dinamicamente
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    // 🔥 FIX: borderColor rimosso - viene applicato dinamicamente
   },
   textInput: {
     flex: 1,

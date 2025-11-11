@@ -1,14 +1,42 @@
-import React, { useEffect } from 'react';
-import { View, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  ActivityIndicator,
+  Text,
+  Pressable,
+  GestureResponderEvent,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSpring } from 'react-native-reanimated';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { AuthService } from '../services/auth.service';
+
+const AVATAR_ICON = require('../assets/avatar-icon.png');
+const USER_PLUS_ICON = require('../assets/user-plus.png');
 
 interface AvatarProps {
   onMicPress?: () => void;
+  /** URI dell'avatar generato (file locale o remoto) */
+  avatarUri?: string | null;
+  /** Mostra stato di generazione avatar */
+  isGenerating?: boolean;
+  /** Callback per avviare il flusso di creazione avatar */
+  onCreateAvatar?: () => void;
+  /** Callback per aprire la community di avatar */
+  onOpenCommunity?: () => void;
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ onMicPress }) => {
+export const Avatar: React.FC<AvatarProps> = ({
+  onMicPress,
+  avatarUri,
+  isGenerating = false,
+  onCreateAvatar,
+  onOpenCommunity,
+}) => {
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const floatY = useSharedValue(0);
   const scale = useSharedValue(1);
   const micScale = useSharedValue(1);
@@ -18,6 +46,20 @@ export const Avatar: React.FC<AvatarProps> = ({ onMicPress }) => {
   useEffect(() => {
     floatY.value = withRepeat(withTiming(-6, { duration: 1600 }), -1, true);
   }, [floatY]);
+
+  useEffect(() => {
+    const loadUserEmail = async () => {
+      try {
+        const user = await AuthService.getCurrentUser();
+        if (user?.email) {
+          setCurrentUserEmail(user.email);
+        }
+      } catch (error) {
+        console.error('Error loading user email:', error);
+      }
+    };
+    loadUserEmail();
+  }, []);
 
   const floatingStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: floatY.value }],
@@ -36,15 +78,10 @@ export const Avatar: React.FC<AvatarProps> = ({ onMicPress }) => {
   }));
 
   const handleMicPress = () => {
-    console.log('Avatar mic button pressed');
-    // Call the navigation immediately, before animation
     if (onMicPress) {
-      console.log('Calling onMicPress callback');
       onMicPress();
-    } else {
-      console.log('No onMicPress callback provided');
     }
-    
+
     // Smooth press animation with rotation and opacity
     micScale.value = withSpring(0.85, { damping: 12, stiffness: 200 });
     micRotation.value = withSpring(5, { damping: 15, stiffness: 150 });
@@ -58,23 +95,160 @@ export const Avatar: React.FC<AvatarProps> = ({ onMicPress }) => {
     }, 150);
   };
 
+  const communityPreview = [
+    'https://images.unsplash.com/photo-1544723795-3fb646b5b39?auto=format&fit=crop&w=200&q=80',
+    'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=200&q=80',
+    'https://images.unsplash.com/photo-1507120410856-1f35574c3b45?auto=format&fit=crop&w=200&q=80',
+  ];
+
+  const handleCreateAvatarPress = (event: GestureResponderEvent) => {
+    event.stopPropagation();
+    onCreateAvatar?.();
+  };
+
+  const Placeholder = () => (
+    <Pressable
+      disabled={!onOpenCommunity}
+      onPress={onOpenCommunity}
+      style={({ pressed }) => [
+        styles.placeholderTapArea,
+        pressed ? { transform: [{ scale: 0.98 }] } : null,
+      ]}
+    >
+      <LinearGradient
+        colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.12)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.placeholderRing}
+      >
+        <View style={styles.communityPreviewStack}>
+          {communityPreview.map((uri, index) => (
+            <Image
+              key={uri}
+              source={{ uri }}
+              style={[
+                styles.communityPreviewImage,
+                { right: index * 18, zIndex: 10 - index },
+              ]}
+            />
+          ))}
+        </View>
+
+        <View style={styles.placeholderCircle}>
+          <FontAwesome name="camera" size={24} color="#4c1d95" />
+        </View>
+        <LinearGradient
+          colors={['#f5f3ff', '#ede9fe']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.placeholderBadge}
+        >
+          <Text style={styles.placeholderBadgeText}>Nuovo</Text>
+        </LinearGradient>
+      </LinearGradient>
+
+      <View style={styles.placeholderContent}>
+        <Text style={styles.placeholderHeadline}>Personalizza il tuo coach</Text>
+        <Text style={styles.placeholderSub}>
+          Guarda gli avatar della community e crea il tuo stile illustrato personale.
+        </Text>
+        <View style={styles.placeholderHighlights}>
+          <View style={styles.highlightItem}>
+            <FontAwesome name="check" size={12} color="#c4b5fd" />
+            <Text style={styles.highlightText}>Ispirati alla community</Text>
+          </View>
+          <View style={styles.highlightItem}>
+            <FontAwesome name="check" size={12} color="#c4b5fd" />
+            <Text style={styles.highlightText}>Avatar coerente nelle sessioni</Text>
+          </View>
+        </View>
+      </View>
+
+      <Pressable
+        style={({ pressed }) => [
+          styles.placeholderButton,
+          pressed ? { transform: [{ scale: 0.96 }] } : null,
+        ]}
+        onPress={handleCreateAvatarPress}
+      >
+        <FontAwesome name="camera" size={14} color="#fff" />
+        <Text style={styles.placeholderButtonText}>Scatta una foto</Text>
+      </Pressable>
+
+      <View style={styles.tapHint}>
+        <FontAwesome name="users" size={12} color="#c4b5fd" />
+        <Text style={styles.tapHintText}>Tocca per esplorare gli avatar della community</Text>
+      </View>
+    </Pressable>
+  );
+
+  const renderAvatarContent = () => {
+    if (isGenerating) {
+      return (
+        <View style={styles.generatingWrap}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.generatingText}>Sto creando il tuo avatar…</Text>
+        </View>
+      );
+    }
+
+    // Se c'è un avatar generato, mostralo (ma sarà cliccabile tramite il container esterno)
+    if (avatarUri) {
+      return <Image source={{ uri: avatarUri }} style={styles.avatarImage} resizeMode="cover" />;
+    }
+
+    // Se è il tuo account (o un account con avatar-icon), mostra avatar-icon.png
+    const isOwnerAccount = currentUserEmail && currentUserEmail.includes('@');
+    
+    if (isOwnerAccount) {
+      return (
+        <Image
+          source={AVATAR_ICON}
+          style={styles.avatarImage}
+          resizeMode="cover"
+        />
+      );
+    }
+
+    // Per gli altri utenti senza avatar, mostra user-plus con sfondo viola
+    return (
+      <LinearGradient
+        colors={['#a855f7', '#8b5cf6']}
+        style={styles.userPlusBackground}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Image
+          source={USER_PLUS_ICON}
+          style={styles.userPlusImage}
+          resizeMode="contain"
+        />
+      </LinearGradient>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.avatarContainer, floatingStyle]}>
-        <LinearGradient
-          colors={['#a855f7', '#8b5cf6']}
-          style={styles.avatarBackground}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        <Pressable
+          onPress={onOpenCommunity}
+          disabled={!onOpenCommunity}
+          style={({ pressed }) => [
+            styles.avatarPressable,
+            pressed && styles.avatarPressablePressed,
+          ]}
         >
-          <Animated.View style={[styles.avatarImageContainer, avatarScaleStyle]}>
-            <Image
-              source={{ uri: 'https://img.heroui.chat/image/avatar?w=400&h=400&u=15' }}
-              style={styles.avatarImage}
-              resizeMode="cover"
-            />
-          </Animated.View>
-        </LinearGradient>
+          <LinearGradient
+            colors={['#a855f7', '#8b5cf6']}
+            style={styles.avatarBackground}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Animated.View style={[styles.avatarImageContainer, avatarScaleStyle]}>
+              {renderAvatarContent()}
+            </Animated.View>
+          </LinearGradient>
+        </Pressable>
       </Animated.View>
 
       <View style={styles.micButtonContainer}>
@@ -102,6 +276,15 @@ const styles = StyleSheet.create({
   avatarContainer: {
     position: 'relative',
   },
+  avatarPressable: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+  },
+  avatarPressablePressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
   avatarBackground: {
     width: 160, // Reduced from 192
     height: 160, // Reduced from 192
@@ -125,6 +308,165 @@ const styles = StyleSheet.create({
   avatarImage: {
     width: '100%',
     height: '100%',
+  },
+  placeholderTapArea: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    width: '100%',
+    height: '100%',
+  },
+  placeholderRing: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.45)',
+    position: 'relative',
+  },
+  placeholderCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#f5f3ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+  },
+  placeholderBadge: {
+    position: 'absolute',
+    bottom: -6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(76,29,149,0.15)',
+    shadowColor: '#4c1d95',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+  },
+  placeholderBadgeText: {
+    color: '#4c1d95',
+    fontWeight: '700',
+    fontSize: 10,
+    letterSpacing: 0.3,
+  },
+  placeholderContent: {
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 4,
+    paddingTop: 10,
+  },
+  placeholderHeadline: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 17,
+    textAlign: 'center',
+  },
+  placeholderSub: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  placeholderHighlights: {
+    gap: 4,
+  },
+  highlightItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  highlightText: {
+    color: 'rgba(235, 229, 255, 0.92)',
+    fontSize: 11,
+  },
+  generatingWrap: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    paddingHorizontal: 16,
+  },
+  generatingText: {
+    color: '#fff',
+    marginTop: 10,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  placeholderButton: {
+    marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#7c3aed',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    shadowColor: '#7c3aed',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 10,
+  },
+  placeholderButtonText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 13,
+    letterSpacing: 0.2,
+  },
+  communityPreviewStack: {
+    position: 'absolute',
+    top: -18,
+    right: -8,
+    flexDirection: 'row',
+  },
+  communityPreviewImage: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#ffffff',
+    position: 'absolute',
+    backgroundColor: '#fff',
+  },
+  tapHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+  },
+  tapHintText: {
+    color: 'rgba(235,229,255,0.85)',
+    fontSize: 11,
+  },
+  userPlusContainer: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userPlusBackground: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 72,
+  },
+  userPlusImage: {
+    width: '60%',
+    height: '60%',
+    tintColor: '#ffffff',
+    opacity: 0.9,
   },
   micButtonContainer: {
     position: 'absolute',

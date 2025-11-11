@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,11 @@ export const BiometricPromptModal: React.FC<BiometricPromptModalProps> = ({
 }) => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   
+  // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+  const isMountedRef = useRef(true);
+  // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare le animazioni attive
+  const animationRefs = useRef<Animated.CompositeAnimation[]>([]);
+  
   // Animation values
   const dot1Anim = useState(new Animated.Value(0.3))[0];
   const dot2Anim = useState(new Animated.Value(0.3))[0];
@@ -31,15 +36,91 @@ export const BiometricPromptModal: React.FC<BiometricPromptModalProps> = ({
   const progressAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
-    if (visible) {
-      triggerBiometricAuth();
-      startAnimations();
-    }
-  }, [visible]);
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // 🔥 FIX: Ferma tutte le animazioni quando il componente viene smontato
+      animationRefs.current.forEach(anim => {
+        if (anim) {
+          anim.stop();
+        }
+      });
+      animationRefs.current = [];
+    };
+  }, []);
 
-  const startAnimations = () => {
-    // Animate dots
-    const animateDots = () => {
+  // 🔥 FIX: Ferma tutte le animazioni - definito prima del useEffect che lo usa
+  const stopAnimations = useCallback(() => {
+    animationRefs.current.forEach(anim => {
+      if (anim) {
+        anim.stop();
+      }
+    });
+    animationRefs.current = [];
+    
+    // Reset animation values
+    dot1Anim.setValue(0.3);
+    dot2Anim.setValue(0.3);
+    dot3Anim.setValue(0.3);
+    progressAnim.setValue(0);
+  }, [dot1Anim, dot2Anim, dot3Anim, progressAnim]);
+
+  // 🔥 FIX: Usiamo un ref per isAuthenticating per evitare problemi con le dipendenze
+  const isAuthenticatingRef = useRef(false);
+
+  const triggerBiometricAuth = useCallback(async () => {
+    // 🔥 FIX: Verifica se il componente è ancora montato
+    if (!isMountedRef.current) return;
+    
+    if (isAuthenticatingRef.current) return;
+    
+    // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
+    if (!isMountedRef.current) return;
+    isAuthenticatingRef.current = true;
+    setIsAuthenticating(true);
+    
+    try {
+      // 🔥 FIX: Rimuoviamo console.log eccessivi - manteniamo solo errori critici
+      const result = await BiometricAuthService.authenticateWithBiometric(
+        'Autenticazione biometrica in corso...'
+      );
+      
+      // 🔥 FIX: Verifica se il componente è ancora montato prima di continuare
+      if (!isMountedRef.current) return;
+      
+      if (result.success) {
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
+        onSuccess();
+      } else {
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
+        onFailure();
+      }
+    } catch (error) {
+      // 🔥 FIX: Solo errori critici in console
+      console.error('❌ Error during biometric authentication:', error);
+      
+      // 🔥 FIX: Verifica se il componente è ancora montato prima di chiamare onFailure
+      if (isMountedRef.current) {
+        onFailure();
+      }
+    } finally {
+      // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
+      if (isMountedRef.current) {
+        isAuthenticatingRef.current = false;
+        setIsAuthenticating(false);
+      }
+    }
+  }, [onSuccess, onFailure]);
+
+  const startAnimations = useCallback(() => {
+    // 🔥 FIX: Ferma le animazioni precedenti prima di avviarne di nuove
+    stopAnimations();
+    
+    // 🔥 FIX: Verifica se il componente è ancora montato
+    if (!isMountedRef.current) return;
+
+    // Animate dots - 🔥 FIX: Usiamo loop invece di ricorsione per evitare memory leak
+    const dot1Loop = Animated.loop(
       Animated.sequence([
         Animated.timing(dot1Anim, {
           toValue: 1,
@@ -51,38 +132,43 @@ export const BiometricPromptModal: React.FC<BiometricPromptModalProps> = ({
           duration: 600,
           useNativeDriver: true,
         }),
-      ]).start(() => animateDots());
-    };
-
-    Animated.sequence([
-      Animated.delay(0),
-      Animated.timing(dot1Anim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    Animated.sequence([
-      Animated.delay(200),
-      Animated.timing(dot2Anim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    Animated.sequence([
-      Animated.delay(400),
-      Animated.timing(dot3Anim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
+      ])
+    );
+    
+    const dot2Loop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(200),
+        Animated.timing(dot2Anim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dot2Anim, {
+          toValue: 0.3,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    
+    const dot3Loop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(400),
+        Animated.timing(dot3Anim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dot3Anim, {
+          toValue: 0.3,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ])
+    );
 
     // Animate progress bar
-    Animated.loop(
+    const progressLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(progressAnim, {
           toValue: 1,
@@ -95,34 +181,27 @@ export const BiometricPromptModal: React.FC<BiometricPromptModalProps> = ({
           useNativeDriver: false,
         }),
       ])
-    ).start();
-  };
+    );
 
-  const triggerBiometricAuth = async () => {
-    if (isAuthenticating) return;
+    // 🔥 FIX: Salva i riferimenti alle animazioni per poterle fermare
+    animationRefs.current = [dot1Loop, dot2Loop, dot3Loop, progressLoop];
     
-    setIsAuthenticating(true);
-    try {
-      console.log('🔐 Triggering biometric authentication...');
-      const result = await BiometricAuthService.authenticateWithBiometric(
-        'Autenticazione biometrica in corso...'
-      );
-      
-      if (result.success) {
-        console.log('✅ Biometric authentication successful');
-        console.log('🔐 Biometric authentication successful, proceeding with login...');
-        onSuccess();
-      } else {
-        console.log('❌ Biometric authentication failed:', result.error);
-        onFailure();
-      }
-    } catch (error) {
-      console.error('❌ Error during biometric authentication:', error);
-      onFailure();
-    } finally {
-      setIsAuthenticating(false);
+    // Avvia tutte le animazioni
+    dot1Loop.start();
+    dot2Loop.start();
+    dot3Loop.start();
+    progressLoop.start();
+  }, [dot1Anim, dot2Anim, dot3Anim, progressAnim, stopAnimations]);
+
+  useEffect(() => {
+    if (visible) {
+      triggerBiometricAuth();
+      startAnimations();
+    } else {
+      // 🔥 FIX: Ferma tutte le animazioni quando il modal viene chiuso
+      stopAnimations();
     }
-  };
+  }, [visible, triggerBiometricAuth, startAnimations, stopAnimations]);
 
 
   return (

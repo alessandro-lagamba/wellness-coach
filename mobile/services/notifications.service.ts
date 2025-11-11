@@ -55,7 +55,8 @@ export const NotificationService = {
         });
       } catch (error) {
         // If AndroidVisibility enum is not available, try without lockscreenVisibility
-        console.warn('Could not set lockscreenVisibility, using default channel config:', error);
+        // 🔥 FIX: Solo errori critici in console
+        console.error('❌ Could not set lockscreenVisibility, using default channel config:', error);
         await Notifications.setNotificationChannelAsync('default', {
           name: 'General',
           importance: Notifications.AndroidImportance.DEFAULT,

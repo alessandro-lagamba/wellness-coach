@@ -41,7 +41,7 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
   icon
 }) => {
   const { t } = useTranslation(); // 🆕 i18n hook
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
   // Calcola bucket e trend personalizzato
   const getBucketAndTrend = () => {
     if (!metric) return { bucket: null, trendInfo: null, action: null };
@@ -147,7 +147,7 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={[styles.popupContainer, { backgroundColor: colors.surface, shadowColor: colors.shadowColor }]}>
             {/* Header */}
-            <View style={styles.header}>
+            <View style={[styles.header, { borderBottomColor: colors.border }]}>
               <View style={styles.titleContainer}>
                 <View style={styles.titleRow}>
                   {icon && (
@@ -156,8 +156,8 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
                     </View>
                   )}
                   <View style={styles.titleTextContainer}>
-                    <Text style={styles.title}>{label}</Text>
-                    <Text style={styles.subtitle}>{subtitle}</Text>
+                    <Text style={[styles.title, { color: colors.text }]}>{label}</Text>
+                    <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
                   </View>
                 </View>
               </View>
@@ -180,17 +180,17 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
 
               {/* Trend Section */}
               {trendInfo && (
-                <View style={styles.trendSection}>
+                <View style={[styles.trendSection, { backgroundColor: colors.surfaceMuted }]}>
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.trend')}</Text>
                   <View style={styles.trendRow}>
                     <FontAwesome
                       name={trendInfo.trend === '↑' ? 'arrow-up' : trendInfo.trend === '↓' ? 'arrow-down' : 'arrow-right'}
                       size={16}
-                      color={trendInfo.trend === '↑' ? '#10b981' : trendInfo.trend === '↓' ? '#ef4444' : '#6b7280'}
+                      color={trendInfo.trend === '↑' ? '#10b981' : trendInfo.trend === '↓' ? '#ef4444' : colors.textSecondary}
                     />
                     <Text style={[styles.trendText, { color: colors.textSecondary }]}>{trendInfo.text}</Text>
                     {trendInfo.percentage !== 0 && (
-                      <Text style={styles.trendPercentage}>{trendInfo.percentage}%</Text>
+                      <Text style={[styles.trendPercentage, { color: colors.text }]}>{trendInfo.percentage}%</Text>
                     )}
                   </View>
                 </View>
@@ -225,7 +225,7 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
               {action && action.actionable && (
                 <View style={styles.actionSection}>
                   <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.recommendedAction')}</Text>
-                  <View style={[styles.actionCard, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
+                  <View style={[styles.actionCard, { backgroundColor: colors.surfaceMuted, borderLeftColor: '#0ea5e9' }]}>
                     <Text style={[styles.actionTitle, { color: colors.text }]}>{action.title}</Text>
                     <Text style={[styles.actionDescription, { color: colors.textSecondary }]}>{action.description}</Text>
                     {action.resources && action.resources.length > 0 && (
@@ -241,8 +241,8 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
               )}
 
               {/* Disclaimer */}
-              <View style={styles.disclaimerSection}>
-                <Text style={[styles.disclaimerText, { color: colors.textSecondary }]}>
+              <View style={[styles.disclaimerSection, { backgroundColor: mode === 'dark' ? 'rgba(245, 158, 11, 0.15)' : '#fef3c7', borderLeftColor: '#f59e0b' }]}>
+                <Text style={[styles.disclaimerText, { color: mode === 'dark' ? colors.textSecondary : '#92400e' }]}>
                   {t('popups.gauge.disclaimer')}
                 </Text>
               </View>
@@ -270,7 +270,6 @@ const styles = StyleSheet.create({
   popupContainer: {
     width: width * 0.9,
     maxHeight: height * 0.8,
-    backgroundColor: '#ffffff',
     borderRadius: 20,
     padding: 20,
     shadowColor: '#000',
@@ -286,7 +285,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
   },
   titleContainer: {
     flex: 1,
@@ -309,11 +307,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1e293b',
   },
   subtitle: {
     fontSize: 14,
-    color: '#64748b',
     marginTop: 2,
   },
   closeButton: {
@@ -342,14 +338,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   trendSection: {
-    backgroundColor: '#f8fafc',
     padding: 16,
     borderRadius: 12,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
     marginBottom: 8,
   },
   trendRow: {
@@ -359,20 +353,17 @@ const styles = StyleSheet.create({
   },
   trendText: {
     fontSize: 14,
-    color: '#64748b',
     flex: 1,
   },
   trendPercentage: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
   },
   infoSection: {
     gap: 8,
   },
   infoText: {
     fontSize: 14,
-    color: '#64748b',
     lineHeight: 20,
   },
   exampleRow: {
@@ -388,7 +379,6 @@ const styles = StyleSheet.create({
   },
   exampleText: {
     fontSize: 14,
-    color: '#64748b',
     flex: 1,
     lineHeight: 20,
   },
@@ -396,21 +386,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionCard: {
-    backgroundColor: '#f0f9ff',
     padding: 16,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#0ea5e9',
   },
   actionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0c4a6e',
     marginBottom: 4,
   },
   actionDescription: {
     fontSize: 14,
-    color: '#0369a1',
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -420,23 +406,18 @@ const styles = StyleSheet.create({
   resourcesLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#0c4a6e',
   },
   resourceItem: {
     fontSize: 12,
-    color: '#0369a1',
     marginLeft: 8,
   },
   disclaimerSection: {
-    backgroundColor: '#fef3c7',
     padding: 12,
     borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: '#f59e0b',
   },
   disclaimerText: {
     fontSize: 12,
-    color: '#92400e',
     lineHeight: 16,
     fontStyle: 'italic',
   },

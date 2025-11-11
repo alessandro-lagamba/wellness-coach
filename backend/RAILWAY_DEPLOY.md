@@ -245,3 +245,5 @@ railway up
 - Port è gestito automaticamente da Railway (usa `PORT` env var)
 - HTTPS è automatico e gratuito
 
+
+

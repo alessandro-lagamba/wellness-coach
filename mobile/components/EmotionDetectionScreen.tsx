@@ -172,14 +172,15 @@ export const EmotionDetectionScreen: React.FC = () => {
       }
       return ready;
     } catch (error) {
-      console.warn('Analysis service initialization failed:', error);
+      // 🔥 FIX: Solo errori critici in console
+      console.error('❌ Analysis service initialization failed:', error);
       if (isMountedRef.current) {
         setAnalysisReady(false);
         setAnalysisError('Unable to initialize analysis service. Check OpenAI settings.');
       }
       return false;
     }
-  }, [analysisReady, analysisError]);
+  }, [analysisReady, analysisError, t]);
 
   useEffect(() => {
     return () => {
@@ -193,41 +194,64 @@ export const EmotionDetectionScreen: React.FC = () => {
 
   // Carica i dati dei grafici dal database quando il componente si monta
   useEffect(() => {
+    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+    let isMounted = true;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    
     const loadChartData = async () => {
       try {
-        console.log('📊 Loading emotion chart data...');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         
         await ChartDataService.loadEmotionDataForCharts();
-        console.log('📊 Emotion chart data loaded successfully');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         
         // Force re-render after data is loaded
-        setDataLoaded(true);
+        if (isMounted) {
+          setDataLoaded(true);
+        }
       } catch (error) {
+        // 🔥 FIX: Solo errori critici in console
         console.error('❌ Failed to load emotion chart data:', error);
-        // Retry after 10 seconds on error
-        setTimeout(() => {
-          loadChartData();
-        }, 10000);
+        // 🔥 FIX: Memory leak - salviamo il retry timer per cleanup
+        if (isMounted) {
+          retryTimer = setTimeout(() => {
+            if (isMounted) {
+              loadChartData();
+            }
+          }, 10000);
+        }
       }
     };
     
     // Delay loading to ensure component is fully mounted
+    // 🔥 FIX: Memory leak - salviamo il timeout per cleanup
     const timer = setTimeout(() => {
-      loadChartData();
+      if (isMounted) {
+        loadChartData();
+      }
     }, 100);
     
-    return () => clearTimeout(timer);
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+      }
+    };
   }, []);
 
   // Calcola dati enhanced per i nuovi componenti
   useEffect(() => {
+    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+    let isMounted = true;
+    
     const calculateEnhancedData = async () => {
       try {
         const store = useAnalysisStore.getState();
         const latestSession = store.latestEmotionSession;
         const emotionHistory = store.emotionHistory || [];
 
-        if (latestSession) {
+        if (latestSession && isMounted) {
           // Calcola bucket e trend per Valence
           const valenceBucket = MetricsService.getEmotionBucket('valence', latestSession.avg_valence);
           const valenceTrend = MetricsService.getPersonalizedTrendForMetric('valence', latestSession.avg_valence, emotionHistory);
@@ -240,68 +264,106 @@ export const EmotionDetectionScreen: React.FC = () => {
 
           // Calcola quality info
           const confidenceInfo = QualityService.getConfidenceScore(latestSession.confidence || 0.8);
-          setQualityInfo(confidenceInfo);
+          if (isMounted) {
+            setQualityInfo(confidenceInfo);
+          }
 
           // Calcola insights
           const calculatedInsights = CorrelationService.getInsights(null, emotionHistory);
-          setInsights(calculatedInsights.slice(0, 3)); // Max 3 insights
+          if (isMounted) {
+            setInsights(calculatedInsights.slice(0, 3)); // Max 3 insights
+          }
 
           // Calcola next best actions
           const actions = [valenceAction, arousalAction].filter(action => action && action.actionable);
-          setNextBestActions(actions);
+          if (isMounted) {
+            setNextBestActions(actions);
+          }
         }
 
-        // Generate intelligent insights
-        try {
-          const freshInsights = await insightService.getFreshInsights();
-          setIntelligentInsights(freshInsights);
-          console.log(`🧠 Loaded ${freshInsights.length} intelligent insights`);
-        } catch (insightError) {
-          console.warn('Failed to load intelligent insights:', insightError);
-        }
+        // 🔥 FIX: Rimuoviamo codice non utilizzato (insightService non esiste)
       } catch (error) {
-        console.warn('Error calculating enhanced data:', error);
+        // 🔥 FIX: Solo errori critici in console
+        console.error('❌ Error calculating enhanced data:', error);
       }
     };
 
     calculateEnhancedData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [dataLoaded]); // Re-run when data is loaded
 
   // Start camera automatically when screen loads
+  // 🔥 FIX: Rimuoviamo cameraController dalle dipendenze per evitare loop infinito
+  const cameraInitializedRef = useRef(false);
   useEffect(() => {
+    // 🔥 FIX: Evita di inizializzare la camera più volte
+    if (cameraInitializedRef.current) {
+      return;
+    }
+    
+    // 🔥 FIX: Evita di avviare la camera se è già attiva
+    if (cameraController.active) {
+      cameraInitializedRef.current = true;
+      return;
+    }
+    
+    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+    let isMounted = true;
+    
     const initializeCamera = async () => {
-      console.log('🎥 Auto-starting camera on screen load...');
-      await cameraController.startCamera();
+      if (isMounted && !cameraController.active) {
+        await cameraController.startCamera();
+        if (isMounted) {
+          cameraInitializedRef.current = true;
+        }
+      }
     };
     
-    initializeCamera();
-  }, []);
+    // Delay initialization to avoid conflicts
+    const timer = setTimeout(() => {
+      initializeCamera();
+    }, 300);
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, []); // 🔥 FIX: Array vuoto per eseguire solo al mount
 
 
   // No background camera initialization - privacy first!
 
   const handleStartDetection = async () => {
-    console.log('🎬 Starting emotion detection...');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     const granted = await ensureCameraPermission();
-    console.log('📷 Camera permission granted:', granted);
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     if (!granted) {
-      alert(t('analysis.emotion.errors.cameraPermission'));
+      if (isMountedRef.current) {
+        alert(t('analysis.emotion.errors.cameraPermission'));
+      }
       return;
     }
 
     const ready = await ensureAnalysisReady();
     if (!ready) {
-      alert(t('analysis.emotion.errors.serviceNotReady'));
+      if (isMountedRef.current) {
+        alert(t('analysis.emotion.errors.serviceNotReady'));
+      }
       return;
     }
 
-    console.log('🎥 Activating camera for emotion detection');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     // Reset previous session state so the camera preview always shows immediately
-    setCurrentEmotion(null);
-    setConfidence(0);
-    setDetecting(false);
-    setShowingResults(false);
+    if (isMountedRef.current) {
+      setCurrentEmotion(null);
+      setConfidence(0);
+      setDetecting(false);
+      setShowingResults(false);
+    }
     
     // Use camera controller to start camera
     await cameraController.startCamera();
@@ -309,24 +371,28 @@ export const EmotionDetectionScreen: React.FC = () => {
 
   // 🔧 FALLBACK: Image Picker for Testing (100% Reliable)
   const analyzeFromGallery = async () => {
-    console.log('📸 Starting analysis from gallery (FALLBACK)...');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     
     try {
       const ready = await ensureAnalysisReady();
       if (!ready) {
-        alert(t('analysis.emotion.errors.serviceNotReady'));
+        if (isMountedRef.current) {
+          alert(t('analysis.emotion.errors.serviceNotReady'));
+        }
         return;
       }
 
       // Request image picker permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        alert(t('analysis.emotion.errors.mediaLibraryPermission'));
+        if (isMountedRef.current) {
+          alert(t('analysis.emotion.errors.mediaLibraryPermission'));
+        }
         return;
       }
 
       // Pick image from gallery
-      console.log('📸 Opening image picker...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       const pickerResult = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -335,20 +401,11 @@ export const EmotionDetectionScreen: React.FC = () => {
         base64: true,
       });
 
-      console.log('📸 Image picker result:', {
-        canceled: pickerResult.canceled,
-        hasAssets: !!pickerResult.assets,
-        assetsLength: pickerResult.assets?.length,
-      });
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
         const asset = pickerResult.assets[0];
-        console.log('📸 Gallery image selected:', {
-          hasUri: !!asset.uri,
-          hasBase64: !!asset.base64,
-          width: asset.width,
-          height: asset.height,
-        });
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
 
         // Convert to data URL for analysis
         const dataUrl = asset.base64 
@@ -356,20 +413,24 @@ export const EmotionDetectionScreen: React.FC = () => {
           : asset.uri;
 
         if (!dataUrl) {
-          alert(t('analysis.emotion.errors.imageProcessingFailed'));
+          if (isMountedRef.current) {
+            alert(t('analysis.emotion.errors.imageProcessingFailed'));
+          }
           return;
         }
 
-        console.log('✅ Gallery image ready for analysis:', dataUrl.length, 'chars');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         
-        setDetecting(true);
+        if (isMountedRef.current) {
+          setDetecting(true);
+        }
 
         // Analyze the selected image
-        console.log('🤖 Analyzing emotion from gallery image...');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         const analysisResult = await analysisServiceRef.current.analyzeEmotion(dataUrl);
         
         if (analysisResult.success && analysisResult.data) {
-          console.log('✅ Gallery emotion analysis successful:', analysisResult.data);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           
           // Process results (same logic as camera capture)
           const { scores, dominantEmotion, confidence } = analysisResult.data;
@@ -383,52 +444,56 @@ export const EmotionDetectionScreen: React.FC = () => {
             updatedScores[emotion] = percentage;
           });
           
-          setEmotionScores(updatedScores);
-          setDetecting(false);
-          setShowingResults(true); // Set immediately to prevent flash
+          if (isMountedRef.current) {
+            setEmotionScores(updatedScores);
+            setDetecting(false);
+            setShowingResults(true); // Set immediately to prevent flash
+          }
 
-          setTimeout(() => {
-            setCurrentEmotion(dominantEmotionKey);
-            setConfidence(newConfidences);
-          }, 100);
+          // 🔥 FIX: Memory leak - usiamo requestAnimationFrame invece di setTimeout quando possibile
+          requestAnimationFrame(() => {
+            if (isMountedRef.current) {
+              setCurrentEmotion(dominantEmotionKey);
+              setConfidence(newConfidences);
+            }
+          });
           
         } else {
-          console.error('Gallery emotion analysis failed:', analysisResult.error);
-          alert(t('analysis.emotion.errors.analysisFailed', { error: analysisResult.error || 'Unknown error' }));
-          setDetecting(false);
+          console.error('❌ Gallery emotion analysis failed:', analysisResult.error);
+          if (isMountedRef.current) {
+            alert(t('analysis.emotion.errors.analysisFailed', { error: analysisResult.error || 'Unknown error' }));
+            setDetecting(false);
+          }
         }
-      } else {
-        console.log('📸 Image picker cancelled');
       }
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
     } catch (error: any) {
-      console.error('Gallery analysis error:', error);
-      alert(t('analysis.emotion.errors.failedToAnalyze', { error: error.message }));
-      setDetecting(false);
+      console.error('❌ Gallery analysis error:', error);
+      if (isMountedRef.current) {
+        alert(t('analysis.emotion.errors.failedToAnalyze', { error: error.message }));
+        setDetecting(false);
+      }
     }
   };
 
   const captureAndAnalyze = async () => {
-    console.log('📸 Starting capture process...');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     
     // Store cameraController methods in local variables to prevent scope issues
-    const { ref, ready, detecting, error, isCameraReady } = cameraController;
+    const { ref, ready, detecting, error, isCameraReady, setDetecting } = cameraController;
     
-    console.log('📸 Camera controller state:', {
-      hasRef: !!ref.current,
-      ready,
-      detecting,
-      error,
-      isCameraReady: isCameraReady(),
-    });
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     if (!isCameraReady()) {
       const errorMsg = error || t('analysis.emotion.errors.cameraNotReady');
-      console.error('📸 Capture failed:', errorMsg);
-      alert(errorMsg);
+      console.error('❌ Capture failed:', errorMsg);
+      if (isMountedRef.current) {
+        alert(errorMsg);
+      }
       return;
     }
     if (detecting) {
-      console.log('📸 Capture skipped - already detecting');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       return;
     }
 
@@ -436,44 +501,46 @@ export const EmotionDetectionScreen: React.FC = () => {
       const serviceReady = await ensureAnalysisReady();
       if (!serviceReady) {
         const errorMsg = t('analysis.emotion.errors.serviceNotReady');
-        console.error('📸 Capture failed:', errorMsg);
-        alert(errorMsg);
+        console.error('❌ Capture failed:', errorMsg);
+        if (isMountedRef.current) {
+          alert(errorMsg);
+        }
         return;
       }
 
-      setDetecting(true); // Set component detecting state
-      console.log('📸 Set detecting to true, current detecting state:', detecting);
+      if (isMountedRef.current) {
+        setDetecting(true); // Set component detecting state
+      }
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       
-      console.log('📸 Taking picture with CameraView...');
-      console.log('📸 Camera ref before capture:', {
-        hasRef: !!ref.current,
-        refType: typeof ref.current,
-        refMethods: ref.current ? Object.getOwnPropertyNames(ref.current) : 'null',
-      });
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       // Aggressive ref recovery before capture
       if (!ref.current) {
-        console.log('📸 Camera ref is null, attempting aggressive recovery...');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         
         // Try to restore from global storage first
         const globalRef = (globalThis as any).globalCameraRef;
         if (globalRef) {
-          console.log('📸 Found global camera ref, restoring...');
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           ref.current = globalRef;
         }
         
         // Try multiple recovery attempts
         for (let attempt = 1; attempt <= 3; attempt++) {
-          console.log(`📸 Recovery attempt ${attempt}/3`);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           await new Promise(resolve => setTimeout(resolve, 200 * attempt));
           
           // Force a re-render by updating state
-          setDetecting(false);
-          await new Promise(resolve => setTimeout(resolve, 50));
-          setDetecting(true);
+          if (isMountedRef.current) {
+            setDetecting(false);
+            await new Promise(resolve => setTimeout(resolve, 50));
+            setDetecting(true);
+          }
           
           if (ref.current) {
-            console.log(`📸 Recovery successful on attempt ${attempt}`);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             break;
           }
         }
@@ -520,7 +587,7 @@ export const EmotionDetectionScreen: React.FC = () => {
 
       for (let i = 0; i < captureStrategies.length; i++) {
         const strategy = captureStrategies[i];
-        console.log(`📸 Trying capture strategy ${i + 1}/${captureStrategies.length}: ${strategy.name}`, strategy.options);
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         
         try {
           const capturePromise = ref.current.takePictureAsync(strategy.options);
@@ -529,22 +596,22 @@ export const EmotionDetectionScreen: React.FC = () => {
           });
 
           photo = await Promise.race([capturePromise, timeoutPromise]);
-          console.log(`📸 Capture successful with strategy: ${strategy.name}`);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           break;
         } catch (strategyError) {
-          console.log(`📸 Strategy ${strategy.name} failed:`, strategyError.message);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           
           // If this is the first strategy and it fails, try to restart the camera
           if (i === 0 && strategyError.message.includes('ERR_IMAGE_CAPTURE_FAILED')) {
-            console.log('📸 First strategy failed with ERR_IMAGE_CAPTURE_FAILED, attempting camera restart...');
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             try {
               cameraController.stopCamera();
               await new Promise(resolve => setTimeout(resolve, 1000));
               cameraController.startCamera();
               await new Promise(resolve => setTimeout(resolve, 2000));
-              console.log('📸 Camera restarted, retrying capture...');
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
             } catch (restartError) {
-              console.log('📸 Camera restart failed:', restartError.message);
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
             }
           }
           
@@ -560,14 +627,7 @@ export const EmotionDetectionScreen: React.FC = () => {
         throw new Error('All capture strategies failed');
       }
 
-      console.log('📸 Photo captured:', {
-        hasUri: !!photo?.uri,
-        hasBase64: !!photo?.base64,
-        width: photo?.width,
-        height: photo?.height,
-        uriLength: photo?.uri?.length,
-        base64Length: photo?.base64?.length,
-      });
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       if (!photo) {
         throw new Error('Camera returned null photo');
@@ -575,14 +635,15 @@ export const EmotionDetectionScreen: React.FC = () => {
 
       if (!photo?.base64 && photo?.uri) {
         try {
-          console.log('📸 Converting photo URI to base64...');
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           const base64 = await FileSystem.readAsStringAsync(photo.uri, {
             encoding: FileSystem.EncodingType.Base64,
           });
           photo.base64 = base64;
-          console.log('📸 Base64 conversion successful, length:', base64.length);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
         } catch (conversionError) {
-          console.warn('📸 Failed to convert photo to base64:', conversionError);
+          // 🔥 FIX: Solo errori critici in console
+          console.error('❌ Failed to convert photo to base64:', conversionError);
           throw new Error('Failed to process photo data');
         }
       }
@@ -592,64 +653,128 @@ export const EmotionDetectionScreen: React.FC = () => {
       }
 
       const dataUrl = `data:image/jpeg;base64,${photo.base64}`;
-      console.log('✅ Photo captured, sending for analysis...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       const analysisResult = await analysisServiceRef.current.analyzeEmotion(dataUrl, 'emotion-analysis-session');
       if (!analysisResult.success || !analysisResult.data) {
         throw new Error(analysisResult.error || 'Analysis failed.');
       }
 
-      console.log('Emotion analysis successful:', analysisResult.data);
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       const dominantEmotion = (analysisResult.data.dominant_emotion || 'neutral') as Emotion;
       const newConfidence = Math.round((analysisResult.data.confidence || 0) * 100);
 
       // Store the full analysis result
-      setFullAnalysisResult(analysisResult.data);
+      if (isMountedRef.current) {
+        setFullAnalysisResult(analysisResult.data);
+      }
 
-      // Save to Supabase database
+      // 🆕 Save to Supabase database with enhanced error handling and feedback
       try {
         const currentUser = await AuthService.getCurrentUser();
         if (currentUser) {
-          const savedAnalysis = await EmotionAnalysisService.saveEmotionAnalysis(currentUser.id, {
-            dominantEmotion: dominantEmotion,
-            valence: analysisResult.data.valence || 0,
-            arousal: analysisResult.data.arousal || 0,
-            confidence: analysisResult.data.confidence || 0,
-            analysisData: {
-              ...analysisResult.data,
-              // Include the full emotions breakdown
-              emotions: analysisResult.data.emotions || {},
-              timestamp: analysisResult.data.timestamp || new Date().toISOString(),
-            },
-            sessionDuration: Date.now() - (analysisResult.timestamp?.getTime() || Date.now()),
-          });
-          
-          if (savedAnalysis) {
-            console.log('✅ Emotion analysis saved to database:', savedAnalysis.id);
+          try {
+            const savedAnalysis = await EmotionAnalysisService.saveEmotionAnalysis(currentUser.id, {
+              dominantEmotion: dominantEmotion,
+              valence: analysisResult.data.valence || 0,
+              arousal: analysisResult.data.arousal || 0,
+              confidence: analysisResult.data.confidence || 0,
+              analysisData: {
+                ...analysisResult.data,
+                // Include the full emotions breakdown
+                emotions: analysisResult.data.emotions || {},
+                timestamp: analysisResult.data.timestamp || new Date().toISOString(),
+              },
+              sessionDuration: Date.now() - (analysisResult.timestamp?.getTime() || Date.now()),
+            });
             
-            // Sincronizza i dati con lo store locale per i grafici
-            const emotionSession = {
-              id: savedAnalysis.id,
-              timestamp: new Date(savedAnalysis.created_at),
-              dominant: savedAnalysis.dominant_emotion,
-              avg_valence: savedAnalysis.valence,
-              avg_arousal: savedAnalysis.arousal,
-              confidence: savedAnalysis.confidence,
-              duration: savedAnalysis.session_duration || 0,
-            };
-            
-            const store = useAnalysisStore.getState();
-            store.addEmotionSession(emotionSession);
-            console.log('📊 Emotion data synchronized with local store for charts');
-          } else {
-            console.warn('⚠️ Failed to save emotion analysis to database');
+            if (savedAnalysis) {
+              // 🆕 Verifica post-salvataggio che i dati siano nel database
+              const { DatabaseVerificationService } = await import('../services/database-verification.service');
+              const { UserFeedbackService } = await import('../services/user-feedback.service');
+              const verification = await DatabaseVerificationService.verifyEmotionAnalysis(currentUser.id, savedAnalysis.id);
+              if (!verification.found) {
+                UserFeedbackService.showWarning('L\'analisi è stata salvata ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
+              } else {
+                UserFeedbackService.showSaveSuccess('analisi');
+              }
+              
+              // Sincronizza i dati con lo store locale per i grafici
+              const emotionSession = {
+                id: savedAnalysis.id,
+                timestamp: new Date(savedAnalysis.created_at),
+                dominant: savedAnalysis.dominant_emotion,
+                avg_valence: savedAnalysis.valence,
+                avg_arousal: savedAnalysis.arousal,
+                confidence: savedAnalysis.confidence,
+                duration: savedAnalysis.session_duration || 0,
+              };
+              
+              const store = useAnalysisStore.getState();
+              store.addEmotionSession(emotionSession);
+            } else {
+              // 🆕 Nessun errore lanciato ma savedAnalysis è null
+              if (isMountedRef.current) {
+                const { UserFeedbackService } = await import('../services/user-feedback.service');
+                UserFeedbackService.showSaveError('analisi', async () => {
+                  // Retry logic
+                  try {
+                    const retryAnalysis = await EmotionAnalysisService.saveEmotionAnalysis(currentUser.id, {
+                      dominantEmotion: dominantEmotion,
+                      valence: analysisResult.data.valence || 0,
+                      arousal: analysisResult.data.arousal || 0,
+                      confidence: analysisResult.data.confidence || 0,
+                      analysisData: {
+                        ...analysisResult.data,
+                        emotions: analysisResult.data.emotions || {},
+                        timestamp: analysisResult.data.timestamp || new Date().toISOString(),
+                      },
+                      sessionDuration: Date.now() - (analysisResult.timestamp?.getTime() || Date.now()),
+                    });
+                    if (retryAnalysis) {
+                      UserFeedbackService.showSaveSuccess('analisi');
+                    }
+                  } catch (retryError) {
+                    UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
+                  }
+                });
+              }
+            }
+          } catch (saveError) {
+            // 🆕 Errore durante il salvataggio - mostra feedback all'utente
+            if (isMountedRef.current) {
+              const { UserFeedbackService } = await import('../services/user-feedback.service');
+              UserFeedbackService.showSaveError('analisi', async () => {
+                // Retry logic
+                try {
+                  const retryAnalysis = await EmotionAnalysisService.saveEmotionAnalysis(currentUser.id, {
+                    dominantEmotion: dominantEmotion,
+                    valence: analysisResult.data.valence || 0,
+                    arousal: analysisResult.data.arousal || 0,
+                    confidence: analysisResult.data.confidence || 0,
+                    analysisData: {
+                      ...analysisResult.data,
+                      emotions: analysisResult.data.emotions || {},
+                      timestamp: analysisResult.data.timestamp || new Date().toISOString(),
+                    },
+                    sessionDuration: Date.now() - (analysisResult.timestamp?.getTime() || Date.now()),
+                  });
+                  if (retryAnalysis) {
+                    UserFeedbackService.showSaveSuccess('analisi');
+                  }
+                } catch (retryError) {
+                  UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
+                }
+              });
+            }
           }
-        } else {
-          console.warn('⚠️ No authenticated user found, skipping database save');
         }
       } catch (dbError) {
-        console.error('❌ Error saving emotion analysis to database:', dbError);
-        // Don't fail the whole operation if database save fails
+        // 🆕 Errore generale - mostra feedback all'utente
+        if (isMountedRef.current) {
+          const { UserFeedbackService } = await import('../services/user-feedback.service');
+          UserFeedbackService.showError('Errore durante il salvataggio dell\'analisi. I dati potrebbero non essere stati salvati.');
+        }
       }
 
       const scores = analysisResult.data.emotions ?? {};
@@ -658,29 +783,33 @@ export const EmotionDetectionScreen: React.FC = () => {
         const percentage = Math.min(100, Math.max(0, Math.round((scores[emotion] ?? 0) * 100)));
         updatedScores[emotion] = percentage;
       });
-      setEmotionScores(updatedScores);
+      if (isMountedRef.current) {
+        setEmotionScores(updatedScores);
+      }
 
       const newEntry: EmotionData = {
         ...EMOTION_META[dominantEmotion],
         percentage: updatedScores[dominantEmotion],
       };
-      setEmotionHistory((prev) => [newEntry, ...prev.slice(0, 4)]);
+      if (isMountedRef.current) {
+        setEmotionHistory((prev) => [newEntry, ...prev.slice(0, 4)]);
+      }
 
-      cameraController.stopCamera();
+      if (isMountedRef.current) {
+        cameraController.stopCamera();
         setDetecting(false);
         setShowingResults(true); // Set immediately to prevent flash
+      }
 
-      setTimeout(() => {
-        setCurrentEmotion(dominantEmotion);
-        setConfidence(newConfidence);
-      }, 100);
-    } catch (error: any) {
-      console.error('📸 Capture error details:', {
-        message: error?.message,
-        name: error?.name,
-        stack: error?.stack,
-        error: error,
+      // 🔥 FIX: Memory leak - usiamo requestAnimationFrame invece di setTimeout quando possibile
+      requestAnimationFrame(() => {
+        if (isMountedRef.current) {
+          setCurrentEmotion(dominantEmotion);
+          setConfidence(newConfidence);
+        }
       });
+    } catch (error: any) {
+      console.error('❌ Capture error:', error?.message || error);
       
       let errorMessage = t('analysis.emotion.errors.captureFailed');
       if (error?.message) {
@@ -695,17 +824,21 @@ export const EmotionDetectionScreen: React.FC = () => {
         }
       }
       
-      alert(errorMessage);
-      setDetecting(false);
+      if (isMountedRef.current) {
+        alert(errorMessage);
+        setDetecting(false);
+      }
     }
   };
 
   const resetDetection = () => {
-    setDetecting(false);
-    setCurrentEmotion(null);
-    setShowingResults(false);
-    // Restart camera immediately to prevent flash
-    cameraController.startCamera();
+    if (isMountedRef.current) {
+      setDetecting(false);
+      setCurrentEmotion(null);
+      setShowingResults(false);
+      // Restart camera immediately to prevent flash
+      cameraController.startCamera();
+    }
   };
 
   const ProgressBar = ({ value, color }: { value: number; color: string }) => {
@@ -1008,7 +1141,7 @@ export const EmotionDetectionScreen: React.FC = () => {
   // --- Render order: permission loading → detecting → results → camera → overview ---
 
   // Removed empty loading screen - CameraCapture handles its own loading state
-  console.log('🎬 Render state:', { detecting, currentEmotion, cameraActive: cameraController.active });
+  // 🔥 FIX: Rimuoviamo console.log eccessivi
 
   // Priority 1: Show detecting screen
   if (detecting) {
@@ -1021,9 +1154,11 @@ export const EmotionDetectionScreen: React.FC = () => {
           </View>
           
           <EmotionLoadingScreen onCancel={() => {
-            setDetecting(false);
-            setCurrentEmotion(null);
-            setShowingResults(false);
+            if (isMountedRef.current) {
+              setDetecting(false);
+              setCurrentEmotion(null);
+              setShowingResults(false);
+            }
           }} />
         </SafeAreaView>
       </View>
@@ -1038,12 +1173,14 @@ export const EmotionDetectionScreen: React.FC = () => {
         confidence={confidence}
         fullAnalysisResult={fullAnalysisResult}
         onGoBack={() => {
-          setCurrentEmotion(null);
-          setShowingResults(false);
-          setDetecting(false);
-          setFullAnalysisResult(null);
-          // Immediately restart camera to prevent flash
-          cameraController.startCamera();
+          if (isMountedRef.current) {
+            setCurrentEmotion(null);
+            setShowingResults(false);
+            setDetecting(false);
+            setFullAnalysisResult(null);
+            // Immediately restart camera to prevent flash
+            cameraController.startCamera();
+          }
         }}
         onRetake={resetDetection}
       />
@@ -1180,11 +1317,13 @@ export const EmotionDetectionScreen: React.FC = () => {
             </View>
             <TouchableOpacity
               onPress={async () => {
-                console.log('🔄 Manually reloading emotion data...');
+                // 🔥 FIX: Rimuoviamo console.log eccessivi
                 try {
                   await ChartDataService.loadEmotionDataForCharts();
-                  setDataLoaded(prev => !prev); // Toggle to force re-render
-                  console.log('✅ Manual reload completed');
+                  if (isMountedRef.current) {
+                    setDataLoaded(prev => !prev); // Toggle to force re-render
+                  }
+                  // 🔥 FIX: Rimuoviamo console.log eccessivi
                 } catch (error) {
                   console.error('❌ Manual reload failed:', error);
                 }
@@ -1208,18 +1347,7 @@ export const EmotionDetectionScreen: React.FC = () => {
             const latestSession = store.latestEmotionSession;
             const emotionHistory = store.emotionHistory;
             
-            // Debug: Log dello stato dello store
-            console.log('🔍 EmotionDetectionScreen Debug:', {
-              hasLatestSession: !!latestSession,
-              latestSessionId: latestSession?.id,
-              latestSessionData: latestSession,
-              emotionHistoryLength: emotionHistory.length,
-              dataLoaded,
-              storeState: {
-                latestEmotionSession: store.latestEmotionSession,
-                emotionHistory: store.emotionHistory
-              }
-            });
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             
             // Always show the card, with fallback data if no session exists
             const fallbackSession = {
@@ -1238,7 +1366,8 @@ export const EmotionDetectionScreen: React.FC = () => {
               />
             );
           } catch (error) {
-            console.warn('Failed to load latest emotion session:', error);
+            // 🔥 FIX: Solo errori critici in console
+            console.error('❌ Failed to load latest emotion session:', error);
             // Fallback session in case of error
             const fallbackSession = {
               id: 'error-fallback',
@@ -1352,7 +1481,8 @@ export const EmotionDetectionScreen: React.FC = () => {
                 </>
               );
             } catch (error) {
-              console.warn('Failed to load emotion history for charts:', error);
+              // 🔥 FIX: Solo errori critici in console
+              console.error('❌ Failed to load emotion history for charts:', error);
               return (
                 <>
                   <GaugeChart 
@@ -1407,7 +1537,8 @@ export const EmotionDetectionScreen: React.FC = () => {
               />
             );
           } catch (error) {
-            console.warn('Failed to load emotion history for trend chart:', error);
+            // 🔥 FIX: Solo errori critici in console
+            console.error('❌ Failed to load emotion history for trend chart:', error);
             return (
               <EmotionTrendChart
                 data={[]}
@@ -1438,11 +1569,11 @@ export const EmotionDetectionScreen: React.FC = () => {
           showTitle={true}
           compact={false}
           onInsightPress={(insight) => {
-            console.log('Intelligent emotion insight pressed:', insight.title);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             // Handle insight press - could navigate to detailed view
           }}
           onActionPress={(insight, action) => {
-            console.log('Intelligent emotion action pressed:', insight.title, action);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             // Handle action press - could start activity, set reminder, etc.
           }}
         />

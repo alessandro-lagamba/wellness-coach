@@ -3,17 +3,24 @@ import { ChatScreen } from '../../components/ChatScreen';
 import { useLocalSearchParams } from 'expo-router';
 import { AuthService } from '../../services/auth.service';
 import { useEffect, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useColorScheme } from 'react-native';
 
 export default function CoachTabScreen() {
   const { voiceMode, t } = useLocalSearchParams();
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { colors } = useTheme();
+  const systemColorScheme = useColorScheme();
+  // 🔥 FIX: Fallback color basato su useColorScheme per evitare flash bianco
+  const fallbackBackground = systemColorScheme === 'dark' ? '#1a1625' : '#f8fafc';
+  const backgroundColor = colors?.background || fallbackBackground;
   
   useEffect(() => {
     const getCurrentUser = async () => {
-      console.log('🔐 Getting current user...');
+      // 🔥 FIX: Rimossi log eccessivi
       const currentUser = await AuthService.getCurrentUser();
-      console.log('🔐 Current user result:', currentUser);
       setUser(currentUser);
       setIsLoading(false);
     };
@@ -22,7 +29,7 @@ export default function CoachTabScreen() {
     
     // Listen for auth state changes
     const { data: { subscription } } = AuthService.onAuthStateChange((event, session) => {
-      console.log('🔐 Auth state changed:', event, session?.user ? { id: session.user.id, email: session.user.email } : null);
+      // 🔥 FIX: Rimossi log eccessivi
       setUser(session?.user || null);
     });
     
@@ -34,12 +41,16 @@ export default function CoachTabScreen() {
   // Use voiceMode and timestamp as key to force remount when they change
   const key = `${voiceMode}-${t}`;
   
-  console.log('🔐 Coach.tsx passing user to ChatScreen:', user ? { id: user.id, email: user.email } : null);
-  
-  // Show loading or handle unauthenticated user
+  // 🔥 FIX: Mostra un componente con backgroundColor invece di null per evitare flash bianco
   if (isLoading) {
-    return null; // or a loading component
+    return <View style={[styles.loadingContainer, { backgroundColor }]} />;
   }
   
   return <ChatScreen key={key} user={user} />;
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+  },
+});

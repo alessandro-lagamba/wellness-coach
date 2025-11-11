@@ -25,7 +25,12 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const systemColorScheme = useColorScheme();
-  const [mode, setMode] = useState<ThemeMode>('light');
+  // 🔥 FIX: Inizializza immediatamente con il tema di sistema per evitare flash bianco
+  const [mode, setMode] = useState<ThemeMode>(() => {
+    // Usa il tema di sistema come default iniziale (evita flash bianco)
+    return systemColorScheme === 'dark' ? 'dark' : 'light';
+  });
+  const [isThemeLoaded, setIsThemeLoaded] = useState(false);
 
   // 🆕 Carica tema salvato o usa quello di sistema
   useEffect(() => {
@@ -36,11 +41,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           setMode(saved);
         } else {
           // Usa il tema di sistema
-          setMode(systemColorScheme === 'dark' ? 'dark' : 'light');
+          const systemMode = systemColorScheme === 'dark' ? 'dark' : 'light';
+          setMode(systemMode);
         }
       } catch (e) {
         console.error('[Theme] Error loading saved theme:', e);
-        setMode(systemColorScheme === 'dark' ? 'dark' : 'light');
+        const systemMode = systemColorScheme === 'dark' ? 'dark' : 'light';
+        setMode(systemMode);
+      } finally {
+        setIsThemeLoaded(true);
       }
     };
     
@@ -64,6 +73,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   };
 
   const colors = themes[mode];
+  // 🔥 FIX: Fallback color basato su useColorScheme per evitare flash bianco
+  const fallbackBackground = systemColorScheme === 'dark' ? '#1a1625' : '#f8fafc';
+  const backgroundColor = colors?.background || fallbackBackground;
 
   // Rende sicuri eventuali nodi stringa al top-level del provider
   const renderChild = (node: ReactNode, key?: string | number): ReactNode => {
@@ -82,7 +94,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   return (
     <ThemeContext.Provider value={{ mode, colors, toggleTheme, setTheme }}>
-      <View style={{ flex: 1, backgroundColor: colors.background }} collapsable={false}>
+      <View style={{ flex: 1, backgroundColor }} collapsable={false}>
         {renderChild(children)}
       </View>
     </ThemeContext.Provider>

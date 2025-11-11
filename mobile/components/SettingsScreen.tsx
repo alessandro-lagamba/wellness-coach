@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { AuthService } from '../services/auth.service';
@@ -301,6 +301,10 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }) => {
   const { t, language, changeLanguage } = useTranslation(); // 🆕 Hook traduzioni
   const { mode, colors, toggleTheme } = useTheme(); // 🆕 Theme hook
+  const systemColorScheme = useColorScheme();
+  // 🔥 FIX: Fallback color basato su useColorScheme per evitare flash bianco
+  const fallbackBackground = systemColorScheme === 'dark' ? '#1a1625' : '#f8fafc';
+  const safeAreaBackground = colors?.background || fallbackBackground;
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<'main' | 'personal-info' | 'notifications'>('main');
@@ -444,7 +448,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={["top"]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: safeAreaBackground }]} edges={["top"]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.text }]}>{t('settings.title')}</Text>
@@ -516,15 +520,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    // 🔥 FIX: backgroundColor rimosso - viene applicato dinamicamente
   },
   header: {
     paddingHorizontal: 20,
     paddingTop: 32,
     paddingBottom: 20,
-    backgroundColor: '#ffffff',
+    // 🔥 FIX: backgroundColor rimosso - viene applicato dinamicamente
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    // 🔥 FIX: borderBottomColor rimosso - viene applicato dinamicamente
   },
   title: {
     fontSize: 24,
@@ -560,7 +564,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    // 🔥 FIX: backgroundColor rimosso - viene applicato dinamicamente
     borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 20,
@@ -571,7 +575,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    // 🔥 FIX: borderColor rimosso - viene applicato dinamicamente
   },
   rowIconWrapper: {
     width: 40,
@@ -599,10 +603,10 @@ const styles = StyleSheet.create({
   versionCard: {
     marginTop: 20,
     borderRadius: 16,
-    backgroundColor: '#ffffff',
+    // 🔥 FIX: backgroundColor rimosso - viene applicato dinamicamente
     padding: 20,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    // 🔥 FIX: borderColor rimosso - viene applicato dinamicamente
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -621,7 +625,7 @@ const styles = StyleSheet.create({
   },
   // Profile Card Styles
   profileCard: {
-    backgroundColor: '#ffffff',
+    // 🔥 FIX: backgroundColor rimosso - viene applicato dinamicamente
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -631,7 +635,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    // 🔥 FIX: borderColor rimosso - viene applicato dinamicamente
   },
   profileHeader: {
     flexDirection: 'row',
@@ -697,13 +701,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    // 🔥 FIX: backgroundColor rimosso - viene applicato dinamicamente
     borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 20,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    // 🔥 FIX: borderColor rimosso - viene applicato dinamicamente (con logica speciale per error color)
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

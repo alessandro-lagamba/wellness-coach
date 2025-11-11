@@ -25,3 +25,5 @@ COMMENT ON COLUMN user_profiles.height IS 'User height in centimeters';
 COMMENT ON COLUMN user_profiles.activity_level IS 'User activity level for BMR/TDEE calculations';
 COMMENT ON COLUMN user_profiles.nutritional_goals IS 'User nutritional goals including daily calories and macronutrient percentages';
 
+
+

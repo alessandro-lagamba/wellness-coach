@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   View,
@@ -10,13 +10,12 @@ import {
   Alert,
   Pressable,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Animated, { useAnimatedStyle, withDelay, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from './Avatar';
-import { WellnessSuggestions } from './WellnessSuggestions';
 import Colors from '../constants/Colors';
 import { useTheme } from '../contexts/ThemeContext';
 import WellnessSyncService from '../services/wellness-sync.service';
@@ -25,7 +24,8 @@ import { AuthService } from '../services/auth.service';
 import PillDetailPopup from './PillDetailPopup';
 import MiniGaugeChart from './MiniGaugeChart';
 import MiniInfoCard from './MiniInfoCard';
-import { TodayGlanceService, WidgetData } from '../services/today-glance.service';
+import { TodayGlanceService } from '../services/today-glance.service';
+import { WidgetData } from '../services/widget-config.service';
 import { useWidgetConfig, WidgetDataService } from '../services/widget-config.service';
 import EditableWidget from './EditableWidget';
 import { useTutorial } from '../contexts/TutorialContext';
@@ -44,6 +44,16 @@ import MoodCheckinCard from './MoodCheckinCard';
 import SleepCheckinCard from './SleepCheckinCard';
 import PrimaryCTA from './PrimaryCTA';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
+import { WidgetSelectionModal } from './WidgetSelectionModal';
+import { MiniTrendChart } from './MiniTrendChart';
+import { HealthDataSyncService } from '../services/health-data-sync.service';
+import { UserFeedbackService } from '../services/user-feedback.service';
+import { DatabaseVerificationService } from '../services/database-verification.service';
+import { DataValidationService } from '../services/data-validation.service';
+import { RetryService } from '../services/retry.service';
+import { OperationLockService } from '../services/operation-lock.service';
+import { AvatarService } from '../services/avatar.service';
+import AvatarCommunityModal from './AvatarCommunityModal';
 
 const { width } = Dimensions.get('window');
 
@@ -134,14 +144,67 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     },
   ], [t, language]);
   
-  const [activities, setActivities] = useState<DailyActivity[]>(() => todaysActivities);
+  // 🔥 Rimuoviamo stato duplicato - usiamo direttamente todaysActivities
+  // const [activities, setActivities] = useState<DailyActivity[]>(() => todaysActivities);
   const [syncService] = useState(() => WellnessSyncService.getInstance());
   const [permissions, setPermissions] = useState({ calendar: false, notifications: false });
   const [userFirstName, setUserFirstName] = useState<string>('User');
   const [momentumData, setMomentumData] = useState<MomentumData | null>(null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarGenerating, setAvatarGenerating] = useState(false);
+  const [communityModalVisible, setCommunityModalVisible] = useState(false);
+  const communityAvatars = useMemo(() => [
+    { id: 'community-1', imageUrl: 'https://images.unsplash.com/photo-1544723795-3fb646b5b39?auto=format&fit=crop&w=400&q=80', displayName: 'Elena R.', streak: 24 },
+    { id: 'community-2', imageUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80', displayName: 'Marco T.', streak: 15 },
+    { id: 'community-3', imageUrl: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=400&q=80', displayName: 'Giulia S.', streak: 12 },
+    { id: 'community-4', imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80', displayName: 'Luca P.', streak: 9 },
+    { id: 'community-5', imageUrl: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=400&q=80', displayName: 'Sara B.', streak: 18 },
+    { id: 'community-6', imageUrl: 'https://images.unsplash.com/photo-1523475472560-d2df97ec485c?auto=format&fit=crop&w=400&q=80', displayName: 'Daniela C.', streak: 7 },
+    { id: 'community-7', imageUrl: 'https://images.unsplash.com/photo-1542145938-0b3c26372d4d?auto=format&fit=crop&w=400&q=80', displayName: 'Michele F.', streak: 20 },
+    { id: 'community-8', imageUrl: 'https://images.unsplash.com/photo-1525130413817-d45c1d127c42?auto=format&fit=crop&w=400&q=80', displayName: 'Valentina H.', streak: 11 },
+    { id: 'community-9', imageUrl: 'https://images.unsplash.com/photo-1481214110143-ed630356e1bb?auto=format&fit=crop&w=400&q=80', displayName: 'Andrea L.', streak: 26 },
+    { id: 'community-10', imageUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80', displayName: 'Irene G.', streak: 14 },
+    { id: 'community-11', imageUrl: 'https://images.unsplash.com/photo-1554151228-14d9def656e4?auto=format&fit=crop&w=400&q=80', displayName: 'Paolo D.', streak: 8 },
+    { id: 'community-12', imageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80', displayName: 'Chiara M.', streak: 17 },
+    { id: 'community-13', imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80', displayName: 'Francesca V.', streak: 5 },
+    { id: 'community-14', imageUrl: 'https://images.unsplash.com/photo-1507120410856-1f35574c3b45?auto=format&fit=crop&w=400&q=80', displayName: 'Federico N.', streak: 23 },
+    { id: 'community-15', imageUrl: 'https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=400&q=80', displayName: 'Marta O.', streak: 10 },
+    { id: 'community-16', imageUrl: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=400&q=80', displayName: 'Stefano Q.', streak: 6 },
+    { id: 'community-17', imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80', displayName: 'Claudia Z.', streak: 19 },
+    { id: 'community-18', imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80', displayName: 'Davide K.', streak: 21 },
+    { id: 'community-19', imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80', displayName: 'Alice E.', streak: 13 },
+    { id: 'community-20', imageUrl: 'https://images.unsplash.com/photo-1614285146320-45e7d88b16a5?auto=format&fit=crop&w=400&q=80', displayName: 'Giorgia U.', streak: 16 },
+    { id: 'community-21', imageUrl: 'https://images.unsplash.com/photo-1603415526960-f7e0328c63b1?auto=format&fit=crop&w=400&q=80', displayName: 'Matteo Y.', streak: 9 },
+    { id: 'community-22', imageUrl: 'https://images.unsplash.com/photo-1521391406205-4a6af174a7f6?auto=format&fit=crop&w=400&q=80', displayName: 'Laura P.', streak: 4 },
+    { id: 'community-23', imageUrl: 'https://images.unsplash.com/photo-1552058544-f2b08422138a?auto=format&fit=crop&w=400&q=80', displayName: 'Cristian W.', streak: 28 },
+    { id: 'community-24', imageUrl: 'https://images.unsplash.com/photo-1531891437562-4301cf35b7e4?auto=format&fit=crop&w=400&q=80', displayName: 'Sofia J.', streak: 12 },
+  ], []);
   const [selectedPill, setSelectedPill] = useState<'streak' | 'momentum' | 'next-session' | null>(null);
   const [todayGlanceWidgets, setTodayGlanceWidgets] = useState<WidgetData[]>([]);
   
+  // Carica l'avatar al mount e quando la schermata torna in focus
+  const loadAvatar = useCallback(async () => {
+    try {
+      const savedAvatar = await AsyncStorage.getItem('user:avatarUri');
+      if (savedAvatar) {
+        setAvatarUri(savedAvatar);
+      }
+    } catch (error) {
+      console.error('Error loading avatar from storage:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAvatar();
+  }, [loadAvatar]);
+
+  // Ricarica l'avatar quando la schermata torna in focus (dopo aver creato un nuovo avatar)
+  useFocusEffect(
+    useCallback(() => {
+      loadAvatar();
+    }, [loadAvatar])
+  );
+
   // Widget configuration
   const { 
     config: widgetConfig, 
@@ -149,13 +212,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     toggleWidget, changeSize,
     addWidget,                // useremo questo al punto (B)
   } = useWidgetConfig();
-  const [widgetData, setWidgetData] = useState<any[]>([]);
+  const [widgetData, setWidgetData] = useState<WidgetData[]>([]);
   const [dragTargetPosition, setDragTargetPosition] = useState<number | null>(null);
   const [editMode, setEditMode] = useState<boolean>(false);
   const [goalModal, setGoalModal] = useState<{visible: boolean; widgetId: 'steps'|'hydration'|'meditation'|'sleep'|null}>({visible:false, widgetId:null});
   const [healthPermissionsModal, setHealthPermissionsModal] = useState<boolean>(false);
   const [recommendationModal, setRecommendationModal] = useState<{visible: boolean; recommendation: any}>({visible: false, recommendation: null});
   const [showHistory, setShowHistory] = useState<boolean>(false);
+  const [widgetSelectionModal, setWidgetSelectionModal] = useState<{ visible: boolean; position: number }>({ visible: false, position: 0 });
+  const [weeklyTrendData, setWeeklyTrendData] = useState<{
+    steps: number[];
+    sleepHours: number[];
+    hrv: number[];
+    heartRate: number[];
+  }>({ steps: [], sleepHours: [], hrv: [], heartRate: [] });
   
   // Health data hook
   const { permissions: healthPermissions, hasData: hasHealthData, isInitialized, healthData, syncData } = useHealthData();
@@ -189,15 +259,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     }
   }, [hasAnyHealthPermission]);
 
-  // Costruisce i dati dei widget partendo dai dati reali di salute + goals
-  const buildWidgetDataFromHealth = async (): Promise<WidgetData[]> => {
-    const goals = await widgetGoalsService.getGoals();
-    const stepsGoal = goals?.steps ?? 10000;
-    const hydrationGoal = goals?.hydration ?? 8;
-    const meditationGoal = goals?.meditation ?? 30;
-    const sleepGoal = goals?.sleep ?? 8;
-
-    const hd = healthData!;
+  // 🔥 Helper function per costruire i widget dati da healthData
+  const buildWidgetDataFromHealthDataHelper = (
+    hd: any,
+    stepsGoal: number,
+    hydrationGoal: number,
+    meditationGoal: number,
+    sleepGoal: number
+  ): WidgetData[] => {
     const normalizeHrv = (value?: number | null) => {
       if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) return 0;
       return value >= 100 ? Math.round(value) : Math.round(value * 10) / 10;
@@ -247,61 +316,152 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         analyses: { completed: true, emotionAnalysis: true, skinAnalysis: true, lastCheckIn: t('home.analyses.today'), streak: 0 } },
     ];
   };
+
+  // Costruisce i dati dei widget partendo dai dati reali di salute + goals
+  // 🔥 FIX: Memoizziamo per evitare ricreazioni ad ogni render
+  const buildWidgetDataFromHealth = useCallback(async (): Promise<WidgetData[]> => {
+    const goals = await widgetGoalsService.getGoals();
+    const stepsGoal = goals?.steps ?? 10000;
+    const hydrationGoal = goals?.hydration ?? 8;
+    const meditationGoal = goals?.meditation ?? 30;
+    const sleepGoal = goals?.sleep ?? 8;
+
+    // 🔥 Gestisci null/undefined healthData
+    if (!healthData) {
+      // 🔥 FIX: Rimuoviamo console.warn eccessivi
+      // Ritorna widget con valori 0 se healthData non è disponibile
+      const hd = {
+        steps: 0,
+        heartRate: 0,
+        restingHeartRate: 0,
+        hrv: 0,
+        sleepHours: 0,
+        sleepQuality: 0,
+        deepSleepMinutes: 0,
+        remSleepMinutes: 0,
+        hydration: 0,
+        mindfulnessMinutes: 0,
+        distance: 0,
+        calories: 0,
+      };
+      return buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoal, meditationGoal, sleepGoal);
+    }
+
+    const hd = healthData;
+    return buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoal, meditationGoal, sleepGoal);
+  }, [healthData]); // 🔥 FIX: translateWidgetTitle non è usato in questa funzione
+  
+  // 🔥 FIX: Helper function per tradurre widget title (evita duplicazione)
+  const translateWidgetTitle = useCallback((widgetId: string): string => {
+    switch (widgetId) {
+      case 'steps': return t('widgets.steps');
+      case 'meditation': return t('widgets.meditation');
+      case 'hydration': return t('widgets.hydration');
+      case 'sleep': return t('widgets.sleep');
+      case 'hrv': return t('widgets.hrv');
+      case 'analyses': return t('widgets.analyses');
+      default: return widgetId;
+    }
+  }, [t]);
+
+  // Load today glance data
+  // 🔥 FIX: Memoizziamo la funzione con useCallback per evitare ricreazioni ad ogni render
+  // 🔥 FIX: Spostata qui prima del useEffect che la usa per evitare errore di dichiarazione
+  const loadTodayGlanceData = useCallback(async () => {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (currentUser) {
+        const widgets = await TodayGlanceService.getTodayGlanceData(currentUser.id);
+        setTodayGlanceWidgets(widgets);
+      }
+    } catch (error) {
+      // 🔥 FIX: Solo errori critici in console + feedback utente per errori critici
+      console.error('Failed to load today glance data:', error);
+      // Mostra feedback utente solo per errori critici (non per errori di rete temporanei)
+      if (error instanceof Error && error.message.includes('critical')) {
+        // Non mostriamo Alert qui perché è un'operazione in background
+        // Gli errori critici sono già loggati in console
+      }
+    }
+  }, []);
+
+  const handleCreateAvatar = useCallback(() => {
+    // Naviga alla schermata di cattura avatar
+    router.push('/avatar-capture');
+  }, [router]);
+
+  // 🔥 FIX: Usiamo useRef per tracciare l'ultimo healthData processato per evitare loop infiniti
+  const lastProcessedHealthDataRef = useRef<string | null>(null);
   
   // Aggiorna i widget quando i dati di salute cambiano
+  // 🔥 FIX: Rimuoviamo dipendenze ridondanti - se healthData cambia, anche healthData?.steps cambia
   useEffect(() => {
+    // 🔥 FIX: Crea una chiave univoca per healthData per evitare processamenti duplicati
+    const healthDataKey = healthData 
+      ? `${healthData.steps}-${healthData.heartRate}-${healthData.sleepHours}-${healthData.hrv}`
+      : 'null';
+    
+    // 🔥 FIX: Evita processamento se i dati non sono cambiati
+    if (healthDataKey === lastProcessedHealthDataRef.current) {
+      return;
+    }
+    
     (async () => {
-      // 🔥 Aggiorna sempre i widget se abbiamo dati di salute reali
-      // Verifica se ci sono dati reali (non solo hasHealthData che richiede permessi)
-      if (healthData !== null && Object.keys(healthData).length > 0) {
-        // Aggiorna i widget con dati reali
+      // 🔥 Aggiorna sempre i widget se abbiamo dati di salute reali (anche se sono 0)
+      // Verifica se healthData è disponibile (non null/undefined) e se ci sono permessi
+      if (healthData !== null && healthData !== undefined && hasAnyHealthPermission) {
+        // Aggiorna i widget con dati reali (anche se sono 0)
         try {
           const data = await buildWidgetDataFromHealth();
+          // 🔥 FIX: Aggiorna il ref solo dopo aver costruito i dati con successo
+          lastProcessedHealthDataRef.current = healthDataKey;
           setWidgetData(data);
-          console.log('📊 Widget data updated with real health data:', {
-            steps: data.find(w => w.id === 'steps')?.steps?.current,
-            heartRate: healthData.heartRate,
-            sleepHours: healthData.sleepHours,
-            hrv: healthData.hrv,
-            restingHeartRate: healthData.restingHeartRate,
-          });
+          // 🔥 FIX: Rimuoviamo console.log eccessivi - manteniamo solo errori critici
+          // Aggiorna anche la sezione Today At a Glance
+          loadTodayGlanceData();
         } catch (error) {
+          // 🔥 FIX: Solo errori critici in console + feedback utente per errori critici
           console.error('❌ Error building widget data from health:', error);
+          // Mostra feedback utente solo per errori critici (non per errori di rete temporanei)
+          if (error instanceof Error && error.message.includes('critical')) {
+            Alert.alert(
+              t('common.error') || 'Errore',
+              t('home.errors.widgetDataLoad') || 'Errore nel caricamento dei dati dei widget. Riprova più tardi.'
+            );
+          }
         }
-        // Aggiorna anche la sezione Today At a Glance
-        loadTodayGlanceData();
-      } else if (isInitialized && (healthData === null || Object.keys(healthData).length === 0)) {
-        // Se non ci sono dati, usa i mock ma solo se non ci sono permessi
-        if (!hasAnyHealthPermission) {
-          // Fallback a mock data se non ci sono permessi
+      } else if (isInitialized && (healthData === null || healthData === undefined) && !hasAnyHealthPermission) {
+        // Se non ci sono dati E non ci sono permessi, usa i mock
+        try {
           const goals = await widgetGoalsService.getGoals();
           const widgetData = WidgetDataService.generateWidgetData(goals);
           const translatedWidgetData = widgetData.map(w => ({
             ...w,
-            title: w.id === 'steps' ? t('widgets.steps') :
-                   w.id === 'meditation' ? t('widgets.meditation') :
-                   w.id === 'hydration' ? t('widgets.hydration') :
-                   w.id === 'sleep' ? t('widgets.sleep') :
-                   w.id === 'hrv' ? t('widgets.hrv') :
-                   w.id === 'analyses' ? t('widgets.analyses') : w.title
+            title: translateWidgetTitle(w.id),
           }));
+          // 🔥 FIX: Aggiorna il ref anche per i mock
+          lastProcessedHealthDataRef.current = healthDataKey;
           setWidgetData(translatedWidgetData);
-          console.log('📊 Widget data updated with mock (no health data available)');
+        } catch (error) {
+          // 🔥 FIX: Solo errori critici in console + feedback utente per errori critici
+          console.error('❌ Error generating mock widget data:', error);
+          // Mostra feedback utente solo per errori critici
+          if (error instanceof Error && error.message.includes('critical')) {
+            Alert.alert(
+              t('common.error') || 'Errore',
+              t('home.errors.mockDataLoad') || 'Errore nel caricamento dei dati mock. Riprova più tardi.'
+            );
+          }
         }
       }
     })();
   }, [
-    healthData,
-    healthData?.steps,
-    healthData?.heartRate,
-    healthData?.sleepHours,
-    healthData?.hrv,
-    healthData?.restingHeartRate,
+    healthData, // 🔥 FIX: Solo healthData - le proprietà nested cambiano automaticamente
     isInitialized,
-    healthPermissions.steps,
-    healthPermissions.heartRate,
-    healthPermissions.sleep,
-    healthPermissions.hrv,
+    hasAnyHealthPermission,
+    buildWidgetDataFromHealth, // 🔥 FIX: Aggiungiamo la funzione memoizzata
+    translateWidgetTitle, // 🔥 FIX: Aggiungiamo la funzione memoizzata
+    loadTodayGlanceData, // 🔥 FIX: Aggiungiamo la funzione memoizzata
   ]);
   
   // Intelligent insights are now handled by DailyCopilot component
@@ -462,20 +622,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     restLevel: (d: string) => `checkin:rest_level:${d}`,
   };
 
-  // Load today glance data
-  const loadTodayGlanceData = async () => {
-    try {
-      const currentUser = await AuthService.getCurrentUser();
-      if (currentUser) {
-        const widgets = await TodayGlanceService.getTodayGlanceData(currentUser.id);
-        setTodayGlanceWidgets(widgets);
-      }
-    } catch (error) {
-      console.error('Failed to load today glance data:', error);
-    }
-  };
-
   // 🆕 Rimosso log widget config per performance (useEffect completo rimosso)
+  // 🔥 FIX: loadTodayGlanceData è stata spostata prima del useEffect che la usa (linea ~310)
 
   // Setup global scroll functions for tutorial
   useEffect(() => {
@@ -549,26 +697,238 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // nuove funzioni di salvataggio con note
   async function saveMoodCheckin(value: number, note: string) {
     const dk = dayKey();
+    
+    // 🆕 Validazione dati prima del salvataggio
+    const validation = DataValidationService.validateMoodCheckin({ value, note });
+    if (!validation.valid) {
+      UserFeedbackService.showError(`Dati non validi: ${validation.errors.join(', ')}`);
+      return;
+    }
+    
+    // Salva in AsyncStorage locale
     await AsyncStorage.multiSet([
       [STORAGE_KEYS.mood(dk), String(value)],
       [STORAGE_KEYS.moodNote(dk), note],
     ]);
-    // TODO: manda al backend
+    
+    // 🆕 Salva nel database Supabase con enhanced error handling
     try {
-      // esempio: await CheckinService.saveMood({ date: dk, value, note });
-    } catch(e) { console.warn('Failed remote mood save', e); }
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) {
+        UserFeedbackService.showWarning('Devi essere loggato per salvare i check-in.');
+        return;
+      }
+
+      // 🆕 Usa locking per prevenire race conditions
+      await OperationLockService.withLock(
+        'save',
+        `mood_checkin_${currentUser.id}_${dk}`,
+        async () => {
+          // 🆕 Usa retry logic per operazioni database
+          await RetryService.withRetry(
+            async () => {
+              const { supabase } = await import('../lib/supabase');
+              
+              // Controlla se esiste già un record per oggi
+              const { data: existingRecord, error: fetchError } = await supabase
+                .from('daily_copilot_analyses')
+                .select('id')
+                .eq('user_id', currentUser.id)
+                .eq('date', dk)
+                .maybeSingle();
+
+              if (fetchError && fetchError.code !== 'PGRST116') {
+                throw new Error(`Error fetching existing check-in: ${fetchError.message}`);
+              }
+
+              const updateData: any = {
+                mood: value,
+                updated_at: new Date().toISOString(),
+              };
+
+              // Se esiste già un record, aggiornalo
+              if (existingRecord) {
+                const { error: updateError } = await supabase
+                  .from('daily_copilot_analyses')
+                  .update(updateData)
+                  .eq('id', existingRecord.id);
+
+                if (updateError) {
+                  throw new Error(`Error updating mood check-in: ${updateError.message}`);
+                }
+              } else {
+                // Crea un nuovo record con valori di default
+                const { error: insertError } = await supabase
+                  .from('daily_copilot_analyses')
+                  .insert({
+                    user_id: currentUser.id,
+                    date: dk,
+                    mood: value,
+                    overall_score: 50, // Default score
+                    sleep_hours: 0,
+                    sleep_quality: 0,
+                    health_metrics: {},
+                    recommendations: [],
+                    summary: {},
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                  });
+
+                if (insertError) {
+                  throw new Error(`Error inserting mood check-in: ${insertError.message}`);
+                }
+              }
+              
+              // 🆕 Verifica post-salvataggio che i dati siano nel database
+              const verification = await DatabaseVerificationService.verifyMoodCheckin(currentUser.id, dk);
+              if (!verification.found) {
+                UserFeedbackService.showWarning('Il check-in è stato salvato ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
+              } else {
+                UserFeedbackService.showSaveSuccess('check-in');
+              }
+            },
+            'save_mood_checkin',
+            {
+              maxAttempts: 3,
+              delay: 1000,
+              backoff: 'exponential',
+              shouldRetry: RetryService.isRetryableError,
+            }
+          );
+        }
+      );
+    } catch(e) {
+      // 🆕 Errore durante il salvataggio - mostra feedback all'utente
+      const error = e instanceof Error ? e : new Error('Unknown error');
+      UserFeedbackService.showSaveError('check-in', async () => {
+        // Retry logic
+        try {
+          await saveMoodCheckin(value, note);
+        } catch (retryError) {
+          UserFeedbackService.showError('Impossibile salvare il check-in. Riprova più tardi.');
+        }
+      });
+    }
   }
 
   async function saveSleepCheckin(quality: number, note: string, restLevel: number) {
     const dk = dayKey();
+    
+    // 🆕 Validazione dati prima del salvataggio
+    const sleepWidget = widgetData.find(w => w.id === 'sleep');
+    const sleepHours = sleepWidget?.sleep?.hours ?? 0;
+    const validation = DataValidationService.validateSleepCheckin({ quality, hours: sleepHours, note });
+    if (!validation.valid) {
+      UserFeedbackService.showError(`Dati non validi: ${validation.errors.join(', ')}`);
+      return;
+    }
+    
+    // Salva in AsyncStorage locale
     await AsyncStorage.multiSet([
       [STORAGE_KEYS.sleep(dk), String(quality)],
       [STORAGE_KEYS.sleepNote(dk), note],
       [STORAGE_KEYS.restLevel(dk), String(restLevel)],
     ]);
+    
+    // 🆕 Salva nel database Supabase con enhanced error handling
     try {
-      // es: await CheckinService.saveSleep({ date: dk, quality, note, restLevel });
-    } catch(e) { console.warn('Failed remote sleep save', e); }
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) {
+        UserFeedbackService.showWarning('Devi essere loggato per salvare i check-in.');
+        return;
+      }
+
+      // 🆕 Usa locking per prevenire race conditions
+      await OperationLockService.withLock(
+        'save',
+        `sleep_checkin_${currentUser.id}_${dk}`,
+        async () => {
+          // 🆕 Usa retry logic per operazioni database
+          await RetryService.withRetry(
+            async () => {
+              const { supabase } = await import('../lib/supabase');
+              
+              // Controlla se esiste già un record per oggi
+              const { data: existingRecord, error: fetchError } = await supabase
+                .from('daily_copilot_analyses')
+                .select('id')
+                .eq('user_id', currentUser.id)
+                .eq('date', dk)
+                .maybeSingle();
+
+              if (fetchError && fetchError.code !== 'PGRST116') {
+                throw new Error(`Error fetching existing check-in: ${fetchError.message}`);
+              }
+
+              const updateData: any = {
+                sleep_quality: quality,
+                sleep_hours: sleepHours,
+                updated_at: new Date().toISOString(),
+              };
+
+              // Se esiste già un record, aggiornalo
+              if (existingRecord) {
+                const { error: updateError } = await supabase
+                  .from('daily_copilot_analyses')
+                  .update(updateData)
+                  .eq('id', existingRecord.id);
+
+                if (updateError) {
+                  throw new Error(`Error updating sleep check-in: ${updateError.message}`);
+                }
+              } else {
+                // Crea un nuovo record con valori di default
+                const { error: insertError } = await supabase
+                  .from('daily_copilot_analyses')
+                  .insert({
+                    user_id: currentUser.id,
+                    date: dk,
+                    mood: 3, // Default mood
+                    overall_score: 50, // Default score
+                    sleep_hours: sleepHours,
+                    sleep_quality: quality,
+                    health_metrics: {},
+                    recommendations: [],
+                    summary: {},
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                  });
+
+                if (insertError) {
+                  throw new Error(`Error inserting sleep check-in: ${insertError.message}`);
+                }
+              }
+              
+              // 🆕 Verifica post-salvataggio che i dati siano nel database
+              const verification = await DatabaseVerificationService.verifySleepCheckin(currentUser.id, dk);
+              if (!verification.found) {
+                UserFeedbackService.showWarning('Il check-in è stato salvato ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
+              } else {
+                UserFeedbackService.showSaveSuccess('check-in');
+              }
+            },
+            'save_sleep_checkin',
+            {
+              maxAttempts: 3,
+              delay: 1000,
+              backoff: 'exponential',
+              shouldRetry: RetryService.isRetryableError,
+            }
+          );
+        }
+      );
+    } catch(e) {
+      // 🆕 Errore durante il salvataggio - mostra feedback all'utente
+      const error = e instanceof Error ? e : new Error('Unknown error');
+      UserFeedbackService.showSaveError('check-in', async () => {
+        // Retry logic
+        try {
+          await saveSleepCheckin(quality, note, restLevel);
+        } catch (retryError) {
+          UserFeedbackService.showError('Impossibile salvare il check-in. Riprova più tardi.');
+        }
+      });
+    }
   }
 
   // Handle pill press
@@ -613,34 +973,34 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   const handleEmptySpaceLongPress = (position: number) => {
-    // 🆕 Rimosso log per performance
-    // Qui potremmo aprire un modal per aggiungere un widget
-    // Per ora, mostriamo un alert
-    Alert.alert(
-      'Aggiungi Widget',
-      `Vuoi aggiungere un widget alla posizione ${position}?`,
-      [
-        { text: 'Annulla', style: 'cancel' },
-        { text: 'Aggiungi', onPress: () => addWidgetToPosition(position) }
-      ]
-    );
+    // Apri il modal di selezione widget
+    setWidgetSelectionModal({ visible: true, position });
   };
 
-  const addWidgetToPosition = async (position: number) => {
+  // 🔥 Lista di tutti i widget disponibili
+  const ALL_AVAILABLE_WIDGETS = ['steps', 'meditation', 'hydration', 'sleep', 'hrv', 'analyses'];
+
+  // 🔥 Filtra i widget NON ancora mostrati (non presenti nella config o disabilitati)
+  const getAvailableWidgets = (): string[] => {
+    return ALL_AVAILABLE_WIDGETS.filter(widgetId => {
+      const widgetInConfig = widgetConfig.find(w => w.id === widgetId);
+      // Mostra solo se NON è presente nella config OPPURE è disabilitato
+      return !widgetInConfig || !widgetInConfig.enabled;
+    });
+  };
+
+  const handleWidgetSelect = async (widgetId: string) => {
     try {
-      // Trova un widget disabilitato da riabilitare
-      const disabledWidget = widgetConfig.find(w => !w.enabled);
-      // 🆕 Rimosso log per performance
-  
-      if (disabledWidget) {
-        // forza la dimensione iniziale a 'small' e posiziona nello slot scelto
-        await addWidget(disabledWidget.id, 'small', position);
-      } else {
-        // 🆕 Rimosso log per performance
-        Alert.alert('Nessun Widget Disponibile', 'Tutti i widget sono già attivi.');
-      }
+      const position = widgetSelectionModal.position;
+      // Aggiungi il widget alla posizione specificata
+      await addWidget(widgetId, 'small', position);
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
     } catch (error) {
-      console.warn('Failed to add widget:', error);
+      console.error('❌ Errore durante l\'aggiunta del widget:', error);
+      Alert.alert(
+        t('widgetSelection.error') || 'Errore',
+        t('widgetSelection.addError') || 'Errore durante l\'aggiunta del widget'
+      );
     }
   };
 
@@ -703,98 +1063,214 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     initializeSync();
   }, []);
 
-  // Load user data and momentum
+  // 🔥 FIX: Usiamo useRef per tracciare se i dati utente sono già stati caricati per evitare loop infiniti
+  const userDataLoadedRef = useRef(false);
+  const lastUserIdRef = useRef<string | null>(null);
+  
+  // Load user data and momentum (solo una volta al mount o quando cambia l'utente)
   useEffect(() => {
     const loadUserData = async () => {
       try {
         // Get current user
         const currentUser = await AuthService.getCurrentUser();
-        if (currentUser?.id) {
-          // Load user profile for first name
-          const userProfile = await AuthService.getUserProfile(currentUser.id);
-          if (userProfile?.first_name) {
-            setUserFirstName(userProfile.first_name);
-          } else if (currentUser.user_metadata?.full_name) {
-            const firstName = currentUser.user_metadata.full_name.split(' ')[0];
-            setUserFirstName(firstName);
-          } else if (currentUser.email) {
-            const firstName = currentUser.email.split('@')[0].split('.')[0];
-            setUserFirstName(firstName);
-          }
+        if (!currentUser?.id) return;
+        
+        // 🔥 FIX: Evita ricaricamento se l'utente è lo stesso e i dati sono già stati caricati
+        if (userDataLoadedRef.current && lastUserIdRef.current === currentUser.id) {
+          return;
+        }
+        
+        // 🔥 FIX: Segna che stiamo caricando i dati per questo utente
+        lastUserIdRef.current = currentUser.id;
+        userDataLoadedRef.current = true;
+        
+        // Load user profile for first name
+        const userProfile = await AuthService.getUserProfile(currentUser.id);
+        if (userProfile?.first_name) {
+          setUserFirstName(userProfile.first_name);
+        } else if (currentUser.user_metadata?.full_name) {
+          const firstName = currentUser.user_metadata.full_name.split(' ')[0];
+          setUserFirstName(firstName);
+        } else if (currentUser.email) {
+          const firstName = currentUser.email.split('@')[0].split('.')[0];
+          setUserFirstName(firstName);
+        }
 
-          // Load momentum data
+        // Load momentum data (solo se non è già stato caricato)
+        if (!momentumData) {
           const momentum = await MomentumService.calculateMomentum(currentUser.id);
           setMomentumData(momentum);
+        }
 
-          // Load today glance widgets
+        // Load weekly trend data for charts (solo se non è già stato caricato)
+        if (weeklyTrendData.steps.length === 0 && weeklyTrendData.sleepHours.length === 0) {
+          const syncService = HealthDataSyncService.getInstance();
+          const trendData = await syncService.getWeeklyTrendData(currentUser.id);
+          setWeeklyTrendData(trendData);
+        }
+
+        // Load today glance widgets (solo se non sono già stati caricati)
+        if (todayGlanceWidgets.length === 0) {
           const widgets = await TodayGlanceService.getTodayGlanceData(currentUser.id);
-          // Translate widget titles
+          // 🔥 FIX: Usiamo la funzione helper per tradurre i widget (evita duplicazione)
           const translatedWidgets = widgets.map(w => ({
             ...w,
-            title: w.id === 'steps' ? t('widgets.steps') :
-                   w.id === 'meditation' || w.id === 'mindfulness' ? t('widgets.meditation') :
-                   w.id === 'hydration' ? t('widgets.hydration') :
-                   w.id === 'sleep' ? t('widgets.sleep') :
-                   w.id === 'hrv' ? t('widgets.hrv') :
-                   w.id === 'analyses' ? t('widgets.analyses') : w.title
+            title: w.id === 'mindfulness' ? translateWidgetTitle('meditation') : translateWidgetTitle(w.id),
           }));
           setTodayGlanceWidgets(translatedWidgets);
-          
-          // Widget data: se abbiamo dati salute usa quelli, altrimenti mock con goals
-          // Verifica se ci sono dati reali (non solo hasHealthData che richiede permessi)
-          if (healthData !== null && Object.keys(healthData).length > 0) {
-            try {
-              const realData = await buildWidgetDataFromHealth();
-              setWidgetData(realData);
-              console.log('📊 Widget data loaded from real health data:', {
-                steps: realData.find(w => w.id === 'steps')?.steps?.current,
-                heartRate: healthData.heartRate,
-                sleepHours: healthData.sleepHours,
-              });
-            } catch (error) {
-              console.error('❌ Error building widget data from health:', error);
-              // Fallback a mock data in caso di errore
-              const goals = await widgetGoalsService.getGoals();
-              const widgetData = WidgetDataService.generateWidgetData(goals);
-              const translatedWidgetData = widgetData.map(w => ({
-                ...w,
-                title: w.id === 'steps' ? t('widgets.steps') :
-                       w.id === 'meditation' ? t('widgets.meditation') :
-                       w.id === 'hydration' ? t('widgets.hydration') :
-                       w.id === 'sleep' ? t('widgets.sleep') :
-                       w.id === 'hrv' ? t('widgets.hrv') :
-                       w.id === 'analyses' ? t('widgets.analyses') : w.title
-              }));
-              setWidgetData(translatedWidgetData);
-            }
-          } else {
-            const goals = await widgetGoalsService.getGoals();
-            const widgetData = WidgetDataService.generateWidgetData(goals);
-            const translatedWidgetData = widgetData.map(w => ({
-              ...w,
-              title: w.id === 'steps' ? t('widgets.steps') :
-                     w.id === 'meditation' ? t('widgets.meditation') :
-                     w.id === 'hydration' ? t('widgets.hydration') :
-                     w.id === 'sleep' ? t('widgets.sleep') :
-                     w.id === 'hrv' ? t('widgets.hrv') :
-                     w.id === 'analyses' ? t('widgets.analyses') : w.title
-            }));
-            setWidgetData(translatedWidgetData);
-            console.log('📊 Widget data loaded from mock (no health data available)');
-          }
         }
+        
+        // 🔥 FIX: Widget data viene gestito dal useEffect separato che dipende da healthData
+        // Non lo carichiamo qui per evitare loop
       } catch (error) {
         console.error('Error loading user data:', error);
+        // 🔥 FIX: Reset il flag in caso di errore per permettere un retry
+        userDataLoadedRef.current = false;
       }
     };
 
     loadUserData();
+  }, []); // 🔥 FIX: Rimuoviamo translateWidgetTitle dalle dipendenze - viene caricato solo al mount
+
+  // 🔥 Rimuoviamo useEffect non necessario - usiamo direttamente todaysActivities che è già memoizzato
+
+  // Load weekly trend data when health data changes
+  // 🔥 FIX: Rimuoviamo dipendenze ridondanti - se healthData cambia, anche le proprietà nested cambiano
+  useEffect(() => {
+    const loadTrendData = async () => {
+      try {
+        const currentUser = await AuthService.getCurrentUser();
+        if (currentUser?.id && hasAnyHealthPermission) {
+          const syncService = HealthDataSyncService.getInstance();
+          const trendData = await syncService.getWeeklyTrendData(currentUser.id);
+          setWeeklyTrendData(trendData);
+        }
+      } catch (error) {
+        // 🔥 FIX: Solo errori critici in console
+        console.error('Error loading weekly trend data:', error);
+      }
+    };
+
+    if (isInitialized && hasAnyHealthPermission) {
+      loadTrendData();
+    }
+  }, [isInitialized, hasAnyHealthPermission, healthData]); // 🔥 FIX: Solo healthData - le proprietà nested cambiano automaticamente
+
+  // Auto-sync health data more frequently towards end of day
+  // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
-  // 🆕 Aggiorna le attività quando cambia la lingua (non l'array stesso per evitare loop infiniti)
   useEffect(() => {
-    setActivities(todaysActivities);
-  }, [language]);
+    if (!isInitialized || !hasAnyHealthPermission) return;
+
+    const getSyncInterval = (): number => {
+      const now = new Date();
+      const hour = now.getHours();
+      
+      // Dopo le 18:00, sincronizza ogni 30 minuti
+      // Dopo le 20:00, sincronizza ogni 15 minuti
+      // Dopo le 22:00, sincronizza ogni 10 minuti
+      if (hour >= 22) return 10 * 60 * 1000; // 10 minuti
+      if (hour >= 20) return 15 * 60 * 1000; // 15 minuti
+      if (hour >= 18) return 30 * 60 * 1000; // 30 minuti
+      // Durante il giorno, sincronizza ogni ora
+      return 60 * 60 * 1000; // 60 minuti
+    };
+
+    const syncAndUpdateTrends = async () => {
+      // 🔥 FIX: Verifica se il componente è ancora montato prima di aggiornare lo stato
+      if (!isMountedRef.current) return;
+      
+      try {
+        const currentUser = await AuthService.getCurrentUser();
+        if (!currentUser?.id || !isMountedRef.current) return;
+
+        // Sincronizza i dati di salute
+        await syncData();
+        
+        // 🔥 FIX: Verifica di nuovo prima di aggiornare lo stato
+        if (!isMountedRef.current) return;
+        
+        // Aggiorna i dati storici per i grafici
+        const syncService = HealthDataSyncService.getInstance();
+        const trendData = await syncService.getWeeklyTrendData(currentUser.id);
+        
+        // 🔥 FIX: Verifica finale prima di setState
+        if (isMountedRef.current) {
+          setWeeklyTrendData(trendData);
+        }
+      } catch (error) {
+        // 🔥 FIX: Solo errori critici in console, non tutti i log
+        if (error instanceof Error && error.message.includes('critical')) {
+          console.error('Error in auto-sync:', error);
+        }
+      }
+    };
+
+    // Prima sincronizzazione immediata
+    syncAndUpdateTrends();
+
+    let currentInterval: ReturnType<typeof setInterval> | null = null;
+    let intervalUpdater: ReturnType<typeof setInterval> | null = null;
+
+    const startInterval = () => {
+      // 🔥 FIX: Pulisci sempre l'intervallo precedente
+      if (currentInterval) {
+        clearInterval(currentInterval);
+        currentInterval = null;
+      }
+      
+      // 🔥 FIX: Verifica se il componente è ancora montato prima di creare nuovo intervallo
+      if (!isMountedRef.current) return;
+      
+      currentInterval = setInterval(() => {
+        if (isMountedRef.current) {
+          syncAndUpdateTrends();
+        } else {
+          // 🔥 FIX: Se il componente è smontato, pulisci l'intervallo
+          if (currentInterval) {
+            clearInterval(currentInterval);
+            currentInterval = null;
+          }
+        }
+      }, getSyncInterval());
+    };
+
+    // Avvia l'intervallo iniziale
+    startInterval();
+
+    // Aggiorna l'intervallo ogni ora per adattarsi all'ora del giorno
+    intervalUpdater = setInterval(() => {
+      if (isMountedRef.current) {
+        startInterval();
+      } else {
+        // 🔥 FIX: Se il componente è smontato, pulisci l'intervallo updater
+        if (intervalUpdater) {
+          clearInterval(intervalUpdater);
+          intervalUpdater = null;
+        }
+      }
+    }, 60 * 60 * 1000); // Ogni ora
+
+    // 🔥 FIX: Cleanup completo - assicurati che tutti gli intervalli siano puliti
+    return () => {
+      if (currentInterval) {
+        clearInterval(currentInterval);
+        currentInterval = null;
+      }
+      if (intervalUpdater) {
+        clearInterval(intervalUpdater);
+        intervalUpdater = null;
+      }
+    };
+  }, [isInitialized, hasAnyHealthPermission]); // 🔥 FIX: Rimuoviamo syncData dalle dipendenze per evitare loop
 
   const syncActivityToCalendar = async (activity: DailyActivity) => {
     try {
@@ -814,12 +1290,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       const result = await syncService.addWellnessActivity(wellnessActivity);
       
       if (result.success) {
-        // Update activity with sync status
-        setActivities(prev => prev.map(a => 
-          a.id === activity.id 
-            ? { ...a, syncedToCalendar: true }
-            : a
-        ));
+        // 🔥 FIX: Non aggiorniamo più lo stato activities (rimosso) - le attività sono read-only
+        // Le attività vengono da todaysActivities che è memoizzato e non cambia durante l'esecuzione
         
         Alert.alert(
           t('home.calendar.synced'),
@@ -1049,12 +1521,18 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
           </View>
 
           <View style={styles.heroAvatarRow}>
-            <Avatar onMicPress={() => {
-              // 🆕 Rimosso log per performance
-              // Force navigation by using a unique timestamp parameter
-              const timestamp = Date.now();
-              router.push(`/(tabs)/coach?voiceMode=true&t=${timestamp}`);
-            }} />
+            <Avatar
+              avatarUri={avatarUri}
+              isGenerating={avatarGenerating}
+              onCreateAvatar={handleCreateAvatar}
+              onOpenCommunity={() => setCommunityModalVisible(true)}
+              onMicPress={() => {
+                // 🆕 Rimosso log per performance
+                // Force navigation by using a unique timestamp parameter
+                const timestamp = Date.now();
+                router.push(`/(tabs)/coach?voiceMode=true&t=${timestamp}`);
+              }}
+            />
             <View style={styles.heroStats}>
               {getStats().map((item: any) => {
                 const isMomentum = item.id === 'momentum';
@@ -1288,8 +1766,6 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                                 ? { meditation: widgetInfo.meditation }
                                 : undefined
                             }
-                            onPress={() => handleWidgetPress(widget.id)}
-                            onLongPress={() => handleWidgetLongPress(widget.id)}
                           />
                         ) : (
                           <MiniInfoCard
@@ -1304,8 +1780,6 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                             showStatus={widget.id === 'analyses'}
                             status={widgetInfo.analyses?.completed ? 'completed' : 'pending'}
                             detailChips={infoDetails}
-                            onPress={() => handleWidgetPress(widget.id)}
-                            onLongPress={() => handleWidgetLongPress(widget.id)}
                           />
                         )}
                       </EditableWidget>
@@ -1353,13 +1827,13 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.activities.title')}</Text>
           <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
             {t('home.calendar.ofCompleted', { 
-              completed: activities.filter(a => a.completed).length, 
-              total: activities.length 
+              completed: todaysActivities.filter(a => a.completed).length, 
+              total: todaysActivities.length 
             })}
           </Text>
         </View>
         <View style={styles.activityContainer}>
-          {activities.map((activity, index) => (
+          {todaysActivities.map((activity, index) => (
             <ActivityItem
               key={activity.id}
               activity={activity}
@@ -1384,12 +1858,144 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
           onViewHistory={() => setShowHistory(true)}
         />
 
-        <View style={styles.sectionFooter}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('wellnessSuggestions.title')}</Text>
-            <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('wellnessSuggestions.subtitle')}</Text>
-          </View>
-          <WellnessSuggestions context="general" />
+        {/* Weekly Progress Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+            {t('home.weeklyProgress.title') || 'I tuoi progressi questa settimana'}
+          </Text>
+          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
+            {t('home.weeklyProgress.subtitle') || 'Un riepilogo dei tuoi miglioramenti'}
+          </Text>
+        </View>
+        
+        <View style={styles.weeklyProgressContainer}>
+          {/* Steps Progress */}
+          {healthData?.steps !== undefined && (
+            <View style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+              <View style={styles.progressCardHeader}>
+                <MaterialCommunityIcons name="walk" size={24} color="#10b981" />
+                <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
+                  {t('widgets.steps')}
+                </Text>
+              </View>
+              <View style={styles.progressCardContent}>
+                <View style={styles.progressCardLeft}>
+                  <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
+                    {healthData.steps?.toLocaleString() || 0}
+                  </Text>
+                  <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]}>
+                    {t('home.weeklyProgress.today')}
+                  </Text>
+                </View>
+                <View style={styles.progressCardRight}>
+                  <MiniTrendChart
+                    data={weeklyTrendData.steps}
+                    color="#10b981"
+                    maxValue={weeklyTrendData.steps.length > 0 
+                      ? Math.max(...weeklyTrendData.steps, healthData.steps || 0, 1)
+                      : healthData.steps || 10000}
+                    formatValue={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toString()}
+                  />
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Sleep Progress */}
+          {healthData?.sleepHours !== undefined && (
+            <View style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+              <View style={styles.progressCardHeader}>
+                <MaterialCommunityIcons name="sleep" size={24} color="#6366f1" />
+                <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
+                  {t('widgets.sleep')}
+                </Text>
+              </View>
+              <View style={styles.progressCardContent}>
+                <View style={styles.progressCardLeft}>
+                  <Text style={[styles.progressCardValue, { color: themeColors.text }]} numberOfLines={1}>
+                    {healthData.sleepHours ? `${Math.round(healthData.sleepHours * 10) / 10}h` : '—'}
+                  </Text>
+                  <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
+                    {healthData.sleepQuality ? `${Math.round(healthData.sleepQuality)}% ${t('home.weeklyProgress.quality')}` : t('home.weeklyProgress.today')}
+                  </Text>
+                </View>
+                <View style={styles.progressCardRight}>
+                  <MiniTrendChart
+                    data={weeklyTrendData.sleepHours}
+                    color="#6366f1"
+                    maxValue={weeklyTrendData.sleepHours.length > 0
+                      ? Math.max(...weeklyTrendData.sleepHours, healthData.sleepHours || 0, 1)
+                      : healthData.sleepHours || 10}
+                    formatValue={(v) => `${v.toFixed(1)}h`}
+                  />
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* HRV Progress */}
+          {healthData?.hrv !== undefined && healthData.hrv > 0 && (
+            <View style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+              <View style={styles.progressCardHeader}>
+                <MaterialCommunityIcons name="heart-pulse" size={24} color="#ef4444" />
+                <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
+                  {t('widgets.hrv')}
+                </Text>
+              </View>
+              <View style={styles.progressCardContent}>
+                <View style={styles.progressCardLeft}>
+                  <Text style={[styles.progressCardValue, { color: themeColors.text }]} numberOfLines={1}>
+                    {healthData.hrv >= 100 ? Math.round(healthData.hrv) : (Math.round(healthData.hrv * 10) / 10)}
+                  </Text>
+                  <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={1}>
+                    {t('home.weeklyProgress.current')}
+                  </Text>
+                </View>
+                <View style={styles.progressCardRight}>
+                  <MiniTrendChart
+                    data={weeklyTrendData.hrv}
+                    color="#ef4444"
+                    maxValue={weeklyTrendData.hrv.length > 0
+                      ? Math.max(...weeklyTrendData.hrv, healthData.hrv || 0, 1)
+                      : healthData.hrv || 100}
+                    formatValue={(v) => v >= 100 ? Math.round(v).toString() : v.toFixed(1)}
+                  />
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Heart Rate Progress */}
+          {healthData?.heartRate !== undefined && healthData.heartRate > 0 && (
+            <View style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+              <View style={styles.progressCardHeader}>
+                <MaterialCommunityIcons name="heart" size={24} color="#ef4444" />
+                <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
+                  {t('home.weeklyProgress.heartRate')}
+                </Text>
+              </View>
+              <View style={styles.progressCardContent}>
+                <View style={styles.progressCardLeft}>
+                  <Text style={[styles.progressCardValue, { color: themeColors.text }]} numberOfLines={1}>
+                    {Math.round(healthData.heartRate)} {t('home.bpm')}
+                  </Text>
+                  <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
+                    {healthData.restingHeartRate ? `${t('home.hrv.restingHR')}: ${Math.round(healthData.restingHeartRate)} ${t('home.bpm')}` : t('home.weeklyProgress.current')}
+                  </Text>
+                </View>
+                <View style={styles.progressCardRight}>
+                  <MiniTrendChart
+                    data={weeklyTrendData.heartRate}
+                    color="#ef4444"
+                    maxValue={weeklyTrendData.heartRate.length > 0
+                      ? Math.max(...weeklyTrendData.heartRate, healthData.heartRate || 0, 1)
+                      : healthData.heartRate || 100}
+                    formatValue={(v) => `${Math.round(v)}`}
+                  />
+                </View>
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
       
@@ -1424,15 +2030,10 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
             // ricarica widget data con i nuovi goal
             const goals = await widgetGoalsService.getGoals();
             const data = WidgetDataService.generateWidgetData(goals);
-            // Translate widget titles
+            // 🔥 FIX: Usiamo la funzione helper per tradurre i widget (evita duplicazione)
             const translatedData = data.map(w => ({
               ...w,
-              title: w.id === 'steps' ? t('widgets.steps') :
-                     w.id === 'meditation' ? t('widgets.meditation') :
-                     w.id === 'hydration' ? t('widgets.hydration') :
-                     w.id === 'sleep' ? t('widgets.sleep') :
-                     w.id === 'hrv' ? t('widgets.hrv') :
-                     w.id === 'analyses' ? t('widgets.analyses') : w.title
+              title: translateWidgetTitle(w.id),
             }));
             setWidgetData(translatedData);
             setGoalModal({ visible: false, widgetId: null });
@@ -1445,7 +2046,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
         visible={healthPermissionsModal}
         onClose={() => setHealthPermissionsModal(false)}
         onSuccess={async () => {
-          console.log('Health permissions granted');
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           // 🔥 Chiudi il modal PRIMA di fare sync per evitare loop
           setHealthPermissionsModal(false);
           
@@ -1456,16 +2057,12 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
             if (syncResult.success && syncResult.data) {
               const data = await buildWidgetDataFromHealth();
               setWidgetData(data);
-              console.log('📊 Widget data refreshed after permissions granted:', {
-                steps: syncResult.data.steps,
-                heartRate: syncResult.data.heartRate,
-                sleepHours: syncResult.data.sleepHours,
-              });
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
             } else if (hasHealthData && healthData) {
               // Fallback: usa i dati già disponibili
               const data = await buildWidgetDataFromHealth();
               setWidgetData(data);
-              console.log('📊 Widget data refreshed from existing health data');
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
             }
           } catch (error) {
             console.error('Error syncing after permissions:', error);
@@ -1490,6 +2087,23 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
         />
       )}
 
+      {/* Widget Selection Modal */}
+      <WidgetSelectionModal
+        visible={widgetSelectionModal.visible}
+        onClose={() => setWidgetSelectionModal({ visible: false, position: 0 })}
+        onSelect={handleWidgetSelect}
+        availableWidgets={getAvailableWidgets()}
+        position={widgetSelectionModal.position}
+      />
+
+      <AvatarCommunityModal
+        visible={communityModalVisible}
+        onClose={() => setCommunityModalVisible(false)}
+        onCreateAvatar={handleCreateAvatar}
+        avatars={communityAvatars}
+        currentUserAvatarUri={avatarUri}
+        currentUserName={userFirstName}
+      />
 
     </SafeAreaView>
   );
@@ -2590,6 +3204,60 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 4,
+  },
+  weeklyProgressContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    marginBottom: 24,
+    gap: 12,
+  },
+  progressCard: {
+    flex: 1,
+    minWidth: '47%',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  progressCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  progressCardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  progressCardContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  progressCardLeft: {
+    flexShrink: 1,
+    marginRight: 12,
+    maxWidth: 100, // Ridotto per dare più spazio ai grafici
+  },
+  progressCardRight: {
+    width: 320, // Aumentato da 300 a 320
+    height: 150, // Aumentato da 130 a 150
+    flexShrink: 0,
+  },
+  progressCardValue: {
+    fontSize: 22, // Leggermente ridotto per risparmiare spazio
+    fontWeight: '700',
+    marginBottom: 2, // Ridotto da 4 a 2
+  },
+  progressCardSubtitle: {
+    fontSize: 11, // Ridotto da 12 a 11
+    lineHeight: 14, // Aggiunto per supportare 2 righe
   },
 });
 

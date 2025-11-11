@@ -54,28 +54,12 @@ export class HealthDataSyncService {
     source: 'healthkit' | 'health_connect' | 'manual' | 'mock' = 'mock'
   ): Promise<HealthDataSyncResult> {
     try {
-      console.log('🔄 Syncing health data to Supabase...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       
-      // Check if record already exists for today
-      const { data: existingRecord, error: fetchError } = await supabase
-        .from('health_data')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('date', today)
-        .single();
-
-      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows found
-        console.error('❌ Error fetching existing health data:', fetchError);
-        return {
-          success: false,
-          recordsInserted: 0,
-          recordsUpdated: 0,
-          error: fetchError.message,
-        };
-      }
-
+      // 🔥 FIX: Usa UPSERT invece di check + insert/update per evitare race conditions
+      // Questo risolve il problema "duplicate key value violates unique constraint"
       const healthRecord: Partial<HealthDataRecord> = {
         user_id: userId,
         date: today,
@@ -101,59 +85,49 @@ export class HealthDataSyncService {
         updated_at: new Date().toISOString(),
       };
 
-      let result: HealthDataSyncResult;
+      // 🔥 FIX: Usa UPSERT con onConflict per gestire automaticamente insert/update
+      // Questo risolve completamente il problema "duplicate key value violates unique constraint"
+      // Il constraint unique è 'health_data_user_id_date_key' quindi usiamo 'user_id,date'
+      const upsertData = {
+        ...healthRecord,
+        created_at: new Date().toISOString(), // Verrà ignorato se il record esiste già (grazie a onConflict)
+      };
 
-      if (existingRecord) {
-        // Update existing record
-        const { error: updateError } = await supabase
-          .from('health_data')
-          .update(healthRecord)
-          .eq('id', existingRecord.id);
+      // 🔥 FIX: Controlla prima se esiste SOLO per determinare insert vs update (non per la logica)
+      // L'upsert gestirà comunque correttamente anche in caso di race condition
+      const { data: existingRecord } = await supabase
+        .from('health_data')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('date', today)
+        .maybeSingle();
 
-        if (updateError) {
-          console.error('❌ Error updating health data:', updateError);
-          result = {
-            success: false,
-            recordsInserted: 0,
-            recordsUpdated: 0,
-            error: updateError.message,
-          };
-        } else {
-          console.log('✅ Health data updated successfully');
-          result = {
-            success: true,
-            recordsInserted: 0,
-            recordsUpdated: 1,
-          };
-        }
-      } else {
-        // Insert new record
-        const { error: insertError } = await supabase
-          .from('health_data')
-          .insert({
-            ...healthRecord,
-            created_at: new Date().toISOString(),
-          });
+      const wasInserted = !existingRecord;
 
-        if (insertError) {
-          console.error('❌ Error inserting health data:', insertError);
-          result = {
-            success: false,
-            recordsInserted: 0,
-            recordsUpdated: 0,
-            error: insertError.message,
-          };
-        } else {
-          console.log('✅ Health data inserted successfully');
-          result = {
-            success: true,
-            recordsInserted: 1,
-            recordsUpdated: 0,
-          };
-        }
+      // 🔥 FIX: Usa upsert con onConflict - gestisce automaticamente insert/update senza race conditions
+      const { data: upsertedData, error: upsertError } = await supabase
+        .from('health_data')
+        .upsert(upsertData, {
+          onConflict: 'user_id,date', // 🔥 FIX: Specifica il constraint unique 'health_data_user_id_date_key'
+        })
+        .select()
+        .single();
+
+      if (upsertError) {
+        console.error('❌ Error upserting health data:', upsertError);
+        return {
+          success: false,
+          recordsInserted: 0,
+          recordsUpdated: 0,
+          error: upsertError.message,
+        };
       }
 
-      return result;
+      return {
+        success: true,
+        recordsInserted: wasInserted ? 1 : 0,
+        recordsUpdated: wasInserted ? 0 : 1,
+      };
     } catch (error) {
       console.error('❌ Unexpected error syncing health data:', error);
       return {
@@ -303,6 +277,89 @@ export class HealthDataSyncService {
         avgHeartRate: 0,
         totalActiveMinutes: 0,
         avgActiveMinutes: 0,
+      };
+    }
+  }
+
+  /**
+   * Get daily health data for the last 7 days for trend charts
+   */
+  async getWeeklyTrendData(userId: string): Promise<{
+    steps: number[];
+    sleepHours: number[];
+    hrv: number[];
+    heartRate: number[];
+  }> {
+    try {
+      const endDate = new Date();
+      const startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+
+      const { data, error } = await supabase
+        .from('health_data')
+        .select('date, steps, sleep_hours, hrv, heart_rate')
+        .eq('user_id', userId)
+        .gte('date', startDateStr)
+        .lte('date', endDateStr)
+        .order('date', { ascending: true });
+
+      if (error) {
+        console.error('❌ Error fetching weekly trend data:', error);
+        return {
+          steps: [],
+          sleepHours: [],
+          hrv: [],
+          heartRate: [],
+        };
+      }
+
+      if (!data || data.length === 0) {
+        return {
+          steps: [],
+          sleepHours: [],
+          hrv: [],
+          heartRate: [],
+        };
+      }
+
+      // Crea un array per gli ultimi 7 giorni
+      const days: { [key: string]: { steps: number; sleepHours: number; hrv: number; heartRate: number } } = {};
+      
+      // Inizializza tutti i giorni con 0
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+        days[dateStr] = { steps: 0, sleepHours: 0, hrv: 0, heartRate: 0 };
+      }
+
+      // Popola con i dati reali
+      data.forEach((record) => {
+        const dateStr = record.date;
+        if (days[dateStr]) {
+          days[dateStr].steps = record.steps || 0;
+          days[dateStr].sleepHours = record.sleep_hours || 0;
+          days[dateStr].hrv = record.hrv || 0;
+          days[dateStr].heartRate = record.heart_rate || 0;
+        }
+      });
+
+      // Converti in array ordinato per data
+      const sortedDates = Object.keys(days).sort();
+      const steps = sortedDates.map(date => days[date].steps);
+      const sleepHours = sortedDates.map(date => days[date].sleepHours);
+      const hrv = sortedDates.map(date => days[date].hrv);
+      const heartRate = sortedDates.map(date => days[date].heartRate);
+
+      return { steps, sleepHours, hrv, heartRate };
+    } catch (error) {
+      console.error('❌ Error in getWeeklyTrendData:', error);
+      return {
+        steps: [],
+        sleepHours: [],
+        hrv: [],
+        heartRate: [],
       };
     }
   }

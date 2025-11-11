@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, View, useColorScheme as RNUseColorScheme } from 'react-native';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../hooks/useColorScheme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -12,26 +12,33 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const systemColorScheme = RNUseColorScheme();
+  // 🔥 FIX: Fallback color basato su useColorScheme per evitare flash bianco
+  const fallbackBackground = systemColorScheme === 'dark' ? '#1a1625' : '#f8fafc';
+  const backgroundColor = colors?.background || fallbackBackground;
+  const surfaceColor = colors?.surface || (systemColorScheme === 'dark' ? '#2d2542' : '#ffffff');
+  const borderColor = colors?.border || (systemColorScheme === 'dark' ? '#3a2f4f' : '#e2e8f0');
+  const primaryColor = colors?.primary || '#6366f1';
+  const textTertiaryColor = colors?.textTertiary || (systemColorScheme === 'dark' ? '#a78bfa' : '#94a3b8');
 
   return (
             <Tabs
               screenOptions={{
-                tabBarActiveTintColor: colors.primary,
-                tabBarInactiveTintColor: colors.textTertiary,
+                tabBarActiveTintColor: primaryColor,
+                tabBarInactiveTintColor: textTertiaryColor,
                 headerShown: false,
-                // ✅ colore di fondo coerente per tutte le scene/ transizioni
-                sceneContainerStyle: { 
-                  backgroundColor: colors.background,
-                  flex: 1,
+                // 🔥 FIX: Usa backgroundColor con fallback per evitare flash bianco
+                sceneStyle: {
+                  backgroundColor,
                 },
                 tabBarStyle: {
           position: 'absolute',
           bottom: 25,
           marginHorizontal: 30,  // Increased margins to make bar narrower
-          backgroundColor: colors.surface,
+          backgroundColor: surfaceColor,  // 🔥 FIX: Usa surfaceColor con fallback
           borderRadius: 30,  // Much more rounded for pill shape
           height: 70,  // Reduced height for pill look
-          shadowColor: colors.shadowColor,
+          shadowColor: colors?.shadowColor || '#000000',
           shadowOpacity: 0.15,  // Increased shadow for better visibility
           shadowOffset: {
             width: 0,
@@ -41,7 +48,7 @@ export default function TabLayout() {
           elevation: 15,  // Increased elevation
           paddingBottom: 8,
           paddingTop: 8,
-          borderTopColor: colors.border,  // ✅ Colore bordo coerente con il tema
+          borderTopColor: borderColor,  // 🔥 FIX: Usa borderColor con fallback
         },
         tabBarItemStyle: {
           height: 54,  // Centered height within the pill

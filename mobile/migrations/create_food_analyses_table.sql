@@ -61,3 +61,5 @@ CREATE TRIGGER update_food_analyses_updated_at
 -- Add comments for documentation
 COMMENT ON TABLE food_analyses IS 'Stores food analysis results including macronutrients, vitamins, minerals, and health scores';
 
+
+

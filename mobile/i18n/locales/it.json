@@ -139,7 +139,21 @@
       "sleepBetter": "Aiutami a dormire meglio",
       "energyTips": "Dammi consigli energia",
       "skinAdvice": "Consigli cura pelle"
-    }
+    },
+    "suggestionFeedback": {
+      "title": "Ottimo!",
+      "message": "Suggerimento applicato. Come ti senti dopo averlo provato?",
+      "veryGood": "Molto bene",
+      "good": "Bene",
+      "soSo": "Così così",
+      "notGood": "Non bene",
+      "veryEffective": "Molto efficace",
+      "useful": "Utile",
+      "neutral": "Neutrale",
+      "notUseful": "Non utile"
+    },
+    "speechError": "Scusa, non ho capito cosa hai detto. Riprova.",
+    "sessionName": "Chat {{date}}"
   },
   "voiceChat": {
     "title": "Chat Vocale",
@@ -241,13 +255,21 @@
     "bpm": "bpm",
     "stats": {
       "streak": "Serie",
-      "momentum": "Momento",
+      "momentum": "Progresso",
       "nextSession": "Prossima Sessione",
       "days": "{{count}} giorni",
       "loading": "Caricamento..."
     },
     "emptySlot": {
       "addWidget": "Premi a lungo per aggiungere widget"
+    },
+    "weeklyProgress": {
+      "title": "I tuoi progressi questa settimana",
+      "subtitle": "Un riepilogo dei tuoi miglioramenti",
+      "today": "Oggi",
+      "quality": "qualità",
+      "current": "Valore attuale",
+      "heartRate": "Battito cardiaco"
     },
     "permissions": {
       "required": "Permessi Necessari",
@@ -742,10 +764,10 @@
         "tipsDesc": "• Imposta promemoria quotidiani\n• Tieni traccia dei tuoi progressi\n• Celebra piccole vittorie\n• Non rompere la catena!"
       },
       "momentum": {
-        "title": "Momento",
-        "subtitle": "Il tuo tasso di completamento",
-        "current": "Momento Attuale",
-        "currentDesc": "Hai completato {{completed}} di {{total}} attività negli ultimi 7 giorni",
+        "title": "Progresso",
+        "subtitle": "Il tuo impegno quotidiano",
+        "current": "Progresso Attuale",
+        "currentDesc": "Hai completato {{completed}} di {{total}} attività negli ultimi {{days}} giorni",
         "trend": "Tendenza",
         "stable": "Stabile →",
         "trendUp": "In Aumento ↑",
@@ -758,10 +780,10 @@
         },
         "noTrend": "Nessun dato di tendenza disponibile",
         "completionRate": "Tasso di Completamento",
-        "completionRateDesc": "Basato sulle tue attività e obiettivi di benessere",
+        "completionRateDesc": "Basato su login giornalieri e obiettivi raggiunti (passi, idratazione, meditazione, sonno)",
         "tips": "Consigli per Migliorare",
-        "keepBuilding": "Continua a costruire!",
-        "tipsDesc": "• Completa le attività quotidiane\n• Imposta obiettivi raggiungibili\n• Tieni traccia dei progressi\n• Celebra i traguardi"
+        "keepBuilding": "Continua così!",
+        "tipsDesc": "• Accedi all'app ogni giorno\n• Raggiungi i tuoi obiettivi quotidiani\n• Tieni traccia dei progressi\n• Celebra i traguardi"
       },
       "nextSession": {
         "title": "Prossima Sessione",
@@ -798,6 +820,21 @@
       "resources": "Risorse",
       "disclaimer": "⚠️ Valutazione cosmetica, non diagnostica. Per dubbi clinici rivolgiti a un professionista."
     }
+  },
+  "microphonePermissions": {
+    "requestTitle": "Permesso Microfono",
+    "requestMessage": "L'app ha bisogno di accedere al microfono per la chat vocale.",
+    "grantedTitle": "Permessi Concessi",
+    "grantedMessage": "Il microfono è ora autorizzato per la chat vocale!",
+    "deniedTitle": "Permessi Negati",
+    "deniedMessage": "Senza l'accesso al microfono non è possibile utilizzare la chat vocale. Puoi modificare i permessi nelle impostazioni del dispositivo.",
+    "errorTitle": "Errore",
+    "errorMessage": "Si è verificato un errore durante la richiesta dei permessi.",
+    "checking": "Controllando...",
+    "permissionsOk": "Permessi OK",
+    "requestPermissions": "Richiedi Permessi",
+    "retry": "Riprova",
+    "check": "Controlla"
   },
   "modals": {
     "healthPermissions": {
@@ -1108,6 +1145,15 @@
     "help3": "• Trascina la maniglia per riordinare widget",
     "help4": "• I widget grandi mostrano più informazioni"
   },
+  "widgetSelection": {
+    "title": "Seleziona Widget",
+    "subtitle": "Aggiungi un widget alla posizione {{position}}",
+    "tapToAdd": "Tocca per aggiungere",
+    "allAdded": "Tutti i widget disponibili sono già stati aggiunti!",
+    "disableToReAdd": "Disabilita un widget per riaggiungerlo qui.",
+    "error": "Errore",
+    "addError": "Errore durante l'aggiunta del widget"
+  },
   "wellnessSuggestions": {
     "title": "Suggerimenti di Benessere",
     "subtitle": "Esplora routine curate dal tuo coach AI per supportare umore, sonno e salute della pelle",
@@ -1241,5 +1287,13 @@
     "categoriesMeta": {
       "count": "{{count}} suggerimenti"
     }
+  },
+  "avatar": {
+    "captureTitle": "Crea il tuo avatar",
+    "captureInstruction": "Posiziona il viso al centro del frame",
+    "capture": "Scatta foto",
+    "generating": "Sto creando il tuo avatar...",
+    "cameraNotReady": "La fotocamera non è pronta. Attendi qualche istante.",
+    "generationError": "Errore durante la generazione dell'avatar. Riprova."
   }
 }

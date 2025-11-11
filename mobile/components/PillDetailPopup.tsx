@@ -112,7 +112,8 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
               value: momentumData ? `${momentumData.percentage}%` : t('common.loading'),
               description: t('popups.pillDetail.momentum.currentDesc', { 
                 completed: momentumData?.completedTasks || 0, 
-                total: momentumData?.totalTasks || 0 
+                total: momentumData?.totalTasks || 0,
+                days: momentumData?.period === '7days' ? 7 : 30
               })
             },
             {

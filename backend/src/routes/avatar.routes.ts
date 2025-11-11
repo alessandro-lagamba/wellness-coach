@@ -4,16 +4,24 @@
  */
 
 import { Router } from 'express';
+import multer from 'multer';
 import {
   getSimliToken,
   simliSpeak,
   getA2EToken,
   generateRPMAvatar,
   getAvatarStatus,
-  validateAvatarRequest
+  validateAvatarRequest,
+  generateAvatarFromPhoto
 } from '../controllers/avatar.controller';
 
 const router: Router = Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 20 * 1024 * 1024, // 20MB
+  },
+});
 
 // Apply rate limiting to all avatar routes
 router.use(validateAvatarRequest);
@@ -41,6 +49,9 @@ router.get('/a2e/token', getA2EToken);
 
 // Generate RPM avatar
 router.post('/rpm/generate', generateRPMAvatar);
+
+// Generate stylized avatar from user photo
+router.post('/generate', upload.single('photo'), generateAvatarFromPhoto);
 
 // ========================================
 // GENERAL ROUTES

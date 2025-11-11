@@ -1,10 +1,16 @@
 import { supabase, Tables, FoodAnalysis } from '../lib/supabase';
 import cacheService from './cache.service';
+import { DataValidationService } from './data-validation.service';
+import { RetryService } from './retry.service';
+import { OperationLockService } from './operation-lock.service';
+import { DatabaseVerificationService } from './database-verification.service';
+import { EnhancedLoggingService } from './enhanced-logging.service';
 
 export class FoodAnalysisService {
   /**
    * Salva una nuova analisi del cibo nel database
    * Evita duplicati recenti: se c'è un'analisi simile negli ultimi 2 minuti, aggiorna quella invece di crearne una nuova
+   * 🆕 Include: validazione dati, retry logic, locking per race conditions, verifica post-salvataggio
    */
   static async saveFoodAnalysis(
     userId: string,
@@ -26,105 +32,150 @@ export class FoodAnalysisService {
       imageUrl?: string;
     }
   ): Promise<FoodAnalysis | null> {
-    try {
-      // Check duplicati recenti: analisi simili negli ultimi 2 minuti
-      const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-      const { data: recentAnalysis, error: checkError } = await supabase
-        .from(Tables.FOOD_ANALYSES)
-        .select('id, created_at, calories, image_url')
-        .eq('user_id', userId)
-        .gte('created_at', twoMinutesAgo)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      // Se esiste un'analisi recente con stesso imageUrl o calorie molto simili, aggiornala
-      if (recentAnalysis && !checkError) {
-        const isSimilar = 
-          (analysis.imageUrl && recentAnalysis.image_url === analysis.imageUrl) || // Stessa immagine
-          (Math.abs(recentAnalysis.calories - analysis.calories) < 50 && !analysis.imageUrl); // Calorie simili e senza nuova immagine
-
-        if (isSimilar) {
-          console.log(`📝 Found similar food analysis from ${recentAnalysis.created_at}, updating instead of inserting`);
-          
-          const { data: updated, error: updateError } = await supabase
-            .from(Tables.FOOD_ANALYSES)
-            .update({
-              meal_type: analysis.mealType,
-              identified_foods: analysis.identifiedFoods,
-              calories: analysis.calories,
-              carbohydrates: analysis.carbohydrates,
-              proteins: analysis.proteins,
-              fats: analysis.fats,
-              fiber: analysis.fiber,
-              vitamins: analysis.vitamins || {},
-              minerals: analysis.minerals || {},
-              health_score: analysis.healthScore,
-              recommendations: analysis.recommendations,
-              observations: analysis.observations,
-              confidence: analysis.confidence,
-              analysis_data: analysis.analysisData || {},
-              image_url: analysis.imageUrl || recentAnalysis.image_url,
-            })
-            .eq('id', recentAnalysis.id)
-            .select()
-            .single();
-
-          if (updateError) {
-            console.error('Error updating food analysis:', updateError);
-            return null;
-          }
-
-          console.log('✅ Food analysis updated (duplicate prevented):', updated.id);
-          
-          // Invalida cache quando si aggiorna un'analisi
-          await cacheService.invalidatePrefix(`food:${userId}`);
-          await cacheService.invalidate(`ai_context:${userId}`);
-          
-          return updated;
-        }
-      }
-
-      // Nessun duplicato trovato, inserisci nuova analisi
-      const { data, error } = await supabase
-        .from(Tables.FOOD_ANALYSES)
-        .insert({
-          user_id: userId,
-          meal_type: analysis.mealType,
-          identified_foods: analysis.identifiedFoods,
-          calories: analysis.calories,
-          carbohydrates: analysis.carbohydrates,
-          proteins: analysis.proteins,
-          fats: analysis.fats,
-          fiber: analysis.fiber,
-          vitamins: analysis.vitamins || {},
-          minerals: analysis.minerals || {},
-          health_score: analysis.healthScore,
-          recommendations: analysis.recommendations,
-          observations: analysis.observations,
-          confidence: analysis.confidence,
-          analysis_data: analysis.analysisData || {},
-          image_url: analysis.imageUrl,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error saving food analysis:', error);
-        return null;
-      }
-
-      console.log('✅ Food analysis saved:', data.id);
-      
-      // Invalida cache quando si salva una nuova analisi
-      await cacheService.invalidatePrefix(`food:${userId}`);
-      await cacheService.invalidate(`ai_context:${userId}`);
-      
-      return data;
-    } catch (error) {
-      console.error('Error in saveFoodAnalysis:', error);
-      return null;
+    // 🆕 Validazione dati prima del salvataggio
+    const validation = DataValidationService.validateFoodAnalysis(analysis);
+    if (!validation.valid) {
+      EnhancedLoggingService.logSaveOperation('food_analysis', userId, false, new Error(`Validation failed: ${validation.errors.join(', ')}`));
+      throw new Error(`Dati non validi: ${validation.errors.join(', ')}`);
     }
+
+    // 🆕 Usa locking per prevenire race conditions
+    return OperationLockService.withLock(
+      'save',
+      `food_analysis_${userId}`,
+      async () => {
+        // 🆕 Usa retry logic per operazioni database
+        return RetryService.withRetry(
+          async () => {
+            try {
+              // Check duplicati recenti: analisi simili negli ultimi 2 minuti
+              const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+              const { data: recentAnalysis, error: checkError } = await supabase
+                .from(Tables.FOOD_ANALYSES)
+                .select('id, created_at, calories, image_url')
+                .eq('user_id', userId)
+                .gte('created_at', twoMinutesAgo)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              // Se esiste un'analisi recente con stesso imageUrl o calorie molto simili, aggiornala
+              if (recentAnalysis && !checkError) {
+                const isSimilar = 
+                  (analysis.imageUrl && recentAnalysis.image_url === analysis.imageUrl) || // Stessa immagine
+                  (Math.abs(recentAnalysis.calories - analysis.calories) < 50 && !analysis.imageUrl); // Calorie simili e senza nuova immagine
+
+                if (isSimilar) {
+                  EnhancedLoggingService.logDatabaseOperation('update', 'food_analysis', true);
+                  
+                  const { data: updated, error: updateError } = await supabase
+                    .from(Tables.FOOD_ANALYSES)
+                    .update({
+                      meal_type: analysis.mealType,
+                      identified_foods: analysis.identifiedFoods,
+                      calories: analysis.calories,
+                      carbohydrates: analysis.carbohydrates,
+                      proteins: analysis.proteins,
+                      fats: analysis.fats,
+                      fiber: analysis.fiber,
+                      vitamins: analysis.vitamins || {},
+                      minerals: analysis.minerals || {},
+                      health_score: analysis.healthScore,
+                      recommendations: analysis.recommendations,
+                      observations: analysis.observations,
+                      confidence: analysis.confidence,
+                      analysis_data: analysis.analysisData || {},
+                      image_url: analysis.imageUrl || recentAnalysis.image_url,
+                    })
+                    .eq('id', recentAnalysis.id)
+                    .select()
+                    .single();
+
+                  if (updateError) {
+                    const err = new Error(`Error updating food analysis: ${updateError.message}`);
+                    EnhancedLoggingService.logSaveOperation('food_analysis', userId, false, err);
+                    throw err;
+                  }
+
+                  EnhancedLoggingService.logSaveOperation('food_analysis', userId, true, undefined, updated.id);
+                  
+                  // Invalida cache quando si aggiorna un'analisi
+                  await cacheService.invalidatePrefix(`food:${userId}`);
+                  await cacheService.invalidate(`ai_context:${userId}`);
+                  
+                  // 🆕 Verifica post-salvataggio che i dati siano nel database
+                  if (updated?.id) {
+                    const verification = await DatabaseVerificationService.verifyFoodAnalysis(userId, updated.id);
+                    if (!verification.found) {
+                      EnhancedLoggingService.logVerification('food_analysis', userId, false, new Error('Data not found after update'));
+                    }
+                  }
+                  
+                  return updated;
+                }
+              }
+
+              // Nessun duplicato trovato, inserisci nuova analisi
+              const { data, error } = await supabase
+                .from(Tables.FOOD_ANALYSES)
+                .insert({
+                  user_id: userId,
+                  meal_type: analysis.mealType,
+                  identified_foods: analysis.identifiedFoods,
+                  calories: analysis.calories,
+                  carbohydrates: analysis.carbohydrates,
+                  proteins: analysis.proteins,
+                  fats: analysis.fats,
+                  fiber: analysis.fiber,
+                  vitamins: analysis.vitamins || {},
+                  minerals: analysis.minerals || {},
+                  health_score: analysis.healthScore,
+                  recommendations: analysis.recommendations,
+                  observations: analysis.observations,
+                  confidence: analysis.confidence,
+                  analysis_data: analysis.analysisData || {},
+                  image_url: analysis.imageUrl,
+                })
+                .select()
+                .single();
+
+              if (error) {
+                const err = new Error(`Error saving food analysis: ${error.message}`);
+                EnhancedLoggingService.logSaveOperation('food_analysis', userId, false, err);
+                throw err;
+              }
+
+              EnhancedLoggingService.logSaveOperation('food_analysis', userId, true, undefined, data.id);
+              
+              // Invalida cache quando si salva una nuova analisi
+              await cacheService.invalidatePrefix(`food:${userId}`);
+              await cacheService.invalidate(`ai_context:${userId}`);
+              
+              // 🆕 Verifica post-salvataggio che i dati siano nel database
+              if (data?.id) {
+                const verification = await DatabaseVerificationService.verifyFoodAnalysis(userId, data.id);
+                if (!verification.found) {
+                  EnhancedLoggingService.logVerification('food_analysis', userId, false, new Error('Data not found after save'));
+                }
+              }
+              
+              return data;
+            } catch (error) {
+              const err = error instanceof Error ? error : new Error('Unknown error');
+              EnhancedLoggingService.logSaveOperation('food_analysis', userId, false, err);
+              throw err;
+            }
+          },
+          'save_food_analysis',
+          {
+            maxAttempts: 3,
+            delay: 1000,
+            backoff: 'exponential',
+            shouldRetry: RetryService.isRetryableError,
+          }
+        );
+      }
+    );
   }
 
   /**
@@ -230,7 +281,15 @@ export class FoodAnalysisService {
       }
 
       const meals = data || [];
-      const totals = meals.reduce((acc, meal) => ({
+      // 🔥 FIX: Esplicita il tipo dell'accumulatore per evitare errori TypeScript
+      const totals = meals.reduce<{
+        calories: number;
+        carbohydrates: number;
+        proteins: number;
+        fats: number;
+        fiber: number;
+        mealCount: number;
+      }>((acc, meal) => ({
         calories: acc.calories + (meal.calories || 0),
         carbohydrates: acc.carbohydrates + (meal.carbohydrates || 0),
         proteins: acc.proteins + (meal.proteins || 0),
@@ -353,4 +412,6 @@ export class FoodAnalysisService {
     }
   }
 }
+
+
 

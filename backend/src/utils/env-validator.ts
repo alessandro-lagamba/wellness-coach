@@ -31,6 +31,7 @@ export function validateEnvironment(): EnvValidationResult {
     'DEEPGRAM_API_KEY',
     'LIVEKIT_API_KEY',
     'LIVEKIT_API_SECRET',
+    'SUPABASE_AVATAR_BUCKET',
   ];
 
   // Verifica critiche
@@ -80,4 +81,6 @@ export function validateAndExit(): void {
 
   console.log('✅ Environment variables validated successfully');
 }
+
+
 

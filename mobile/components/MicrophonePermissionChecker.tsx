@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import MicrophonePermissionsService from '../services/microphone-permissions.service';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface MicrophonePermissionCheckerProps {
   onPermissionGranted?: () => void;
@@ -12,6 +13,7 @@ const MicrophonePermissionChecker: React.FC<MicrophonePermissionCheckerProps> = 
   onPermissionGranted,
   onPermissionDenied
 }) => {
+  const { t } = useTranslation();
   const [permissionStatus, setPermissionStatus] = useState<string>('checking');
   const [isChecking, setIsChecking] = useState(false);
   const permissionsService = MicrophonePermissionsService.getInstance();
@@ -48,26 +50,26 @@ const MicrophonePermissionChecker: React.FC<MicrophonePermissionCheckerProps> = 
         setPermissionStatus('granted');
         onPermissionGranted?.();
         Alert.alert(
-          'Permessi Concessi',
-          'Il microfono è ora autorizzato per la chat vocale!',
-          [{ text: 'OK' }]
+          t('microphonePermissions.grantedTitle'),
+          t('microphonePermissions.grantedMessage'),
+          [{ text: t('common.ok') }]
         );
       } else {
         setPermissionStatus('denied');
         onPermissionDenied?.();
         Alert.alert(
-          'Permessi Negati',
-          'Senza l\'accesso al microfono non è possibile utilizzare la chat vocale. Puoi modificare i permessi nelle impostazioni del dispositivo.',
-          [{ text: 'OK' }]
+          t('microphonePermissions.deniedTitle'),
+          t('microphonePermissions.deniedMessage'),
+          [{ text: t('common.ok') }]
         );
       }
     } catch (error) {
       console.error('Error requesting permissions:', error);
       setPermissionStatus('error');
       Alert.alert(
-        'Errore',
-        'Si è verificato un errore durante la richiesta dei permessi.',
-        [{ text: 'OK' }]
+        t('microphonePermissions.errorTitle'),
+        t('microphonePermissions.errorMessage'),
+        [{ text: t('common.ok') }]
       );
     } finally {
       setIsChecking(false);
@@ -94,17 +96,17 @@ const MicrophonePermissionChecker: React.FC<MicrophonePermissionCheckerProps> = 
   };
 
   const getButtonText = () => {
-    if (isChecking) return 'Controllando...';
+    if (isChecking) return t('microphonePermissions.checking');
     switch (permissionStatus) {
       case 'granted':
-        return 'Permessi OK';
+        return t('microphonePermissions.permissionsOk');
       case 'denied':
       case 'undetermined':
-        return 'Richiedi Permessi';
+        return t('microphonePermissions.requestPermissions');
       case 'error':
-        return 'Riprova';
+        return t('microphonePermissions.retry');
       default:
-        return 'Controlla';
+        return t('microphonePermissions.check');
     }
   };
 

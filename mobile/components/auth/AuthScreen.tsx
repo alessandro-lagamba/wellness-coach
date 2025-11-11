@@ -75,21 +75,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   useEffect(() => {
     const checkExistingUser = async () => {
       try {
-        console.log('🔍 Checking for existing user...');
+        // 🔥 FIX: Rimossi log eccessivi
         
         // Check if user is already authenticated
         const isAuth = await AuthService.isAuthenticated();
         const currentUser = await AuthService.getCurrentUser();
         
         if (isAuth && currentUser) {
-          console.log('✅ User already authenticated, proceeding directly to app...');
           // User is authenticated, proceed directly to app
           onAuthSuccess(currentUser);
-        } else {
-          console.log('❌ No authenticated user found, showing login screen');
         }
       } catch (error) {
-        console.error('Error checking existing user:', error);
+        console.error('❌ Error checking existing user:', error);
       }
     };
 

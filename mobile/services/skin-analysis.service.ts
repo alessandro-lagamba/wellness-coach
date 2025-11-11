@@ -1,10 +1,16 @@
 import { supabase, Tables, SkinAnalysis } from '../lib/supabase';
 import cacheService from './cache.service';
+import { DataValidationService } from './data-validation.service';
+import { RetryService } from './retry.service';
+import { OperationLockService } from './operation-lock.service';
+import { DatabaseVerificationService } from './database-verification.service';
+import { EnhancedLoggingService } from './enhanced-logging.service';
 
 export class SkinAnalysisService {
   /**
    * Salva una nuova analisi della pelle nel database
    * 🆕 Evita duplicati recenti: se c'è un'analisi simile negli ultimi 2 minuti, aggiorna quella invece di crearne una nuova
+   * 🆕 Include: validazione dati, retry logic, locking per race conditions, verifica post-salvataggio
    */
   static async saveSkinAnalysis(
     userId: string,
@@ -22,97 +28,143 @@ export class SkinAnalysisService {
       imageUrl?: string;
     }
   ): Promise<SkinAnalysis | null> {
-    try {
-      // 🆕 Check duplicati recenti: analisi simili negli ultimi 2 minuti
-      const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-      const { data: recentAnalysis, error: checkError } = await supabase
-        .from(Tables.SKIN_ANALYSES)
-        .select('id, created_at, overall_score, image_url')
-        .eq('user_id', userId)
-        .gte('created_at', twoMinutesAgo)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      // 🆕 Se esiste un'analisi recente con stesso imageUrl o punteggio molto simile, aggiornala
-      if (recentAnalysis && !checkError) {
-        const isSimilar = 
-          (analysis.imageUrl && recentAnalysis.image_url === analysis.imageUrl) || // Stessa immagine
-          (Math.abs(recentAnalysis.overall_score - analysis.overallScore) < 5 && !analysis.imageUrl); // Punteggio simile e senza nuova immagine
-
-        if (isSimilar) {
-          console.log(`📝 Found similar skin analysis from ${recentAnalysis.created_at}, updating instead of inserting`);
-          
-          const { data: updated, error: updateError } = await supabase
-            .from(Tables.SKIN_ANALYSES)
-            .update({
-              overall_score: analysis.overallScore,
-              hydration_score: analysis.hydrationScore,
-              oiliness_score: analysis.oilinessScore,
-              texture_score: analysis.textureScore,
-              pigmentation_score: analysis.pigmentationScore,
-              redness_score: analysis.rednessScore,
-              strengths: analysis.strengths,
-              improvements: analysis.improvements,
-              recommendations: analysis.recommendations,
-              analysis_data: analysis.analysisData || {},
-              image_url: analysis.imageUrl || recentAnalysis.image_url, // Mantieni immagine esistente se non fornita nuova
-            })
-            .eq('id', recentAnalysis.id)
-            .select()
-            .single();
-
-          if (updateError) {
-            console.error('Error updating skin analysis:', updateError);
-            return null;
-          }
-
-          console.log('✅ Skin analysis updated (duplicate prevented):', updated.id);
-          
-          // 🆕 Invalida cache quando si aggiorna un'analisi
-          await cacheService.invalidatePrefix(`skin:${userId}`);
-          await cacheService.invalidate(`ai_context:${userId}`);
-          
-          return updated;
-        }
-      }
-
-      // 🆕 Nessun duplicato trovato, inserisci nuova analisi
-      const { data, error } = await supabase
-        .from(Tables.SKIN_ANALYSES)
-        .insert({
-          user_id: userId,
-          overall_score: analysis.overallScore,
-          hydration_score: analysis.hydrationScore,
-          oiliness_score: analysis.oilinessScore,
-          texture_score: analysis.textureScore,
-          pigmentation_score: analysis.pigmentationScore,
-          redness_score: analysis.rednessScore,  // Added redness score
-          strengths: analysis.strengths,
-          improvements: analysis.improvements,
-          recommendations: analysis.recommendations,
-          analysis_data: analysis.analysisData || {},
-          image_url: analysis.imageUrl,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error saving skin analysis:', error);
-        return null;
-      }
-
-      console.log('✅ Skin analysis saved:', data.id);
-      
-      // 🆕 Invalida cache quando si salva una nuova analisi
-      await cacheService.invalidatePrefix(`skin:${userId}`);
-      await cacheService.invalidate(`ai_context:${userId}`);
-      
-      return data;
-    } catch (error) {
-      console.error('Error in saveSkinAnalysis:', error);
-      return null;
+    // 🆕 Validazione dati prima del salvataggio
+    const validation = DataValidationService.validateSkinAnalysis(analysis);
+    if (!validation.valid) {
+      EnhancedLoggingService.logSaveOperation('skin_analysis', userId, false, new Error(`Validation failed: ${validation.errors.join(', ')}`));
+      throw new Error(`Dati non validi: ${validation.errors.join(', ')}`);
     }
+
+    // 🆕 Usa locking per prevenire race conditions
+    return OperationLockService.withLock(
+      'save',
+      `skin_analysis_${userId}`,
+      async () => {
+        // 🆕 Usa retry logic per operazioni database
+        return RetryService.withRetry(
+          async () => {
+            try {
+              // 🆕 Check duplicati recenti: analisi simili negli ultimi 2 minuti
+              const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+              const { data: recentAnalysis, error: checkError } = await supabase
+                .from(Tables.SKIN_ANALYSES)
+                .select('id, created_at, overall_score, image_url')
+                .eq('user_id', userId)
+                .gte('created_at', twoMinutesAgo)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              // 🆕 Se esiste un'analisi recente con stesso imageUrl o punteggio molto simile, aggiornala
+              if (recentAnalysis && !checkError) {
+                const isSimilar = 
+                  (analysis.imageUrl && recentAnalysis.image_url === analysis.imageUrl) || // Stessa immagine
+                  (Math.abs(recentAnalysis.overall_score - analysis.overallScore) < 5 && !analysis.imageUrl); // Punteggio simile e senza nuova immagine
+
+                if (isSimilar) {
+                  EnhancedLoggingService.logDatabaseOperation('update', 'skin_analysis', true);
+                  
+                  const { data: updated, error: updateError } = await supabase
+                    .from(Tables.SKIN_ANALYSES)
+                    .update({
+                      overall_score: analysis.overallScore,
+                      hydration_score: analysis.hydrationScore,
+                      oiliness_score: analysis.oilinessScore,
+                      texture_score: analysis.textureScore,
+                      pigmentation_score: analysis.pigmentationScore,
+                      redness_score: analysis.rednessScore,
+                      strengths: analysis.strengths,
+                      improvements: analysis.improvements,
+                      recommendations: analysis.recommendations,
+                      analysis_data: analysis.analysisData || {},
+                      image_url: analysis.imageUrl || recentAnalysis.image_url, // Mantieni immagine esistente se non fornita nuova
+                    })
+                    .eq('id', recentAnalysis.id)
+                    .select()
+                    .single();
+
+                  if (updateError) {
+                    const err = new Error(`Error updating skin analysis: ${updateError.message}`);
+                    EnhancedLoggingService.logSaveOperation('skin_analysis', userId, false, err);
+                    throw err;
+                  }
+
+                  EnhancedLoggingService.logSaveOperation('skin_analysis', userId, true, undefined, updated.id);
+                  
+                  // 🆕 Invalida cache quando si aggiorna un'analisi
+                  await cacheService.invalidatePrefix(`skin:${userId}`);
+                  await cacheService.invalidate(`ai_context:${userId}`);
+                  
+                  // 🆕 Verifica post-salvataggio che i dati siano nel database
+                  if (updated?.id) {
+                    const verification = await DatabaseVerificationService.verifySkinAnalysis(userId, updated.id);
+                    if (!verification.found) {
+                      EnhancedLoggingService.logVerification('skin_analysis', userId, false, new Error('Data not found after update'));
+                    }
+                  }
+                  
+                  return updated;
+                }
+              }
+
+              // 🆕 Nessun duplicato trovato, inserisci nuova analisi
+              const { data, error } = await supabase
+                .from(Tables.SKIN_ANALYSES)
+                .insert({
+                  user_id: userId,
+                  overall_score: analysis.overallScore,
+                  hydration_score: analysis.hydrationScore,
+                  oiliness_score: analysis.oilinessScore,
+                  texture_score: analysis.textureScore,
+                  pigmentation_score: analysis.pigmentationScore,
+                  redness_score: analysis.rednessScore,  // Added redness score
+                  strengths: analysis.strengths,
+                  improvements: analysis.improvements,
+                  recommendations: analysis.recommendations,
+                  analysis_data: analysis.analysisData || {},
+                  image_url: analysis.imageUrl,
+                })
+                .select()
+                .single();
+
+              if (error) {
+                const err = new Error(`Error saving skin analysis: ${error.message}`);
+                EnhancedLoggingService.logSaveOperation('skin_analysis', userId, false, err);
+                throw err;
+              }
+
+              EnhancedLoggingService.logSaveOperation('skin_analysis', userId, true, undefined, data.id);
+              
+              // 🆕 Invalida cache quando si salva una nuova analisi
+              await cacheService.invalidatePrefix(`skin:${userId}`);
+              await cacheService.invalidate(`ai_context:${userId}`);
+              
+              // 🆕 Verifica post-salvataggio che i dati siano nel database
+              if (data?.id) {
+                const verification = await DatabaseVerificationService.verifySkinAnalysis(userId, data.id);
+                if (!verification.found) {
+                  EnhancedLoggingService.logVerification('skin_analysis', userId, false, new Error('Data not found after save'));
+                }
+              }
+              
+              return data;
+            } catch (error) {
+              const err = error instanceof Error ? error : new Error('Unknown error');
+              EnhancedLoggingService.logSaveOperation('skin_analysis', userId, false, err);
+              throw err;
+            }
+          },
+          'save_skin_analysis',
+          {
+            maxAttempts: 3,
+            delay: 1000,
+            backoff: 'exponential',
+            shouldRetry: RetryService.isRetryableError,
+          }
+        );
+      },
+      `skin_analysis_${userId}`
+    );
   }
 
   /**

@@ -114,18 +114,15 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
     }
 
     try {
-      console.log('🔍 Starting detailed analysis generation...');
+      // 🔥 FIX: Rimossi log eccessivi
       const userMessage = analysisType === 'emotion' 
         ? 'Fammi un\'analisi dettagliata SOLAMENTE della mia ultima analisi delle emozioni, non di tutte le analisi precedenti'
         : 'Fammi un\'analisi dettagliata SOLAMENTE della mia ultima analisi della pelle, non di tutte le analisi precedenti';
 
-      console.log('👤 Getting current user...');
       const currentUser = await AuthService.getCurrentUser();
-      console.log('👤 Current user:', currentUser?.id);
       
       const sessionId = `detailed-analysis-${Date.now()}`;
       const analysisIntent = AnalysisIntentService.detectAnalysisIntent(userMessage);
-      console.log('🎯 Analysis intent detected:', analysisIntent);
 
       const aiContext = currentUser?.id ? await AIContextService.getCompleteContext(currentUser.id) : null;
       const userContext = aiContext ? {

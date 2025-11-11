@@ -47,7 +47,7 @@ class PushNotificationService {
       this.notificationPermissionGranted = finalStatus === 'granted';
 
       if (!this.notificationPermissionGranted) {
-        console.log('[PushNotifications] ❌ Permission not granted');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         return false;
       }
 
@@ -60,7 +60,7 @@ class PushNotificationService {
         }),
       });
 
-      console.log('[PushNotifications] ✅ Initialized and permission granted');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       return true;
     } catch (error) {
       console.error('[PushNotifications] ❌ Error initializing:', error);
@@ -77,7 +77,7 @@ class PushNotificationService {
       const lastNotification = await AsyncStorage.getItem(`${LAST_MOOD_NOTIFICATION_KEY}:${userId}`);
       const today = new Date().toISOString().slice(0, 10);
       if (lastNotification === today) {
-        console.log('[PushNotifications] ⏭️ Mood decline notification already sent today');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         return false;
       }
 
@@ -85,7 +85,7 @@ class PushNotificationService {
       const history = await EmotionAnalysisService.getEmotionHistory(userId, 3);
       
       if (history.length < 3) {
-        console.log('[PushNotifications] ⏭️ Not enough emotion history (need 3, have', history.length, ')');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         return false;
       }
 
@@ -105,12 +105,7 @@ class PushNotificationService {
 
       // 🆕 Solo se il declino è significativo (>= 0.3)
       if (isDeclining && declineAmount >= 0.3) {
-        console.log('[PushNotifications] ✅ Mood decline detected:', {
-          recent: recentValence,
-          middle: middleValence,
-          older: olderValence,
-          decline: declineAmount,
-        });
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
 
         // 🆕 Invia notifica
         await this.sendMoodDeclineNotification(userId);
@@ -163,7 +158,7 @@ class PushNotificationService {
         trigger: null, // Immediate
       });
 
-      console.log('[PushNotifications] ✅ Mood decline notification sent');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
     } catch (error) {
       console.error('[PushNotifications] ❌ Error sending mood decline notification:', error);
     }
@@ -174,7 +169,7 @@ class PushNotificationService {
    */
   async checkAllRules(userId: string): Promise<void> {
     if (!this.notificationPermissionGranted) {
-      console.log('[PushNotifications] ⏭️ Skipping checks - permission not granted');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       return;
     }
 

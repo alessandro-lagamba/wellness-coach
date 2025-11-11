@@ -29,16 +29,15 @@ export default function CameraCapture({
   const [cameraError, setCameraError] = React.useState<string | null>(null);
   const cameraRef = React.useRef<CameraView | null>(null);
   const [refSet, setRefSet] = React.useState(false);
-  const [cameraMounted, setCameraMounted] = React.useState(false);
+  // 🔥 FIX: Usa useRef invece di useState per cameraMounted per evitare re-render infiniti
+  const cameraMountedRef = React.useRef(false);
 
   // Enhanced ref management with aggressive persistence
   const setCameraRef = React.useCallback((ref: CameraView | null) => {
-    console.log('📷 [CameraCapture] setCameraRef called. New ref:', !!ref, 'Previous ref.current:', !!cameraRef.current, 'Controller ref.current:', !!controller.ref.current, 'Mounted:', cameraMounted);
-    
+    // 🔥 FIX: Rimuoviamo console.log eccessivi - solo errori critici
     // Don't clear refs if we're just getting a new ref and the old one was valid
     if (ref && cameraRef.current && cameraRef.current === ref) {
-      console.log('📷 [CameraCapture] Same ref received, no action needed');
-      return;
+      return; // Same ref, no action needed
     }
     
     cameraRef.current = ref;
@@ -46,20 +45,17 @@ export default function CameraCapture({
     if (ref) {
       controller.ref.current = ref;
       setRefSet(true);
-      setCameraMounted(true);
-      console.log('📷 [CameraCapture] Camera ref set successfully and persisted');
+      cameraMountedRef.current = true;
       
       // Store globally for persistence
       (globalThis as any).globalCameraRef = ref;
       
-      // More aggressive ref restoration
+      // More aggressive ref restoration (solo se necessario)
       const restoreRefs = () => {
         if (controller.ref.current !== ref) {
-          console.log('📷 [CameraCapture] Ref was lost, restoring...');
           controller.ref.current = ref;
         }
         if ((globalThis as any).globalCameraRef !== ref) {
-          console.log('📷 [CameraCapture] Global ref was lost, restoring...');
           (globalThis as any).globalCameraRef = ref;
         }
       };
@@ -67,47 +63,30 @@ export default function CameraCapture({
       // Immediate restoration
       restoreRefs();
       
-      // Delayed restoration to catch any async issues
+      // Delayed restoration to catch any async issues (solo una volta)
+      // 🔥 FIX: I timeout vengono gestiti in un useEffect separato per evitare problemi con callback ref
       setTimeout(restoreRefs, 100);
       setTimeout(restoreRefs, 500);
     } else {
       // Only clear refs if we're actually unmounting, not just switching
       if (!isScreenFocused) {
-        console.log('📷 [CameraCapture] Screen not focused, clearing refs');
         controller.ref.current = null;
         setRefSet(false);
-        setCameraMounted(false);
-      } else {
-        console.log('📷 [CameraCapture] Ref became null but screen is focused, keeping refs');
+        cameraMountedRef.current = false;
       }
     }
-  }, [controller, cameraMounted, isScreenFocused]);
+  }, [controller, isScreenFocused]);
 
-  // Aggressive ref sync - runs on every render
-  React.useEffect(() => {
-    if (cameraRef.current && cameraRef.current !== controller.ref.current) {
-      console.log('📷 Aggressive sync: restoring camera ref');
-      controller.ref.current = cameraRef.current;
-    }
-  });
+  // 🔥 FIX: Rimuoviamo questo useEffect che causa loop infiniti
+  // Il ref viene già gestito correttamente in setCameraRef
 
   // Prevent unmounting during critical operations
   React.useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (controller.detecting) {
-        console.log('📷 Preventing unmount during detection');
-        return false;
-      }
-    };
-    
     // Add cleanup protection
     return () => {
       // Only cleanup if not detecting and not analyzing
       if (!controller.detecting && !controller.ready) {
-        console.log('📷 CameraCapture unmounting, clearing ref');
         controller.ref.current = null;
-      } else {
-        console.log('📷 CameraCapture unmounting but keeping ref (detecting:', controller.detecting, 'ready:', controller.ready, ')');
       }
     };
   }, [controller.detecting, controller.ready]);
@@ -116,16 +95,14 @@ export default function CameraCapture({
   React.useEffect(() => {
     const initCamera = async () => {
       if (!permission?.granted) {
-        console.log('🔐 Requesting camera permission...');
         const result = await requestPermission();
-        console.log('🔐 Permission request result:', result);
         if (!result?.granted) {
           setCameraError('Camera permission denied');
         }
       }
     };
     initCamera();
-  }, []);
+  }, [permission?.granted, requestPermission]);
 
   // Reset camera ready state when facing changes (but not when switching)
   React.useEffect(() => {
@@ -146,21 +123,14 @@ export default function CameraCapture({
   // Cleanup effect
   React.useEffect(() => {
     return () => {
-      console.log('📷 CameraCapture unmounting, clearing ref');
       cameraRef.current = null;
       controller.ref.current = null;
       setRefSet(false);
-      setCameraMounted(false);
+      cameraMountedRef.current = false;
     };
   }, [controller]);
 
-  console.log('📷 CameraCapture render state:', {
-    isScreenFocused,
-    permission: permission?.granted,
-    cameraReady,
-    cameraError,
-    controllerReady: controller.ready,
-  });
+  // 🔥 FIX: Rimuoviamo console.log che viene eseguito ad ogni render
 
   if (!permission?.granted) {
     return (
@@ -189,14 +159,12 @@ export default function CameraCapture({
           style={styles.camera}
           facing={facing}
           onCameraReady={() => {
-            console.log('📷 Camera ready callback triggered, ref exists:', !!controller.ref.current, 'refSet:', refSet, 'mounted:', cameraMounted);
             setCameraReady(true);
             controller.setReady(true);
             controller.setError(null);
             
             // Ensure ref is still set after camera is ready
             if (cameraRef.current && !controller.ref.current) {
-              console.log('📷 Ref lost during ready, restoring...');
               controller.ref.current = cameraRef.current;
             }
             

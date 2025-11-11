@@ -16,9 +16,8 @@ export function useCameraController({ isScreenFocused }: { isScreenFocused: bool
   const permissionGranted = !!permission?.granted;
 
   useEffect(() => {
-    console.log('🎥 Camera controller screen focus changed:', isScreenFocused);
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     if (!isScreenFocused) {
-      console.log('🎥 Screen not focused, stopping camera');
       setActive(false);
       setReady(false);
       setDetecting(false);
@@ -26,27 +25,27 @@ export function useCameraController({ isScreenFocused }: { isScreenFocused: bool
   }, [isScreenFocused]);
 
   const ensurePermission = async () => {
-    console.log('🔐 Current permission state:', permission);
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     if (permissionGranted) {
-      console.log('🔐 Permission already granted');
       return true;
     }
-    console.log('🔐 Requesting camera permission...');
     const res = await requestPermission();
-    console.log('🔐 Permission request result:', res);
     return !!res?.granted;
   };
 
   const startCamera = async () => {
-    console.log('🎥 Starting camera...');
+    // 🔥 FIX: Evita di avviare la camera se è già attiva
+    if (active) {
+      return true;
+    }
+    
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     const granted = await ensurePermission();
-    console.log('🎥 Permission granted:', granted);
     if (!granted) {
       setError('Camera permission denied');
       return false;
     }
     
-    console.log('🎥 Setting camera state: active=true, ready=false');
     setActive(true);
     setReady(false);
     setDetecting(false);
@@ -55,7 +54,7 @@ export function useCameraController({ isScreenFocused }: { isScreenFocused: bool
   };
 
   const stopCamera = () => {
-    console.log('🎥 Stopping camera');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     setActive(false);
     setReady(false);
     setDetecting(false);
@@ -66,19 +65,11 @@ export function useCameraController({ isScreenFocused }: { isScreenFocused: bool
   const isCameraReady = () => {
     // Try to restore ref from global storage if local ref is null
     if (!ref.current && globalCameraRef) {
-      console.log('🎥 Restoring camera ref from global storage');
       ref.current = globalCameraRef;
     }
     
     const cameraReady = !!ref.current && ready && permissionGranted && !error;
-    console.log('🎥 isCameraReady check:', {
-      hasRef: !!ref.current,
-      hasGlobalRef: !!globalCameraRef,
-      ready,
-      permissionGranted,
-      error,
-      result: cameraReady,
-    });
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     return cameraReady;
   };
 
@@ -86,15 +77,14 @@ export function useCameraController({ isScreenFocused }: { isScreenFocused: bool
   useEffect(() => {
     if (ref.current) {
       globalCameraRef = ref.current;
-      console.log('🎥 Stored camera ref globally');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
     }
   }, []);
 
   // Add method to recover camera ref if it becomes null
   const recoverCameraRef = () => {
-    console.log('🎥 Attempting to recover camera ref...');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     if (!ref.current) {
-      console.log('🎥 Camera ref is null, cannot recover automatically');
       return false;
     }
     return true;

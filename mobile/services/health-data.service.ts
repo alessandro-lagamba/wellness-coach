@@ -25,7 +25,8 @@ try {
     }
   }
 } catch (error) {
-  console.warn('Health libraries not available:', error);
+  // 🔥 FIX: Solo errori critici in console
+  console.error('❌ Health libraries not available:', error);
 }
 
 export class HealthDataService {
@@ -69,7 +70,7 @@ export class HealthDataService {
    */
   async initialize(): Promise<boolean> {
     try {
-      console.log('🏥 Initializing Health Data Service...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi - manteniamo solo errori critici
       
       // Carica i permessi concessi se disponibili
       if (Platform.OS === 'android') {
@@ -90,9 +91,10 @@ export class HealthDataService {
             mindfulness: false, // Not directly available
           };
           
-          console.log('📋 Loaded granted permissions:', this.permissions);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
         } catch (error) {
-          console.warn('⚠️ Could not load granted permissions:', error);
+          // 🔥 FIX: Solo errori critici in console
+          console.error('❌ Could not load granted permissions:', error);
         }
       }
       
@@ -102,7 +104,7 @@ export class HealthDataService {
         return await this.initializeHealthConnect();
       }
       
-      console.log('🏥 Health data service initialized (mock mode)');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       return true;
     } catch (error) {
       console.error('❌ Failed to initialize health data service:', error);
@@ -115,7 +117,6 @@ export class HealthDataService {
    */
   private async initializeHealthKit(): Promise<boolean> {
     if (!AppleHealthKit) {
-      console.warn('⚠️ AppleHealthKit not available');
       return false;
     }
 
@@ -123,11 +124,9 @@ export class HealthDataService {
       // Check if HealthKit is available
       const isAvailable = await AppleHealthKit.isAvailable();
       if (!isAvailable) {
-        console.warn('⚠️ HealthKit not available on this device');
         return false;
       }
 
-      console.log('✅ HealthKit is available');
       return true;
     } catch (error) {
       console.error('❌ HealthKit initialization failed:', error);
@@ -140,14 +139,12 @@ export class HealthDataService {
    */
   private async initializeHealthConnect(): Promise<boolean> {
     if (!HealthConnect) {
-      console.warn('⚠️ HealthConnect not available');
       return false;
     }
 
     try {
       // CORRETTO: Usa getSdkStatus() invece di isAvailable() che non esiste
       if (!HealthConnect.getSdkStatus || typeof HealthConnect.getSdkStatus !== 'function') {
-        console.warn('⚠️ HealthConnect.getSdkStatus not available');
         return false;
       }
 
@@ -158,14 +155,12 @@ export class HealthDataService {
       if (HealthConnect.SdkAvailabilityStatus) {
         const isAvailable = status === HealthConnect.SdkAvailabilityStatus.SDK_AVAILABLE;
         if (!isAvailable) {
-          console.warn('⚠️ Health Connect SDK not available. Status:', status);
           return false;
         }
       } else {
         // Fallback: se getSdkStatus restituisce un numero, SDK_AVAILABLE è tipicamente 1
         const isAvailable = status === 1 || status === 'SDK_AVAILABLE' || status === true;
         if (!isAvailable) {
-          console.warn('⚠️ Health Connect SDK not available. Status:', status);
           return false;
         }
       }
@@ -174,14 +169,13 @@ export class HealthDataService {
       if (HealthConnect.initialize && typeof HealthConnect.initialize === 'function') {
         try {
           await HealthConnect.initialize();
-          console.log('✅ Health Connect initialized');
         } catch (initError) {
-          console.warn('⚠️ Health Connect initialization failed:', initError);
+          // 🔥 FIX: Solo errori critici in console
+          console.error('❌ Health Connect initialization failed:', initError);
           // Continua comunque, a volte l'inizializzazione può fallire ma funziona ancora
         }
       }
 
-      console.log('✅ Health Connect is available');
       return true;
     } catch (error) {
       console.error('❌ Health Connect initialization failed:', error);
@@ -194,7 +188,7 @@ export class HealthDataService {
    */
   async requestPermissions(): Promise<HealthPermissions> {
     try {
-      console.log('🔐 Requesting health data permissions...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       if (Platform.OS === 'ios' && AppleHealthKit) {
         return await this.requestHealthKitPermissions();
@@ -215,7 +209,7 @@ export class HealthDataService {
         mindfulness: true,
       };
 
-      console.log('✅ Health permissions granted (mock mode)');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       return this.permissions;
     } catch (error) {
       console.error('❌ Failed to request health permissions:', error);
@@ -257,7 +251,7 @@ export class HealthDataService {
           return;
         }
 
-        console.log('✅ HealthKit permissions granted:', results);
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         
         // Map HealthKit permissions to our interface
         this.permissions = {
@@ -279,35 +273,31 @@ export class HealthDataService {
 
   /**
    * Request Health Connect permissions
+   * 🔥 Now uses HealthPermissionsService for consistent permission handling
    */
   private async requestHealthConnectPermissions(): Promise<HealthPermissions> {
     try {
-      const permissions = [
-        'steps',
-        'distance',
-        'activeCalories',
-        'heartRate',
-        'restingHeartRate',
-        'heartRateVariability',
-        'sleepSession',
-        'bloodPressure',
-        'weight',
-        'bodyFat',
-      ];
-
-      const grantedPermissions = await HealthConnect.requestPermissions(permissions);
+      const { HealthPermissionsService } = await import('./health-permissions.service');
       
-      console.log('✅ Health Connect permissions granted:', grantedPermissions);
+      const permissionIds = ['steps', 'heart_rate', 'sleep', 'hrv', 'blood_pressure', 'weight', 'body_fat'];
+      
+      const result = await HealthPermissionsService.requestHealthPermissions(permissionIds);
+      
+      const granted = result.success
+        ? await HealthPermissionsService.getGrantedPermissions()
+        : [];
+      
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       
       // Map Health Connect permissions to our interface
       this.permissions = {
-        steps: grantedPermissions.includes('steps'),
-        heartRate: grantedPermissions.includes('heartRate'),
-        sleep: grantedPermissions.includes('sleepSession'),
-        hrv: grantedPermissions.includes('heartRateVariability'),
-        bloodPressure: grantedPermissions.includes('bloodPressure'),
-        weight: grantedPermissions.includes('weight'),
-        bodyFat: grantedPermissions.includes('bodyFat'),
+        steps: granted.includes('steps'),
+        heartRate: granted.includes('heart_rate'),
+        sleep: granted.includes('sleep'),
+        hrv: granted.includes('hrv'),
+        bloodPressure: granted.includes('blood_pressure'),
+        weight: granted.includes('weight'),
+        bodyFat: granted.includes('body_fat'),
         hydration: false, // Not directly available in Health Connect
         mindfulness: false, // Not directly available in Health Connect
       };
@@ -326,7 +316,7 @@ export class HealthDataService {
     try {
       // Debounce/lock: evita sync concorrenti o troppo ravvicinate
       if (this.isSyncInProgress && !force) {
-        console.log('⏳ Sync already in progress - skipping');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         // 🔥 Restituisci l'ultimo dato sincronizzato invece di undefined
         return { 
           success: true, 
@@ -335,7 +325,7 @@ export class HealthDataService {
         };
       }
       if (!force && this.lastSyncAt && Date.now() - this.lastSyncAt < 60_000) {
-        console.log('⏳ Last sync < 60s ago - skipping');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         // 🔥 Restituisci l'ultimo dato sincronizzato invece di undefined
         return { 
           success: true, 
@@ -345,7 +335,7 @@ export class HealthDataService {
       }
 
       this.isSyncInProgress = true;
-      console.log('🔄 Syncing health data...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       let healthData: HealthData;
       let source: 'healthkit' | 'health_connect' | 'manual' | 'mock' = 'mock';
@@ -369,7 +359,7 @@ export class HealthDataService {
           throw new Error(result.error || 'Health Connect sync failed');
         }
       } else if (this.config.fallbackToMock || (Platform.OS === 'android' && !HealthConnect)) {
-        console.log('📊 Using mock health data');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         healthData = this.generateMockHealthData();
         source = 'mock';
       } else {
@@ -389,10 +379,10 @@ export class HealthDataService {
         const syncResult = await syncService.syncHealthData(currentUser.id, healthData, source);
         
         if (!syncResult.success) {
-          console.warn('⚠️ Failed to sync to Supabase:', syncResult.error);
-        } else {
-          console.log('✅ Health data synced to Supabase:', syncResult);
+          // 🔥 FIX: Solo errori critici in console
+          console.error('❌ Failed to sync to Supabase:', syncResult.error);
         }
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
       }
 
       // 🔥 Memorizza l'ultimo dato sincronizzato
@@ -474,14 +464,15 @@ export class HealthDataService {
    */
   private async syncHealthConnectData(): Promise<HealthDataSyncResult> {
     try {
-      console.log('🔄 Syncing Health Connect data...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       
       // Assicurati che Health Connect sia inizializzato
       if (HealthConnect.initialize && typeof HealthConnect.initialize === 'function') {
         try {
           await HealthConnect.initialize();
         } catch (initError) {
-          console.warn('⚠️ Health Connect already initialized or init failed:', initError);
+          // 🔥 FIX: Solo errori critici in console
+          console.error('❌ Health Connect initialization failed:', initError);
         }
       }
 
@@ -571,8 +562,9 @@ export class HealthDataService {
             } else {
               pageToken = nextToken;
             }
-          } catch (error) {
-            console.warn(`⚠️ Error reading ${recordType} page:`, error);
+            } catch (error) {
+            // 🔥 FIX: Solo errori critici in console
+            console.error(`❌ Error reading ${recordType} page:`, error);
             break;
           }
         } while (pageToken);
@@ -583,7 +575,7 @@ export class HealthDataService {
       // Leggi Steps se il permesso è stato concesso
       if (this.permissions.steps) {
         try {
-          console.log('📊 Reading Steps data...');
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           const PREFERRED_ORIGINS = [
             'com.huami.watch.hmwatchmanager', // Zepp (Amazfit)
             'com.xiaomi.hm.health', // Zepp Life (ex Mi Fit)
@@ -638,7 +630,8 @@ export class HealthDataService {
                 raw: aggregateResult,
               };
             } catch (error) {
-              console.warn(`⚠️ Steps aggregate failed${origin ? ` (${origin})` : ''}:`, error);
+              // 🔥 FIX: Solo errori critici in console
+              console.error(`❌ Steps aggregate failed${origin ? ` (${origin})` : ''}:`, error);
               return null;
             }
           };
@@ -675,16 +668,7 @@ export class HealthDataService {
               aggregatedTotal = Math.round(bestCandidate.total);
               aggregateSelectedOrigin = bestCandidate.origin;
               aggregateOrigins = bestCandidate.dataOrigins;
-              const aggregateLabel = bestCandidate.origin ?? (bestCandidate.dataOrigins?.[0] || undefined);
-
-              console.log(
-                '📦 Steps aggregate result:',
-                JSON.stringify({
-                  selectedOrigin: aggregateLabel,
-                  dataOrigins: aggregateOrigins,
-                  total: bestCandidate.total,
-                })
-              );
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
             }
           }
 
@@ -693,7 +677,7 @@ export class HealthDataService {
 
           if (HealthConnect.readRecords && typeof HealthConnect.readRecords === 'function') {
             const recordsAll = await readAllRecords('Steps', { timeRangeFilter });
-            console.log('📥 Steps records (today) count:', recordsAll.length);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
 
             const seenKeysByOrigin = new Set<string>();
             const seenKeysGlobal = new Set<string>();
@@ -726,8 +710,7 @@ export class HealthDataService {
               }
             }
 
-            console.log('📦 Steps totals by origin:', JSON.stringify(Array.from(totalsByOrigin.entries())));
-            console.log('📦 Steps deduplicated total (records):', unionTotal);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
 
             if (totalsByOrigin.size > 0) {
               let maxOrigin = '';
@@ -763,10 +746,7 @@ export class HealthDataService {
 
           healthData.steps = stepsFromRecords;
 
-          if (selectedOrigin) {
-            console.log(`🎯 Selected steps origin: ${selectedOrigin} total=${healthData.steps}`);
-          }
-          console.log(`✅ Steps: ${healthData.steps}`);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
 
           if (healthData.steps === 0 && HealthConnect.readRecords && typeof HealthConnect.readRecords === 'function') {
             const end = new Date();
@@ -790,13 +770,13 @@ export class HealthDataService {
                 seen24h.add(key);
                 total24 += value;
               }
-              console.log('📥 Steps records (24h) count:', records24h.length);
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
               if (total24 > 0) {
                 healthData.steps = total24;
-                console.log(`✅ Steps fallback 24h: ${healthData.steps}`);
               }
             } catch (error) {
-              console.warn('⚠️ Error reading Steps fallback 24h:', error);
+              // 🔥 FIX: Solo errori critici in console
+              console.error('❌ Error reading Steps fallback 24h:', error);
             }
           }
 
@@ -806,7 +786,7 @@ export class HealthDataService {
             const range7d = { operator: 'BETWEEN' as const, startTime: start7.toISOString(), endTime: end7.toISOString() };
             try {
               const records7d = await readAllRecords('Steps', { timeRangeFilter: range7d });
-              console.log('📥 Steps records (7d) count:', records7d.length);
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
               const startOfDayLocal = new Date(now);
               startOfDayLocal.setHours(0, 0, 0, 0);
               const endOfDayLocal = new Date(now);
@@ -829,26 +809,27 @@ export class HealthDataService {
                 if (!overlapsToday) return total;
                 return total + value;
               }, 0);
-              console.log('📊 Steps (computed from 7d, today only):', todayTotal);
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
               if (todayTotal > 0) {
                 healthData.steps = todayTotal;
               }
-              console.log('📄 Steps sample records:', JSON.stringify(records7d.slice(0, 3)));
             } catch (error) {
-              console.warn('⚠️ Error reading Steps fallback 7d:', error);
+              // 🔥 FIX: Solo errori critici in console
+              console.error('❌ Error reading Steps fallback 7d:', error);
             }
           }
         } catch (error) {
-          console.warn('⚠️ Error reading Steps:', error);
+          // 🔥 FIX: Solo errori critici in console
+          console.error('❌ Error reading Steps:', error);
         }
       }
 
       // Leggi HeartRate se il permesso è stato concesso
       if (this.permissions.heartRate && HealthConnect.readRecords) {
         try {
-          console.log('📊 Reading HeartRate data...');
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           const heartRateRecords = await readAllRecords('HeartRate', { timeRangeFilter });
-          console.log('📥 HeartRate records count:', heartRateRecords.length);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
 
           const getRecordTimestamp = (record: any): number => {
             const raw =
@@ -908,12 +889,7 @@ export class HealthDataService {
               }
             }
 
-            if (healthData.heartRate > 0) {
-              console.log(`✅ Heart Rate: ${healthData.heartRate} bpm`);
-            }
-            if (healthData.restingHeartRate > 0) {
-              console.log(`✅ Resting Heart Rate: ${healthData.restingHeartRate} bpm`);
-            }
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
           }
 
           // Fallback: se 0 record o bpm nullo, estendi finestra a 24h
@@ -935,22 +911,23 @@ export class HealthDataService {
                 const bpm = extractBpm(latest);
                 if (bpm > 0) {
                   healthData.heartRate = bpm;
-                  console.log(`✅ Heart Rate fallback 24h: ${bpm} bpm`);
                 }
               }
             } catch (fallbackError) {
-              console.warn('⚠️ Error reading HeartRate fallback:', fallbackError);
+              // 🔥 FIX: Solo errori critici in console
+              console.error('❌ Error reading HeartRate fallback:', fallbackError);
             }
           }
         } catch (error) {
-          console.warn('⚠️ Error reading HeartRate:', error);
+          // 🔥 FIX: Solo errori critici in console
+          console.error('❌ Error reading HeartRate:', error);
         }
       }
 
       // Leggi HRV se il permesso è stato concesso
       if (this.permissions.hrv && HealthConnect.readRecords) {
         try {
-          console.log('📊 Reading HRV data...');
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
 
           const getRecordTimestamp = (record: any): number => {
             const raw =
@@ -997,7 +974,7 @@ export class HealthDataService {
           const collectHrvDataset = async (options: any) => {
             for (const type of hrvRecordTypes) {
               const records = await readAllRecords(type, options);
-              console.log(`📥 HRV records (${type}) count:`, records.length);
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
               if (records.length === 0) continue;
 
               const dataset = records
@@ -1042,33 +1019,24 @@ export class HealthDataService {
               healthData.hrv = averageRounded;
             }
 
-            if (averageRounded > 0 || latestRounded > 0) {
-              console.log(
-                '✅ HRV:',
-                JSON.stringify({
-                  latest: latestRounded,
-                  average: averageRounded,
-                  records: values.length,
-                  source: hrvResult.type,
-                })
-              );
-            }
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
           }
         } catch (error) {
-          console.warn('⚠️ Error reading HRV:', error);
+          // 🔥 FIX: Solo errori critici in console
+          console.error('❌ Error reading HRV:', error);
         }
       }
 
       // Leggi SleepSession se il permesso è stato concesso
       if (this.permissions.sleep && HealthConnect.readRecords) {
         try {
-          console.log('📊 Reading SleepSession data...');
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           // Per il sonno, considera le ultime 36 ore per includere la notte scorsa
           const sleepEnd = new Date();
           const sleepStart = new Date(sleepEnd.getTime() - 36 * 60 * 60 * 1000);
           const sleepRange = { operator: 'BETWEEN' as const, startTime: sleepStart.toISOString(), endTime: sleepEnd.toISOString() };
           const sleepRecords = await readAllRecords('SleepSession', { timeRangeFilter: sleepRange });
-          console.log('📥 SleepSession records count:', sleepRecords.length);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           
           if (sleepRecords.length > 0) {
             let totalSleepMinutes = 0;
@@ -1155,11 +1123,12 @@ export class HealthDataService {
               const qualityScore = (sleepRatio * 0.6 + stageContribution * 0.4) * 100;
               healthData.sleepQuality = Math.round(Math.min(Math.max(qualityScore, 0), 100));
 
-              console.log(`✅ Sleep: ${healthData.sleepHours.toFixed(1)} hours`);
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
             }
           }
         } catch (error) {
-          console.warn('⚠️ Error reading SleepSession:', error);
+          // 🔥 FIX: Solo errori critici in console
+          console.error('❌ Error reading SleepSession:', error);
         }
       }
 
@@ -1170,7 +1139,7 @@ export class HealthDataService {
         healthData.calories = Math.round(healthData.steps * 0.04);
       }
 
-      console.log('✅ Health Connect data synced successfully');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       
       return {
         success: true,

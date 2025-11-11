@@ -57,15 +57,19 @@ export class MicrophonePermissionsService {
       console.log('🎤 Requesting microphone permissions...');
       
       if (Platform.OS === 'android') {
+        // 🔥 FIX: Usa traduzioni invece di stringhe hardcoded
+        const i18n = (await import('../i18n')).default;
+        const t = i18n.t;
+        
         // Use PermissionsAndroid for Android
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
           {
-            title: 'Permesso Microfono',
-            message: 'L\'app ha bisogno di accedere al microfono per la chat vocale.',
-            buttonNeutral: 'Chiedimi più tardi',
-            buttonNegative: 'Annulla',
-            buttonPositive: 'OK',
+            title: t('microphonePermissions.requestTitle'),
+            message: t('microphonePermissions.requestMessage'),
+            buttonNeutral: t('popups.wellnessSuggestion.later') || 'Later',
+            buttonNegative: t('common.cancel'),
+            buttonPositive: t('common.ok'),
           }
         );
         
@@ -182,8 +186,13 @@ export class MicrophonePermissionsService {
 
   /**
    * Get user-friendly permission status message
+   * 🔥 FIX: Questo metodo viene chiamato da MicrophonePermissionChecker che ora usa le traduzioni,
+   * quindi possiamo lasciare questo metodo così com'è o passare le traduzioni come parametro.
+   * Per ora lo lasciamo così perché viene usato solo internamente.
    */
   getPermissionStatusMessage(status: string): string {
+    // 🔥 FIX: Questo metodo è deprecato - MicrophonePermissionChecker ora gestisce le traduzioni
+    // Manteniamo questo per retrocompatibilità ma non dovrebbe essere usato
     switch (status) {
       case 'granted':
         return 'Microfono autorizzato ✅';
@@ -202,6 +211,8 @@ export class MicrophonePermissionsService {
 
   /**
    * Show alert to user when permissions are denied
+   * 🔥 FIX: Questo metodo non è più usato - MicrophonePermissionChecker gestisce gli alert con traduzioni
+   * Manteniamo questo per retrocompatibilità ma non dovrebbe essere usato
    */
   showPermissionDeniedAlert(): void {
     Alert.alert(

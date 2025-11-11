@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthService } from '../services/auth.service';
@@ -34,6 +34,12 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   const router = useRouter();
   const { setStatusBarColor } = useStatusBarColor(); // 🆕 Override status bar color
   
+  // 🔥 FIX: Usiamo useRef per onAuthSuccess per evitare loop infiniti
+  const onAuthSuccessRef = useRef(onAuthSuccess);
+  useEffect(() => {
+    onAuthSuccessRef.current = onAuthSuccess;
+  }, [onAuthSuccess]);
+  
   // 🆕 Imposta il colore della status bar quando viene renderizzato il loading screen o AuthScreen
   useEffect(() => {
     // Se siamo in loading o non autenticati, usa il colore del gradiente
@@ -50,171 +56,26 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
     };
   }, [isLoading, isAuthenticated, setStatusBarColor]);
 
-  useEffect(() => {
-    checkAuthStatus();
-    
-    // Ascolta i cambiamenti di autenticazione
-    const { data: { subscription } } = AuthService.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, !!session);
-        
-        if (event === 'SIGNED_IN' && session?.user) {
-          setIsAuthenticated(true);
-          setUser(session.user);
-          onAuthSuccess(session.user);
-        } else if (event === 'SIGNED_OUT') {
-          setIsAuthenticated(false);
-          setUser(null);
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  // 🆕 Inizializza push notifications quando l'utente è autenticato
-  useEffect(() => {
-    if (!isAuthenticated || !user?.id) return;
-
-    let intervalId: NodeJS.Timeout | null = null;
-
-    const initPushNotifications = async () => {
-      const pushService = PushNotificationService.getInstance();
-      const enabled = await pushService.isEnabled();
-      
-      if (enabled) {
-        const initialized = await pushService.initialize(user.id);
-        if (initialized) {
-          console.log('[AuthWrapper] ✅ Push notifications initialized');
-          
-          // 🆕 Esegui controlli delle regole ogni 6 ore
-          const checkRules = async () => {
-            await pushService.checkAllRules(user.id);
-          };
-          
-          // Controlla immediatamente
-          checkRules();
-          
-          // Poi ogni 6 ore (solo se ancora autenticato)
-          intervalId = setInterval(() => {
-            if (isAuthenticated && user?.id) {
-              checkRules();
-            }
-          }, 6 * 60 * 60 * 1000);
-        }
-      }
-    };
-
-    initPushNotifications();
-    
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [isAuthenticated, user?.id]);
-
-  // 🆕 Inizializza notifiche locali programmate quando l'utente è autenticato
-  const NOTIFICATIONS_SCHEDULED_KEY = '@notifications_scheduled';
-  const notificationsScheduledRef = useRef(false);
-  
-  useEffect(() => {
-    if (!isAuthenticated || !user?.id) return;
-    
-    // Evita rischedulazioni multiple durante lo stesso mount
-    if (notificationsScheduledRef.current) {
-      console.log('[AuthWrapper] ⏭️ Notifications already scheduled in this session');
-      return;
-    }
-
-    const initLocalNotifications = async () => {
-      try {
-        // Verifica se le notifiche sono già state schedulate in una sessione precedente
-        const wasScheduled = await AsyncStorage.getItem(NOTIFICATIONS_SCHEDULED_KEY);
-        if (wasScheduled === 'true') {
-          // Verifica che ci siano effettivamente notifiche schedulate
-          const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-          if (scheduled.length >= 15) {
-            console.log('[AuthWrapper] ℹ️ Notifications already scheduled:', scheduled.length);
-            notificationsScheduledRef.current = true;
-            return;
-          }
-          // Se le notifiche sono state cancellate, rischedula
-          console.log('[AuthWrapper] ⚠️ Notifications were scheduled but not found, rescheduling...');
-        }
-
-        const { NotificationService } = await import('../services/notifications.service');
-        const granted = await NotificationService.initialize();
-        
-        if (granted) {
-          console.log('[AuthWrapper] ✅ Local notifications initialized');
-          
-          // Verifica se ci sono già notifiche schedulate
-          const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-          
-          // Controlla se ci sono già notifiche schedulate (almeno 15 per essere sicuri)
-          if (scheduled.length >= 15) {
-            console.log('[AuthWrapper] ℹ️ Notifications already scheduled:', scheduled.length);
-            await AsyncStorage.setItem(NOTIFICATIONS_SCHEDULED_KEY, 'true');
-            notificationsScheduledRef.current = true;
-            return;
-          }
-          
-          // Se ci sono poche notifiche o nessuna, cancellale tutte e rischedula
-          if (scheduled.length === 0 || scheduled.length < 15) {
-            console.log('[AuthWrapper] 📅 Scheduling default notifications...');
-            // Cancella eventuali notifiche esistenti per evitare duplicati
-            await NotificationService.cancelAll();
-            // Schedula le nuove notifiche
-            const ids = await NotificationService.scheduleDefaults();
-            console.log('[AuthWrapper] ✅ Scheduled default notifications:', ids.length);
-            // Salva il flag per evitare rischedulazioni future
-            await AsyncStorage.setItem(NOTIFICATIONS_SCHEDULED_KEY, 'true');
-            notificationsScheduledRef.current = true;
-          }
-        } else {
-          console.log('[AuthWrapper] ⚠️ Notification permission not granted');
-        }
-      } catch (error) {
-        console.error('[AuthWrapper] ❌ Error initializing local notifications:', error);
-      }
-    };
-
-    // Delay di 3 secondi per evitare rischedulazioni immediate all'avvio
-    const timer = setTimeout(() => {
-      initLocalNotifications();
-    }, 3000);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [isAuthenticated, user?.id]);
-
-  const checkAuthStatus = async () => {
+  // 🔥 FIX: Memoizziamo checkAuthStatus per evitare ricreazioni - rimuoviamo onAuthSuccess dalle dipendenze
+  const checkAuthStatus = useCallback(async () => {
     try {
-      console.log('🔍 Checking authentication status...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi - manteniamo solo errori critici
       const isAuth = await AuthService.isAuthenticated();
       const currentUser = await AuthService.getCurrentUser();
       
-      console.log('🔍 Auth status:', { isAuth, hasUser: !!currentUser });
-      
       if (isAuth && currentUser) {
         // User is already authenticated, proceed with biometric check
-        console.log('✅ User already authenticated, proceeding with biometric check...');
         
         // Check if biometric authentication is enabled
         const isBiometricEnabled = await BiometricAuthService.isBiometricEnabled();
-        console.log('🔐 Biometric enabled:', isBiometricEnabled);
         
         // Check if device actually supports biometrics
         let biometricAvailable = false;
         try {
           const capabilities = await BiometricAuthService.getCapabilities();
           biometricAvailable = capabilities.isAvailable;
-          console.log('🔐 Biometric available on device:', biometricAvailable);
         } catch (error) {
+          // 🔥 FIX: Solo errori critici in console
           console.error('Error checking biometric availability:', error);
           biometricAvailable = false;
         }
@@ -224,20 +85,31 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         try {
           const creds = await BiometricAuthService.getBiometricCredentials();
           hasSavedBiometricCredentials = !!(creds.email && creds.password);
-        } catch {}
+        } catch (error) {
+          // 🔥 FIX: Solo errori critici in console
+          console.error('Error checking saved biometric credentials:', error);
+        }
 
-        if ((isBiometricEnabled || hasSavedBiometricCredentials) && biometricAvailable) {
-          console.log('🔐 Biometric authentication required, showing prompt...');
+        // 🔥 Mostra il prompt biometrico se:
+        // 1. L'autenticazione biometrica è abilitata E il dispositivo supporta biometrics
+        // 2. OPPURE ci sono credenziali biometriche salvate E il dispositivo supporta biometrics
+        const shouldShowBiometric = (isBiometricEnabled || hasSavedBiometricCredentials) && biometricAvailable;
+
+        if (shouldShowBiometric) {
+          // 🔥 Imposta isAuthenticated a true PRIMA di mostrare il prompt
+          // Questo permette al prompt di essere mostrato (perché isAuthenticated è true)
+          setIsAuthenticated(true);
+          setUser(currentUser);
           setBiometricPromptVisible(true);
-          // Don't set authenticated yet, wait for biometric confirmation
+          // Il prompt biometrico verrà mostrato e, se confermato, chiamerà handleBiometricSuccess
         } else {
           // No biometric required or not available, proceed normally
           if (isBiometricEnabled && !biometricAvailable) {
-            console.log('⚠️ Biometric was enabled but not available, disabling...');
             // Optionally disable biometric if device doesn't support it anymore
             try {
               await BiometricAuthService.clearBiometricCredentials();
             } catch (e) {
+              // 🔥 FIX: Solo errori critici in console
               console.error('Error clearing biometric credentials:', e);
             }
           }
@@ -250,12 +122,11 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           if (!isOnboardingCompleted) {
             setShowOnboarding(true);
           } else {
-            onAuthSuccess(currentUser);
+            onAuthSuccessRef.current(currentUser);
           }
         }
       } else {
         // User not authenticated, show login screen
-        console.log('❌ User not authenticated, showing login screen');
         setIsAuthenticated(false);
         setUser(null);
         setBiometricPromptVisible(false); // Ensure biometric prompt is hidden
@@ -263,45 +134,281 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         // Let AuthScreen handle biometric authentication
       }
     } catch (error) {
+      // 🔥 FIX: Solo errori critici in console + feedback utente per errori critici
       console.error('Error checking auth status:', error);
       setIsAuthenticated(false);
       setUser(null);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []); // 🔥 FIX: Rimossi onAuthSuccess dalle dipendenze - usiamo ref
+
+  useEffect(() => {
+    checkAuthStatus();
+    
+    // Ascolta i cambiamenti di autenticazione
+    const { data: { subscription } } = AuthService.onAuthStateChange(
+      async (event, session) => {
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
+        if (event === 'SIGNED_IN' && session?.user) {
+          setIsAuthenticated(true);
+          setUser(session.user);
+          onAuthSuccessRef.current(session.user);
+        } else if (event === 'SIGNED_OUT') {
+          setIsAuthenticated(false);
+          setUser(null);
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [checkAuthStatus]); // 🔥 FIX: Rimossi onAuthSuccess dalle dipendenze - usiamo ref
+
+  // 🆕 Inizializza push notifications quando l'utente è autenticato
+  // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+  const isMountedRef = useRef(true);
+  // 🔥 FIX: Usiamo un ref per intervalId per evitare problemi con closure e cleanup
+  const pushNotificationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) {
+      // 🔥 FIX: Pulisci l'intervallo se l'utente non è più autenticato
+      if (pushNotificationIntervalRef.current) {
+        clearInterval(pushNotificationIntervalRef.current);
+        pushNotificationIntervalRef.current = null;
+      }
+      return;
+    }
+
+    const initPushNotifications = async () => {
+      // 🔥 FIX: Verifica se il componente è ancora montato
+      if (!isMountedRef.current) return;
+      
+      const pushService = PushNotificationService.getInstance();
+      const enabled = await pushService.isEnabled();
+      
+      if (enabled) {
+        const initialized = await pushService.initialize(user.id);
+        if (initialized) {
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
+          
+          // 🆕 Esegui controlli delle regole ogni 6 ore
+          // 🔥 FIX: Usiamo user.id direttamente dalla closure per evitare problemi con le dipendenze
+          const userId = user.id;
+          const checkRules = async () => {
+            // 🔥 FIX: Verifica se il componente è ancora montato prima di eseguire
+            if (!isMountedRef.current) {
+              // 🔥 FIX: Pulisci l'intervallo se il componente è smontato
+              if (pushNotificationIntervalRef.current) {
+                clearInterval(pushNotificationIntervalRef.current);
+                pushNotificationIntervalRef.current = null;
+              }
+              return;
+            }
+            await pushService.checkAllRules(userId);
+          };
+          
+          // Controlla immediatamente
+          checkRules();
+          
+          // 🔥 FIX: Pulisci l'intervallo precedente se esiste
+          if (pushNotificationIntervalRef.current) {
+            clearInterval(pushNotificationIntervalRef.current);
+            pushNotificationIntervalRef.current = null;
+          }
+          
+          // Poi ogni 6 ore (solo se ancora montato)
+          pushNotificationIntervalRef.current = setInterval(() => {
+            if (isMountedRef.current) {
+              checkRules();
+            } else {
+              // 🔥 FIX: Se il componente è smontato, pulisci l'intervallo
+              if (pushNotificationIntervalRef.current) {
+                clearInterval(pushNotificationIntervalRef.current);
+                pushNotificationIntervalRef.current = null;
+              }
+            }
+          }, 6 * 60 * 60 * 1000);
+        }
+      }
+    };
+
+    initPushNotifications();
+    
+    return () => {
+      // 🔥 FIX: Cleanup completo - assicurati che l'intervallo sia pulito
+      if (pushNotificationIntervalRef.current) {
+        clearInterval(pushNotificationIntervalRef.current);
+        pushNotificationIntervalRef.current = null;
+      }
+    };
+  }, [isAuthenticated, user?.id]);
+
+  // 🆕 Inizializza notifiche locali programmate quando l'utente è autenticato
+  const NOTIFICATIONS_SCHEDULED_KEY = '@notifications_scheduled';
+  const NOTIFICATIONS_LAST_SCHEDULED_KEY = '@notifications_last_scheduled';
+  const notificationsScheduledRef = useRef(false);
+  
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return;
+    
+    // Evita rischedulazioni multiple durante lo stesso mount
+    if (notificationsScheduledRef.current) {
+      return;
+    }
+
+    const initLocalNotifications = async () => {
+      // 🔥 FIX: Verifica se il componente è ancora montato
+      if (!isMountedRef.current) return;
+      
+      try {
+        // 🔥 PRIMA verifica se ci sono già notifiche schedulate (PRIMA di chiamare initialize)
+        const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+        
+        // 🔥 MIGLIORATO: Verifica se ci sono notifiche valide (non scadute)
+        const now = Date.now();
+        const validNotifications = scheduled.filter(notif => {
+          if (!notif.trigger) return false;
+          // Verifica se la notifica è ricorrente o ha una data futura
+          if ('repeats' in notif.trigger && notif.trigger.repeats) {
+            return true; // Notifiche ricorrenti sono sempre valide
+          }
+          if ('date' in notif.trigger && notif.trigger.date) {
+            const triggerDate = new Date(notif.trigger.date).getTime();
+            return triggerDate > now; // Solo notifiche future
+          }
+          return false;
+        });
+        
+        // Se ci sono già notifiche valide (almeno 10), non rischedulare
+        if (validNotifications.length >= 10) {
+          await AsyncStorage.setItem(NOTIFICATIONS_SCHEDULED_KEY, 'true');
+          await AsyncStorage.setItem(NOTIFICATIONS_LAST_SCHEDULED_KEY, now.toString());
+          notificationsScheduledRef.current = true;
+          return;
+        }
+
+        // 🔥 MIGLIORATO: Verifica quando sono state schedulate l'ultima volta
+        const lastScheduledStr = await AsyncStorage.getItem(NOTIFICATIONS_LAST_SCHEDULED_KEY);
+        if (lastScheduledStr) {
+          const lastScheduled = parseInt(lastScheduledStr, 10);
+          const hoursSinceLastSchedule = (now - lastScheduled) / (1000 * 60 * 60);
+          
+          // Se sono state schedulate meno di 24 ore fa e ci sono ancora notifiche valide, non rischedulare
+          if (hoursSinceLastSchedule < 24 && validNotifications.length >= 5) {
+            notificationsScheduledRef.current = true;
+            return;
+          }
+        }
+
+        // Verifica se le notifiche sono già state schedulate in una sessione precedente
+        const wasScheduled = await AsyncStorage.getItem(NOTIFICATIONS_SCHEDULED_KEY);
+        if (wasScheduled === 'true' && validNotifications.length >= 10) {
+          notificationsScheduledRef.current = true;
+          return;
+        }
+
+        // 🔥 MIGLIORATO: Rischedula solo se necessario
+        // Se le notifiche sono state cancellate o non ci sono abbastanza notifiche valide, rischedula
+        if (validNotifications.length < 10) {
+          // 🔥 FIX: Verifica di nuovo se il componente è ancora montato
+          if (!isMountedRef.current) return;
+          
+          const { NotificationService } = await import('../services/notifications.service');
+          const granted = await NotificationService.initialize();
+          
+          if (granted) {
+            // Cancella solo le notifiche non valide (scadute)
+            const expiredNotifications = scheduled.filter(notif => {
+              if (!notif.trigger) return true;
+              if ('repeats' in notif.trigger && notif.trigger.repeats) {
+                return false; // Non cancellare notifiche ricorrenti
+              }
+              if ('date' in notif.trigger && notif.trigger.date) {
+                const triggerDate = new Date(notif.trigger.date).getTime();
+                return triggerDate <= now; // Cancella solo quelle scadute
+              }
+              return true;
+            });
+            
+            // Cancella solo le notifiche scadute
+            for (const notif of expiredNotifications) {
+              try {
+                await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+              } catch (error) {
+                // Ignora errori se la notifica non esiste più
+              }
+            }
+            
+            // Schedula le nuove notifiche solo se necessario
+            const ids = await NotificationService.scheduleDefaults();
+            
+            // Salva il flag e il timestamp per evitare rischedulazioni future
+            await AsyncStorage.setItem(NOTIFICATIONS_SCHEDULED_KEY, 'true');
+            await AsyncStorage.setItem(NOTIFICATIONS_LAST_SCHEDULED_KEY, now.toString());
+            notificationsScheduledRef.current = true;
+          }
+        }
+      } catch (error) {
+        // 🔥 FIX: Solo errori critici in console
+        console.error('[AuthWrapper] ❌ Error initializing local notifications:', error);
+      }
+    };
+
+    // Delay di 3 secondi per evitare rischedulazioni immediate all'avvio
+    const timer = setTimeout(() => {
+      if (isMountedRef.current) {
+        initLocalNotifications();
+      }
+    }, 3000);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [isAuthenticated, user?.id]);
+
+  // 🔥 FIX: checkAuthStatus è già definita come useCallback sopra (linea 54) - rimuoviamo questa duplicata
 
   const handleAuthSuccess = (user: any) => {
     setIsAuthenticated(true);
     setUser(user);
-    onAuthSuccess(user);
+    onAuthSuccessRef.current(user);
   };
 
   const handleBiometricSuccess = async () => {
     try {
-      console.log('🔐 Biometric authentication successful, proceeding with already authenticated user...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       setBiometricPromptVisible(false);
       
-      // User is already authenticated, just proceed
+      // User is already authenticated (set in checkAuthStatus), just proceed with onboarding check
       const currentUser = await AuthService.getCurrentUser();
       if (currentUser) {
-        console.log('✅ Proceeding with authenticated user:', currentUser.email);
-        setIsAuthenticated(true);
-        setUser(currentUser);
+        // isAuthenticated e user sono già impostati in checkAuthStatus, quindi non serve reimpostarli
         
         // Check if onboarding is needed
         const isOnboardingCompleted = await OnboardingService.isOnboardingCompleted();
         if (!isOnboardingCompleted) {
           setShowOnboarding(true);
         } else {
-          onAuthSuccess(currentUser);
+          onAuthSuccessRef.current(currentUser);
         }
       } else {
+        // 🔥 FIX: Solo errori critici in console
         console.error('❌ No authenticated user found after biometric success');
         setIsAuthenticated(false);
         setUser(null);
       }
     } catch (error) {
+      // 🔥 FIX: Solo errori critici in console
       console.error('❌ Error in biometric success handler:', error);
       setIsAuthenticated(false);
       setUser(null);
@@ -309,7 +416,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   };
 
   const handleBiometricFailure = () => {
-    console.log('❌ Biometric authentication failed or cancelled');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     setBiometricPromptVisible(false);
     setIsAuthenticated(false);
     setUser(null);
@@ -318,7 +425,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   const handleOnboardingComplete = async () => {
     setShowOnboarding(false);
     if (user) {
-      onAuthSuccess(user);
+      onAuthSuccessRef.current(user);
     }
   };
 
@@ -328,6 +435,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       setIsAuthenticated(false);
       setUser(null);
     } catch (error) {
+      // 🔥 FIX: Solo errori critici in console
       console.error('Error signing out:', error);
     }
   };
@@ -373,7 +481,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         onClose={() => setShowTutorial(false)}
         onComplete={() => setShowTutorial(false)}
         onNavigateToScreen={(screen) => {
-          console.log('🎯 Global Tutorial navigating to:', screen);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           switch (screen) {
             case 'home':
               router.push('/(tabs)/');
@@ -388,7 +496,8 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
               router.push('/coach/chat');
               break;
             default:
-              console.log('Unknown screen:', screen);
+              // 🔥 FIX: Solo errori critici in console
+              console.error('Unknown screen:', screen);
           }
         }}
       />

@@ -33,6 +33,8 @@ import UnifiedAnalysisService from '../services/unified-analysis.service';
 import { FoodAnalysisService } from '../services/food-analysis.service';
 import { AuthService } from '../services/auth.service';
 import { ChartDataService } from '../services/chart-data.service';
+import { UserFeedbackService } from '../services/user-feedback.service';
+import { DatabaseVerificationService } from '../services/database-verification.service';
 import { useAnalysisStore } from '../stores/analysis.store';
 import { CoachService } from '../services/coach.service';
 import { GaugeChart } from './charts/GaugeChart';
@@ -299,8 +301,42 @@ export const FoodAnalysisScreen: React.FC = () => {
 
   // Intelligent insights are now handled by IntelligentInsightsSection component
 
+  // 🔥 FIX: Spostati tutti gli useState prima degli useEffect per rispettare le regole degli hook
+  // Calcola daily intake e obiettivi giornalieri
+  const [dailyIntake, setDailyIntake] = useState({
+    calories: 0,
+    carbohydrates: 0,
+    proteins: 0,
+    fats: 0,
+    fiber: 0,
+    mealCount: 0,
+  });
+
+  // Obiettivi giornalieri (caricati dal profilo utente o valori di default)
+  const [dailyGoals, setDailyGoals] = useState({
+    calories: 2000, // kcal
+    carbohydrates: 250, // g (50% di 2000 kcal)
+    proteins: 150, // g (30% di 2000 kcal)
+    fats: 65, // g (20% di 2000 kcal)
+    fiber: 25, // g
+  });
+
+  // Modal per configurare obiettivi nutrizionali
+  const [showGoalsModal, setShowGoalsModal] = useState(false);
+  const [nutritionalGoals, setNutritionalGoals] = useState<any>(null);
+  
+  // Modal per ingredienti frigo
+  const [showFridgeModal, setShowFridgeModal] = useState(false);
+  
+  // Modal per dettagli ricetta
+  const [showRecipeModal, setShowRecipeModal] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
+  const [loadingRecipe, setLoadingRecipe] = useState(false);
+
   const analysisServiceRef = useRef(UnifiedAnalysisService.getInstance());
   const isMountedRef = useRef(true);
+  // 🔥 FIX: Spostato prima degli useEffect per rispettare le regole degli hook
+  const cameraInitializedRef = useRef(false);
 
   const startDisabled = permissionChecking || analyzing || !analysisReady || !!analysisError;
   const captureDisabled = !cameraController.ready || cameraController.detecting || permissionChecking || analyzing || cameraSwitching;
@@ -333,14 +369,15 @@ export const FoodAnalysisScreen: React.FC = () => {
       }
       return ready;
     } catch (error) {
-      console.warn('Analysis service initialization failed:', error);
+      // 🔥 FIX: Solo errori critici in console
+      console.error('❌ Analysis service initialization failed:', error);
       if (isMountedRef.current) {
         setAnalysisReady(false);
         setAnalysisError('Unable to initialize analysis service. Check OpenAI settings.');
       }
       return false;
     }
-  }, []);
+  }, [analysisReady, analysisError]); // 🔥 FIX: Aggiunte dipendenze mancanti
 
   useEffect(() => {
     return () => {
@@ -354,71 +391,60 @@ export const FoodAnalysisScreen: React.FC = () => {
 
   // Carica i dati dei grafici dal database quando il componente si monta
   useEffect(() => {
+    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+    let isMounted = true;
+    
     const loadChartData = async () => {
       try {
-        console.log('📊 Loading food chart data...');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         await ChartDataService.loadFoodDataForCharts();
-        console.log('📊 Food chart data loaded successfully');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
       } catch (error) {
+        // 🔥 FIX: Solo errori critici in console
         console.error('❌ Failed to load food chart data:', error);
       }
     };
     
     // Delay loading to ensure component is fully mounted
+    // 🔥 FIX: Memory leak - salviamo il timeout per cleanup
     const timer = setTimeout(() => {
-      loadChartData();
+      if (isMounted) {
+        loadChartData();
+      }
     }, 100);
     
-    return () => clearTimeout(timer);
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   // Calcola dati enhanced per i nuovi componenti
   useEffect(() => {
+    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+    let isMounted = true;
+    
     const calculateEnhancedData = async () => {
       try {
-        if (fullAnalysisResult) {
+        if (fullAnalysisResult && isMounted) {
           // Calcola quality info
           const confidenceInfo = QualityService.getConfidenceScore(fullAnalysisResult.confidence || 0.8);
-          setQualityInfo(confidenceInfo);
+          if (isMounted) {
+            setQualityInfo(confidenceInfo);
+          }
         }
       } catch (error) {
-        console.warn('Error calculating enhanced data:', error);
+        // 🔥 FIX: Solo errori critici in console
+        console.error('❌ Error calculating enhanced data:', error);
       }
     };
 
     calculateEnhancedData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [fullAnalysisResult]);
-
-  // Calcola daily intake e obiettivi giornalieri
-  const [dailyIntake, setDailyIntake] = useState({
-    calories: 0,
-    carbohydrates: 0,
-    proteins: 0,
-    fats: 0,
-    fiber: 0,
-    mealCount: 0,
-  });
-
-  // Obiettivi giornalieri (caricati dal profilo utente o valori di default)
-  const [dailyGoals, setDailyGoals] = useState({
-    calories: 2000, // kcal
-    carbohydrates: 250, // g (50% di 2000 kcal)
-    proteins: 150, // g (30% di 2000 kcal)
-    fats: 65, // g (20% di 2000 kcal)
-    fiber: 25, // g
-  });
-
-  // Modal per configurare obiettivi nutrizionali
-  const [showGoalsModal, setShowGoalsModal] = useState(false);
-  const [nutritionalGoals, setNutritionalGoals] = useState<any>(null);
-  
-  // Modal per ingredienti frigo
-  const [showFridgeModal, setShowFridgeModal] = useState(false);
-  
-  // Modal per dettagli ricetta
-  const [showRecipeModal, setShowRecipeModal] = useState(false);
-  const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
-  const [loadingRecipe, setLoadingRecipe] = useState(false);
 
   // Carica obiettivi nutrizionali dal profilo utente
   useEffect(() => {
@@ -447,7 +473,8 @@ export const FoodAnalysisScreen: React.FC = () => {
           }
         }
       } catch (error) {
-        console.warn('Error loading nutritional goals:', error);
+        // 🔥 FIX: Solo errori critici in console
+        console.error('❌ Error loading nutritional goals:', error);
       }
     };
 
@@ -487,43 +514,82 @@ export const FoodAnalysisScreen: React.FC = () => {
   };
 
   useEffect(() => {
+    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+    let isMounted = true;
+    
     const loadDailyIntake = async () => {
       try {
         const currentUser = await AuthService.getCurrentUser();
-        if (currentUser) {
+        if (currentUser && isMounted) {
           const intake = await FoodAnalysisService.getDailyIntake(currentUser.id);
-          setDailyIntake(intake);
+          if (isMounted) {
+            setDailyIntake(intake);
+          }
         }
       } catch (error) {
-        console.warn('Error loading daily intake:', error);
+        // 🔥 FIX: Solo errori critici in console
+        console.error('❌ Error loading daily intake:', error);
       }
     };
 
     loadDailyIntake();
     
     // Ricarica ogni volta che viene aggiunta una nuova analisi
+    // 🔥 FIX: Usiamo un flag per evitare subscription multiple
+    let subscribed = true;
     const unsubscribe = useAnalysisStore.subscribe((state) => {
-      if (state.foodHistory.length > 0) {
+      if (subscribed && isMounted && state.foodHistory.length > 0) {
         loadDailyIntake();
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      subscribed = false;
+      unsubscribe();
+    };
   }, [fullAnalysisResult]);
 
   // Start camera automatically when screen loads
+  // 🔥 FIX: Rimuoviamo cameraController dalle dipendenze per evitare loop infinito
   useEffect(() => {
+    // 🔥 FIX: Evita di inizializzare la camera più volte
+    if (cameraInitializedRef.current) {
+      return;
+    }
+    
+    // 🔥 FIX: Evita di avviare la camera se è già attiva
+    if (cameraController.active) {
+      cameraInitializedRef.current = true;
+      return;
+    }
+    
+    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+    let isMounted = true;
+    
     const initializeCamera = async () => {
-      console.log('🎥 Auto-starting camera on screen load...');
-      await cameraController.startCamera();
+      if (isMounted && !cameraController.active) {
+        await cameraController.startCamera();
+        if (isMounted) {
+          cameraInitializedRef.current = true;
+        }
+      }
     };
     
-    initializeCamera();
-  }, []);
+    // Delay initialization to avoid conflicts
+    const timer = setTimeout(() => {
+      initializeCamera();
+    }, 300);
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, []); // 🔥 FIX: Array vuoto per eseguire solo al mount
 
 
   const handleStartAnalysis = async () => {
-    console.log('Starting food analysis...');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     // Start camera immediately for better perceived performance
     await cameraController.startCamera();
@@ -534,46 +600,56 @@ export const FoodAnalysisScreen: React.FC = () => {
       ensureAnalysisReady()
     ]);
 
-    console.log('Camera permission granted:', granted);
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     if (!granted) {
-      alert(t('analysis.food.errors.cameraPermission'));
-      cameraController.stopCamera();
+      if (isMountedRef.current) {
+        alert(t('analysis.food.errors.cameraPermission'));
+        cameraController.stopCamera();
+      }
       return;
     }
 
     if (!ready) {
-      alert(t('analysis.food.errors.serviceNotReady'));
-      cameraController.stopCamera();
+      if (isMountedRef.current) {
+        alert(t('analysis.food.errors.serviceNotReady'));
+        cameraController.stopCamera();
+      }
       return;
     }
 
-    console.log('🎥 Activating camera for food analysis');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     // Reset previous session state so the camera preview always shows immediately
-    setResults(null);
-    setAnalyzing(false);
-    setCameraSwitching(false);
+    if (isMountedRef.current) {
+      setResults(null);
+      setAnalyzing(false);
+      setCameraSwitching(false);
+    }
   };
 
   // 🔧 FALLBACK: Image Picker for Testing (100% Reliable)
   const analyzeFromGallery = async () => {
-    console.log('📸 Starting food analysis from gallery (FALLBACK)...');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     
     try {
       const ready = await ensureAnalysisReady();
       if (!ready) {
-        alert(t('analysis.food.errors.serviceNotReady'));
+        if (isMountedRef.current) {
+          alert(t('analysis.food.errors.serviceNotReady'));
+        }
         return;
       }
 
       // Request image picker permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        alert(t('analysis.food.errors.mediaLibraryPermission'));
+        if (isMountedRef.current) {
+          alert(t('analysis.food.errors.mediaLibraryPermission'));
+        }
         return;
       }
 
       // Pick image from gallery
-      console.log('📸 Opening image picker...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       const pickerResult = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -582,20 +658,11 @@ export const FoodAnalysisScreen: React.FC = () => {
         base64: true,
       });
 
-      console.log('📸 Image picker result:', {
-        canceled: pickerResult.canceled,
-        hasAssets: !!pickerResult.assets,
-        assetsLength: pickerResult.assets?.length,
-      });
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
         const asset = pickerResult.assets[0];
-        console.log('📸 Gallery image selected:', {
-          hasUri: !!asset.uri,
-          hasBase64: !!asset.base64,
-          width: asset.width,
-          height: asset.height,
-        });
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
 
         // Convert to data URL for analysis
         const dataUrl = asset.base64 
@@ -603,23 +670,29 @@ export const FoodAnalysisScreen: React.FC = () => {
           : asset.uri;
 
         if (!dataUrl) {
-          alert(t('analysis.food.errors.imageProcessingFailed'));
+          if (isMountedRef.current) {
+            alert(t('analysis.food.errors.imageProcessingFailed'));
+          }
           return;
         }
 
-        console.log('✅ Gallery image ready for food analysis:', dataUrl.length, 'chars');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         
-        setAnalyzing(true);
+        if (isMountedRef.current) {
+          setAnalyzing(true);
+        }
 
         // Analyze the selected image
-        console.log('🤖 Analyzing food from gallery image...');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         const analysisResult = await analysisServiceRef.current.analyzeFood(dataUrl);
         
         if (analysisResult.success && analysisResult.data) {
-          console.log('✅ Gallery food analysis successful:', analysisResult.data);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
 
           // Store the full analysis result
-          setFullAnalysisResult(analysisResult.data);
+          if (isMountedRef.current) {
+            setFullAnalysisResult(analysisResult.data);
+          }
 
           const foodResults: FoodAnalysisResults = {
             calories: analysisResult.data.macronutrients?.calories || 0,
@@ -631,187 +704,270 @@ export const FoodAnalysisScreen: React.FC = () => {
             recommendations: analysisResult.data.recommendations || [],
           };
           
-          setResults(foodResults);
-          setAnalyzing(false);
+          if (isMountedRef.current) {
+            setResults(foodResults);
+            setAnalyzing(false);
+          }
 
-          // Save to Supabase database
+          // 🆕 Save to Supabase database with enhanced error handling and feedback
           try {
             const currentUser = await AuthService.getCurrentUser();
             if (currentUser) {
-              const savedAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
-                mealType: analysisResult.data.meal_type || 'other',
-                identifiedFoods: analysisResult.data.identified_foods || [],
-                calories: analysisResult.data.macronutrients?.calories || 0,
-                carbohydrates: analysisResult.data.macronutrients?.carbohydrates || 0,
-                proteins: analysisResult.data.macronutrients?.proteins || 0,
-                fats: analysisResult.data.macronutrients?.fats || 0,
-                fiber: analysisResult.data.macronutrients?.fiber || 0,
-                vitamins: analysisResult.data.vitamins || {},
-                minerals: analysisResult.data.minerals || {},
-                healthScore: analysisResult.data.health_score || 70,
-                recommendations: analysisResult.data.recommendations || [],
-                observations: analysisResult.data.observations || [],
-                confidence: analysisResult.data.confidence || 0.8,
-                analysisData: {
-                  ...analysisResult.data,
-                  version: analysisResult.data.version || '1.0.0',
+              try {
+                const savedAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
+                  mealType: analysisResult.data.meal_type || 'other',
+                  identifiedFoods: analysisResult.data.identified_foods || [],
+                  calories: analysisResult.data.macronutrients?.calories || 0,
+                  carbohydrates: analysisResult.data.macronutrients?.carbohydrates || 0,
+                  proteins: analysisResult.data.macronutrients?.proteins || 0,
+                  fats: analysisResult.data.macronutrients?.fats || 0,
+                  fiber: analysisResult.data.macronutrients?.fiber || 0,
+                  vitamins: analysisResult.data.vitamins || {},
+                  minerals: analysisResult.data.minerals || {},
+                  healthScore: analysisResult.data.health_score || 70,
+                  recommendations: analysisResult.data.recommendations || [],
+                  observations: analysisResult.data.observations || [],
                   confidence: analysisResult.data.confidence || 0.8,
-                },
-                imageUrl: asset.uri,
-              });
-              
-              if (savedAnalysis) {
-                console.log('✅ Food analysis saved to database:', savedAnalysis.id);
-                
-                // Sincronizza i dati con lo store locale per i grafici
-                const foodSession = {
-                  id: savedAnalysis.id,
-                  timestamp: new Date(savedAnalysis.created_at),
-                  macronutrients: {
-                    carbohydrates: savedAnalysis.carbohydrates || 0,
-                    proteins: savedAnalysis.proteins || 0,
-                    fats: savedAnalysis.fats || 0,
-                    fiber: savedAnalysis.fiber || 0,
-                    calories: savedAnalysis.calories || 0,
+                  analysisData: {
+                    ...analysisResult.data,
+                    version: analysisResult.data.version || '1.0.0',
+                    confidence: analysisResult.data.confidence || 0.8,
                   },
-                  meal_type: savedAnalysis.meal_type || 'other',
-                  health_score: savedAnalysis.health_score || 70,
-                  confidence: savedAnalysis.confidence || 0.8,
-                  identified_foods: savedAnalysis.identified_foods || [],
-                };
+                  imageUrl: asset.uri,
+                });
                 
-                const store = useAnalysisStore.getState();
-                store.addFoodSession(foodSession);
-                console.log('📊 Food data synchronized with local store for charts');
-              } else {
-                console.warn('⚠️ Failed to save food analysis to database');
+                if (savedAnalysis) {
+                  // 🆕 Verifica post-salvataggio che i dati siano nel database
+                  const verification = await DatabaseVerificationService.verifyFoodAnalysis(currentUser.id, savedAnalysis.id);
+                  if (!verification.found) {
+                    UserFeedbackService.showWarning('L\'analisi è stata salvata ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
+                  } else {
+                    UserFeedbackService.showSaveSuccess('analisi');
+                  }
+                  
+                  // Sincronizza i dati con lo store locale per i grafici
+                  const foodSession = {
+                    id: savedAnalysis.id,
+                    timestamp: new Date(savedAnalysis.created_at),
+                    macronutrients: {
+                      carbohydrates: savedAnalysis.carbohydrates || 0,
+                      proteins: savedAnalysis.proteins || 0,
+                      fats: savedAnalysis.fats || 0,
+                      fiber: savedAnalysis.fiber || 0,
+                      calories: savedAnalysis.calories || 0,
+                    },
+                    meal_type: savedAnalysis.meal_type || 'other',
+                    health_score: savedAnalysis.health_score || 70,
+                    confidence: savedAnalysis.confidence || 0.8,
+                    identified_foods: savedAnalysis.identified_foods || [],
+                  };
+                  
+                  const store = useAnalysisStore.getState();
+                  store.addFoodSession(foodSession);
+                } else {
+                  // 🆕 Nessun errore lanciato ma savedAnalysis è null
+                  if (isMountedRef.current) {
+                    UserFeedbackService.showSaveError('analisi', async () => {
+                      // Retry logic
+                      try {
+                        const retryAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
+                          mealType: analysisResult.data.meal_type || 'other',
+                          identifiedFoods: analysisResult.data.identified_foods || [],
+                          calories: analysisResult.data.macronutrients?.calories || 0,
+                          carbohydrates: analysisResult.data.macronutrients?.carbohydrates || 0,
+                          proteins: analysisResult.data.macronutrients?.proteins || 0,
+                          fats: analysisResult.data.macronutrients?.fats || 0,
+                          fiber: analysisResult.data.macronutrients?.fiber || 0,
+                          vitamins: analysisResult.data.vitamins || {},
+                          minerals: analysisResult.data.minerals || {},
+                          healthScore: analysisResult.data.health_score || 70,
+                          recommendations: analysisResult.data.recommendations || [],
+                          observations: analysisResult.data.observations || [],
+                          confidence: analysisResult.data.confidence || 0.8,
+                          analysisData: {
+                            ...analysisResult.data,
+                            version: analysisResult.data.version || '1.0.0',
+                            confidence: analysisResult.data.confidence || 0.8,
+                          },
+                          imageUrl: asset.uri,
+                        });
+                        if (retryAnalysis) {
+                          UserFeedbackService.showSaveSuccess('analisi');
+                        }
+                      } catch (retryError) {
+                        UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
+                      }
+                    });
+                  }
+                }
+              } catch (saveError) {
+                // 🆕 Errore durante il salvataggio - mostra feedback all'utente
+                if (isMountedRef.current) {
+                  UserFeedbackService.showSaveError('analisi', async () => {
+                    // Retry logic
+                    try {
+                      const retryAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
+                        mealType: analysisResult.data.meal_type || 'other',
+                        identifiedFoods: analysisResult.data.identified_foods || [],
+                        calories: analysisResult.data.macronutrients?.calories || 0,
+                        carbohydrates: analysisResult.data.macronutrients?.carbohydrates || 0,
+                        proteins: analysisResult.data.macronutrients?.proteins || 0,
+                        fats: analysisResult.data.macronutrients?.fats || 0,
+                        fiber: analysisResult.data.macronutrients?.fiber || 0,
+                        vitamins: analysisResult.data.vitamins || {},
+                        minerals: analysisResult.data.minerals || {},
+                        healthScore: analysisResult.data.health_score || 70,
+                        recommendations: analysisResult.data.recommendations || [],
+                        observations: analysisResult.data.observations || [],
+                        confidence: analysisResult.data.confidence || 0.8,
+                        analysisData: {
+                          ...analysisResult.data,
+                          version: analysisResult.data.version || '1.0.0',
+                          confidence: analysisResult.data.confidence || 0.8,
+                        },
+                        imageUrl: asset.uri,
+                      });
+                      if (retryAnalysis) {
+                        UserFeedbackService.showSaveSuccess('analisi');
+                      }
+                    } catch (retryError) {
+                      UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
+                    }
+                  });
+                }
               }
-            } else {
-              console.warn('⚠️ No authenticated user found, skipping database save');
             }
           } catch (dbError) {
-            console.error('❌ Error saving food analysis to database:', dbError);
-            // Don't fail the whole operation if database save fails
+            // 🆕 Errore generale - mostra feedback all'utente
+            if (isMountedRef.current) {
+              UserFeedbackService.showError('Errore durante il salvataggio dell\'analisi. I dati potrebbero non essere stati salvati.');
+            }
           }
           
         } else {
-          console.error('Gallery food analysis failed:', analysisResult.error);
-          alert(t('analysis.food.errors.analysisFailed', { error: analysisResult.error || 'Unknown error' }));
-          setAnalyzing(false);
+          console.error('❌ Gallery food analysis failed:', analysisResult.error);
+          if (isMountedRef.current) {
+            alert(t('analysis.food.errors.analysisFailed', { error: analysisResult.error || 'Unknown error' }));
+            setAnalyzing(false);
+          }
         }
-      } else {
-        console.log('📸 Image picker cancelled');
       }
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
     } catch (error: any) {
-      console.error('Gallery food analysis error:', error);
-      alert(t('analysis.food.errors.failedToAnalyze', { error: error.message }));
-      setAnalyzing(false);
+      console.error('❌ Gallery food analysis error:', error);
+      if (isMountedRef.current) {
+        alert(t('analysis.food.errors.failedToAnalyze', { error: error.message }));
+        setAnalyzing(false);
+      }
     }
   };
 
   const switchCamera = useCallback(() => {
     if (cameraSwitching) {
-      console.log('🔄 Camera switch already in progress, ignoring');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       return;
     }
 
     const nextType = cameraType === 'front' ? 'back' : 'front';
-    console.log('🔄 Switching camera from', cameraType, 'to', nextType);
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     // DON'T set cameraSwitching to true immediately - this causes ref loss
     // Instead, update the camera type and let the CameraView handle the transition
-    setCameraType(nextType);
+    if (isMountedRef.current) {
+      setCameraType(nextType);
+    }
     
     // Set switching state AFTER the camera type change to prevent ref loss
-    setTimeout(() => {
-      setCameraSwitching(true);
-      console.log('🔄 Camera switching state set to true');
-      
-      // Reset switching state after a short delay
-      setTimeout(() => {
-        setCameraSwitching(false);
-        console.log('🔄 Camera switching state reset to false');
-      }, 1000);
-    }, 100);
+    // 🔥 FIX: Memory leak - usiamo Promise per gestire i delay invece di setTimeout annidati
+    (async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (isMountedRef.current) {
+        setCameraSwitching(true);
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
+        
+        // Reset switching state after a short delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (isMountedRef.current) {
+          setCameraSwitching(false);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
+        }
+      }
+    })();
     
   }, [cameraType, cameraSwitching]);
 
   const captureAndAnalyze = async () => {
-    console.log('📸 Starting food capture process...');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     
     // Store cameraController methods in local variables to prevent scope issues
     const { ref, ready, detecting, error, isCameraReady, setDetecting } = cameraController;
     
-    console.log('📸 Food Camera controller state:', {
-      hasRef: !!ref.current,
-      ready,
-      detecting,
-      error,
-      isCameraReady: isCameraReady(),
-      cameraSwitching,
-      analyzing,
-    });
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     if (!isCameraReady()) {
-      const errorMsg = error || 'Camera not ready';
-      console.error('📸 Food Capture failed:', errorMsg);
-      alert(errorMsg);
+      const errorMsg = error || t('analysis.food.errors.cameraNotReady');
+      console.error('❌ Capture failed:', errorMsg);
+      if (isMountedRef.current) {
+        alert(errorMsg);
+      }
       return;
     }
     if (detecting || analyzing) {
-      console.log('📸 Food Capture skipped - already analyzing');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       return;
     }
     if (cameraSwitching) {
-      console.log('📸 Food Capture skipped - camera is switching');
-      alert(t('analysis.common.processing'));
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
+      if (isMountedRef.current) {
+        alert(t('analysis.common.processing'));
+      }
       return;
     }
 
     try {
       const serviceReady = await ensureAnalysisReady();
       if (!serviceReady) {
-        const errorMsg = t('analysis.skin.errors.serviceNotReady');
-        console.error('📸 Food Capture failed:', errorMsg);
-        alert(errorMsg);
+        const errorMsg = t('analysis.food.errors.serviceNotReady');
+        console.error('❌ Capture failed:', errorMsg);
+        if (isMountedRef.current) {
+          alert(errorMsg);
+        }
         return;
       }
 
-      setAnalyzing(true);
-      setDetecting(true);
+      if (isMountedRef.current) {
+        setAnalyzing(true);
+        setDetecting(true);
+      }
 
-      console.log('📸 Taking skin picture with CameraView...');
-      console.log('📸 Camera ref before capture:', {
-        hasRef: !!ref.current,
-        refType: typeof ref.current,
-        refMethods: ref.current ? Object.getOwnPropertyNames(ref.current) : 'null',
-        cameraSwitching,
-        analyzing,
-      });
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       // Aggressive ref recovery before capture (same as EmotionDetectionScreen)
       if (!ref.current) {
-        console.log('📸 Food Camera ref is null, attempting aggressive recovery...');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         
         // Try to restore from global storage first
         const globalRef = (globalThis as any).globalCameraRef;
         if (globalRef) {
-          console.log('📸 Food Found global camera ref, restoring...');
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           ref.current = globalRef;
         }
         
         // Try multiple recovery attempts
         for (let attempt = 1; attempt <= 3; attempt++) {
-          console.log(`📸 Food Recovery attempt ${attempt}/3`);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           await new Promise(resolve => setTimeout(resolve, 200 * attempt));
           
           // Force a re-render by updating state
-          setDetecting(false);
-          await new Promise(resolve => setTimeout(resolve, 50));
-          setDetecting(true);
+          if (isMountedRef.current) {
+            setDetecting(false);
+            await new Promise(resolve => setTimeout(resolve, 50));
+            setDetecting(true);
+          }
           
           if (ref.current) {
-            console.log(`📸 Food Recovery successful on attempt ${attempt}`);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             break;
           }
         }
@@ -821,7 +977,7 @@ export const FoodAnalysisScreen: React.FC = () => {
         }
       }
 
-      console.log('📸 Food Ref validation passed, proceeding with capture...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       // Try multiple capture strategies (exact copy from Emotion Detection)
       let photo = null;
@@ -860,17 +1016,17 @@ export const FoodAnalysisScreen: React.FC = () => {
 
       for (let i = 0; i < captureStrategies.length; i++) {
         const strategy = captureStrategies[i];
-        console.log(`📸 Food Trying capture strategy ${i + 1}/${captureStrategies.length}: ${strategy.name}`, strategy.options);
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         
         try {
           // Double-check camera ref is still valid right before capture
           if (!ref.current) {
-            console.log(`📸 Food Camera ref became null before strategy ${strategy.name}, attempting recovery...`);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             
             // Try to recover ref from global storage
             const globalRef = (globalThis as any).globalCameraRef;
             if (globalRef) {
-              console.log('📸 Food Found global camera ref, restoring...');
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
               ref.current = globalRef;
             } else {
               throw new Error('Camera ref is null and cannot be recovered');
@@ -879,39 +1035,39 @@ export const FoodAnalysisScreen: React.FC = () => {
           
           // Additional safety check - ensure the ref has the takePictureAsync method
           if (typeof ref.current.takePictureAsync !== 'function') {
-            console.log(`📸 Food Camera ref takePictureAsync is not a function, skipping strategy ${strategy.name}`);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             throw new Error('Camera ref does not have takePictureAsync method');
           }
           
           // Extra validation for camera switching scenarios
           if (cameraSwitching) {
-            console.log(`📸 Food Camera still switching during strategy ${strategy.name}, skipping`);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             throw new Error('Camera is still switching');
           }
           
-          console.log(`📸 Food About to call takePictureAsync with camera ref:`, !!ref.current, 'method exists:', typeof ref.current.takePictureAsync, 'switching:', cameraSwitching);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           const capturePromise = ref.current.takePictureAsync(strategy.options);
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('Camera capture timeout')), 8000);
           });
 
           photo = await Promise.race([capturePromise, timeoutPromise]);
-          console.log(`📸 Food Capture successful with strategy: ${strategy.name}`);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           break;
         } catch (strategyError) {
-          console.log(`📸 Food Strategy ${strategy.name} failed:`, strategyError.message);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           
           // If this is the first strategy and it fails, try to restart the camera
           if (i === 0 && strategyError.message.includes('ERR_IMAGE_CAPTURE_FAILED')) {
-            console.log('📸 Food First strategy failed with ERR_IMAGE_CAPTURE_FAILED, attempting camera restart...');
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             try {
               cameraController.stopCamera();
               await new Promise(resolve => setTimeout(resolve, 1000));
               cameraController.startCamera();
               await new Promise(resolve => setTimeout(resolve, 2000));
-              console.log('📸 Food Camera restarted, retrying capture...');
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
             } catch (restartError) {
-              console.log('📸 Food Camera restart failed:', restartError.message);
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
             }
           }
           
@@ -927,14 +1083,7 @@ export const FoodAnalysisScreen: React.FC = () => {
         throw new Error('All capture strategies failed');
       }
 
-      console.log('📸 Food photo captured:', {
-        hasUri: !!photo?.uri,
-        hasBase64: !!photo?.base64,
-        width: photo?.width,
-        height: photo?.height,
-        uriLength: photo?.uri?.length,
-        base64Length: photo?.base64?.length,
-      });
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       if (!photo) {
         throw new Error('Camera returned null photo');
@@ -942,14 +1091,15 @@ export const FoodAnalysisScreen: React.FC = () => {
 
       if (!photo?.base64 && photo?.uri) {
         try {
-          console.log('📸 Converting skin photo URI to base64...');
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           const base64 = await FileSystem.readAsStringAsync(photo.uri, {
             encoding: FileSystem.EncodingType.Base64,
           });
           photo.base64 = base64;
-          console.log('📸 Food base64 conversion successful, length:', base64.length);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
         } catch (conversionError) {
-          console.warn('📸 Failed to convert skin photo to base64:', conversionError);
+          // 🔥 FIX: Solo errori critici in console
+          console.error('❌ Failed to convert photo to base64:', conversionError);
           throw new Error('Failed to process photo data');
         }
       }
@@ -959,76 +1109,153 @@ export const FoodAnalysisScreen: React.FC = () => {
       }
 
       const dataUrl = `data:image/jpeg;base64,${photo.base64}`;
-      console.log('✅ Skin photo captured, sending for analysis...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       const result = await analysisServiceRef.current.analyzeFood(dataUrl, 'food-analysis-session');
       if (!result.success || !result.data) {
         throw new Error(result.error || 'Food analysis failed.');
       }
 
-      console.log('Food analysis successful:', result.data);
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       // Store the full analysis result
-      setFullAnalysisResult(result.data);
+      if (isMountedRef.current) {
+        setFullAnalysisResult(result.data);
+      }
 
-      // Save to Supabase database
+      // 🆕 Save to Supabase database with enhanced error handling and feedback
       try {
         const currentUser = await AuthService.getCurrentUser();
         if (currentUser) {
-          const savedAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
-            mealType: result.data.meal_type || 'other',
-            identifiedFoods: result.data.identified_foods || [],
-            calories: result.data.macronutrients?.calories || 0,
-            carbohydrates: result.data.macronutrients?.carbohydrates || 0,
-            proteins: result.data.macronutrients?.proteins || 0,
-            fats: result.data.macronutrients?.fats || 0,
-            fiber: result.data.macronutrients?.fiber || 0,
-            vitamins: result.data.vitamins || {},
-            minerals: result.data.minerals || {},
-            healthScore: result.data.health_score || 70,
-            recommendations: result.data.recommendations || [],
-            observations: result.data.observations || [],
-            confidence: result.data.confidence || 0.8,
-            analysisData: {
-              ...result.data,
-              version: result.data.version || '1.0.0',
+          try {
+            const savedAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
+              mealType: result.data.meal_type || 'other',
+              identifiedFoods: result.data.identified_foods || [],
+              calories: result.data.macronutrients?.calories || 0,
+              carbohydrates: result.data.macronutrients?.carbohydrates || 0,
+              proteins: result.data.macronutrients?.proteins || 0,
+              fats: result.data.macronutrients?.fats || 0,
+              fiber: result.data.macronutrients?.fiber || 0,
+              vitamins: result.data.vitamins || {},
+              minerals: result.data.minerals || {},
+              healthScore: result.data.health_score || 70,
+              recommendations: result.data.recommendations || [],
+              observations: result.data.observations || [],
               confidence: result.data.confidence || 0.8,
-            },
-            imageUrl: photo.uri,
-          });
-          
-          if (savedAnalysis) {
-            console.log('✅ Food analysis saved to database:', savedAnalysis.id);
-            
-            // Sincronizza i dati con lo store locale per i grafici
-            const foodSession = {
-              id: savedAnalysis.id,
-              timestamp: new Date(savedAnalysis.created_at),
-              macronutrients: {
-                carbohydrates: savedAnalysis.carbohydrates || 0,
-                proteins: savedAnalysis.proteins || 0,
-                fats: savedAnalysis.fats || 0,
-                fiber: savedAnalysis.fiber || 0,
-                calories: savedAnalysis.calories || 0,
+              analysisData: {
+                ...result.data,
+                version: result.data.version || '1.0.0',
+                confidence: result.data.confidence || 0.8,
               },
-              meal_type: savedAnalysis.meal_type || 'other',
-              health_score: savedAnalysis.health_score || 70,
-              confidence: savedAnalysis.confidence || 0.8,
-              identified_foods: savedAnalysis.identified_foods || [],
-            };
+              imageUrl: photo.uri,
+            });
             
-            const store = useAnalysisStore.getState();
-            store.addFoodSession(foodSession);
-            console.log('📊 Food data synchronized with local store for charts');
-          } else {
-            console.warn('⚠️ Failed to save food analysis to database');
+            if (savedAnalysis) {
+              // 🆕 Verifica post-salvataggio che i dati siano nel database
+              const verification = await DatabaseVerificationService.verifyFoodAnalysis(currentUser.id, savedAnalysis.id);
+              if (!verification.found) {
+                UserFeedbackService.showWarning('L\'analisi è stata salvata ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
+              } else {
+                UserFeedbackService.showSaveSuccess('analisi');
+              }
+              
+              // Sincronizza i dati con lo store locale per i grafici
+              const foodSession = {
+                id: savedAnalysis.id,
+                timestamp: new Date(savedAnalysis.created_at),
+                macronutrients: {
+                  carbohydrates: savedAnalysis.carbohydrates || 0,
+                  proteins: savedAnalysis.proteins || 0,
+                  fats: savedAnalysis.fats || 0,
+                  fiber: savedAnalysis.fiber || 0,
+                  calories: savedAnalysis.calories || 0,
+                },
+                meal_type: savedAnalysis.meal_type || 'other',
+                health_score: savedAnalysis.health_score || 70,
+                confidence: savedAnalysis.confidence || 0.8,
+                identified_foods: savedAnalysis.identified_foods || [],
+              };
+              
+              const store = useAnalysisStore.getState();
+              store.addFoodSession(foodSession);
+            } else {
+              // 🆕 Nessun errore lanciato ma savedAnalysis è null
+              if (isMountedRef.current) {
+                UserFeedbackService.showSaveError('analisi', async () => {
+                  // Retry logic
+                  try {
+                    const retryAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
+                      mealType: result.data.meal_type || 'other',
+                      identifiedFoods: result.data.identified_foods || [],
+                      calories: result.data.macronutrients?.calories || 0,
+                      carbohydrates: result.data.macronutrients?.carbohydrates || 0,
+                      proteins: result.data.macronutrients?.proteins || 0,
+                      fats: result.data.macronutrients?.fats || 0,
+                      fiber: result.data.macronutrients?.fiber || 0,
+                      vitamins: result.data.vitamins || {},
+                      minerals: result.data.minerals || {},
+                      healthScore: result.data.health_score || 70,
+                      recommendations: result.data.recommendations || [],
+                      observations: result.data.observations || [],
+                      confidence: result.data.confidence || 0.8,
+                      analysisData: {
+                        ...result.data,
+                        version: result.data.version || '1.0.0',
+                        confidence: result.data.confidence || 0.8,
+                      },
+                      imageUrl: photo.uri,
+                    });
+                    if (retryAnalysis) {
+                      UserFeedbackService.showSaveSuccess('analisi');
+                    }
+                  } catch (retryError) {
+                    UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
+                  }
+                });
+              }
+            }
+          } catch (saveError) {
+            // 🆕 Errore durante il salvataggio - mostra feedback all'utente
+            if (isMountedRef.current) {
+              UserFeedbackService.showSaveError('analisi', async () => {
+                // Retry logic
+                try {
+                  const retryAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
+                    mealType: result.data.meal_type || 'other',
+                    identifiedFoods: result.data.identified_foods || [],
+                    calories: result.data.macronutrients?.calories || 0,
+                    carbohydrates: result.data.macronutrients?.carbohydrates || 0,
+                    proteins: result.data.macronutrients?.proteins || 0,
+                    fats: result.data.macronutrients?.fats || 0,
+                    fiber: result.data.macronutrients?.fiber || 0,
+                    vitamins: result.data.vitamins || {},
+                    minerals: result.data.minerals || {},
+                    healthScore: result.data.health_score || 70,
+                    recommendations: result.data.recommendations || [],
+                    observations: result.data.observations || [],
+                    confidence: result.data.confidence || 0.8,
+                    analysisData: {
+                      ...result.data,
+                      version: result.data.version || '1.0.0',
+                      confidence: result.data.confidence || 0.8,
+                    },
+                    imageUrl: photo.uri,
+                  });
+                  if (retryAnalysis) {
+                    UserFeedbackService.showSaveSuccess('analisi');
+                  }
+                } catch (retryError) {
+                  UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
+                }
+              });
+            }
           }
-        } else {
-          console.warn('⚠️ No authenticated user found, skipping database save');
         }
       } catch (dbError) {
-        console.error('❌ Error saving food analysis to database:', dbError);
-        // Don't fail the whole operation if database save fails
+        // 🆕 Errore generale - mostra feedback all'utente
+        if (isMountedRef.current) {
+          UserFeedbackService.showError('Errore durante il salvataggio dell\'analisi. I dati potrebbero non essere stati salvati.');
+        }
       }
 
       const foodResults: FoodAnalysisResults = {
@@ -1041,17 +1268,14 @@ export const FoodAnalysisScreen: React.FC = () => {
         recommendations: result.data.recommendations || [],
       };
 
-      cameraController.stopCamera();
-      setAnalyzing(false);
-      setDetecting(false);
-      setResults(foodResults);
+      if (isMountedRef.current) {
+        cameraController.stopCamera();
+        setAnalyzing(false);
+        setDetecting(false);
+        setResults(foodResults);
+      }
     } catch (error: any) {
-      console.error('📸 Food capture error details:', {
-        message: error?.message,
-        name: error?.name,
-        stack: error?.stack,
-        error: error,
-      });
+      console.error('❌ Capture error:', error?.message || error);
       
       let errorMessage = 'Capture failed';
       if (error?.message) {
@@ -1066,17 +1290,21 @@ export const FoodAnalysisScreen: React.FC = () => {
         }
       }
       
-      alert(errorMessage);
-      setAnalyzing(false);
-      setDetecting(false);
+      if (isMountedRef.current) {
+        alert(errorMessage);
+        setAnalyzing(false);
+        setDetecting(false);
+      }
     }
   };
 
   const resetAnalysis = () => {
-    setResults(null);
-    setAnalyzing(false);
-    // Restart camera immediately to prevent flash
-    cameraController.startCamera();
+    if (isMountedRef.current) {
+      setResults(null);
+      setAnalyzing(false);
+      // Restart camera immediately to prevent flash
+      cameraController.startCamera();
+    }
   };
 
 
@@ -1181,11 +1409,13 @@ export const FoodAnalysisScreen: React.FC = () => {
 
   const CameraFrame = () => {
     const handleCameraReady = () => {
-      console.log('📷 Camera ready callback triggered');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       // Reset switching state when camera is actually ready
       if (cameraSwitching) {
-        console.log('📷 Camera ready during switch, resetting switching state');
-        setCameraSwitching(false);
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
+        if (isMountedRef.current) {
+          setCameraSwitching(false);
+        }
       }
     };
 
@@ -1406,16 +1636,7 @@ export const FoodAnalysisScreen: React.FC = () => {
              const latestSession = store.latestFoodSession;
              const foodHistory = store.foodHistory;
              
-             // Debug: Log dello stato dello store
-             console.log('🔍 FoodAnalysisScreen Debug:', {
-               hasLatestSession: !!latestSession,
-               latestSessionId: latestSession?.id,
-               foodHistoryLength: foodHistory.length,
-               storeState: {
-                 latestFoodSession: store.latestFoodSession,
-                 foodHistory: store.foodHistory
-               }
-             });
+             // 🔥 FIX: Rimuoviamo console.log eccessivi
              
              // Always show the card, with fallback data if no session exists
              const fallbackSession = {
@@ -1438,7 +1659,8 @@ export const FoodAnalysisScreen: React.FC = () => {
                />
              );
            } catch (error) {
-             console.warn('Failed to load latest food session:', error);
+             // 🔥 FIX: Solo errori critici in console
+             console.error('❌ Failed to load latest food session:', error);
              // Fallback session in case of error
              const fallbackSession = {
                id: 'error-fallback',
@@ -1631,11 +1853,11 @@ export const FoodAnalysisScreen: React.FC = () => {
             showTitle={true}
             compact={false}
             onInsightPress={(insight) => {
-              console.log('Intelligent food insight pressed:', insight.title);
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
               // Handle insight press - could navigate to detailed view
             }}
             onActionPress={(insight, action) => {
-              console.log('Intelligent food action pressed:', insight.title, action);
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
               // Handle action press - could start activity, set reminder, etc.
             }}
           />
@@ -1817,7 +2039,7 @@ export const FoodAnalysisScreen: React.FC = () => {
         onClose={() => setShowFridgeModal(false)}
         onRecipeGenerated={(recipe) => {
           // TODO: Potresti voler salvare la ricetta o mostrarla in un'altra schermata
-          console.log('Recipe generated:', recipe);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
         }}
       />
       

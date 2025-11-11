@@ -5,6 +5,7 @@
 
 import { Request, Response } from 'express';
 import axios from 'axios';
+import { generateAvatarFromPhoto as generateAvatarService } from '../services/avatar-generation.service';
 
 // ========================================
 // SIMLI AVATAR ENDPOINTS
@@ -254,4 +255,46 @@ export const validateAvatarRequest = (req: Request, res: Response, next: any) =>
   globalAny.avatarRequests.set(userIP, recentRequests);
   
   next();
+};
+
+// ========================================
+// CUSTOM AVATAR GENERATION
+// ========================================
+
+export const generateAvatarFromPhoto = async (req: Request, res: Response) => {
+  try {
+    const file = req.file;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'userId is required',
+      });
+    }
+
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        error: 'photo upload is required',
+      });
+    }
+
+    const result = await generateAvatarService({
+      userId,
+      photoBuffer: file.buffer,
+      mimeType: file.mimetype,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('[Avatar] generateAvatarFromPhoto error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate avatar',
+    });
+  }
 };

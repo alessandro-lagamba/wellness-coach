@@ -192,3 +192,5 @@ export class FridgeItemsService {
 
 export const fridgeItemsService = FridgeItemsService.getInstance();
 
+
+

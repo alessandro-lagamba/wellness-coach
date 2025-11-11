@@ -208,7 +208,7 @@ const MiniInfoCard: React.FC<Props> = ({
             <Text style={styles.largeIcon}>{icon}</Text>
           </View>
           <View style={styles.largeHeaderText}>
-            <Text style={styles.largeLabel} numberOfLines={1}>
+            <Text style={[styles.largeLabel, { color: colors.text }]} numberOfLines={1}>
               {label}
             </Text>
             <Text style={styles.largeDescriptor} numberOfLines={1}>
@@ -255,10 +255,10 @@ const MiniInfoCard: React.FC<Props> = ({
       {!!detailChips?.length && (
         <View style={styles.largeChipsRow}>
           {detailChips.map((chip) => (
-            <View key={`${chip.label}-${chip.value}`} style={[styles.largeDetailChip, { borderColor: `${color}25` }]}>
+            <View key={`${chip.label}-${chip.value}`} style={[styles.largeDetailChip, { borderColor: `${color}25`, backgroundColor: colors.surfaceMuted }]}>
               <Text style={styles.largeChipIcon}>{chip.icon}</Text>
               <View style={styles.largeChipTextContainer}>
-                <Text style={styles.largeChipLabel} numberOfLines={1}>
+                <Text style={[styles.largeChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>
                   {chip.label}
                 </Text>
                 <Text style={[styles.largeChipValue, { color }]} numberOfLines={1}>
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   largeHeaderText: { flex: 1, minWidth: 0 },
   largeIconChip: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.2, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   largeIcon: { fontSize: 18 },
-  largeLabel: { fontSize: 15, fontWeight: "700", color: "#111827", letterSpacing: -0.2 },
+  largeLabel: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
   largeDescriptor: { marginTop: 1, fontSize: 11.5, fontWeight: "600", color: "#64748b", letterSpacing: -0.1 },
 
   largeTrendBadge: { height: 28, paddingHorizontal: 10, borderRadius: 14, borderWidth: 1.2, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, flexShrink: 0 },
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   largeStatusText: { fontSize: 15, fontWeight: "800" },
 
   largeChipsRow: { marginTop: 10, flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  largeDetailChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, backgroundColor: "#ffffff96", gap: 8, flex: 1, minWidth: 90, maxWidth: "48%" },
+  largeDetailChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, gap: 8, flex: 1, minWidth: 90, maxWidth: "48%" },
   largeChipIcon: { fontSize: 15, flexShrink: 0 },
   largeChipTextContainer: { flex: 1, minWidth: 0 },
   largeChipLabel: { fontSize: 10, color: "#64748b", fontWeight: "600" },

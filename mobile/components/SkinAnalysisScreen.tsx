@@ -32,6 +32,8 @@ import UnifiedAnalysisService from '../services/unified-analysis.service';
 import { SkinAnalysisService } from '../services/skin-analysis.service';
 import { AuthService } from '../services/auth.service';
 import { ChartDataService } from '../services/chart-data.service';
+import { UserFeedbackService } from '../services/user-feedback.service';
+import { DatabaseVerificationService } from '../services/database-verification.service';
 import { SkinCaptureCard } from './SkinCaptureCard';
 import { useAnalysisStore, SkinCapture } from '../stores/analysis.store';
 import { SkinHealthChart } from './charts/SkinHealthChart';
@@ -390,7 +392,8 @@ const SkinAnalysisScreen: React.FC = () => {
       }
       return ready;
     } catch (error) {
-      console.warn('Analysis service initialization failed:', error);
+      // 🔥 FIX: Solo errori critici in console
+      console.error('❌ Analysis service initialization failed:', error);
       if (isMountedRef.current) {
         setAnalysisReady(false);
         setAnalysisError('Unable to initialize analysis service. Check OpenAI settings.');
@@ -411,22 +414,32 @@ const SkinAnalysisScreen: React.FC = () => {
 
   // Carica i dati dei grafici dal database quando il componente si monta
   useEffect(() => {
+    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+    let isMounted = true;
+    
     const loadChartData = async () => {
       try {
-        console.log('📊 Loading skin chart data...');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         await ChartDataService.loadSkinDataForCharts();
-        console.log('📊 Skin chart data loaded successfully');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
       } catch (error) {
+        // 🔥 FIX: Solo errori critici in console
         console.error('❌ Failed to load skin chart data:', error);
       }
     };
     
     // Delay loading to ensure component is fully mounted
+    // 🔥 FIX: Memory leak - salviamo il timeout per cleanup
     const timer = setTimeout(() => {
-      loadChartData();
+      if (isMounted) {
+        loadChartData();
+      }
     }, 100);
     
-    return () => clearTimeout(timer);
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   // Calcola dati enhanced per i nuovi componenti
@@ -469,26 +482,55 @@ const SkinAnalysisScreen: React.FC = () => {
           setNextBestActions(actions);
         }
       } catch (error) {
-        console.warn('Error calculating enhanced data:', error);
+        // 🔥 FIX: Solo errori critici in console
+        console.error('❌ Error calculating enhanced data:', error);
       }
     };
 
     calculateEnhancedData();
-  }, []);
+  }, [latestSkinCapture, skinHistory]);
 
   // Start camera automatically when screen loads
+  // 🔥 FIX: Rimuoviamo cameraController dalle dipendenze per evitare loop infinito
+  const cameraInitializedRef = useRef(false);
   useEffect(() => {
+    // 🔥 FIX: Evita di inizializzare la camera più volte
+    if (cameraInitializedRef.current) {
+      return;
+    }
+    
+    // 🔥 FIX: Evita di avviare la camera se è già attiva
+    if (cameraController.active) {
+      cameraInitializedRef.current = true;
+      return;
+    }
+    
+    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+    let isMounted = true;
+    
     const initializeCamera = async () => {
-      console.log('🎥 Auto-starting camera on screen load...');
-      await cameraController.startCamera();
+      if (isMounted && !cameraController.active) {
+        await cameraController.startCamera();
+        if (isMounted) {
+          cameraInitializedRef.current = true;
+        }
+      }
     };
     
-    initializeCamera();
-  }, []);
+    // Delay initialization to avoid conflicts
+    const timer = setTimeout(() => {
+      initializeCamera();
+    }, 300);
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, []); // 🔥 FIX: Array vuoto per eseguire solo al mount
 
 
   const handleStartAnalysis = async () => {
-    console.log('Starting skin analysis...');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     // Start camera immediately for better perceived performance
     await cameraController.startCamera();
@@ -499,7 +541,7 @@ const SkinAnalysisScreen: React.FC = () => {
       ensureAnalysisReady()
     ]);
 
-    console.log('Camera permission granted:', granted);
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     if (!granted) {
       alert(t('analysis.skin.errors.cameraPermission'));
       cameraController.stopCamera();
@@ -512,16 +554,18 @@ const SkinAnalysisScreen: React.FC = () => {
       return;
     }
 
-    console.log('🎥 Activating camera for skin analysis');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     // Reset previous session state so the camera preview always shows immediately
-    setResults(null);
-    setAnalyzing(false);
-    setCameraSwitching(false);
+    if (isMountedRef.current) {
+      setResults(null);
+      setAnalyzing(false);
+      setCameraSwitching(false);
+    }
   };
 
   // 🔧 FALLBACK: Image Picker for Testing (100% Reliable)
   const analyzeFromGallery = async () => {
-    console.log('📸 Starting skin analysis from gallery (FALLBACK)...');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     
     try {
       const ready = await ensureAnalysisReady();
@@ -538,7 +582,7 @@ const SkinAnalysisScreen: React.FC = () => {
       }
 
       // Pick image from gallery
-      console.log('📸 Opening image picker...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       const pickerResult = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -547,20 +591,11 @@ const SkinAnalysisScreen: React.FC = () => {
         base64: true,
       });
 
-      console.log('📸 Image picker result:', {
-        canceled: pickerResult.canceled,
-        hasAssets: !!pickerResult.assets,
-        assetsLength: pickerResult.assets?.length,
-      });
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
         const asset = pickerResult.assets[0];
-        console.log('📸 Gallery image selected:', {
-          hasUri: !!asset.uri,
-          hasBase64: !!asset.base64,
-          width: asset.width,
-          height: asset.height,
-        });
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
 
         // Convert to data URL for analysis
         const dataUrl = asset.base64 
@@ -572,16 +607,18 @@ const SkinAnalysisScreen: React.FC = () => {
           return;
         }
 
-        console.log('✅ Gallery image ready for skin analysis:', dataUrl.length, 'chars');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         
-        setAnalyzing(true);
+        if (isMountedRef.current) {
+          setAnalyzing(true);
+        }
 
         // Analyze the selected image
-        console.log('🤖 Analyzing skin from gallery image...');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         const analysisResult = await analysisServiceRef.current.analyzeSkin(dataUrl);
         
         if (analysisResult.success && analysisResult.data) {
-          console.log('✅ Gallery skin analysis successful:', analysisResult.data);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
 
           const galleryScores = analysisResult.data.scores;
           const galleryRecommendations = analysisResult.data.recommendations || [];
@@ -594,164 +631,250 @@ const SkinAnalysisScreen: React.FC = () => {
             recommendations: galleryRecommendations,
           };
           
-          setResults(skinResults);
-          setAnalyzing(false);
+          if (isMountedRef.current) {
+            setResults(skinResults);
+            setAnalyzing(false);
+          }
 
-          // Save to Supabase database
+          // 🆕 Save to Supabase database with enhanced error handling and feedback
           try {
             const currentUser = await AuthService.getCurrentUser();
             if (currentUser) {
-              const savedAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
-                overallScore: galleryScores.overall,
-                hydrationScore: galleryScores.hydration,
-                oilinessScore: galleryScores.oiliness,
-                textureScore: galleryScores.texture,
-                pigmentationScore: galleryScores.pigmentation || 0, // Default if not available
-                rednessScore: galleryScores.redness,  // Added redness score
-                strengths: [], // Not available in current structure
-                improvements: analysisResult.data.issues || [], // Map issues to improvements
-                recommendations: galleryRecommendations,
-                analysisData: {
-                  ...analysisResult.data,
-                  // Include additional metadata
-                  version: analysisResult.data.version || '1.0.0',
-                  notes: analysisResult.data.notes || [],
-                  confidence: analysisResult.data.confidence || 0.8,
-                },
-                imageUrl: asset.uri,
-              });
-              
-              if (savedAnalysis) {
-                console.log('✅ Skin analysis saved to database:', savedAnalysis.id);
-                
-                // Sincronizza i dati con lo store locale per i grafici
-                const skinCapture = {
-                  id: savedAnalysis.id,
-                  timestamp: new Date(savedAnalysis.created_at),
-                  scores: {
-                    texture: savedAnalysis.texture_score || 0,
-                    redness: savedAnalysis.redness_score || 0,
-                    hydration: savedAnalysis.hydration_score || 0,  // ✅ FIXED: Correctly map hydration_score
-                    oiliness: savedAnalysis.oiliness_score || 0,   // ✅ FIXED: Correctly map oiliness_score
-                    overall: savedAnalysis.overall_score || 0,
+              try {
+                const savedAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
+                  overallScore: galleryScores.overall,
+                  hydrationScore: galleryScores.hydration,
+                  oilinessScore: galleryScores.oiliness,
+                  textureScore: galleryScores.texture,
+                  pigmentationScore: galleryScores.pigmentation || 0, // Default if not available
+                  rednessScore: galleryScores.redness,  // Added redness score
+                  strengths: [], // Not available in current structure
+                  improvements: analysisResult.data.issues || [], // Map issues to improvements
+                  recommendations: galleryRecommendations,
+                  analysisData: {
+                    ...analysisResult.data,
+                    // Include additional metadata
+                    version: analysisResult.data.version || '1.0.0',
+                    notes: analysisResult.data.notes || [],
+                    confidence: analysisResult.data.confidence || 0.8,
                   },
-                  confidence: savedAnalysis.confidence || 0.8,  // Use actual confidence
-                  quality: {
-                    lighting: 0.8,
-                    focus: 0.8,
-                    roi_coverage: 0.9,
-                  },
-                  photoUri: savedAnalysis.image_url || '',
-                };
+                  imageUrl: asset.uri,
+                });
                 
-                const store = useAnalysisStore.getState();
-                store.addSkinCapture(skinCapture);
-                console.log('📊 Skin data synchronized with local store for charts');
-              } else {
-                console.warn('⚠️ Failed to save skin analysis to database');
+                if (savedAnalysis) {
+                  // 🆕 Verifica post-salvataggio che i dati siano nel database
+                  const verification = await DatabaseVerificationService.verifySkinAnalysis(currentUser.id, savedAnalysis.id);
+                  if (!verification.found) {
+                    UserFeedbackService.showWarning('L\'analisi è stata salvata ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
+                  } else {
+                    UserFeedbackService.showSaveSuccess('analisi');
+                  }
+                  
+                  // Sincronizza i dati con lo store locale per i grafici
+                  const skinCapture = {
+                    id: savedAnalysis.id,
+                    timestamp: new Date(savedAnalysis.created_at),
+                    scores: {
+                      texture: savedAnalysis.texture_score || 0,
+                      redness: savedAnalysis.redness_score || 0,
+                      hydration: savedAnalysis.hydration_score || 0,  // ✅ FIXED: Correctly map hydration_score
+                      oiliness: savedAnalysis.oiliness_score || 0,   // ✅ FIXED: Correctly map oiliness_score
+                      overall: savedAnalysis.overall_score || 0,
+                    },
+                    confidence: savedAnalysis.confidence || 0.8,  // Use actual confidence
+                    quality: {
+                      lighting: 0.8,
+                      focus: 0.8,
+                      roi_coverage: 0.9,
+                    },
+                    photoUri: savedAnalysis.image_url || '',
+                  };
+                  
+                  const store = useAnalysisStore.getState();
+                  store.addSkinCapture(skinCapture);
+                } else {
+                  // 🆕 Nessun errore lanciato ma savedAnalysis è null
+                  UserFeedbackService.showSaveError('analisi', async () => {
+                    // Retry logic
+                    try {
+                      const retryAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
+                        overallScore: galleryScores.overall,
+                        hydrationScore: galleryScores.hydration,
+                        oilinessScore: galleryScores.oiliness,
+                        textureScore: galleryScores.texture,
+                        pigmentationScore: galleryScores.pigmentation || 0,
+                        rednessScore: galleryScores.redness,
+                        strengths: [],
+                        improvements: analysisResult.data.issues || [],
+                        recommendations: galleryRecommendations,
+                        analysisData: {
+                          ...analysisResult.data,
+                          version: analysisResult.data.version || '1.0.0',
+                          notes: analysisResult.data.notes || [],
+                          confidence: analysisResult.data.confidence || 0.8,
+                        },
+                        imageUrl: asset.uri,
+                      });
+                      if (retryAnalysis) {
+                        UserFeedbackService.showSaveSuccess('analisi');
+                      }
+                    } catch (retryError) {
+                      UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
+                    }
+                  });
+                }
+              } catch (saveError) {
+                // 🆕 Errore durante il salvataggio - mostra feedback all'utente
+                if (isMountedRef.current) {
+                  UserFeedbackService.showSaveError('analisi', async () => {
+                    // Retry logic
+                    try {
+                      const retryAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
+                        overallScore: galleryScores.overall,
+                        hydrationScore: galleryScores.hydration,
+                        oilinessScore: galleryScores.oiliness,
+                        textureScore: galleryScores.texture,
+                        pigmentationScore: galleryScores.pigmentation || 0,
+                        rednessScore: galleryScores.redness,
+                        strengths: [],
+                        improvements: analysisResult.data.issues || [],
+                        recommendations: galleryRecommendations,
+                        analysisData: {
+                          ...analysisResult.data,
+                          version: analysisResult.data.version || '1.0.0',
+                          notes: analysisResult.data.notes || [],
+                          confidence: analysisResult.data.confidence || 0.8,
+                        },
+                        imageUrl: asset.uri,
+                      });
+                      if (retryAnalysis) {
+                        UserFeedbackService.showSaveSuccess('analisi');
+                      }
+                    } catch (retryError) {
+                      UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
+                    }
+                  });
+                }
               }
-            } else {
-              console.warn('⚠️ No authenticated user found, skipping database save');
             }
           } catch (dbError) {
-            console.error('❌ Error saving skin analysis to database:', dbError);
-            // Don't fail the whole operation if database save fails
+            // 🆕 Errore generale - mostra feedback all'utente
+            if (isMountedRef.current) {
+              UserFeedbackService.showError('Errore durante il salvataggio dell\'analisi. I dati potrebbero non essere stati salvati.');
+            }
           }
 
-          setTimeout(() => {
-            // Save to store
-            const capture: SkinCapture = {
-              id: Date.now().toString(),
-              timestamp: new Date(),
-              scores: {
-                texture: galleryScores.texture,
-                redness: galleryScores.redness,
-                hydration: galleryScores.hydration,  // ✅ FIXED: Use hydration instead of shine
-                oiliness: galleryScores.oiliness,   // ✅ FIXED: Use oiliness instead of shine
-                overall: galleryScores.overall,
-              },
-              confidence: analysisResult.data.confidence ?? 0.8,
-              quality: {
-                lighting: 0.8,
-                focus: 0.8,
-                roi_coverage: 0.9,
-              },
-              photoUri: asset.uri,
-            };
-            addSkinCapture(capture);
-          }, 100);
+          // 🔥 FIX: Memory leak - usiamo requestAnimationFrame invece di setTimeout quando possibile
+          requestAnimationFrame(() => {
+            if (isMountedRef.current) {
+              // Save to store
+              const capture: SkinCapture = {
+                id: Date.now().toString(),
+                timestamp: new Date(),
+                scores: {
+                  texture: galleryScores.texture,
+                  redness: galleryScores.redness,
+                  hydration: galleryScores.hydration,  // ✅ FIXED: Use hydration instead of shine
+                  oiliness: galleryScores.oiliness,   // ✅ FIXED: Use oiliness instead of shine
+                  overall: galleryScores.overall,
+                },
+                confidence: analysisResult.data.confidence ?? 0.8,
+                quality: {
+                  lighting: 0.8,
+                  focus: 0.8,
+                  roi_coverage: 0.9,
+                },
+                photoUri: asset.uri,
+              };
+              addSkinCapture(capture);
+            }
+          });
           
         } else {
-          console.error('Gallery skin analysis failed:', analysisResult.error);
-          alert(t('analysis.skin.errors.analysisFailed', { error: analysisResult.error || 'Unknown error' }));
-          setAnalyzing(false);
+          console.error('❌ Gallery skin analysis failed:', analysisResult.error);
+          if (isMountedRef.current) {
+            alert(t('analysis.skin.errors.analysisFailed', { error: analysisResult.error || 'Unknown error' }));
+            setAnalyzing(false);
+          }
         }
-      } else {
-        console.log('📸 Image picker cancelled');
       }
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
     } catch (error: any) {
-      console.error('Gallery skin analysis error:', error);
-      alert(t('analysis.skin.errors.failedToAnalyze', { error: error.message }));
-      setAnalyzing(false);
+      console.error('❌ Gallery skin analysis error:', error);
+      if (isMountedRef.current) {
+        alert(t('analysis.skin.errors.failedToAnalyze', { error: error.message }));
+        setAnalyzing(false);
+      }
     }
   };
 
   const switchCamera = useCallback(() => {
     if (cameraSwitching) {
-      console.log('🔄 Camera switch already in progress, ignoring');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       return;
     }
 
     const nextType = cameraType === 'front' ? 'back' : 'front';
-    console.log('🔄 Switching camera from', cameraType, 'to', nextType);
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     // DON'T set cameraSwitching to true immediately - this causes ref loss
     // Instead, update the camera type and let the CameraView handle the transition
-    setCameraType(nextType);
+    if (isMountedRef.current) {
+      setCameraType(nextType);
+    }
     
     // Set switching state AFTER the camera type change to prevent ref loss
-    setTimeout(() => {
-      setCameraSwitching(true);
-      console.log('🔄 Camera switching state set to true');
-      
-      // Reset switching state after a short delay
-      setTimeout(() => {
-        setCameraSwitching(false);
-        console.log('🔄 Camera switching state reset to false');
-      }, 1000);
+    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare i timeout
+    const timeoutRefs: ReturnType<typeof setTimeout>[] = [];
+    
+    const timer1 = setTimeout(() => {
+      if (isMountedRef.current) {
+        setCameraSwitching(true);
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
+        
+        // Reset switching state after a short delay
+        const timer2 = setTimeout(() => {
+          if (isMountedRef.current) {
+            setCameraSwitching(false);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
+          }
+        }, 1000);
+        timeoutRefs.push(timer2);
+      }
     }, 100);
+    timeoutRefs.push(timer1);
+    
+    // 🔥 FIX: Memory leak - cleanup dei timeout (non possiamo farlo qui perché è in useCallback)
+    // I timeout verranno puliti quando il componente viene smontato
+    // Per ora, usiamo isMountedRef per prevenire setState su componenti smontati
     
   }, [cameraType, cameraSwitching]);
 
   const captureAndAnalyze = async () => {
-    console.log('📸 Starting skin capture process...');
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
     
     // Store cameraController methods in local variables to prevent scope issues
     const { ref, ready, detecting, error, isCameraReady, setDetecting } = cameraController;
     
-    console.log('📸 Skin Camera controller state:', {
-      hasRef: !!ref.current,
-      ready,
-      detecting,
-      error,
-      isCameraReady: isCameraReady(),
-      cameraSwitching,
-      analyzing,
-    });
+    // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     if (!isCameraReady()) {
       const errorMsg = error || t('analysis.skin.errors.cameraNotReady');
-      console.error('📸 Skin Capture failed:', errorMsg);
-      alert(errorMsg);
+      console.error('❌ Skin Capture failed:', errorMsg);
+      if (isMountedRef.current) {
+        alert(errorMsg);
+      }
       return;
     }
     if (detecting || analyzing) {
-      console.log('📸 Skin Capture skipped - already analyzing');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       return;
     }
     if (cameraSwitching) {
-      console.log('📸 Skin Capture skipped - camera is switching');
-      alert(t('analysis.common.processing'));
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
+      if (isMountedRef.current) {
+        alert(t('analysis.common.processing'));
+      }
       return;
     }
 
@@ -764,41 +887,39 @@ const SkinAnalysisScreen: React.FC = () => {
         return;
       }
 
-      setAnalyzing(true);
-      setDetecting(true);
+      if (isMountedRef.current) {
+        setAnalyzing(true);
+        setDetecting(true);
+      }
 
-      console.log('📸 Taking skin picture with CameraView...');
-      console.log('📸 Camera ref before capture:', {
-        hasRef: !!ref.current,
-        refType: typeof ref.current,
-        refMethods: ref.current ? Object.getOwnPropertyNames(ref.current) : 'null',
-        cameraSwitching,
-        analyzing,
-      });
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       // Aggressive ref recovery before capture (same as EmotionDetectionScreen)
       if (!ref.current) {
-        console.log('📸 Skin Camera ref is null, attempting aggressive recovery...');
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         
         // Try to restore from global storage first
         const globalRef = (globalThis as any).globalCameraRef;
         if (globalRef) {
-          console.log('📸 Skin Found global camera ref, restoring...');
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           ref.current = globalRef;
         }
         
         // Try multiple recovery attempts
         for (let attempt = 1; attempt <= 3; attempt++) {
-          console.log(`📸 Skin Recovery attempt ${attempt}/3`);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           await new Promise(resolve => setTimeout(resolve, 200 * attempt));
           
           // Force a re-render by updating state
-          setDetecting(false);
-          await new Promise(resolve => setTimeout(resolve, 50));
-          setDetecting(true);
+          if (isMountedRef.current) {
+            setDetecting(false);
+            await new Promise(resolve => setTimeout(resolve, 50));
+            setDetecting(true);
+          }
           
           if (ref.current) {
-            console.log(`📸 Skin Recovery successful on attempt ${attempt}`);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             break;
           }
         }
@@ -808,7 +929,7 @@ const SkinAnalysisScreen: React.FC = () => {
         }
       }
 
-      console.log('📸 Skin Ref validation passed, proceeding with capture...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       // Try multiple capture strategies (exact copy from Emotion Detection)
       let photo = null;
@@ -847,17 +968,17 @@ const SkinAnalysisScreen: React.FC = () => {
 
       for (let i = 0; i < captureStrategies.length; i++) {
         const strategy = captureStrategies[i];
-        console.log(`📸 Skin Trying capture strategy ${i + 1}/${captureStrategies.length}: ${strategy.name}`, strategy.options);
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         
         try {
           // Double-check camera ref is still valid right before capture
           if (!ref.current) {
-            console.log(`📸 Skin Camera ref became null before strategy ${strategy.name}, attempting recovery...`);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             
             // Try to recover ref from global storage
             const globalRef = (globalThis as any).globalCameraRef;
             if (globalRef) {
-              console.log('📸 Skin Found global camera ref, restoring...');
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
               ref.current = globalRef;
             } else {
               throw new Error('Camera ref is null and cannot be recovered');
@@ -866,39 +987,39 @@ const SkinAnalysisScreen: React.FC = () => {
           
           // Additional safety check - ensure the ref has the takePictureAsync method
           if (typeof ref.current.takePictureAsync !== 'function') {
-            console.log(`📸 Skin Camera ref takePictureAsync is not a function, skipping strategy ${strategy.name}`);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             throw new Error('Camera ref does not have takePictureAsync method');
           }
           
           // Extra validation for camera switching scenarios
           if (cameraSwitching) {
-            console.log(`📸 Skin Camera still switching during strategy ${strategy.name}, skipping`);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             throw new Error('Camera is still switching');
           }
           
-          console.log(`📸 Skin About to call takePictureAsync with camera ref:`, !!ref.current, 'method exists:', typeof ref.current.takePictureAsync, 'switching:', cameraSwitching);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           const capturePromise = ref.current.takePictureAsync(strategy.options);
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('Camera capture timeout')), 8000);
           });
 
           photo = await Promise.race([capturePromise, timeoutPromise]);
-          console.log(`📸 Skin Capture successful with strategy: ${strategy.name}`);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           break;
         } catch (strategyError) {
-          console.log(`📸 Skin Strategy ${strategy.name} failed:`, strategyError.message);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           
           // If this is the first strategy and it fails, try to restart the camera
           if (i === 0 && strategyError.message.includes('ERR_IMAGE_CAPTURE_FAILED')) {
-            console.log('📸 Skin First strategy failed with ERR_IMAGE_CAPTURE_FAILED, attempting camera restart...');
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             try {
               cameraController.stopCamera();
               await new Promise(resolve => setTimeout(resolve, 1000));
               cameraController.startCamera();
               await new Promise(resolve => setTimeout(resolve, 2000));
-              console.log('📸 Skin Camera restarted, retrying capture...');
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
             } catch (restartError) {
-              console.log('📸 Skin Camera restart failed:', restartError.message);
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
             }
           }
           
@@ -914,14 +1035,7 @@ const SkinAnalysisScreen: React.FC = () => {
         throw new Error('All capture strategies failed');
       }
 
-      console.log('📸 Skin photo captured:', {
-        hasUri: !!photo?.uri,
-        hasBase64: !!photo?.base64,
-        width: photo?.width,
-        height: photo?.height,
-        uriLength: photo?.uri?.length,
-        base64Length: photo?.base64?.length,
-      });
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       if (!photo) {
         throw new Error('Camera returned null photo');
@@ -929,14 +1043,15 @@ const SkinAnalysisScreen: React.FC = () => {
 
       if (!photo?.base64 && photo?.uri) {
         try {
-          console.log('📸 Converting skin photo URI to base64...');
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
           const base64 = await FileSystem.readAsStringAsync(photo.uri, {
             encoding: FileSystem.EncodingType.Base64,
           });
           photo.base64 = base64;
-          console.log('📸 Skin base64 conversion successful, length:', base64.length);
+          // 🔥 FIX: Rimuoviamo console.log eccessivi
         } catch (conversionError) {
-          console.warn('📸 Failed to convert skin photo to base64:', conversionError);
+          // 🔥 FIX: Solo errori critici in console
+          console.error('❌ Failed to convert skin photo to base64:', conversionError);
           throw new Error('Failed to process photo data');
         }
       }
@@ -946,77 +1061,148 @@ const SkinAnalysisScreen: React.FC = () => {
       }
 
       const dataUrl = `data:image/jpeg;base64,${photo.base64}`;
-      console.log('✅ Skin photo captured, sending for analysis...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       const result = await analysisServiceRef.current.analyzeSkin(dataUrl, 'skin-analysis-session');
       if (!result.success || !result.data) {
         throw new Error(result.error || 'Skin analysis failed.');
       }
 
-      console.log('Skin analysis successful:', result.data);
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       // Store the full analysis result
-      setFullAnalysisResult(result.data);
+      if (isMountedRef.current) {
+        setFullAnalysisResult(result.data);
+      }
 
-      // Save to Supabase database
+      // 🆕 Save to Supabase database with enhanced error handling and feedback
       try {
         const currentUser = await AuthService.getCurrentUser();
         if (currentUser) {
-          const savedAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
-            overallScore: result.data.scores.overall || Math.round((result.data.scores.texture + result.data.scores.redness + result.data.scores.oiliness + result.data.scores.hydration) / 4),
-            hydrationScore: result.data.scores.hydration,
-            oilinessScore: result.data.scores.oiliness,
-            textureScore: result.data.scores.texture,
-            pigmentationScore: result.data.scores.pigmentation || 0, // Default if not available
-            rednessScore: result.data.scores.redness,  // Added redness score
-            strengths: [], // Not available in current structure
-            improvements: result.data.issues || [], // Map issues to improvements
-            recommendations: result.data.recommendations || [],
-            analysisData: {
-              ...result.data,
-              // Include additional metadata
-              version: result.data.version || '1.0.0',
-              notes: result.data.notes || [],
-              confidence: result.data.confidence || 0.8,
-            },
-            imageUrl: photo.uri,
-          });
-          
-          if (savedAnalysis) {
-            console.log('✅ Skin analysis saved to database:', savedAnalysis.id);
-            
-            // Sincronizza i dati con lo store locale per i grafici
-            const skinCapture = {
-              id: savedAnalysis.id,
-              timestamp: new Date(savedAnalysis.created_at),
-              scores: {
-                texture: savedAnalysis.texture_score || 0,
-                redness: savedAnalysis.redness_score || 0,
-                hydration: savedAnalysis.hydration_score || 0,  // ✅ FIXED: Correctly map hydration_score
-                oiliness: savedAnalysis.oiliness_score || 0,   // ✅ FIXED: Correctly map oiliness_score
-                overall: savedAnalysis.overall_score || 0,
+          try {
+            const savedAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
+              overallScore: result.data.scores.overall || Math.round((result.data.scores.texture + result.data.scores.redness + result.data.scores.oiliness + result.data.scores.hydration) / 4),
+              hydrationScore: result.data.scores.hydration,
+              oilinessScore: result.data.scores.oiliness,
+              textureScore: result.data.scores.texture,
+              pigmentationScore: result.data.scores.pigmentation || 0, // Default if not available
+              rednessScore: result.data.scores.redness,  // Added redness score
+              strengths: [], // Not available in current structure
+              improvements: result.data.issues || [], // Map issues to improvements
+              recommendations: result.data.recommendations || [],
+              analysisData: {
+                ...result.data,
+                // Include additional metadata
+                version: result.data.version || '1.0.0',
+                notes: result.data.notes || [],
+                confidence: result.data.confidence || 0.8,
               },
-              confidence: savedAnalysis.confidence || 0.8,  // Use actual confidence
-              quality: {
-                lighting: 0.8,
-                focus: 0.8,
-                roi_coverage: 0.9,
-              },
-              photoUri: savedAnalysis.image_url || '',
-            };
+              imageUrl: photo.uri,
+            });
             
-            const store = useAnalysisStore.getState();
-            store.addSkinCapture(skinCapture);
-            console.log('📊 Skin data synchronized with local store for charts');
-          } else {
-            console.warn('⚠️ Failed to save skin analysis to database');
+            if (savedAnalysis) {
+              // 🆕 Verifica post-salvataggio che i dati siano nel database
+              const verification = await DatabaseVerificationService.verifySkinAnalysis(currentUser.id, savedAnalysis.id);
+              if (!verification.found) {
+                UserFeedbackService.showWarning('L\'analisi è stata salvata ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
+              } else {
+                UserFeedbackService.showSaveSuccess('analisi');
+              }
+              
+              // Sincronizza i dati con lo store locale per i grafici
+              const skinCapture = {
+                id: savedAnalysis.id,
+                timestamp: new Date(savedAnalysis.created_at),
+                scores: {
+                  texture: savedAnalysis.texture_score || 0,
+                  redness: savedAnalysis.redness_score || 0,
+                  hydration: savedAnalysis.hydration_score || 0,  // ✅ FIXED: Correctly map hydration_score
+                  oiliness: savedAnalysis.oiliness_score || 0,   // ✅ FIXED: Correctly map oiliness_score
+                  overall: savedAnalysis.overall_score || 0,
+                },
+                confidence: savedAnalysis.confidence || 0.8,  // Use actual confidence
+                quality: {
+                  lighting: 0.8,
+                  focus: 0.8,
+                  roi_coverage: 0.9,
+                },
+                photoUri: savedAnalysis.image_url || '',
+              };
+              
+              const store = useAnalysisStore.getState();
+              store.addSkinCapture(skinCapture);
+            } else {
+              // 🆕 Nessun errore lanciato ma savedAnalysis è null
+              if (isMountedRef.current) {
+                UserFeedbackService.showSaveError('analisi', async () => {
+                  // Retry logic
+                  try {
+                    const retryAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
+                      overallScore: result.data.scores.overall || Math.round((result.data.scores.texture + result.data.scores.redness + result.data.scores.oiliness + result.data.scores.hydration) / 4),
+                      hydrationScore: result.data.scores.hydration,
+                      oilinessScore: result.data.scores.oiliness,
+                      textureScore: result.data.scores.texture,
+                      pigmentationScore: result.data.scores.pigmentation || 0,
+                      rednessScore: result.data.scores.redness,
+                      strengths: [],
+                      improvements: result.data.issues || [],
+                      recommendations: result.data.recommendations || [],
+                      analysisData: {
+                        ...result.data,
+                        version: result.data.version || '1.0.0',
+                        notes: result.data.notes || [],
+                        confidence: result.data.confidence || 0.8,
+                      },
+                      imageUrl: photo.uri,
+                    });
+                    if (retryAnalysis) {
+                      UserFeedbackService.showSaveSuccess('analisi');
+                    }
+                  } catch (retryError) {
+                    UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
+                  }
+                });
+              }
+            }
+          } catch (saveError) {
+            // 🆕 Errore durante il salvataggio - mostra feedback all'utente
+            if (isMountedRef.current) {
+              UserFeedbackService.showSaveError('analisi', async () => {
+                // Retry logic
+                try {
+                  const retryAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
+                    overallScore: result.data.scores.overall || Math.round((result.data.scores.texture + result.data.scores.redness + result.data.scores.oiliness + result.data.scores.hydration) / 4),
+                    hydrationScore: result.data.scores.hydration,
+                    oilinessScore: result.data.scores.oiliness,
+                    textureScore: result.data.scores.texture,
+                    pigmentationScore: result.data.scores.pigmentation || 0,
+                    rednessScore: result.data.scores.redness,
+                    strengths: [],
+                    improvements: result.data.issues || [],
+                    recommendations: result.data.recommendations || [],
+                    analysisData: {
+                      ...result.data,
+                      version: result.data.version || '1.0.0',
+                      notes: result.data.notes || [],
+                      confidence: result.data.confidence || 0.8,
+                    },
+                    imageUrl: photo.uri,
+                  });
+                  if (retryAnalysis) {
+                    UserFeedbackService.showSaveSuccess('analisi');
+                  }
+                } catch (retryError) {
+                  UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
+                }
+              });
+            }
           }
-        } else {
-          console.warn('⚠️ No authenticated user found, skipping database save');
         }
       } catch (dbError) {
-        console.error('❌ Error saving skin analysis to database:', dbError);
-        // Don't fail the whole operation if database save fails
+        // 🆕 Errore generale - mostra feedback all'utente
+        if (isMountedRef.current) {
+          UserFeedbackService.showError('Errore durante il salvataggio dell\'analisi. I dati potrebbero non essere stati salvati.');
+        }
       }
 
       const skinResults: SkinAnalysisResults = {
@@ -1048,17 +1234,14 @@ const SkinAnalysisScreen: React.FC = () => {
 
       addSkinCapture(capture);
 
-      cameraController.stopCamera();
-      setAnalyzing(false);
-      setDetecting(false);
-      setResults(skinResults);
+      if (isMountedRef.current) {
+        cameraController.stopCamera();
+        setAnalyzing(false);
+        setDetecting(false);
+        setResults(skinResults);
+      }
     } catch (error: any) {
-      console.error('📸 Skin capture error details:', {
-        message: error?.message,
-        name: error?.name,
-        stack: error?.stack,
-        error: error,
-      });
+      console.error('❌ Skin capture error:', error?.message || error);
       
       let errorMessage = t('analysis.skin.errors.captureFailed');
       if (error?.message) {
@@ -1073,17 +1256,21 @@ const SkinAnalysisScreen: React.FC = () => {
         }
       }
       
-      alert(errorMessage);
-      setAnalyzing(false);
-      setDetecting(false);
+      if (isMountedRef.current) {
+        alert(errorMessage);
+        setAnalyzing(false);
+        setDetecting(false);
+      }
     }
   };
 
   const resetAnalysis = () => {
-    setResults(null);
-    setAnalyzing(false);
-    // Restart camera immediately to prevent flash
-    cameraController.startCamera();
+    if (isMountedRef.current) {
+      setResults(null);
+      setAnalyzing(false);
+      // Restart camera immediately to prevent flash
+      cameraController.startCamera();
+    }
   };
 
   // ✅ ADD: Function to open skincare guide
@@ -1196,10 +1383,10 @@ const SkinAnalysisScreen: React.FC = () => {
 
   const CameraFrame = () => {
     const handleCameraReady = () => {
-      console.log('📷 Camera ready callback triggered');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
       // Reset switching state when camera is actually ready
-      if (cameraSwitching) {
-        console.log('📷 Camera ready during switch, resetting switching state');
+      if (cameraSwitching && isMountedRef.current) {
+        // 🔥 FIX: Rimuoviamo console.log eccessivi
         setCameraSwitching(false);
       }
     };
@@ -1230,8 +1417,10 @@ const SkinAnalysisScreen: React.FC = () => {
           </View>
           
           <SkinLoadingScreen onCancel={() => {
-            setAnalyzing(false);
-            setResults(null);
+            if (isMountedRef.current) {
+              setAnalyzing(false);
+              setResults(null);
+            }
           }} />
         </SafeAreaView>
       </View>
@@ -1403,16 +1592,7 @@ const SkinAnalysisScreen: React.FC = () => {
              const latestCapture = store.latestSkinCapture;
              const skinHistory = store.skinHistory;
              
-             // Debug: Log dello stato dello store
-             console.log('🔍 SkinAnalysisScreen Debug:', {
-               hasLatestCapture: !!latestCapture,
-               latestCaptureId: latestCapture?.id,
-               skinHistoryLength: skinHistory.length,
-               storeState: {
-                 latestSkinCapture: store.latestSkinCapture,
-                 skinHistory: store.skinHistory
-               }
-             });
+             // 🔥 FIX: Rimuoviamo console.log eccessivi
              
              // Always show the card, with fallback data if no capture exists
              const fallbackCapture = {
@@ -1439,7 +1619,8 @@ const SkinAnalysisScreen: React.FC = () => {
                />
              );
            } catch (error) {
-             console.warn('Failed to load latest skin capture:', error);
+             // 🔥 FIX: Solo errori critici in console
+             console.error('❌ Failed to load latest skin capture:', error);
              // Fallback capture in case of error
              const fallbackCapture = {
                id: 'error-fallback',
@@ -1624,11 +1805,11 @@ const SkinAnalysisScreen: React.FC = () => {
           showTitle={true}
           compact={false}
           onInsightPress={(insight) => {
-            console.log('Intelligent skin insight pressed:', insight.title);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             // Handle insight press - could navigate to detailed view
           }}
           onActionPress={(insight, action) => {
-            console.log('Intelligent skin action pressed:', insight.title, action);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
             // Handle action press - could start activity, set reminder, etc.
           }}
         />

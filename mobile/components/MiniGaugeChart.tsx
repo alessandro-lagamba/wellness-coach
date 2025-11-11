@@ -177,7 +177,7 @@ const MiniGaugeChart: React.FC<Props> = memo(({
         <View style={styles.mKpiCol}>
           {subtitle ? (<><Text style={[styles.mKpiTitle, { color: colors.textSecondary }]} numberOfLines={1}>{subtitle}</Text><View style={styles.mSpacer4} /></>) : null}
           {detailChips.length > 0 && (
-            <View style={[styles.mDetailChip, { borderColor: `${color}22` }]}>
+            <View style={[styles.mDetailChip, { borderColor: `${color}22`, backgroundColor: colors.surfaceMuted }]}>
               <MaterialCommunityIcons name={detailChips[0].icon as any} size={14} color={color} />
               <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={[styles.mChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>{detailChips[0].label}</Text>
@@ -206,7 +206,7 @@ const MiniGaugeChart: React.FC<Props> = memo(({
             <Text style={styles.largeIconEmoji}>{icon ?? "📊"}</Text>
           </View>
           <View style={styles.largeHeaderText}>
-            <Text style={styles.largeLabel} numberOfLines={1}>{label}</Text>
+            <Text style={[styles.largeLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
             <Text style={styles.largeDescriptor} numberOfLines={1}>{descriptor}</Text>
           </View>
         </View>
@@ -250,10 +250,10 @@ const MiniGaugeChart: React.FC<Props> = memo(({
       {detailChips.length > 0 && (
         <View style={styles.largeChipsRowTighter}>
           {detailChips.map((chip) => (
-            <View key={chip.label} style={[styles.largeDetailChip, { borderColor: `${color}25` }]}>
+            <View key={chip.label} style={[styles.largeDetailChip, { borderColor: `${color}25`, backgroundColor: colors.surfaceMuted }]}>
               <MaterialCommunityIcons name={chip.icon as any} size={15} color={color} />
               <View style={styles.largeChipTextContainer}>
-                <Text style={styles.largeChipLabel} numberOfLines={1}>{chip.label}</Text>
+                <Text style={[styles.largeChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>{chip.label}</Text>
                 <Text style={[styles.largeChipValue, { color }]} numberOfLines={1}>{chip.value}</Text>
               </View>
             </View>
@@ -309,9 +309,9 @@ const styles = StyleSheet.create({
   mGaugeUnit: { marginLeft: 2, fontSize: 10, fontWeight: "800", color: "#94a3b8" },
   mKpiCol: { flex: 1, minWidth: 0, justifyContent: "center" },
   mKpiTitle: { fontSize: 12, fontWeight: "700", color: "#475569" },
-  mDetailChip: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, backgroundColor: "#ffffffc7" },
-  mChipLabel: { fontSize: 10, color: "#64748b", fontWeight: "700" },
-  mChipValue: { fontSize: 12, color: "#0f172a", fontWeight: "900" },
+  mDetailChip: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
+  mChipLabel: { fontSize: 10, fontWeight: "700" },
+  mChipValue: { fontSize: 12, fontWeight: "900" },
   mSpacer4: { height: 4 },
 
   /* LARGE (gauge top-right + chips più in alto) */
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
   largeHeaderText: { flex: 1, minWidth: 0 },
   largeIconChip: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   largeIconEmoji: { fontSize: 19 },
-  largeLabel: { fontSize: 15, fontWeight: "700", color: "#111827", letterSpacing: -0.2 },
+  largeLabel: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
   largeDescriptor: { marginTop: 2, fontSize: 11.5, fontWeight: "600", color: "#64748b", letterSpacing: -0.1 },
   largeTrendBadge: { height: 28, paddingHorizontal: 10, borderRadius: 14, borderWidth: 1.2, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, flexShrink: 0 },
   largeTrendText: { fontSize: 11.5, fontWeight: "700" },
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   largeSubtitle: { fontSize: 12.5, color: "#374151", fontWeight: "600", lineHeight: 16 },
 
   largeChipsRowTighter: { marginTop: 6, flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  largeDetailChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, backgroundColor: "#ffffff96", gap: 8, flex: 1, minWidth: 90, maxWidth: "48%" },
+  largeDetailChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, gap: 8, flex: 1, minWidth: 90, maxWidth: "48%" },
   largeChipTextContainer: { flex: 1, minWidth: 0 },
   largeChipLabel: { fontSize: 10, color: "#64748b", fontWeight: "600" },
   largeChipValue: { fontSize: 12, fontWeight: "700", letterSpacing: -0.2 },

@@ -128,6 +128,10 @@ function RootLayoutNav() {
 function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => void }) {
   const { colors, mode } = useTheme(); // 🆕 Get colors from custom theme
   const router = useRouter();
+  const systemColorScheme = useColorScheme();
+  // 🔥 FIX: Fallback color basato su useColorScheme per evitare flash bianco
+  const fallbackBackground = systemColorScheme === 'dark' ? '#1a1625' : '#f8fafc';
+  const backgroundColor = colors?.background || fallbackBackground;
 
   // 🆕 Configure notification handler for navigation
   useEffect(() => {
@@ -141,7 +145,7 @@ function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => v
       if (screen === 'analysis') {
         router.push('/(tabs)/analysis');
       } else if (screen === 'journal') {
-        router.push('/(tabs)/journal');
+        router.push('/(tabs)/coach');
       } else if (screen === 'food') {
         router.push('/(tabs)/food');
         if (action === 'OPEN_FRIDGE_RECIPES') {
@@ -150,10 +154,10 @@ function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => v
       } else if (screen === 'breathing') {
         router.push('/breathing-exercise');
       } else if (screen === 'home') {
-        router.push('/(tabs)/');
+        router.push('/(tabs)');
       } else if (screen === 'hydration') {
         // Could navigate to hydration tracking if exists
-        router.push('/(tabs)/');
+        router.push('/(tabs)');
       }
     });
 
@@ -168,15 +172,15 @@ function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => v
       dark: mode === 'dark',
       colors: {
         ...base.colors,
-        background: colors.background,   // <- fondamentale: elimina la banda bianca
-        card: colors.background,
-        border: colors.border,
-        primary: colors.primary,
-        text: colors.text,
-        notification: colors.accent,
+        background: backgroundColor,   // 🔥 FIX: Usa backgroundColor con fallback
+        card: backgroundColor,
+        border: colors?.border || (mode === 'dark' ? '#3a2f4f' : '#e2e8f0'),
+        primary: colors?.primary || '#6366f1',
+        text: colors?.text || (mode === 'dark' ? '#f5f3ff' : '#0f172a'),
+        notification: colors?.accent || '#f59e0b',
       },
     };
-  }, [mode, colors]);
+  }, [mode, colors, backgroundColor]);
 
   return (
     <StatusBarProvider>
@@ -186,8 +190,8 @@ function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => v
             <Stack
               screenOptions={{
                 headerShown: false,
-                // ✅ evita "flash" o strisce chiare nelle transizioni
-                contentStyle: { backgroundColor: colors.background },
+                // 🔥 FIX: Usa backgroundColor con fallback per evitare flash bianco
+                contentStyle: { backgroundColor },
               }}
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -204,9 +208,12 @@ function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => v
 function StatusBarWrapper({ children }: { children: React.ReactNode }) {
   const { mode, colors } = useTheme();
   const { statusBarColor } = useStatusBarColor();
+  const systemColorScheme = useColorScheme();
+  // 🔥 FIX: Fallback color basato su useColorScheme per evitare flash bianco
+  const fallbackBackground = systemColorScheme === 'dark' ? '#1a1625' : '#f8fafc';
   
-  // Usa il colore override se disponibile, altrimenti usa il colore del tema
-  const effectiveStatusBarColor = statusBarColor || colors.background;
+  // Usa il colore override se disponibile, altrimenti usa il colore del tema, altrimenti fallback
+  const effectiveStatusBarColor = statusBarColor || colors?.background || fallbackBackground;
   
   // 🆕 Fix StatusBar e NavigationBar: edge-to-edge con fondo tematizzato
   useEffect(() => {

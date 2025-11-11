@@ -100,13 +100,6 @@ export class HealthPermissionsService {
     },
   ];
 
-  /** True se tutti i permessi required sono concessi */
-  static async hasAllRequiredPermissions(): Promise<boolean> {
-    const granted = await this.getGrantedPermissions();
-    const requiredIds = this.HEALTH_PERMISSIONS.filter(p => p.required).map(p => p.id);
-    return requiredIds.every(id => granted.includes(id));
-  }
-
   /**
    * Verifica la disponibilità di HealthKit/Health Connect
    */
@@ -263,7 +256,21 @@ export class HealthPermissionsService {
         }
       }
 
-      // RIMOSSO: la revoca forzata causava richieste multiple e UX pessima
+      // 3) CRITICO: Revoca tutti i permessi esistenti per resettare lo stato
+      // Questo è NECESSARIO se i permessi sono stati negati in precedenza
+      // Health Connect blocca il dialog se i permessi sono stati negati due volte
+      if (HealthConnect.revokeAllPermissions && typeof HealthConnect.revokeAllPermissions === 'function') {
+        try {
+          console.log('🔄 Revoking all existing permissions to reset state...');
+          await HealthConnect.revokeAllPermissions();
+          console.log('✅ All permissions revoked - state reset');
+          // Piccolo delay dopo la revoca per dare tempo a Health Connect di processare
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (revokeError) {
+          // Non bloccare se la revoca fallisce (potrebbe non esserci nulla da revocare)
+          console.log('ℹ️ No permissions to revoke or revoke failed (this is OK):', revokeError);
+        }
+      }
 
       // 4) Converte gli ID permessi nei tipi Health Connect
       const toRecordType = (id: string) => this.getHealthConnectPermissionType(id);

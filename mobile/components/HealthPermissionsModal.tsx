@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -39,17 +39,15 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
 
   const hasCheckedPermissionsRef = useRef<boolean>(false); // 🔥 Previene controlli multipli
+  // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    if (visible && !hasCheckedPermissionsRef.current) {
-      hasCheckedPermissionsRef.current = true;
-      loadPermissionsState();
-    } else if (!visible) {
-      // Reset quando il modal viene chiuso
-      hasCheckedPermissionsRef.current = false;
-      isClosingRef.current = false;
-    }
-  }, [visible]);
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // 🔥 RIMOSSO: Il listener AppState causava loop infiniti
   // Se l'utente concede i permessi manualmente in Health Connect, può usare il pulsante "Ricarica permessi"
@@ -59,35 +57,45 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
   const lastHapticTimeRef = useRef<number>(0); // 🔥 Debounce per haptic feedback
 
   // 🔥 NUOVO: Funzione per sincronizzare i dati dopo aver ottenuto i permessi
-  const syncHealthDataAfterPermissions = React.useCallback(async () => {
+  const syncHealthDataAfterPermissions = useCallback(async () => {
+    // 🔥 FIX: Verifica se il componente è ancora montato
+    if (!isMountedRef.current) return;
+    
     try {
-      console.log('🔄 Syncing health data after permissions granted...');
+      // 🔥 FIX: Rimuoviamo console.log eccessivi - manteniamo solo errori critici
       const { HealthDataService } = await import('../services/health-data.service');
       const healthService = HealthDataService.getInstance();
       
       // Sincronizza i dati
       const syncResult = await healthService.syncHealthData();
-      if (syncResult.success) {
-        console.log('✅ Health data synced successfully:', syncResult);
-      } else {
-        console.warn('⚠️ Health data sync failed:', syncResult.error);
+      if (!syncResult.success) {
+        // 🔥 FIX: Solo errori critici in console
+        console.error('⚠️ Health data sync failed:', syncResult.error);
       }
     } catch (error) {
+      // 🔥 FIX: Solo errori critici in console
       console.error('❌ Error syncing health data:', error);
     }
   }, []);
 
   // Rimosso il polling periodico per evitare loop e consumo risorse.
 
-  const loadPermissionsState = async (showSuccessIfChanged = false) => {
+  // 🔥 FIX: Memoizziamo loadPermissionsState per evitare ricreazioni
+  const loadPermissionsState = useCallback(async (showSuccessIfChanged = false) => {
     // 🔥 Previene chiamate multiple mentre si sta chiudendo
-    if (isClosingRef.current) {
+    if (isClosingRef.current || !isMountedRef.current) {
       return;
     }
 
+    // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
+    if (!isMountedRef.current) return;
     setIsLoading(true);
+    
     try {
       const permissionsState = await HealthPermissionsService.getHealthPermissionsState();
+      
+      // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
+      if (!isMountedRef.current) return;
       
       // Conta quanti permessi sono concessi
       const grantedCount = permissionsState.permissions.filter(p => p.granted).length;
@@ -103,6 +111,9 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
         );
         
         if (newlyGranted.length > 0) {
+          // 🔥 FIX: Verifica se il componente è ancora montato prima di mostrare Alert
+          if (!isMountedRef.current) return;
+          
           // 🔥 Debounce haptic feedback (max una volta ogni 2 secondi)
           const now = Date.now();
           // haptic disabilitato
@@ -128,6 +139,9 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
       // 🔥 RIMOSSO: Auto-chiusura automatica che causava loop infiniti
       // L'utente deve chiudere manualmente il modal dopo aver concesso i permessi
       
+      // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
+      if (!isMountedRef.current) return;
+      
       previousGrantedCountRef.current = grantedCount;
       setState(permissionsState);
       
@@ -135,11 +149,26 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
       const requiredPermissionIds = requiredPermissions.map(p => p.id);
       setSelectedPermissions(requiredPermissionIds);
     } catch (error) {
+      // 🔥 FIX: Solo errori critici in console
       console.error('Error loading permissions state:', error);
     } finally {
-      setIsLoading(false);
+      // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [state, syncHealthDataAfterPermissions, t]);
+
+  useEffect(() => {
+    if (visible && !hasCheckedPermissionsRef.current) {
+      hasCheckedPermissionsRef.current = true;
+      loadPermissionsState();
+    } else if (!visible) {
+      // Reset quando il modal viene chiuso
+      hasCheckedPermissionsRef.current = false;
+      isClosingRef.current = false;
+    }
+  }, [visible, loadPermissionsState]);
 
   const handlePermissionToggle = (permissionId: string) => {
     setSelectedPermissions(prev => {
@@ -152,14 +181,31 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
   };
 
   const handleRequestPermissions = async () => {
-    if (selectedPermissions.length === 0) {
+    // 🔥 FIX: Verifica se il componente è ancora montato
+    if (!isMountedRef.current) return;
+    
+    // 🔥 SEMPRE richiedi tutti i permessi richiesti, anche se l'utente non li ha selezionati manualmente
+    const requiredPermissions = state?.permissions?.filter(p => p.required) || [];
+    const requiredPermissionIds = requiredPermissions.map(p => p.id);
+    
+    // Combina i permessi richiesti con quelli selezionati manualmente
+    const permissionsToRequest = [...new Set([...requiredPermissionIds, ...selectedPermissions])];
+    
+    if (permissionsToRequest.length === 0) {
       Alert.alert(t('modals.healthPermissions.warning'), t('modals.healthPermissions.selectAtLeastOne'));
       return;
     }
 
+    // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
+    if (!isMountedRef.current) return;
     setIsRequesting(true);
+    
     try {
-      const result = await HealthPermissionsService.requestHealthPermissions(selectedPermissions);
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
+      const result = await HealthPermissionsService.requestHealthPermissions(permissionsToRequest);
+      
+      // 🔥 FIX: Verifica se il componente è ancora montato prima di continuare
+      if (!isMountedRef.current) return;
       
       if (result.success) {
         await HealthPermissionsService.markSetupCompleted();
@@ -167,6 +213,9 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
         
         // 🔥 Sincronizza i dati dopo aver ottenuto i permessi
         await syncHealthDataAfterPermissions();
+        
+        // 🔥 FIX: Verifica se il componente è ancora montato prima di mostrare Alert
+        if (!isMountedRef.current) return;
         
         // Costruisci un messaggio più dettagliato se ci sono permessi negati
         let message = t('modals.healthPermissions.successMessage', { 
@@ -206,6 +255,9 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
           ]
         );
       } else {
+        // 🔥 FIX: Verifica se il componente è ancora montato prima di mostrare Alert
+        if (!isMountedRef.current) return;
+        
         Alert.alert(
           t('modals.healthPermissions.deniedTitle'),
           t('modals.healthPermissions.deniedMessage'),
@@ -219,10 +271,18 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
         );
       }
     } catch (error) {
+      // 🔥 FIX: Solo errori critici in console
       console.error('Error requesting permissions:', error);
-      Alert.alert(t('common.error'), t('modals.healthPermissions.errorMessage'));
+      
+      // 🔥 FIX: Verifica se il componente è ancora montato prima di mostrare Alert
+      if (isMountedRef.current) {
+        Alert.alert(t('common.error'), t('modals.healthPermissions.errorMessage'));
+      }
     } finally {
-      setIsRequesting(false);
+      // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
+      if (isMountedRef.current) {
+        setIsRequesting(false);
+      }
     }
   };
 
@@ -396,7 +456,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                 {Platform.OS === 'android' && (
                   <TouchableOpacity
                     onPress={async () => {
-                      console.log('🔄 Manual refresh requested by user');
+                      // 🔥 FIX: Rimuoviamo console.log eccessivi
                       await loadPermissionsState(true);
                       try {
                         // Se tutti i required sono concessi, forza una sync immediata
@@ -406,10 +466,15 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                           const { HealthDataService } = await import('../services/health-data.service');
                           const svc = HealthDataService.getInstance();
                           const res = await svc.syncHealthData(true);
-                          console.log('🚀 Forced sync after refresh:', res);
+                          // 🔥 FIX: Rimuoviamo console.log eccessivi
+                          if (!res.success) {
+                            // 🔥 FIX: Solo errori critici in console
+                            console.error('⚠️ Forced sync failed:', res.error);
+                          }
                         }
                       } catch (e) {
-                        console.warn('⚠️ Forced sync failed:', e);
+                        // 🔥 FIX: Solo errori critici in console
+                        console.error('⚠️ Forced sync failed:', e);
                       }
                     }}
                     style={styles.refreshButton}

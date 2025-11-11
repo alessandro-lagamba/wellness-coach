@@ -39,6 +39,9 @@ importers:
       '@google/generative-ai':
         specifier: ^0.24.1
         version: 0.24.1
+      '@supabase/supabase-js':
+        specifier: ^2.45.4
+        version: 2.74.0
       '@types/express-ws':
         specifier: ^3.0.6
         version: 3.0.6
@@ -289,6 +292,9 @@ importers:
       react-native:
         specifier: 0.81.4
         version: 0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0)
+      react-native-avoid-softinput:
+        specifier: ^8.0.2
+        version: 8.0.2(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0))(react@19.1.0)
       react-native-chart-kit:
         specifier: ^6.12.0
         version: 6.12.0(react-native-svg@15.12.1(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0))(react@19.1.0))(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0))(react@19.1.0)
@@ -5749,6 +5755,12 @@ packages:
 
   react-is@19.2.0:
     resolution: {integrity: sha512-x3Ax3kNSMIIkyVYhWPyO09bu0uttcAIoecO/um/rKGQ4EltYWVYtyiGkS/3xMynrbVQdS69Jhlv8FXUEZehlzA==}
+
+  react-native-avoid-softinput@8.0.2:
+    resolution: {integrity: sha512-2Tx/4Z3QWjQsf6WEz31ULWbI6RSNivH7UlSlCbA8cZUQvj3D6GO/GDX1e8JbmT+rXaSKgdQeHDITC8k0jjkb2g==}
+    peerDependencies:
+      react: '>=19.0.0'
+      react-native: '>=0.78.0'
 
   react-native-chart-kit@6.12.0:
     resolution: {integrity: sha512-nZLGyCFzZ7zmX0KjYeeSV1HKuPhl1wOMlTAqa0JhlyW62qV/1ZPXHgT8o9s8mkFaGxdqbspOeuaa6I9jUQDgnA==}
@@ -13438,6 +13450,12 @@ snapshots:
   react-is@18.3.1: {}
 
   react-is@19.2.0: {}
+
+  react-native-avoid-softinput@8.0.2(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0))(react@19.1.0):
+    dependencies:
+      react: 19.1.0
+      react-native: 0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0)
+      react-native-is-edge-to-edge: 1.2.1(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0))(react@19.1.0)
 
   react-native-chart-kit@6.12.0(react-native-svg@15.12.1(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0))(react@19.1.0))(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0))(react@19.1.0):
     dependencies:

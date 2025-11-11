@@ -137,7 +137,21 @@
       "sleepBetter": "Help me sleep better",
       "energyTips": "Give me energy tips",
       "skinAdvice": "Skin care advice"
-    }
+    },
+    "suggestionFeedback": {
+      "title": "Great!",
+      "message": "Suggestion applied. How do you feel after trying it?",
+      "veryGood": "Very good",
+      "good": "Good",
+      "soSo": "So-so",
+      "notGood": "Not good",
+      "veryEffective": "Very effective",
+      "useful": "Useful",
+      "neutral": "Neutral",
+      "notUseful": "Not useful"
+    },
+    "speechError": "Sorry, I couldn't understand what you said. Please try again.",
+    "sessionName": "Chat {{date}}"
   },
   "voiceChat": {
     "title": "Voice Chat",
@@ -239,13 +253,21 @@
     "bpm": "bpm",
     "stats": {
       "streak": "Streak",
-      "momentum": "Momentum",
+      "momentum": "Progress",
       "nextSession": "Next Session",
       "days": "{{count}} days",
       "loading": "Loading..."
     },
     "emptySlot": {
       "addWidget": "Long press to add widget"
+    },
+    "weeklyProgress": {
+      "title": "Your weekly progress",
+      "subtitle": "A summary of your improvements",
+      "today": "Today",
+      "quality": "quality",
+      "current": "Current value",
+      "heartRate": "Heart rate"
     },
     "permissions": {
       "required": "Permissions Required",
@@ -710,6 +732,21 @@
     "permissionRequired": "Permission Required",
     "permissionMessage": "We need permission to send you helpful notifications about your wellness."
   },
+  "microphonePermissions": {
+    "requestTitle": "Microphone Permission",
+    "requestMessage": "The app needs access to the microphone for voice chat.",
+    "grantedTitle": "Permissions Granted",
+    "grantedMessage": "Microphone is now authorized for voice chat!",
+    "deniedTitle": "Permissions Denied",
+    "deniedMessage": "Without microphone access, voice chat is not available. You can modify permissions in device settings.",
+    "errorTitle": "Error",
+    "errorMessage": "An error occurred while requesting permissions.",
+    "checking": "Checking...",
+    "permissionsOk": "Permissions OK",
+    "requestPermissions": "Request Permissions",
+    "retry": "Retry",
+    "check": "Check"
+  },
   "modals": {
     "healthPermissions": {
       "title": "Health Permissions",
@@ -838,10 +875,10 @@
         "tipsDesc": "• Set daily reminders\n• Track your progress\n• Celebrate small wins\n• Don't break the chain!"
       },
       "momentum": {
-        "title": "Momentum",
-        "subtitle": "Your completion rate",
-        "current": "Current Momentum",
-        "currentDesc": "You've completed {{completed}} of {{total}} tasks in the last 7 days",
+        "title": "Progress",
+        "subtitle": "Your daily commitment",
+        "current": "Current Progress",
+        "currentDesc": "You've completed {{completed}} of {{total}} activities in the last {{days}} days",
         "trend": "Trend",
         "stable": "Stable →",
         "trendUp": "Rising ↑",
@@ -854,10 +891,10 @@
         },
         "noTrend": "No trend data available",
         "completionRate": "Completion Rate",
-        "completionRateDesc": "Based on your wellness activities and goals",
+        "completionRateDesc": "Based on daily logins and goals reached (steps, hydration, meditation, sleep)",
         "tips": "Tips to Improve",
-        "keepBuilding": "Keep building!",
-        "tipsDesc": "• Complete daily activities\n• Set achievable goals\n• Track your progress\n• Celebrate milestones"
+        "keepBuilding": "Keep it up!",
+        "tipsDesc": "• Log in every day\n• Reach your daily goals\n• Track your progress\n• Celebrate milestones"
       },
       "nextSession": {
         "title": "Next Session",
@@ -1100,6 +1137,15 @@
     "help3": "• Drag the handle to reorder widgets",
     "help4": "• Large widgets show more information"
   },
+  "widgetSelection": {
+    "title": "Select Widget",
+    "subtitle": "Add a widget to position {{position}}",
+    "tapToAdd": "Tap to add",
+    "allAdded": "All available widgets have already been added!",
+    "disableToReAdd": "Disable a widget to re-add it here.",
+    "error": "Error",
+    "addError": "Error adding widget"
+  },
   "wellnessSuggestions": {
     "title": "Wellness Suggestions",
     "subtitle": "Explore routines curated by your AI coach to support mood, sleep, and skin health",
@@ -1233,5 +1279,13 @@
     "categoriesMeta": {
       "count": "{{count}} suggestions"
     }
+  },
+  "avatar": {
+    "captureTitle": "Create your avatar",
+    "captureInstruction": "Position your face in the center of the frame",
+    "capture": "Take photo",
+    "generating": "Creating your avatar...",
+    "cameraNotReady": "Camera is not ready. Please wait a moment.",
+    "generationError": "Error generating avatar. Please try again."
   }
 }

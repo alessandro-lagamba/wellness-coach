@@ -8,12 +8,44 @@ export class AuthService {
    */
   static async getCurrentUser(): Promise<User | null> {
     try {
-      console.log('🔐 AuthService: Getting current user from Supabase...');
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('🔐 AuthService: User result:', user ? { id: user.id, email: user.email } : null);
+      // 🔥 FIX: Rimossi log eccessivi - manteniamo solo errori critici
+      
+      // 🔥 PRIMA: Ripristina la sessione (importante per React Native)
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        return session.user;
+      }
+      
+      // Se non c'è sessione, prova a ottenere l'utente direttamente
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        // 🔥 FIX: Solo errori critici in console
+        console.error('❌ Error getting user:', error.message);
+        // Se fallisce, controlla la persistenza locale
+        const authState = await AuthPersistenceService.loadAuthData();
+        if (authState?.user) {
+          // Tenta di ripristinare la sessione
+          try {
+            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+              access_token: authState.session.access_token,
+              refresh_token: authState.session.refresh_token,
+            });
+            
+            if (!sessionError && sessionData.session?.user) {
+              return sessionData.session.user;
+            }
+          } catch (restoreError) {
+            console.error('❌ Error restoring session:', restoreError);
+          }
+        }
+        return null;
+      }
+      
       return user;
     } catch (error) {
-      console.error('Error getting current user:', error);
+      console.error('❌ Error getting current user:', error);
       return null;
     }
   }
@@ -81,7 +113,6 @@ export class AuthService {
       // Salva i dati di autenticazione per la persistenza
       if (data.user && data.session) {
         await AuthPersistenceService.saveAuthData(data.user, data.session, rememberMe);
-        console.log('✅ Auth data saved for persistence');
       }
 
       return { user: data.user, error: null };
@@ -105,7 +136,6 @@ export class AuthService {
 
       // Pulisce i dati di persistenza
       await AuthPersistenceService.clearAuthData();
-      console.log('🧹 Auth persistence data cleared');
 
       return { error: null };
     } catch (error) {
@@ -158,7 +188,6 @@ export class AuthService {
         return null;
       }
 
-      console.log('✅ User profile created:', data.id);
       return data;
     } catch (error) {
       console.error('Error in createUserProfile:', error);
@@ -322,18 +351,43 @@ export class AuthService {
    */
   static async isAuthenticated(): Promise<boolean> {
     try {
-      // Prima controlla la sessione Supabase
-      const session = await this.getCurrentSession();
-      if (session?.user) {
+      // 🔥 PRIMA: Ripristina la sessione Supabase (importante per React Native)
+      // Supabase potrebbe non aver ancora ripristinato la sessione all'avvio
+      const { data: { session: restoredSession } } = await supabase.auth.getSession();
+      
+      if (restoredSession?.user) {
         return true;
       }
 
       // Se non c'è sessione Supabase, controlla la persistenza locale
       const authState = await AuthPersistenceService.loadAuthData();
-      if (authState?.isAuthenticated) {
-        // Tenta di rinnovare la sessione se necessario
-        const refreshedState = await AuthPersistenceService.refreshSession(authState.session);
-        return refreshedState?.isAuthenticated || false;
+      if (authState?.isAuthenticated && authState.session) {
+        // Tenta di ripristinare la sessione Supabase usando i token salvati
+        try {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: authState.session.access_token,
+            refresh_token: authState.session.refresh_token,
+          });
+          
+          if (error) {
+            // 🔥 FIX: Solo errori critici in console
+            console.error('❌ Failed to restore session from persisted data:', error.message);
+            // Tenta di rinnovare la sessione se necessario
+            const refreshedState = await AuthPersistenceService.refreshSession(authState.session);
+            return refreshedState?.isAuthenticated || false;
+          }
+          
+          if (data.session?.user) {
+            // Salva nuovamente i dati aggiornati
+            await AuthPersistenceService.saveAuthData(data.session.user, data.session, true);
+            return true;
+          }
+        } catch (restoreError) {
+          console.error('❌ Error restoring session:', restoreError);
+          // Tenta di rinnovare la sessione se necessario
+          const refreshedState = await AuthPersistenceService.refreshSession(authState.session);
+          return refreshedState?.isAuthenticated || false;
+        }
       }
 
       return false;
