@@ -70,11 +70,15 @@ export const generateAvatarFromPhoto = async ({ userId, photoBuffer, mimeType = 
 
 CRITICAL INSTRUCTIONS:
 - The person's PHYSICAL APPEARANCE must be EXACTLY as shown in the first photo:
+  * CRITICAL: Identify and describe the person's GENDER (male/female) - this is ESSENTIAL
+  * If the person is MALE, the avatar MUST be MALE with masculine features
+  * If the person is FEMALE, the avatar MUST be FEMALE with feminine features
+  * If the person has a BEARD or MUSTACHE, describe it EXACTLY - these are MALE characteristics
   * If the person is BALD (no hair), the avatar MUST be BALD - no hair at all
   * If the person has hair, describe the EXACT hair color, length, and style
   * Describe the EXACT facial features: eye color, skin tone, face shape, any distinctive features
   * Describe the EXACT clothing if visible
-  * Be extremely precise about physical characteristics - the avatar must look like the SAME PERSON
+  * Be extremely precise about physical characteristics - the avatar must look like the SAME PERSON with the CORRECT GENDER
 
 - The artistic STYLE must match the second image (reference avatar):
   * Flat vector illustration style
@@ -133,15 +137,20 @@ Detailed description from photo analysis:
 ${combinedDescription}
 
 IMPORTANT REMINDERS:
+- CRITICAL: The avatar MUST match the person's GENDER from the photo:
+  * If the person is MALE (has beard, mustache, masculine features), the avatar MUST be MALE
+  * If the person is FEMALE (feminine features, no facial hair), the avatar MUST be FEMALE
+  * DO NOT confuse or swap genders - this is the MOST IMPORTANT aspect
 - If the person is BALD in the photo, the avatar MUST be completely BALD (no hair, no stubble, smooth head)
+- If the person has a BEARD or MUSTACHE, the avatar MUST have the SAME facial hair
 - If the person has hair, show the EXACT hair color, length, and style from the photo
 - Match the EXACT skin tone, eye color, and facial features from the photo
-- The person's likeness must be clearly recognizable
+- The person's likeness must be clearly recognizable as the SAME PERSON with the CORRECT GENDER
 - Apply the reference style's color palette, gradients, and illustration technique
 - Use the circular purple gradient background as shown in the reference
 - Keep the simple teal crew-neck t-shirt style
 
-Generate an avatar that is FIRST AND FOREMOST an accurate representation of the person from the photo, styled in the reference illustration aesthetic.`;
+Generate an avatar that is FIRST AND FOREMOST an accurate representation of the person from the photo with the CORRECT GENDER, styled in the reference illustration aesthetic.`;
     
     // Step 3: Generate the avatar using DALL-E 3 (doesn't require billing/verification)
     const generateResponse = await openai.images.generate({
