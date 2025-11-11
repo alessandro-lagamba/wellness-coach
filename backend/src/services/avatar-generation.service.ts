@@ -68,21 +68,28 @@ export const generateAvatarFromPhoto = async ({ userId, photoBuffer, mimeType = 
     const enhancedPrompt = `${AVATAR_PROMPT}\n\nBased on this person's appearance: ${personDescription}\n\nGenerate an avatar that maintains their facial features, skin tone, hair, and overall likeness while applying the described illustration style.`;
     
     // Step 3: Generate the avatar using gpt-image-1-mini with quality medium
+    // Note: gpt-image-1-mini doesn't support response_format parameter
+    // It returns URLs by default, so we'll download the image from the URL
     const generateResponse = await openai.images.generate({
       model: 'gpt-image-1-mini',
       prompt: enhancedPrompt,
       quality: 'medium',
       n: 1,
       size: '1024x1024',
-      response_format: 'b64_json',
     });
 
-    const imageData = generateResponse.data?.[0]?.b64_json;
-    if (!imageData) {
-      throw new Error('No image returned from OpenAI');
+    const imageUrl = generateResponse.data?.[0]?.url;
+    if (!imageUrl) {
+      throw new Error('No image URL returned from OpenAI');
     }
 
-    const avatarBuffer = Buffer.from(imageData, 'base64');
+    // Download the image from the URL
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to download image from OpenAI: ${imageResponse.statusText}`);
+    }
+
+    const avatarBuffer = Buffer.from(await imageResponse.arrayBuffer());
     const avatarPath = `${userId}/avatar-${Date.now()}.png`;
 
     const { error: uploadError } = await supabaseAdmin.storage
