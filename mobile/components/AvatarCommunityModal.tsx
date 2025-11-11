@@ -44,6 +44,7 @@ type AvatarCommunityModalProps = {
   avatars: CommunityAvatar[];
   currentUserAvatarUri?: string | null;
   currentUserName?: string;
+  onAvatarPress?: (avatar: CommunityAvatar) => void;
 };
 
 type SphereNode = {
@@ -75,6 +76,7 @@ const AvatarCommunityModal: React.FC<AvatarCommunityModalProps> = ({
   avatars,
   currentUserAvatarUri,
   currentUserName,
+  onAvatarPress,
 }) => {
   const rotationY = useSharedValue(0);
   const rotationX = useSharedValue(0);
@@ -219,18 +221,22 @@ const AvatarCommunityModal: React.FC<AvatarCommunityModalProps> = ({
         </View>
 
         <Animated.View style={styles.sphereWrapper} {...panResponder.panHandlers}>
-          {nodes.map((node, index) => (
-            <SphereAvatar
-              key={node.id}
-              node={node}
-              rotationY={rotationYMod}
-              rotationX={rotationXClamped}
-              radius={radius}
-              baseSize={avatarBaseSize}
-              index={index}
-              isCurrentUser={node.id === 'current-user'}
-            />
-          ))}
+          {nodes.map((node, index) => {
+            const avatar = allAvatars.find(a => a.id === node.id);
+            return (
+              <SphereAvatar
+                key={node.id}
+                node={node}
+                rotationY={rotationYMod}
+                rotationX={rotationXClamped}
+                radius={radius}
+                baseSize={avatarBaseSize}
+                index={index}
+                isCurrentUser={node.id === 'current-user'}
+                onPress={avatar && onAvatarPress ? () => onAvatarPress(avatar) : undefined}
+              />
+            );
+          })}
         </Animated.View>
 
         <ScrollView
@@ -346,6 +352,7 @@ type SphereAvatarProps = {
   baseSize: number;
   index: number;
   isCurrentUser?: boolean;
+  onPress?: () => void;
 };
 
 const SphereAvatar: React.FC<SphereAvatarProps> = ({
@@ -355,6 +362,7 @@ const SphereAvatar: React.FC<SphereAvatarProps> = ({
   radius,
   baseSize,
   isCurrentUser = false,
+  onPress,
 }) => {
   const style = useAnimatedStyle(() => {
     const totalTheta = normalizeAngle(rotationY.value + node.theta);
@@ -402,41 +410,47 @@ const SphereAvatar: React.FC<SphereAvatarProps> = ({
   const hasImage = node.imageUrl && node.imageUrl.trim() !== '';
 
   return (
-    <Animated.View
-      style={[
-        styles.sphereAvatar,
-        sizeStyle,
-        style,
-        isCurrentUser && styles.currentUserAvatar,
-      ]}
+    <TouchableOpacity
+      activeOpacity={onPress ? 0.7 : 1}
+      onPress={onPress}
+      disabled={!onPress}
     >
-      {hasImage ? (
-        <>
-          <View style={styles.avatarShadow} />
-          <Image source={{ uri: node.imageUrl }} style={styles.sphereAvatarImage} />
-          {isCurrentUser && (
-            <View style={styles.currentUserBadge}>
-              <Text style={styles.currentUserBadgeText}>Tu</Text>
-            </View>
-          )}
-        </>
-      ) : (
-        <Animated.View style={[styles.userPlusBackground, sizeStyle]}>
-          <LinearGradient
-            colors={['#a855f7', '#8b5cf6']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Image
-              source={USER_PLUS_ICON}
-              style={styles.userPlusImage}
-              resizeMode="contain"
-            />
-          </LinearGradient>
-        </Animated.View>
-      )}
-    </Animated.View>
+      <Animated.View
+        style={[
+          styles.sphereAvatar,
+          sizeStyle,
+          style,
+          isCurrentUser && styles.currentUserAvatar,
+        ]}
+      >
+        {hasImage ? (
+          <>
+            <View style={styles.avatarShadow} />
+            <Image source={{ uri: node.imageUrl }} style={styles.sphereAvatarImage} />
+            {isCurrentUser && (
+              <View style={styles.currentUserBadge}>
+                <Text style={styles.currentUserBadgeText}>Tu</Text>
+              </View>
+            )}
+          </>
+        ) : (
+          <Animated.View style={[styles.userPlusBackground, sizeStyle]}>
+            <LinearGradient
+              colors={['#a855f7', '#8b5cf6']}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Image
+                source={USER_PLUS_ICON}
+                style={styles.userPlusImage}
+                resizeMode="contain"
+              />
+            </LinearGradient>
+          </Animated.View>
+        )}
+      </Animated.View>
+    </TouchableOpacity>
   );
 };
 
@@ -574,15 +588,18 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statValue: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 24,
+    fontWeight: '900',
     color: '#ffffff',
+    letterSpacing: -0.5,
   },
   statLabel: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.75)',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
+    fontWeight: '600',
+    marginTop: 2,
   },
   statDivider: {
     width: 1,
@@ -590,13 +607,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
   currentUserAvatar: {
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: '#fbbf24',
     shadowColor: '#fbbf24',
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
+    elevation: 12,
   },
   currentUserBadge: {
     position: 'absolute',
@@ -618,16 +635,18 @@ const styles = StyleSheet.create({
   },
   actionsContainer: {
     width: '100%',
+    flexDirection: 'row',
     gap: 12,
+    alignItems: 'center',
   },
   primaryButton: {
-    width: '100%',
+    flex: 1,
   },
   primaryButtonWithSecondary: {
     flex: 1,
   },
   secondaryButton: {
-    width: '100%',
+    flex: 1,
   },
   secondaryButtonGradient: {
     borderRadius: 999,

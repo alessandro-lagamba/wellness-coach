@@ -2103,6 +2103,15 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
         avatars={communityAvatars}
         currentUserAvatarUri={avatarUri}
         currentUserName={userFirstName}
+        onAvatarPress={(avatar) => {
+          Alert.alert(
+            avatar.displayName,
+            avatar.streak 
+              ? `🔥 Streak: ${avatar.streak} giorni\n${avatar.hasAvatar || avatar.imageUrl ? '✓ Ha un avatar personalizzato' : 'Non ha ancora creato un avatar'}`
+              : `Nuovo membro\n${avatar.hasAvatar || avatar.imageUrl ? '✓ Ha un avatar personalizzato' : 'Non ha ancora creato un avatar'}`,
+            [{ text: 'OK', style: 'default' }]
+          );
+        }}
       />
 
     </SafeAreaView>
