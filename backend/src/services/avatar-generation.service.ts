@@ -347,13 +347,13 @@ Compose as a head-and-shoulders portrait centered within the circular background
     // 9) Naming idempotente con hash
     const avatarPath = `${userId}/avatar-${Date.now()}-${digest}.png`;
 
-    // 10) Upload su Supabase con cacheControl aumentato e contentDisposition
+    // 10) Upload su Supabase con cacheControl aumentato
+    // Nota: contentDisposition non è supportato direttamente in FileOptions di Supabase
     const { error: uploadError } = await supabaseAdmin.storage
       .from(AVATAR_BUCKET)
       .upload(avatarPath, avatarBuffer, {
         contentType: 'image/png',
         cacheControl: '86400', // 24 ore invece di 1 ora
-        contentDisposition: 'inline', // Utile per UI web/mobile
         upsert: false,
       });
 
