@@ -7,15 +7,16 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Enhanced prompt for gpt-image-1-mini generation
-// Since gpt-image-1-mini generates from scratch, we'll use a detailed description
+// Base prompt for avatar generation - style reference
 const AVATAR_PROMPT = `
-A clean, modern wellness coach illustration in soft vector style.
-The character has a smiling expression and friendly eyes.
-The illustration uses smooth gradients and soft lighting.
-The character is placed inside a circular purple background with gradient from #6b21a8 to #9d4edd.
-The clothing is simple, like a teal crew-neck.
-The style is cartoon-like, modern, and professional.
+Create a clean, modern wellness coach avatar illustration in soft vector style matching the reference style exactly:
+- Flat design with clean lines and minimal shading
+- Soft gradients and smooth lighting
+- Circular purple background with gradient from #6b21a8 (darker purple) to #9d4edd (lighter purple)
+- Simple teal/turquoise crew-neck t-shirt
+- Cartoon-like but professional aesthetic
+- Friendly, approachable expression
+- Vector illustration quality, modern and clean
 `;
 
 interface GenerateAvatarParams {
@@ -63,15 +64,27 @@ export const generateAvatarFromPhoto = async ({ userId, photoBuffer, mimeType = 
     const content: any[] = [
       {
         type: 'text',
-        text: `Analyze these two images:
-1. The first image is a portrait photo of a person
-2. The second image is a reference avatar illustration showing the desired artistic style
+        text: `Analyze these two images carefully:
+1. The FIRST image is a REAL PHOTOGRAPH of a person - this is the PRIMARY REFERENCE for the person's actual appearance
+2. The SECOND image is a reference avatar illustration showing the desired artistic STYLE only
 
-Describe how to generate an avatar that:
-- Maintains the person's facial features, skin tone, hair color and style, eye color, and overall likeness from the portrait photo
-- Matches the exact artistic style, color palette, illustration technique, lighting, and aesthetic of the reference avatar
+CRITICAL INSTRUCTIONS:
+- The person's PHYSICAL APPEARANCE must be EXACTLY as shown in the first photo:
+  * If the person is BALD (no hair), the avatar MUST be BALD - no hair at all
+  * If the person has hair, describe the EXACT hair color, length, and style
+  * Describe the EXACT facial features: eye color, skin tone, face shape, any distinctive features
+  * Describe the EXACT clothing if visible
+  * Be extremely precise about physical characteristics - the avatar must look like the SAME PERSON
 
-Be very specific about both the person's appearance and the style characteristics.`
+- The artistic STYLE must match the second image (reference avatar):
+  * Flat vector illustration style
+  * Soft gradients and lighting
+  * Circular purple background with gradient (#6b21a8 to #9d4edd)
+  * Clean, modern, cartoon-like but professional
+  * Simple teal crew-neck t-shirt
+  * Minimal shading, clean lines
+
+Generate a detailed description that prioritizes the PERSON'S ACTUAL APPEARANCE from the photo, then applies the artistic style from the reference.`
       },
       {
         type: 'image_url',
@@ -109,8 +122,26 @@ Be very specific about both the person's appearance and the style characteristic
     
     const combinedDescription = visionResponse.choices[0]?.message?.content || '';
     
-    // Step 2: Build the enhanced prompt with the combined description
-    const enhancedPrompt = `${AVATAR_PROMPT}\n\n${combinedDescription}\n\nGenerate an avatar that exactly matches these specifications.`;
+    // Step 2: Build the enhanced prompt with STRONG emphasis on physical appearance
+    const enhancedPrompt = `${AVATAR_PROMPT}
+
+CRITICAL: The person's physical appearance from the photo is the MOST IMPORTANT aspect. Follow these priorities:
+1. FIRST: Accurately represent the person's physical features from the photo (especially hair/baldness, facial features, skin tone, eye color)
+2. SECOND: Apply the artistic style from the reference avatar
+
+Detailed description from photo analysis:
+${combinedDescription}
+
+IMPORTANT REMINDERS:
+- If the person is BALD in the photo, the avatar MUST be completely BALD (no hair, no stubble, smooth head)
+- If the person has hair, show the EXACT hair color, length, and style from the photo
+- Match the EXACT skin tone, eye color, and facial features from the photo
+- The person's likeness must be clearly recognizable
+- Apply the reference style's color palette, gradients, and illustration technique
+- Use the circular purple gradient background as shown in the reference
+- Keep the simple teal crew-neck t-shirt style
+
+Generate an avatar that is FIRST AND FOREMOST an accurate representation of the person from the photo, styled in the reference illustration aesthetic.`;
     
     // Step 3: Generate the avatar using DALL-E 3 (doesn't require billing/verification)
     const generateResponse = await openai.images.generate({
