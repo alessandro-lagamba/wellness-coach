@@ -292,9 +292,12 @@ export const generateAvatarFromPhoto = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[Avatar] generateAvatarFromPhoto error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('[Avatar] Error details:', { errorMessage, errorStack, userId: req.body?.userId, hasFile: !!req.file });
     res.status(500).json({
       success: false,
-      error: 'Failed to generate avatar',
+      error: `Failed to generate avatar: ${errorMessage}`,
     });
   }
 };
