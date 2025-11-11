@@ -28,8 +28,23 @@ export const generateAvatarFromPhoto = async ({ userId, photoBuffer, mimeType = 
 
   await ensureAvatarBucket();
 
+  // Convert image to PNG if needed (OpenAI images.edit requires PNG format)
+  let processedImageBuffer: Buffer;
+  let processedMimeType: string;
+  
+  if (mimeType && mimeType !== 'image/png') {
+    // Convert to PNG using sharp
+    processedImageBuffer = await sharp(photoBuffer)
+      .png()
+      .toBuffer();
+    processedMimeType = 'image/png';
+  } else {
+    processedImageBuffer = photoBuffer;
+    processedMimeType = mimeType || 'image/png';
+  }
+
   const fileName = `source-${Date.now()}.png`;
-  const uploadable = await toFile(photoBuffer, fileName, { type: mimeType });
+  const uploadable = await toFile(processedImageBuffer, fileName, { type: processedMimeType });
 
   try {
     // Use images.edit with a white mask to edit the entire image
@@ -37,7 +52,7 @@ export const generateAvatarFromPhoto = async ({ userId, photoBuffer, mimeType = 
     // We'll create a white PNG mask of the same size as the image
     
     // Get image dimensions to create matching mask
-    const imageMetadata = await sharp(photoBuffer).metadata();
+    const imageMetadata = await sharp(processedImageBuffer).metadata();
     const width = imageMetadata.width || 512;
     const height = imageMetadata.height || 512;
     
