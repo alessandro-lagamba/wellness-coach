@@ -1,5 +1,8 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { ensureAvatarBucket, supabaseAdmin, AVATAR_BUCKET } from './supabase.service';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -23,73 +26,137 @@ interface GenerateAvatarParams {
 }
 
 export const generateAvatarFromPhoto = async ({ userId, photoBuffer, mimeType = 'image/jpeg' }: GenerateAvatarParams) => {
+  if (!process.env.GOOGLE_API_KEY) {
+    throw new Error('GOOGLE_API_KEY is not configured');
+  }
+  
   if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not configured');
+    throw new Error('OPENAI_API_KEY is not configured (needed for image analysis)');
   }
 
   await ensureAvatarBucket();
 
+  const gemini = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+
   try {
-    // Use gpt-image-1-mini with images.generate (not images.edit)
-    // This model generates images from scratch based on a prompt
-    // We'll use the photo as a reference by analyzing it first with GPT-4 Vision
-    // to extract features, then generate the avatar with those features
+    // Step 0: Load the reference avatar-icon.png for style reference
+    // Try multiple possible paths (development and production)
+    const possiblePaths = [
+      path.join(__dirname, '../../mobile/assets/avatar-icon.png'),
+      path.join(__dirname, '../assets/avatar-icon.png'),
+      path.join(process.cwd(), 'mobile/assets/avatar-icon.png'),
+      path.join(process.cwd(), 'assets/avatar-icon.png'),
+    ];
     
-    // Step 1: Analyze the photo with GPT-4 Vision to extract facial features
+    let avatarIconBase64: string | null = null;
+    let avatarIconPath: string | null = null;
+    
+    // Find the avatar icon file
+    for (const testPath of possiblePaths) {
+      if (fs.existsSync(testPath)) {
+        avatarIconPath = testPath;
+        const avatarIconBuffer = fs.readFileSync(testPath);
+        avatarIconBase64 = avatarIconBuffer.toString('base64');
+        break;
+      }
+    }
+    
+    // Step 1: Analyze BOTH images together with GPT-4 Vision
+    // - The user's photo for facial features
+    // - The avatar-icon.png for style reference
     const photoBase64 = photoBuffer.toString('base64');
     const photoMimeType = mimeType || 'image/jpeg';
+    
+    const content: any[] = [
+      {
+        type: 'text',
+        text: `Analyze these two images:
+1. The first image is a portrait photo of a person
+2. The second image is a reference avatar illustration showing the desired artistic style
+
+Describe how to generate an avatar that:
+- Maintains the person's facial features, skin tone, hair color and style, eye color, and overall likeness from the portrait photo
+- Matches the exact artistic style, color palette, illustration technique, lighting, and aesthetic of the reference avatar
+
+Be very specific about both the person's appearance and the style characteristics.`
+      },
+      {
+        type: 'image_url',
+        image_url: {
+          url: `data:${photoMimeType};base64,${photoBase64}`,
+          detail: 'high'
+        }
+      }
+    ];
+    
+    // Add reference style image if available
+    if (avatarIconBase64) {
+      content.push({
+        type: 'image_url',
+        image_url: {
+          url: `data:image/png;base64,${avatarIconBase64}`,
+          detail: 'high'
+        }
+      });
+      console.log('[Avatar] Using avatar-icon.png as style reference');
+    } else {
+      console.warn('[Avatar] Reference avatar-icon.png not found, generating without style reference');
+    }
     
     const visionResponse = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
           role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Analyze this portrait photo and describe the person's facial features, skin tone, hair color and style, eye color, and overall appearance. Be specific about these details as they will be used to generate a stylized avatar that maintains the person's likeness.`
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${photoMimeType};base64,${photoBase64}`,
-                detail: 'high'
-              }
-            }
-          ]
+          content
         }
       ],
-      max_tokens: 200
+      max_tokens: 400
     });
     
-    const personDescription = visionResponse.choices[0]?.message?.content || '';
+    const combinedDescription = visionResponse.choices[0]?.message?.content || '';
     
-    // Step 2: Combine the person description with the avatar style prompt
-    const enhancedPrompt = `${AVATAR_PROMPT}\n\nBased on this person's appearance: ${personDescription}\n\nGenerate an avatar that maintains their facial features, skin tone, hair, and overall likeness while applying the described illustration style.`;
+    // Step 2: Build the enhanced prompt with the combined description
+    const enhancedPrompt = `${AVATAR_PROMPT}\n\n${combinedDescription}\n\nGenerate an avatar that exactly matches these specifications.`;
     
-    // Step 3: Generate the avatar using gpt-image-1-mini with quality medium
-    // Note: gpt-image-1-mini doesn't support response_format parameter
-    // It returns URLs by default, so we'll download the image from the URL
-    const generateResponse = await openai.images.generate({
-      model: 'gpt-image-1-mini',
-      prompt: enhancedPrompt,
-      quality: 'medium',
-      n: 1,
-      size: '1024x1024',
-    });
-
-    const imageUrl = generateResponse.data?.[0]?.url;
-    if (!imageUrl) {
-      throw new Error('No image URL returned from OpenAI');
+    // Step 3: Generate the avatar using gemini-2.5-flash-image
+    // Try different model names in case the exact name differs
+    let generateResponse;
+    let avatarBuffer: Buffer;
+    
+    try {
+      // Try gemini-2.5-flash-image-preview first
+      const imageModel = gemini.getGenerativeModel({ model: 'gemini-2.5-flash-image-preview' });
+      generateResponse = await imageModel.generateContent(enhancedPrompt);
+      
+      // Extract image from response
+      const response = generateResponse.response;
+      const imagePart = response.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData);
+      
+      if (!imagePart?.inlineData?.data) {
+        throw new Error('No image data in response');
+      }
+      
+      avatarBuffer = Buffer.from(imagePart.inlineData.data, 'base64');
+    } catch (error) {
+      // If preview model doesn't work, try without -preview
+      console.warn('[Avatar] Preview model failed, trying without -preview:', error);
+      try {
+        const imageModel = gemini.getGenerativeModel({ model: 'gemini-2.5-flash-image' });
+        generateResponse = await imageModel.generateContent(enhancedPrompt);
+        
+        const response = generateResponse.response;
+        const imagePart = response.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData);
+        
+        if (!imagePart?.inlineData?.data) {
+          throw new Error('No image data in response');
+        }
+        
+        avatarBuffer = Buffer.from(imagePart.inlineData.data, 'base64');
+      } catch (fallbackError) {
+        throw new Error(`Failed to generate image with Gemini: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
+      }
     }
-
-    // Download the image from the URL
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to download image from OpenAI: ${imageResponse.statusText}`);
-    }
-
-    const avatarBuffer = Buffer.from(await imageResponse.arrayBuffer());
     const avatarPath = `${userId}/avatar-${Date.now()}.png`;
 
     const { error: uploadError } = await supabaseAdmin.storage
