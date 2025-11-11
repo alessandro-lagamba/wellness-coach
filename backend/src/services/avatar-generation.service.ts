@@ -1,4 +1,7 @@
 import { ensureAvatarBucket, supabaseAdmin, AVATAR_BUCKET } from './supabase.service';
+
+// Bucket separato per input temporanei (privato, con signed URL)
+const INPUT_BUCKET = process.env.AVATAR_INPUT_BUCKET || AVATAR_BUCKET;
 import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
@@ -43,6 +46,8 @@ interface AvatarGenerationResult {
   model: string;
   seed: number;
   size: string;
+  inferenceMs?: number;
+  totalMs?: number;
 }
 
 // Retry utility con exponential backoff per errori transient
@@ -97,11 +102,25 @@ export const generateAvatarFromPhoto = async ({
 
   const startTime = Date.now();
   let tempInputPath: string | null = null;
+  let needCleanup = false;
 
   try {
     // 1) Preprocessing: rilevamento MIME e square crop + resize
     const type = await fileTypeFromBuffer(photoBuffer);
     const detectedMime = type?.mime ?? mimeType ?? 'image/jpeg';
+    
+    // Validazione: solo immagini supportate
+    const allowedMimeTypes = new Set([
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/heic',
+      'image/heif',
+    ]);
+    
+    if (!allowedMimeTypes.has(detectedMime)) {
+      throw new Error(`Unsupported image type: ${detectedMime}. Supported types: JPEG, PNG, WebP, HEIC, HEIF`);
+    }
     
     console.log('[Avatar] Processing image:', { 
       detectedMime: type?.mime, 
@@ -169,12 +188,14 @@ export const generateAvatarFromPhoto = async ({
 
     // 5) Fallback: se files.upload non esiste, carica temporaneamente su Supabase con SIGNED URL
     // Usa signed URL per privacy (TTL 15 minuti) invece di public URL
+    // Usa bucket separato per input se configurato (AVATAR_INPUT_BUCKET)
     if (!uploadedInput) {
-      console.log('[Avatar] Using Supabase fallback with signed URL for input image');
+      console.log('[Avatar] Using Supabase fallback with signed URL for input image', { bucket: INPUT_BUCKET });
       tempInputPath = `${userId}/inputs/${Date.now()}-input.png`;
+      needCleanup = true;
       
       const { error: tempUploadError } = await supabaseAdmin.storage
-        .from(AVATAR_BUCKET)
+        .from(INPUT_BUCKET)
         .upload(tempInputPath, processedBuffer, {
           contentType: 'image/png',
           upsert: true,
@@ -186,7 +207,7 @@ export const generateAvatarFromPhoto = async ({
 
       // Crea signed URL con TTL di 15 minuti (900 secondi) per privacy
       const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
-        .from(AVATAR_BUCKET)
+        .from(INPUT_BUCKET)
         .createSignedUrl(tempInputPath, 15 * 60); // 15 minuti
       
       if (signedUrlError || !signedUrlData?.signedUrl) {
@@ -241,9 +262,14 @@ Compose as a head-and-shoulders portrait centered within the circular background
     let avatarBuffer: Buffer | null = null;
     let imageUrl: string | null = null;
 
-    // Case A: SDK nuovo con helper .url()
-    if (output && typeof (output as any).url === 'function') {
-      imageUrl = (output as any).url();
+    // Case A: SDK nuovo con helper .url() (controllo più robusto)
+    if (output && typeof output === 'object' && 'url' in (output as any)) {
+      const urlProp = (output as any).url;
+      if (typeof urlProp === 'function') {
+        imageUrl = urlProp();
+      } else if (typeof urlProp === 'string' && urlProp.startsWith('http')) {
+        imageUrl = urlProp;
+      }
     }
 
     // Case B: output = string URL
@@ -259,8 +285,13 @@ Compose as a head-and-shoulders portrait centered within the circular background
       const first = output[0];
       if (typeof first === 'string' && first.startsWith('http')) {
         imageUrl = first;
-      } else if (first && typeof (first as any).url === 'function') {
-        imageUrl = (first as any).url();
+      } else if (first && typeof first === 'object' && 'url' in first) {
+        const urlProp = (first as any).url;
+        if (typeof urlProp === 'function') {
+          imageUrl = urlProp();
+        } else if (typeof urlProp === 'string' && urlProp.startsWith('http')) {
+          imageUrl = urlProp;
+        }
       }
     }
 
@@ -275,17 +306,21 @@ Compose as a head-and-shoulders portrait centered within the circular background
     if (!avatarBuffer && imageUrl) {
       console.log('[Avatar] Downloading image from:', imageUrl.substring(0, 50) + '...');
       
-      // Verifica che fetch sia disponibile (Node >=18 ha fetch globale)
-      if (typeof globalThis.fetch === 'undefined') {
-        console.warn('[Avatar] fetch not available, attempting to use node-fetch');
-        // In produzione, considera di importare node-fetch come fallback
+      // Fallback fetch per Node <18 (lazy import)
+      let doFetch: typeof fetch;
+      if (typeof globalThis.fetch === 'function') {
+        doFetch = globalThis.fetch;
+      } else {
+        console.warn('[Avatar] fetch not available globally, using node-fetch fallback');
+        const nodeFetch = await import('node-fetch');
+        doFetch = nodeFetch.default as unknown as typeof fetch;
       }
       
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30_000);
       
       try {
-        const res = await fetch(imageUrl, { signal: controller.signal });
+        const res = await doFetch(imageUrl, { signal: controller.signal });
         clearTimeout(timeout);
         
         if (!res.ok) {
@@ -311,12 +346,13 @@ Compose as a head-and-shoulders portrait centered within the circular background
     // 9) Naming idempotente con hash
     const avatarPath = `${userId}/avatar-${Date.now()}-${digest}.png`;
 
-    // 10) Upload su Supabase con cacheControl aumentato
+    // 10) Upload su Supabase con cacheControl aumentato e contentDisposition
     const { error: uploadError } = await supabaseAdmin.storage
       .from(AVATAR_BUCKET)
       .upload(avatarPath, avatarBuffer, {
         contentType: 'image/png',
         cacheControl: '86400', // 24 ore invece di 1 ora
+        contentDisposition: 'inline', // Utile per UI web/mobile
         upsert: false,
       });
 
@@ -353,32 +389,18 @@ Compose as a head-and-shoulders portrait centered within the circular background
       }
     }
 
-    // 12) Pulizia input temporaneo se usato (con delay per evitare race condition)
-    // Aspettiamo 5 secondi dopo il download per assicurarci che Replicate abbia finito di leggere
-    if (tempInputPath) {
-      // Delay per evitare race condition: Replicate potrebbe ancora star leggendo l'URL
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      
-      try {
-        await supabaseAdmin.storage.from(AVATAR_BUCKET).remove([tempInputPath]);
-        console.log('[Avatar] Temp input cleaned up:', tempInputPath);
-      } catch (cleanupError) {
-        console.warn('[Avatar] Failed to cleanup temp input (non-critical):', cleanupError);
-        // Nota: Il signed URL scadrà comunque dopo 15 minuti, quindi non è critico
-      }
-    }
-
     const totalDuration = Date.now() - startTime;
     const modelName = 'black-forest-labs/flux-kontext-pro';
     console.log('[Avatar] Generation completed:', {
       userId: userId.substring(0, 8) + '...', // Log parziale per privacy
       duration: `${totalDuration}ms`,
+      inferenceMs: modelDuration,
       model: modelName,
       seed,
       size: '1024x1024',
     });
 
-    // 13) Restituisci metadati utili
+    // 13) Restituisci metadati utili con telemetria
     const result: AvatarGenerationResult = {
       avatarUrl: publicUrl,
       storagePath: avatarPath,
@@ -386,26 +408,33 @@ Compose as a head-and-shoulders portrait centered within the circular background
       model: modelName,
       seed,
       size: '1024x1024',
+      inferenceMs: modelDuration,
+      totalMs: totalDuration,
     };
 
     return result;
   } catch (error) {
-    // Pulizia input temporaneo anche in caso di errore
-    if (tempInputPath) {
-      try {
-        await supabaseAdmin.storage.from(AVATAR_BUCKET).remove([tempInputPath]);
-        console.log('[Avatar] Temp input cleaned up after error:', tempInputPath);
-      } catch (cleanupError) {
-        console.warn('[Avatar] Failed to cleanup temp input after error (non-critical):', cleanupError);
-      }
-    }
-
     console.error('[Avatar] Error in generateAvatarFromPhoto:', error);
     // Re-throw with more context
     if (error instanceof Error) {
       throw new Error(`Avatar generation failed: ${error.message}`);
     }
     throw error;
+  } finally {
+    // 12) Pulizia input temporaneo se usato (con delay per evitare race condition)
+    // Aspettiamo 5 secondi dopo il download per assicurarci che Replicate abbia finito di leggere
+    if (tempInputPath && needCleanup) {
+      // Delay per evitare race condition: Replicate potrebbe ancora star leggendo l'URL
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      try {
+        await supabaseAdmin.storage.from(INPUT_BUCKET).remove([tempInputPath]);
+        console.log('[Avatar] Temp input cleaned up:', tempInputPath);
+      } catch (cleanupError) {
+        console.warn('[Avatar] Failed to cleanup temp input (non-critical):', cleanupError);
+        // Nota: Il signed URL scadrà comunque dopo 15 minuti, quindi non è critico
+      }
+    }
   }
 };
 
