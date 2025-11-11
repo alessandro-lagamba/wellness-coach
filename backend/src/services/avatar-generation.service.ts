@@ -312,8 +312,9 @@ Compose as a head-and-shoulders portrait centered within the circular background
         doFetch = globalThis.fetch;
       } else {
         console.warn('[Avatar] fetch not available globally, using node-fetch fallback');
-        const nodeFetch = await import('node-fetch');
-        doFetch = nodeFetch.default as unknown as typeof fetch;
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const nodeFetch = require('node-fetch');
+        doFetch = nodeFetch as unknown as typeof fetch;
       }
       
       const controller = new AbortController();
