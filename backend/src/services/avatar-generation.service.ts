@@ -1,18 +1,19 @@
 import OpenAI from 'openai';
-import { toFile } from 'openai/uploads';
 import { ensureAvatarBucket, supabaseAdmin, AVATAR_BUCKET } from './supabase.service';
-import sharp from 'sharp';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Enhanced prompt for gpt-image-1-mini generation
+// Since gpt-image-1-mini generates from scratch, we'll use a detailed description
 const AVATAR_PROMPT = `
-Convert the provided portrait photo into a clean, modern wellness coach illustration.
-Maintain the person's facial features, skin tone, hair shape, and overall likeness.
-Use a soft vector style with smooth gradients, smiling expression, and friendly eyes.
-Place the character inside a circular purple background (#6b21a8 → #9d4edd gradient) with soft lighting.
-Keep clothing simple (eg. teal crew-neck), and remove any busy background elements.
+A clean, modern wellness coach illustration in soft vector style.
+The character has a smiling expression and friendly eyes.
+The illustration uses smooth gradients and soft lighting.
+The character is placed inside a circular purple background with gradient from #6b21a8 to #9d4edd.
+The clothing is simple, like a teal crew-neck.
+The style is cartoon-like, modern, and professional.
 `;
 
 interface GenerateAvatarParams {
@@ -28,59 +29,55 @@ export const generateAvatarFromPhoto = async ({ userId, photoBuffer, mimeType = 
 
   await ensureAvatarBucket();
 
-  // Convert image to PNG if needed (OpenAI images.edit requires PNG format)
-  let processedImageBuffer: Buffer;
-  let processedMimeType: string;
-  
-  if (mimeType && mimeType !== 'image/png') {
-    // Convert to PNG using sharp
-    processedImageBuffer = await sharp(photoBuffer)
-      .png()
-      .toBuffer();
-    processedMimeType = 'image/png';
-  } else {
-    processedImageBuffer = photoBuffer;
-    processedMimeType = mimeType || 'image/png';
-  }
-
-  const fileName = `source-${Date.now()}.png`;
-  const uploadable = await toFile(processedImageBuffer, fileName, { type: processedMimeType });
-
   try {
-    // Use images.edit with a white mask to edit the entire image
-    // A white mask means "edit this area", so a fully white mask edits the whole image
-    // We'll create a white PNG mask of the same size as the image
+    // Use gpt-image-1-mini with images.generate (not images.edit)
+    // This model generates images from scratch based on a prompt
+    // We'll use the photo as a reference by analyzing it first with GPT-4 Vision
+    // to extract features, then generate the avatar with those features
     
-    // Get image dimensions to create matching mask
-    const imageMetadata = await sharp(processedImageBuffer).metadata();
-    const width = imageMetadata.width || 512;
-    const height = imageMetadata.height || 512;
+    // Step 1: Analyze the photo with GPT-4 Vision to extract facial features
+    const photoBase64 = photoBuffer.toString('base64');
+    const photoMimeType = mimeType || 'image/jpeg';
     
-    // Create a white (fully editable) mask
-    const whiteMaskBuffer = await sharp({
-      create: {
-        width,
-        height,
-        channels: 4,
-        background: { r: 255, g: 255, b: 255, alpha: 1 }
-      }
-    })
-    .png()
-    .toBuffer();
+    const visionResponse = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Analyze this portrait photo and describe the person's facial features, skin tone, hair color and style, eye color, and overall appearance. Be specific about these details as they will be used to generate a stylized avatar that maintains the person's likeness.`
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${photoMimeType};base64,${photoBase64}`,
+                detail: 'high'
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 200
+    });
     
-    const maskFile = await toFile(whiteMaskBuffer, `mask-${Date.now()}.png`, { type: 'image/png' });
+    const personDescription = visionResponse.choices[0]?.message?.content || '';
     
-    // Now use images.edit with the white mask to edit the entire image
-    const editResponse = await openai.images.edit({
-      image: uploadable,
-      mask: maskFile,
-      prompt: AVATAR_PROMPT,
+    // Step 2: Combine the person description with the avatar style prompt
+    const enhancedPrompt = `${AVATAR_PROMPT}\n\nBased on this person's appearance: ${personDescription}\n\nGenerate an avatar that maintains their facial features, skin tone, hair, and overall likeness while applying the described illustration style.`;
+    
+    // Step 3: Generate the avatar using gpt-image-1-mini with quality medium
+    const generateResponse = await openai.images.generate({
+      model: 'gpt-image-1-mini',
+      prompt: enhancedPrompt,
+      quality: 'medium',
       n: 1,
-      size: '512x512',
+      size: '1024x1024',
       response_format: 'b64_json',
     });
 
-    const imageData = editResponse.data?.[0]?.b64_json;
+    const imageData = generateResponse.data?.[0]?.b64_json;
     if (!imageData) {
       throw new Error('No image returned from OpenAI');
     }
