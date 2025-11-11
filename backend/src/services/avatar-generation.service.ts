@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { ensureAvatarBucket, supabaseAdmin, AVATAR_BUCKET } from './supabase.service';
 import * as fs from 'fs';
@@ -26,17 +25,11 @@ interface GenerateAvatarParams {
 }
 
 export const generateAvatarFromPhoto = async ({ userId, photoBuffer, mimeType = 'image/jpeg' }: GenerateAvatarParams) => {
-  if (!process.env.GOOGLE_API_KEY) {
-    throw new Error('GOOGLE_API_KEY is not configured');
-  }
-  
   if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not configured (needed for image analysis)');
+    throw new Error('OPENAI_API_KEY is not configured');
   }
 
   await ensureAvatarBucket();
-
-  const gemini = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
   try {
     // Step 0: Load the reference avatar-icon.png for style reference
@@ -114,75 +107,32 @@ Be very specific about both the person's appearance and the style characteristic
       max_tokens: 400
     });
     
-    // Step 2: Generate the avatar using gemini-2.5-flash-image
-    // Gemini 2.5 Flash Image supports multimodal input, so we can pass images directly
-    const imageModel = gemini.getGenerativeModel({ model: 'gemini-2.5-flash-image-preview' });
+    const combinedDescription = visionResponse.choices[0]?.message?.content || '';
     
-    // Build multimodal content: text prompt + user photo + style reference
-    const geminiContent: any[] = [
-      {
-        text: `Generate an avatar illustration that:
-- Maintains the person's facial features, skin tone, hair color and style, eye color, and overall likeness from the first image (portrait photo)
-- Matches the exact artistic style, color palette, illustration technique, lighting, and aesthetic of the second image (reference avatar style)
+    // Step 2: Build the enhanced prompt with the combined description
+    const enhancedPrompt = `${AVATAR_PROMPT}\n\n${combinedDescription}\n\nGenerate an avatar that exactly matches these specifications.`;
+    
+    // Step 3: Generate the avatar using DALL-E 3 (doesn't require billing/verification)
+    const generateResponse = await openai.images.generate({
+      model: 'dall-e-3',
+      prompt: enhancedPrompt,
+      quality: 'standard',
+      n: 1,
+      size: '1024x1024',
+    });
 
-${AVATAR_PROMPT}
+    const imageUrl = generateResponse.data?.[0]?.url;
+    if (!imageUrl) {
+      throw new Error('No image URL returned from OpenAI');
+    }
 
-Create a clean, modern wellness coach illustration that combines the person's likeness with the reference style.`
-      },
-      {
-        inlineData: {
-          mimeType: photoMimeType,
-          data: photoBase64
-        }
-      }
-    ];
-    
-    // Add style reference image if available
-    if (avatarIconBase64) {
-      geminiContent.push({
-        inlineData: {
-          mimeType: 'image/png',
-          data: avatarIconBase64
-        }
-      });
+    // Download the image from the URL
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to download image from OpenAI: ${imageResponse.statusText}`);
     }
-    
-    // Try different model names in case the exact name differs
-    let generateResponse;
-    let avatarBuffer: Buffer;
-    
-    try {
-      // Try gemini-2.5-flash-image-preview first
-      generateResponse = await imageModel.generateContent(geminiContent);
-      
-      // Extract image from response
-      const response = generateResponse.response;
-      const imagePart = response.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData);
-      
-      if (!imagePart?.inlineData?.data) {
-        throw new Error('No image data in response');
-      }
-      
-      avatarBuffer = Buffer.from(imagePart.inlineData.data, 'base64');
-    } catch (error) {
-      // If preview model doesn't work, try without -preview
-      console.warn('[Avatar] Preview model failed, trying without -preview:', error);
-      try {
-        const imageModelFallback = gemini.getGenerativeModel({ model: 'gemini-2.5-flash-image' });
-        generateResponse = await imageModelFallback.generateContent(geminiContent);
-        
-        const response = generateResponse.response;
-        const imagePart = response.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData);
-        
-        if (!imagePart?.inlineData?.data) {
-          throw new Error('No image data in response');
-        }
-        
-        avatarBuffer = Buffer.from(imagePart.inlineData.data, 'base64');
-      } catch (fallbackError) {
-        throw new Error(`Failed to generate image with Gemini: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
-      }
-    }
+
+    const avatarBuffer = Buffer.from(await imageResponse.arrayBuffer());
     const avatarPath = `${userId}/avatar-${Date.now()}.png`;
 
     const { error: uploadError } = await supabaseAdmin.storage
