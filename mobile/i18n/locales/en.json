@@ -113,6 +113,7 @@
     },
     "noEntry": "No entry for this day",
     "loadingHistory": "Loading history...",
+    "dictationError": "Error during dictation. Please try again.",
     "errorLoading": "Error loading"
   },
   "chat": {

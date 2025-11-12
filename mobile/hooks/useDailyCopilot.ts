@@ -9,15 +9,13 @@ export const useDailyCopilot = () => {
 
   const copilotService = DailyCopilotService.getInstance();
 
-  const loadCopilotData = useCallback(async (forceRefresh = false) => {
+  const loadCopilotData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      if (forceRefresh) {
-        copilotService.invalidateCache();
-      }
-      
+      // 🔥 Il servizio controlla automaticamente se esiste già un'analisi per oggi nel database
+      // Se esiste, la ritorna senza rigenerarla. Se non esiste, genera una nuova analisi.
       const data = await copilotService.generateDailyCopilotAnalysis();
       if (data) {
         setCopilotData(data);
@@ -33,33 +31,17 @@ export const useDailyCopilot = () => {
     }
   }, [copilotService]);
 
-  const refreshCopilotData = useCallback(() => {
-    return loadCopilotData(true);
-  }, [loadCopilotData]);
-
-  // Carica i dati al mount
+  // 🔥 Carica i dati solo al mount - una volta al giorno
+  // Il servizio controlla automaticamente se esiste già un'analisi per oggi
   useEffect(() => {
     loadCopilotData();
   }, [loadCopilotData]);
-
-  // Auto-refresh ogni 30 minuti se l'app è attiva
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!loading) {
-        loadCopilotData();
-      }
-    }, 30 * 60 * 1000); // 30 minuti
-
-    return () => clearInterval(interval);
-  }, [loadCopilotData, loading]);
 
   return {
     copilotData,
     loading,
     error,
     lastUpdated,
-    refreshCopilotData,
-    loadCopilotData,
   };
 };
 

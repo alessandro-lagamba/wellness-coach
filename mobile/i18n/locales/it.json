@@ -115,6 +115,7 @@
     },
     "noEntry": "Nessuna entry per questo giorno",
     "loadingHistory": "Caricamento storia...",
+    "dictationError": "Errore durante la dettatura. Riprova.",
     "errorLoading": "Errore nel caricamento"
   },
   "chat": {

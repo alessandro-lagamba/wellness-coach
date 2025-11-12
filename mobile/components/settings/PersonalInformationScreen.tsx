@@ -15,6 +15,8 @@ import { FontAwesome } from '@expo/vector-icons';
 import { AuthService } from '../../services/auth.service';
 import { User } from '@supabase/supabase-js';
 import { useTranslation } from '../../hooks/useTranslation'; // 🆕 i18n
+import { useTheme } from '../../contexts/ThemeContext'; // 🆕 Theme hook
+import { SafeAreaView } from 'react-native-safe-area-context'; // 🆕 SafeAreaView
 
 interface PersonalInformationScreenProps {
   user: User;
@@ -26,6 +28,7 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
   onBack,
 }) => {
   const { t } = useTranslation(); // 🆕 i18n hook
+  const { colors } = useTheme(); // 🆕 Theme colors
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState({
@@ -123,25 +126,26 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8B5CF6" />
-        <Text style={styles.loadingText}>{t('profile.loading')}</Text>
-      </View>
+      <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]} edges={['top']}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('profile.loading')}</Text>
+      </SafeAreaView>
     );
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <KeyboardAvoidingView 
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <FontAwesome name="arrow-left" size={20} color="#8B5CF6" />
+            <FontAwesome name="arrow-left" size={20} color={colors.primary} />
           </TouchableOpacity>
-          <Text style={styles.title}>{t('profile.title')}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('profile.title')}</Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -149,46 +153,46 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
         <View style={styles.form}>
           {/* Nome Completo */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('profile.fullName')}</Text>
-            <View style={styles.inputWrapper}>
-              <FontAwesome name="user" size={16} color="#8B5CF6" style={styles.inputIcon} />
+            <Text style={[styles.label, { color: colors.text }]}>{t('profile.fullName')}</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <FontAwesome name="user" size={16} color={colors.primary} style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 value={profile.full_name}
                 onChangeText={(text) => setProfile({ ...profile, full_name: text })}
                 placeholder={t('profile.fullNamePlaceholder')}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textTertiary}
               />
             </View>
           </View>
 
           {/* Email */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <View style={[styles.inputWrapper, styles.disabledInput]}>
-              <FontAwesome name="envelope" size={16} color="#9CA3AF" style={styles.inputIcon} />
+            <Text style={[styles.label, { color: colors.text }]}>Email</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.borderLight }]}>
+              <FontAwesome name="envelope" size={16} color={colors.textTertiary} style={styles.inputIcon} />
               <TextInput
-                style={[styles.input, styles.disabledText]}
+                style={[styles.input, { color: colors.textSecondary }]}
                 value={profile.email}
                 editable={false}
                 placeholder={t('auth.email')}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textTertiary}
               />
             </View>
-            <Text style={styles.helpText}>{t('profile.emailCannotBeChanged')}</Text>
+            <Text style={[styles.helpText, { color: colors.textTertiary }]}>{t('profile.emailCannotBeChanged')}</Text>
           </View>
 
           {/* Età */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('auth.age')}</Text>
-            <View style={styles.inputWrapper}>
-              <FontAwesome name="calendar" size={16} color="#8B5CF6" style={styles.inputIcon} />
+            <Text style={[styles.label, { color: colors.text }]}>{t('auth.age')}</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <FontAwesome name="calendar" size={16} color={colors.primary} style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 value={profile.age}
                 onChangeText={(text) => setProfile({ ...profile, age: text })}
                 placeholder={t('auth.agePlaceholder')}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textTertiary}
                 keyboardType="numeric"
                 maxLength={3}
               />
@@ -197,9 +201,9 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
 
           {/* Genere */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('auth.gender.label')}</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('auth.gender.label')}</Text>
             <TouchableOpacity 
-              style={styles.inputWrapper}
+              style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={() => {
                 Alert.alert(
                   t('auth.gender.selectTitle'),
@@ -213,51 +217,51 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
                 );
               }}
             >
-              <FontAwesome name="venus-mars" size={16} color="#8B5CF6" style={styles.inputIcon} />
-              <Text style={styles.inputText}>{getGenderLabel(profile.gender)}</Text>
-              <FontAwesome name="chevron-down" size={14} color="#9CA3AF" />
+              <FontAwesome name="venus-mars" size={16} color={colors.primary} style={styles.inputIcon} />
+              <Text style={[styles.inputText, { color: colors.text }]}>{getGenderLabel(profile.gender)}</Text>
+              <FontAwesome name="chevron-down" size={14} color={colors.textTertiary} />
             </TouchableOpacity>
           </View>
 
           {/* Peso */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('profile.weight')}</Text>
-            <View style={styles.inputWrapper}>
-              <FontAwesome name="balance-scale" size={16} color="#8B5CF6" style={styles.inputIcon} />
+            <Text style={[styles.label, { color: colors.text }]}>{t('profile.weight')}</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <FontAwesome name="balance-scale" size={16} color={colors.primary} style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 value={profile.weight}
                 onChangeText={(text) => setProfile({ ...profile, weight: text })}
                 placeholder={t('profile.weightPlaceholder')}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textTertiary}
                 keyboardType="decimal-pad"
               />
-              <Text style={styles.unitText}>kg</Text>
+              <Text style={[styles.unitText, { color: colors.textSecondary }]}>kg</Text>
             </View>
           </View>
 
           {/* Altezza */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('profile.height')}</Text>
-            <View style={styles.inputWrapper}>
-              <FontAwesome name="ruler-vertical" size={16} color="#8B5CF6" style={styles.inputIcon} />
+            <Text style={[styles.label, { color: colors.text }]}>{t('profile.height')}</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <FontAwesome name="ruler-vertical" size={16} color={colors.primary} style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 value={profile.height}
                 onChangeText={(text) => setProfile({ ...profile, height: text })}
                 placeholder={t('profile.heightPlaceholder')}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textTertiary}
                 keyboardType="decimal-pad"
               />
-              <Text style={styles.unitText}>cm</Text>
+              <Text style={[styles.unitText, { color: colors.textSecondary }]}>cm</Text>
             </View>
           </View>
 
           {/* Livello di Attività */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('profile.activityLevel')}</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('profile.activityLevel')}</Text>
             <TouchableOpacity 
-              style={styles.inputWrapper}
+              style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={() => {
                 Alert.alert(
                   t('profile.selectActivityLevel'),
@@ -273,49 +277,50 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
                 );
               }}
             >
-              <FontAwesome name="tachometer" size={16} color="#8B5CF6" style={styles.inputIcon} />
-              <Text style={styles.inputText}>{getActivityLevelLabel(profile.activity_level)}</Text>
-              <FontAwesome name="chevron-down" size={14} color="#9CA3AF" />
+              <FontAwesome name="tachometer" size={16} color={colors.primary} style={styles.inputIcon} />
+              <Text style={[styles.inputText, { color: colors.text }]}>{getActivityLevelLabel(profile.activity_level)}</Text>
+              <FontAwesome name="chevron-down" size={14} color={colors.textTertiary} />
             </TouchableOpacity>
-            <Text style={styles.helpText}>{t('profile.activityLevelHelp')}</Text>
+            <Text style={[styles.helpText, { color: colors.textTertiary }]}>{t('profile.activityLevelHelp')}</Text>
           </View>
         </View>
 
         {/* Save Button */}
         <TouchableOpacity 
-          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} 
+          style={[styles.saveButton, { backgroundColor: colors.primary }, isSaving && { backgroundColor: colors.primaryMuted }]} 
           onPress={handleSave}
           disabled={isSaving}
         >
           {isSaving ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={colors.textInverse} />
           ) : (
             <>
-              <FontAwesome name="save" size={16} color="#FFFFFF" style={styles.buttonIcon} />
-              <Text style={styles.saveButtonText}>{t('profile.saveChanges')}</Text>
+              <FontAwesome name="save" size={16} color={colors.textInverse} style={styles.buttonIcon} />
+              <Text style={[styles.saveButtonText, { color: colors.textInverse }]}>{t('profile.saveChanges')}</Text>
             </>
           )}
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+  },
+  flex: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#6B7280',
   },
   scrollView: {
     flex: 1,
@@ -331,7 +336,6 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 30,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   backButton: {
     padding: 8,
@@ -339,7 +343,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
   },
   placeholder: {
     width: 36,
@@ -354,23 +357,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 8,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     minHeight: 50,
-  },
-  disabledInput: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#D1D5DB',
   },
   inputIcon: {
     marginRight: 12,
@@ -379,25 +375,18 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#1F2937',
-  },
-  disabledText: {
-    color: '#9CA3AF',
   },
   inputText: {
     flex: 1,
     fontSize: 16,
-    color: '#1F2937',
   },
   helpText: {
     fontSize: 12,
-    color: '#6B7280',
     marginTop: 4,
     fontStyle: 'italic',
   },
   unitText: {
     fontSize: 14,
-    color: '#6B7280',
     marginLeft: 8,
     fontWeight: '500',
   },
@@ -405,21 +394,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#8B5CF6',
     borderRadius: 12,
     paddingVertical: 16,
     marginHorizontal: 20,
     marginTop: 30,
     marginBottom: 20,
   },
-  saveButtonDisabled: {
-    backgroundColor: '#A78BFA',
-  },
   buttonIcon: {
     marginRight: 8,
   },
   saveButtonText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },

@@ -289,6 +289,8 @@ export class HealthDataSyncService {
     sleepHours: number[];
     hrv: number[];
     heartRate: number[];
+    hydration: number[];
+    meditation: number[];
   }> {
     try {
       const endDate = new Date();
@@ -298,7 +300,7 @@ export class HealthDataSyncService {
 
       const { data, error } = await supabase
         .from('health_data')
-        .select('date, steps, sleep_hours, hrv, heart_rate')
+        .select('date, steps, sleep_hours, hrv, heart_rate, hydration, mindfulness_minutes')
         .eq('user_id', userId)
         .gte('date', startDateStr)
         .lte('date', endDateStr)
@@ -311,6 +313,8 @@ export class HealthDataSyncService {
           sleepHours: [],
           hrv: [],
           heartRate: [],
+          hydration: [],
+          meditation: [],
         };
       }
 
@@ -320,18 +324,20 @@ export class HealthDataSyncService {
           sleepHours: [],
           hrv: [],
           heartRate: [],
+          hydration: [],
+          meditation: [],
         };
       }
 
       // Crea un array per gli ultimi 7 giorni
-      const days: { [key: string]: { steps: number; sleepHours: number; hrv: number; heartRate: number } } = {};
+      const days: { [key: string]: { steps: number; sleepHours: number; hrv: number; heartRate: number; hydration: number; meditation: number } } = {};
       
       // Inizializza tutti i giorni con 0
       for (let i = 0; i < 7; i++) {
         const date = new Date(startDate);
         date.setDate(date.getDate() + i);
         const dateStr = date.toISOString().split('T')[0];
-        days[dateStr] = { steps: 0, sleepHours: 0, hrv: 0, heartRate: 0 };
+        days[dateStr] = { steps: 0, sleepHours: 0, hrv: 0, heartRate: 0, hydration: 0, meditation: 0 };
       }
 
       // Popola con i dati reali
@@ -342,6 +348,8 @@ export class HealthDataSyncService {
           days[dateStr].sleepHours = record.sleep_hours || 0;
           days[dateStr].hrv = record.hrv || 0;
           days[dateStr].heartRate = record.heart_rate || 0;
+          days[dateStr].hydration = record.hydration || 0;
+          days[dateStr].meditation = record.mindfulness_minutes || 0;
         }
       });
 
@@ -351,8 +359,10 @@ export class HealthDataSyncService {
       const sleepHours = sortedDates.map(date => days[date].sleepHours);
       const hrv = sortedDates.map(date => days[date].hrv);
       const heartRate = sortedDates.map(date => days[date].heartRate);
+      const hydration = sortedDates.map(date => days[date].hydration);
+      const meditation = sortedDates.map(date => days[date].meditation);
 
-      return { steps, sleepHours, hrv, heartRate };
+      return { steps, sleepHours, hrv, heartRate, hydration, meditation };
     } catch (error) {
       console.error('❌ Error in getWeeklyTrendData:', error);
       return {
@@ -360,6 +370,8 @@ export class HealthDataSyncService {
         sleepHours: [],
         hrv: [],
         heartRate: [],
+        hydration: [],
+        meditation: [],
       };
     }
   }

@@ -33,6 +33,8 @@ import WidgetGoalModal from './WidgetGoalModal';
 import { widgetGoalsService } from '../services/widget-goals.service';
 import { HealthPermissionsModal } from './HealthPermissionsModal';
 import { useHealthData } from '../hooks/useHealthData';
+import { useChartConfig, ChartType } from '../services/chart-config.service';
+import { ChartSelectionModal } from './ChartSelectionModal';
 import { InsightSection } from './InsightSection';
 // Removed useInsights - now using DailyCopilot for insights
 import DailyCopilot from './DailyCopilot';
@@ -259,7 +261,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     sleepHours: number[];
     hrv: number[];
     heartRate: number[];
-  }>({ steps: [], sleepHours: [], hrv: [], heartRate: [] });
+    hydration: number[];
+    meditation: number[];
+  }>({ steps: [], sleepHours: [], hrv: [], heartRate: [], hydration: [], meditation: [] });
+  const [chartEditMode, setChartEditMode] = useState<boolean>(false);
+  const [chartSelectionModal, setChartSelectionModal] = useState<boolean>(false);
+  
+  // Chart configuration
+  const { enabledCharts, toggleChart, config: chartConfig, enableChart, getAvailableCharts } = useChartConfig();
+  const disabledCharts = chartConfig.filter(c => !c.enabled);
+  const [availableChartsList, setAvailableChartsList] = useState<ChartType[]>([]);
+  
+  // Carica i grafici disponibili quando entra in modalità edit
+  useEffect(() => {
+    if (chartEditMode) {
+      getAvailableCharts().then(setAvailableChartsList);
+    }
+  }, [chartEditMode, getAvailableCharts]);
   
   // Health data hook
   const { permissions: healthPermissions, hasData: hasHealthData, isInitialized, healthData, syncData } = useHealthData();
@@ -1958,23 +1976,79 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
 
         {/* Weekly Progress Section */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
-            {t('home.weeklyProgress.title') || 'I tuoi progressi questa settimana'}
-          </Text>
-          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
-            {t('home.weeklyProgress.subtitle') || 'Un riepilogo dei tuoi miglioramenti'}
-          </Text>
+          <View style={styles.sectionHeaderContent}>
+            <View>
+              <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+                {t('home.weeklyProgress.title') || 'I tuoi progressi questa settimana'}
+              </Text>
+              <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
+                {t('home.weeklyProgress.subtitle') || 'Un riepilogo dei tuoi miglioramenti'}
+              </Text>
+            </View>
+            <View style={styles.headerActions}>
+              {chartEditMode ? (
+                <>
+                  {availableChartsList.length > 0 && (
+                    <TouchableOpacity 
+                      onPress={() => setChartSelectionModal(true)}
+                      style={[styles.addChartButton, { backgroundColor: themeColors.primary, borderColor: themeColors.primaryDark }]}
+                    >
+                      <FontAwesome name="plus" size={14} color="#ffffff" />
+                      <Text style={styles.addChartButtonText}>{t('home.addChart') || 'Aggiungi'}</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity 
+                    onPress={() => setChartEditMode(false)}
+                    style={styles.exitEditButton}
+                  >
+                    <Text style={styles.exitEditButtonText}>{t('home.done')}</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity 
+                  onPress={() => setChartEditMode(true)}
+                  style={[
+                    styles.editModeButton,
+                    {
+                      backgroundColor: themeColors.primary,
+                      borderColor: themeColors.primaryDark,
+                    }
+                  ]}
+                >
+                  <Text style={styles.editModeButtonText}>{t('home.edit')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
         </View>
         
         <View style={styles.weeklyProgressContainer}>
-          {/* Steps Progress */}
-          {healthData?.steps !== undefined && (
+          {enabledCharts.length === 0 && !chartEditMode ? (
             <View style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+              <Text style={[styles.progressCardTitle, { color: themeColors.textSecondary }]}>
+                {t('home.weeklyProgress.noCharts') || 'Nessun grafico abilitato. Usa il pulsante "Modifica" per abilitare i grafici.'}
+              </Text>
+            </View>
+          ) : (
+            <>
+            {enabledCharts.map((chartConfig) => {
+              // Steps Progress
+              if (chartConfig.id === 'steps' && healthData?.steps !== undefined) {
+                return (
+            <View key="steps" style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="walk" size={24} color="#10b981" />
                 <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
                   {t('widgets.steps')}
                 </Text>
+                {chartEditMode && (
+                  <TouchableOpacity
+                    onPress={() => toggleChart('steps')}
+                    style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
+                  >
+                    <FontAwesome name="times" size={14} color={themeColors.error} />
+                  </TouchableOpacity>
+                )}
               </View>
               <View style={styles.progressCardContent}>
                 <View style={styles.progressCardLeft}>
@@ -1997,16 +2071,26 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 </View>
               </View>
             </View>
-          )}
-
-          {/* Sleep Progress */}
-          {healthData?.sleepHours !== undefined && (
-            <View style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+                );
+              }
+              
+              // Sleep Progress
+              if (chartConfig.id === 'sleepHours' && healthData?.sleepHours !== undefined) {
+                return (
+            <View key="sleepHours" style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="sleep" size={24} color="#6366f1" />
                 <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
                   {t('widgets.sleep')}
                 </Text>
+                {chartEditMode && (
+                  <TouchableOpacity
+                    onPress={() => toggleChart('sleepHours')}
+                    style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
+                  >
+                    <FontAwesome name="times" size={14} color={themeColors.error} />
+                  </TouchableOpacity>
+                )}
               </View>
               <View style={styles.progressCardContent}>
                 <View style={styles.progressCardLeft}>
@@ -2029,16 +2113,26 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 </View>
               </View>
             </View>
-          )}
-
-          {/* HRV Progress */}
-          {healthData?.hrv !== undefined && healthData.hrv > 0 && (
-            <View style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+                );
+              }
+              
+              // HRV Progress
+              if (chartConfig.id === 'hrv' && healthData?.hrv !== undefined && healthData.hrv > 0) {
+                return (
+            <View key="hrv" style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="heart-pulse" size={24} color="#ef4444" />
                 <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
                   {t('widgets.hrv')}
                 </Text>
+                {chartEditMode && (
+                  <TouchableOpacity
+                    onPress={() => toggleChart('hrv')}
+                    style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
+                  >
+                    <FontAwesome name="times" size={14} color={themeColors.error} />
+                  </TouchableOpacity>
+                )}
               </View>
               <View style={styles.progressCardContent}>
                 <View style={styles.progressCardLeft}>
@@ -2061,16 +2155,26 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 </View>
               </View>
             </View>
-          )}
-
-          {/* Heart Rate Progress */}
-          {healthData?.heartRate !== undefined && healthData.heartRate > 0 && (
-            <View style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+                );
+              }
+              
+              // Heart Rate Progress
+              if (chartConfig.id === 'heartRate' && healthData?.heartRate !== undefined && healthData.heartRate > 0) {
+                return (
+            <View key="heartRate" style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="heart" size={24} color="#ef4444" />
                 <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
                   {t('home.weeklyProgress.heartRate')}
                 </Text>
+                {chartEditMode && (
+                  <TouchableOpacity
+                    onPress={() => toggleChart('heartRate')}
+                    style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
+                  >
+                    <FontAwesome name="times" size={14} color={themeColors.error} />
+                  </TouchableOpacity>
+                )}
               </View>
               <View style={styles.progressCardContent}>
                 <View style={styles.progressCardLeft}>
@@ -2093,6 +2197,128 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 </View>
               </View>
             </View>
+                );
+              }
+              
+              // Hydration Progress
+              if (chartConfig.id === 'hydration') {
+                return (
+            <View key="hydration" style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+              <View style={styles.progressCardHeader}>
+                <MaterialCommunityIcons name="cup-water" size={24} color="#3b82f6" />
+                <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
+                  {t('widgets.hydration')}
+                </Text>
+                {chartEditMode && (
+                  <TouchableOpacity
+                    onPress={() => toggleChart('hydration')}
+                    style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
+                  >
+                    <FontAwesome name="times" size={14} color={themeColors.error} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={styles.progressCardContent}>
+                <View style={styles.progressCardLeft}>
+                  <Text style={[styles.progressCardValue, { color: themeColors.text }]} numberOfLines={1}>
+                    {Math.round((healthData.hydration || 0) / 250)} {t('home.glasses') || 'bicchieri'}
+                  </Text>
+                  <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
+                    {healthData.hydration ? `${Math.round(healthData.hydration)} ml` : t('home.weeklyProgress.today')}
+                  </Text>
+                </View>
+                <View style={styles.progressCardRight}>
+                  <MiniTrendChart
+                    data={weeklyTrendData.hydration.map(v => Math.round(v / 250))}
+                    color="#3b82f6"
+                    maxValue={weeklyTrendData.hydration.length > 0
+                      ? Math.max(...weeklyTrendData.hydration.map(v => Math.round(v / 250)), Math.round((healthData.hydration || 0) / 250), 1)
+                      : Math.round((healthData.hydration || 0) / 250) || 8}
+                    formatValue={(v) => `${Math.round(v)}`}
+                  />
+                </View>
+              </View>
+            </View>
+                );
+              }
+              
+              // Meditation Progress
+              if (chartConfig.id === 'meditation') {
+                return (
+            <View key="meditation" style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+              <View style={styles.progressCardHeader}>
+                <MaterialCommunityIcons name="meditation" size={24} color="#8b5cf6" />
+                <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
+                  {t('widgets.meditation')}
+                </Text>
+                {chartEditMode && (
+                  <TouchableOpacity
+                    onPress={() => toggleChart('meditation')}
+                    style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
+                  >
+                    <FontAwesome name="times" size={14} color={themeColors.error} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={styles.progressCardContent}>
+                <View style={styles.progressCardLeft}>
+                  <Text style={[styles.progressCardValue, { color: themeColors.text }]} numberOfLines={1}>
+                    {Math.round(healthData.mindfulnessMinutes || 0)} {t('home.minutes') || 'min'}
+                  </Text>
+                  <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
+                    {t('home.weeklyProgress.today')}
+                  </Text>
+                </View>
+                <View style={styles.progressCardRight}>
+                  <MiniTrendChart
+                    data={weeklyTrendData.meditation}
+                    color="#8b5cf6"
+                    maxValue={weeklyTrendData.meditation.length > 0
+                      ? Math.max(...weeklyTrendData.meditation, healthData.mindfulnessMinutes || 0, 1)
+                      : healthData.mindfulnessMinutes || 30}
+                    formatValue={(v) => `${Math.round(v)}`}
+                  />
+                </View>
+              </View>
+            </View>
+                );
+              }
+              
+              return null;
+            })}
+          
+          {/* Mostra i grafici disabilitati in modalità edit per permettere di riabilitarli */}
+          {chartEditMode && disabledCharts.length > 0 && (
+            <View style={styles.disabledChartsContainer}>
+              <Text style={[styles.disabledChartsTitle, { color: themeColors.textSecondary }]}>
+                {t('home.weeklyProgress.disabledCharts') || 'Grafici disabilitati'}
+              </Text>
+              {disabledCharts.map((chart) => {
+                const chartLabels: Record<ChartType, { icon: string; label: string; color: string }> = {
+                  steps: { icon: 'walk', label: t('widgets.steps'), color: '#10b981' },
+                  sleepHours: { icon: 'sleep', label: t('widgets.sleep'), color: '#6366f1' },
+                  hrv: { icon: 'heart-pulse', label: t('widgets.hrv'), color: '#ef4444' },
+                  heartRate: { icon: 'heart', label: t('home.weeklyProgress.heartRate'), color: '#ef4444' },
+                  hydration: { icon: 'cup-water', label: t('widgets.hydration'), color: '#3b82f6' },
+                  meditation: { icon: 'meditation', label: t('widgets.meditation'), color: '#8b5cf6' },
+                };
+                const chartInfo = chartLabels[chart.id];
+                
+                return (
+                  <TouchableOpacity
+                    key={chart.id}
+                    onPress={() => enableChart(chart.id)}
+                    style={[styles.disabledChartCard, { backgroundColor: themeColors.surfaceMuted, borderColor: themeColors.border }]}
+                  >
+                    <MaterialCommunityIcons name={chartInfo.icon as any} size={20} color={chartInfo.color} />
+                    <Text style={[styles.disabledChartLabel, { color: themeColors.text }]}>{chartInfo.label}</Text>
+                    <FontAwesome name="plus-circle" size={18} color={themeColors.primary} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+          </>
           )}
         </View>
       </ScrollView>
@@ -2210,6 +2436,19 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
             [{ text: 'OK', style: 'default' }]
           );
         }}
+      />
+
+      {/* Chart Selection Modal */}
+      <ChartSelectionModal
+        visible={chartSelectionModal}
+        onClose={() => setChartSelectionModal(false)}
+        onSelect={async (chartId) => {
+          await enableChart(chartId);
+          // Ricarica i grafici disponibili
+          const available = await getAvailableCharts();
+          setAvailableChartsList(available);
+        }}
+        availableCharts={availableChartsList}
       />
 
     </SafeAreaView>
@@ -3336,8 +3575,60 @@ const styles = StyleSheet.create({
   progressCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 12,
     gap: 8,
+  },
+  chartEditButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  disabledChartsContainer: {
+    width: '100%',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  disabledChartsTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  disabledChartCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    gap: 12,
+  },
+  disabledChartLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  addChartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
+    marginRight: 8,
+  },
+  addChartButtonText: {
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: '600',
   },
   progressCardTitle: {
     fontSize: 14,

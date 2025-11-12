@@ -35,7 +35,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
   onViewHistory,
   compact = false,
 }) => {
-  const { copilotData, loading, error, refreshCopilotData } = useDailyCopilot();
+  const { copilotData, loading, error } = useDailyCopilot();
   const { colors: themeColors } = useTheme();
 
   // Animation values
@@ -74,6 +74,15 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
       case 'medium': return '#f59e0b';
       case 'low': return '#10b981';
       default: return '#6b7280';
+    }
+  };
+
+  const getPriorityEmoji = (priority: string) => {
+    switch (priority) {
+      case 'high': return '🚨'; // Urgente/Importante
+      case 'medium': return '⚠️'; // Attenzione
+      case 'low': return '✅'; // Tutto ok/Opzionale
+      default: return '💡';
     }
   };
 
@@ -126,9 +135,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
         <View style={styles.errorContainer}>
           <MaterialCommunityIcons name="alert-circle" size={48} color="#ef4444" />
           <Text style={styles.errorText}>{error || 'Errore nel caricamento'}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={refreshCopilotData}>
-            <Text style={styles.retryButtonText}>Riprova</Text>
-          </TouchableOpacity>
+          <Text style={styles.errorSubtext}>L'analisi verrà generata automaticamente al prossimo avvio</Text>
         </View>
       </View>
     );
@@ -182,7 +189,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                         styles.compactPriorityText,
                         { color: getPriorityColor(rec.priority) }
                       ]}>
-                        {rec.priority.toUpperCase()}
+                        {getPriorityEmoji(rec.priority)}
                       </Text>
                     </View>
                   </View>
@@ -244,8 +251,8 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
             </View>
           </View>
           
-          {/* Header Buttons */}
-          <View style={styles.headerButtons}>
+          {/* Header Buttons - Solo history, refresh rimosso */}
+          {onViewHistory && (
             <TouchableOpacity 
               style={styles.historyButton}
               onPress={onViewHistory}
@@ -253,14 +260,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
             >
               <MaterialCommunityIcons name="history" size={20} color={themeColors.primary} />
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.refreshButton}
-              onPress={refreshCopilotData}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons name="refresh" size={20} color={themeColors.primary} />
-            </TouchableOpacity>
-          </View>
+          )}
           
           {/* Score Circle */}
           <Animated.View style={[styles.scoreContainer, progressStyle]}>
@@ -364,7 +364,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                       styles.priorityTextSimple,
                       { color: getPriorityColor(rec.priority) }
                     ]}>
-                      {rec.priority.toUpperCase()}
+                      {getPriorityEmoji(rec.priority)}
                     </Text>
                   </View>
                 </View>
@@ -458,17 +458,11 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     textAlign: 'center',
   },
-  retryButton: {
-    marginTop: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: '#8b5cf6',
-    borderRadius: 12,
-  },
-  retryButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+  errorSubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -476,17 +470,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
   historyButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    opacity: 0.7,
   },
   titleRow: {
     flexDirection: 'row',

@@ -157,12 +157,32 @@ class DailyCopilotService {
   }
 
   /**
-   * Ottiene il mood di oggi dal check-in
+   * Ottiene il mood di oggi dal check-in (dal database)
    */
   private async getTodayMood(): Promise<number> {
     try {
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) {
+        return 3; // Default neutro
+      }
+
       const dayKey = new Date().toISOString().slice(0, 10);
+      
+      // 🔥 FIX: Leggi dal database invece che da AsyncStorage
+      const { supabase } = await import('../lib/supabase');
+      const { data: checkinData } = await supabase
+        .from('daily_copilot_analyses')
+        .select('mood')
+        .eq('user_id', currentUser.id)
+        .eq('date', dayKey)
+        .maybeSingle();
+      
+      if (checkinData?.mood !== null && checkinData?.mood !== undefined) {
+        return checkinData.mood;
+      }
+      
+      // Fallback ad AsyncStorage per retrocompatibilità
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const savedMood = await AsyncStorage.getItem(`checkin:mood:${dayKey}`);
       return savedMood ? parseInt(savedMood, 10) : 3; // Default neutro
     } catch {
@@ -171,15 +191,37 @@ class DailyCopilotService {
   }
 
   /**
-   * Ottiene i dati del sonno di oggi
+   * Ottiene i dati del sonno di oggi (dal database)
    */
   private async getTodaySleep(): Promise<{ hours: number; quality: number; }> {
     try {
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) {
+        return { hours: 7.5, quality: 80 }; // Default
+      }
+
       const dayKey = new Date().toISOString().slice(0, 10);
+      
+      // 🔥 FIX: Leggi dal database invece che da AsyncStorage
+      const { supabase } = await import('../lib/supabase');
+      const { data: checkinData } = await supabase
+        .from('daily_copilot_analyses')
+        .select('sleep_hours, sleep_quality')
+        .eq('user_id', currentUser.id)
+        .eq('date', dayKey)
+        .maybeSingle();
+      
+      if (checkinData) {
+        return {
+          hours: checkinData.sleep_hours || 7.5,
+          quality: checkinData.sleep_quality || 80
+        };
+      }
+      
+      // Fallback ad AsyncStorage per retrocompatibilità
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const savedSleep = await AsyncStorage.getItem(`checkin:sleep:${dayKey}`);
       
-      // Default basati su dati tipici
       return {
         hours: 7.5,
         quality: savedSleep ? parseInt(savedSleep, 10) : 80
@@ -413,12 +455,15 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
             correlations: rec.correlations || [],
             expectedBenefits: rec.expectedBenefits || []
           })),
-          summary: {
-            focus: parsedData.focus || this.generateFocus(data),
-            energy: parsedData.energy || this.getEnergyLevel(data),
-            recovery: parsedData.recovery || this.getRecoveryLevel(data),
-            mood: parsedData.mood || this.getMoodLevel(data.mood)
-          }
+          summary: (() => {
+            const fallbackSummary = this.generateSummary(data);
+            return {
+              focus: parsedData.focus || fallbackSummary.focus,
+              energy: parsedData.energy || fallbackSummary.energy,
+              recovery: parsedData.recovery || fallbackSummary.recovery,
+              mood: parsedData.mood || fallbackSummary.mood
+            };
+          })()
         };
       }
     } catch (error) {

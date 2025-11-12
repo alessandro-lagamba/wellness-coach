@@ -40,6 +40,7 @@ import { UnifiedTTSService } from '../services/unified-tts.service';
 import LoadingCloud from './LoadingCloud';
 import AnimatedOrbVoiceChat from './AnimatedOrbVoiceChat';
 import { ModernVoiceChat } from './ModernVoiceChat';
+import { useSpeechRecognitionEvent, ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 import MessageLoadingDots from './MessageLoadingDots';
 import { DailyJournalService } from '../services/daily-journal.service';
 import { DailyJournalDBService } from '../services/daily-journal-db.service';
@@ -276,8 +277,29 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       if (!local.aiPrompt) {
         const currentTemplate = await JournalSettingsService.getTemplate();
         const templatePrompt = await JournalSettingsService.getTemplatePrompt();
-        const moodNote = await AsyncStorage.getItem(`checkin:mood_note:${selectedDayKey}`);
-        const sleepNote = await AsyncStorage.getItem(`checkin:sleep_note:${selectedDayKey}`);
+        
+        // 🔥 FIX: Recupera le note dal database invece che da AsyncStorage
+        let moodNote: string | null = null;
+        let sleepNote: string | null = null;
+        
+        try {
+          const { supabase } = await import('../lib/supabase');
+          const { data: checkinData } = await supabase
+            .from('daily_copilot_analyses')
+            .select('mood_note, sleep_note')
+            .eq('user_id', currentUser.id)
+            .eq('date', selectedDayKey)
+            .maybeSingle();
+          
+          if (checkinData) {
+            moodNote = checkinData.mood_note || null;
+            sleepNote = checkinData.sleep_note || null;
+          }
+        } catch (error) {
+          // Fallback ad AsyncStorage per retrocompatibilità
+          moodNote = await AsyncStorage.getItem(`checkin:mood_note:${selectedDayKey}`);
+          sleepNote = await AsyncStorage.getItem(`checkin:sleep_note:${selectedDayKey}`);
+        }
         
         // Se c'è un template diverso da 'free', usa il prompt del template
         // Altrimenti usa il prompt tradizionale basato su mood/sleep
@@ -391,6 +413,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [showVoiceInterface, setShowVoiceInterface] = useState(false);
+  
+  // 🆕 Journal dictation state (simile a FridgeIngredientsModal)
+  const [isJournalDictating, setIsJournalDictating] = useState(false);
+  const [journalTranscript, setJournalTranscript] = useState('');
+  const [hasProcessedJournalResult, setHasProcessedJournalResult] = useState(false);
   const [showLoadingCloud, setShowLoadingCloud] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -1410,17 +1437,93 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
   // scrollContentStyle non più necessario per FlatList; il paddingBottom viene messo direttamente in contentContainerStyle della FlatList
 
-  // 🆕 Voice input handler memoizzato
+  // 🆕 Journal dictation handlers (simile a FridgeIngredientsModal)
+  const handleStartJournalDictation = useCallback(async () => {
+    try {
+      setIsJournalDictating(true);
+      setJournalTranscript('');
+      setHasProcessedJournalResult(false);
+      await ExpoSpeechRecognitionModule.start({
+        lang: 'it-IT',
+        interimResults: true,
+        continuous: false,
+        maxAlternatives: 1,
+        requiresOnDeviceRecognition: false,
+      });
+    } catch (error) {
+      console.error('Error starting journal dictation:', error);
+      Alert.alert(t('common.error') || 'Errore', t('journal.dictationError') || 'Errore durante la dettatura');
+      setIsJournalDictating(false);
+    }
+  }, [t]);
+
+  const handleStopJournalDictation = useCallback(async () => {
+    try {
+      await ExpoSpeechRecognitionModule.stop();
+      setIsJournalDictating(false);
+    } catch (error) {
+      console.error('Error stopping journal dictation:', error);
+      setIsJournalDictating(false);
+    }
+  }, []);
+
+  // 🆕 Cleanup: ferma la dettatura quando si cambia modalità
+  useEffect(() => {
+    if (mode !== 'journal' && isJournalDictating) {
+      handleStopJournalDictation();
+      setJournalTranscript('');
+      setHasProcessedJournalResult(false);
+    }
+  }, [mode, isJournalDictating, handleStopJournalDictation]);
+
+  // 🆕 Speech recognition events per Journal dictation
+  useSpeechRecognitionEvent('result', (event) => {
+    if (mode !== 'journal' || !isJournalDictating) return;
+    
+    if (event.results && event.results.length > 0) {
+      const result = event.results[0];
+      const text = result.transcript || '';
+      const isFinal = event.isFinal || false;
+
+      setJournalTranscript(text);
+
+      if (isFinal && text.trim().length > 2 && !hasProcessedJournalResult) {
+        setHasProcessedJournalResult(true);
+        handleStopJournalDictation();
+        // Aggiungi il testo dettato al journal
+        setJournalText(prev => (prev ? `${prev}\n${text.trim()}` : text.trim()));
+        setJournalTranscript('');
+      }
+    }
+  });
+
+  useSpeechRecognitionEvent('start', () => {
+    if (mode === 'journal') {
+      setIsJournalDictating(true);
+    }
+  });
+
+  useSpeechRecognitionEvent('end', () => {
+    if (mode === 'journal') {
+      setIsJournalDictating(false);
+    }
+  });
+
+  useSpeechRecognitionEvent('error', (event) => {
+    if (mode === 'journal') {
+      console.warn('Journal dictation error:', event?.error);
+      setIsJournalDictating(false);
+      Alert.alert(t('common.error') || 'Errore', t('journal.dictationError') || 'Errore durante la dettatura');
+    }
+  });
+
+  // 🆕 Voice input handler memoizzato (solo per chat, non per journal)
   const handleVoiceInput = useCallback(async (text: string) => {
     // ✅ REAL VOICE INPUT - No more simulation!
     // 🆕 Rimosso log per performance
     
+    // Journal dictation è gestita separatamente con handleStartJournalDictation
     if (mode === 'journal') {
-      // In Journal mode, append dictation to journal text instead of sending to chat
-      setJournalText(prev => (prev ? `${prev}\n${text}` : text));
-      setIsListening(false);
-      setIsProcessing(false);
-      setIsVoiceMode(false);
       return;
     }
 
@@ -1868,9 +1971,22 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   value={journalText}
                   onChangeText={setJournalText}
                 />
+                {/* Transcript in tempo reale durante la dettatura */}
+                {isJournalDictating && journalTranscript && (
+                  <View style={[styles.journalTranscriptContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                    <Text style={[styles.journalTranscriptText, { color: colors.text }]}>{journalTranscript}</Text>
+                  </View>
+                )}
                 <View style={styles.journalActions}>
-                  <TouchableOpacity style={styles.journalMic} onPress={() => setShowVoiceInterface(true)}>
-                    <FontAwesome name="microphone" size={16} color="#fff" />
+                  <TouchableOpacity 
+                    style={[styles.journalMic, isJournalDictating && styles.journalMicRecording]} 
+                    onPress={isJournalDictating ? handleStopJournalDictation : handleStartJournalDictation}
+                  >
+                    <FontAwesome 
+                      name={isJournalDictating ? "stop-circle" : "microphone"} 
+                      size={16} 
+                      color="#fff" 
+                    />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.journalSave}
@@ -1887,9 +2003,28 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                         
                         if (journalText.trim().length > 10 && !hasExistingAI) {
                           // 🆕 Rimossi log per performance
-                          // Get mood and sleep notes for context
-                          const moodNote = await AsyncStorage.getItem(`checkin:mood_note:${dayKey}`);
-                          const sleepNote = await AsyncStorage.getItem(`checkin:sleep_note:${dayKey}`);
+                          // 🔥 FIX: Recupera le note dal database invece che da AsyncStorage
+                          let moodNote: string | null = null;
+                          let sleepNote: string | null = null;
+                          
+                          try {
+                            const { supabase } = await import('../lib/supabase');
+                            const { data: checkinData } = await supabase
+                              .from('daily_copilot_analyses')
+                              .select('mood_note, sleep_note')
+                              .eq('user_id', currentUser.id)
+                              .eq('date', dayKey)
+                              .maybeSingle();
+                            
+                            if (checkinData) {
+                              moodNote = checkinData.mood_note || null;
+                              sleepNote = checkinData.sleep_note || null;
+                            }
+                          } catch (error) {
+                            // Fallback ad AsyncStorage per retrocompatibilità
+                            moodNote = await AsyncStorage.getItem(`checkin:mood_note:${dayKey}`);
+                            sleepNote = await AsyncStorage.getItem(`checkin:sleep_note:${dayKey}`);
+                          }
                           
                           const aiJudgment = await DailyJournalService.generateAIJudgment(
                             currentUser.id, 
@@ -2712,6 +2847,20 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: '#6366f1',
     borderRadius: 12,
+  },
+  journalMicRecording: {
+    backgroundColor: '#ef4444',
+  },
+  journalTranscriptContainer: {
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    maxHeight: 100,
+  },
+  journalTranscriptText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   journalSave: {
     paddingHorizontal: 16,

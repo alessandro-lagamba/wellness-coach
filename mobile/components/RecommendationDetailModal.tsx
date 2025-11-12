@@ -70,6 +70,15 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
     }
   };
 
+  const getPriorityEmoji = (priority: string) => {
+    switch (priority) {
+      case 'high': return '🚨'; // Urgente/Importante
+      case 'medium': return '⚠️'; // Attenzione
+      case 'low': return '✅'; // Tutto ok/Opzionale
+      default: return '💡';
+    }
+  };
+
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'nutrition': return '#f59e0b';
@@ -149,7 +158,7 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
                   { backgroundColor: priorityColor + '20' }
                 ]}>
                   <Text style={[styles.priorityText, { color: priorityColor }]}>
-                    {recommendation.priority.toUpperCase()}
+                    {getPriorityEmoji(recommendation.priority)}
                   </Text>
                 </View>
               </View>
