@@ -2238,7 +2238,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             <ScrollView style={styles.settingsModalBody} showsVerticalScrollIndicator={false}>
               {/* Tono del coach */}
               <View style={styles.settingsSection}>
-                <Text style={[styles.settingsSectionTitle, { color: colors.text }]}>Tono del coach</Text>
+                <View style={styles.settingsSectionHeader}>
+                  <View style={[styles.settingsSectionDot, { backgroundColor: colors.primary }]} />
+                  <Text style={[styles.settingsSectionTitle, { color: colors.primary }]}>Tono del coach</Text>
+                </View>
                 <View style={styles.settingsOptions}>
                   {(['empathetic', 'neutral', 'motivational', 'professional'] as ChatTone[]).map((tone) => (
                     <TouchableOpacity
@@ -2265,7 +2268,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
               {/* Lunghezza risposta */}
               <View style={styles.settingsSection}>
-                <Text style={[styles.settingsSectionTitle, { color: colors.text }]}>Lunghezza risposta</Text>
+                <View style={styles.settingsSectionHeader}>
+                  <View style={[styles.settingsSectionDot, { backgroundColor: colors.primary }]} />
+                  <Text style={[styles.settingsSectionTitle, { color: colors.primary }]}>Lunghezza risposta</Text>
+                </View>
                 <View style={styles.settingsOptions}>
                   {(['short', 'standard', 'detailed'] as ResponseLength[]).map((length) => (
                     <TouchableOpacity
@@ -2294,7 +2300,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               <View style={styles.settingsSection}>
                 <View style={styles.settingsToggleRow}>
                   <View style={styles.settingsToggleLabel}>
-                    <Text style={[styles.settingsSectionTitle, { color: colors.text }]}>Passi d'azione automatici</Text>
+                    <View style={styles.settingsSectionHeader}>
+                      <View style={[styles.settingsSectionDot, { backgroundColor: colors.primary }]} />
+                      <Text style={[styles.settingsSectionTitle, { color: colors.primary }]}>Passi d'azione automatici</Text>
+                    </View>
                     <Text style={[styles.settingsSectionSubtitle, { color: colors.textSecondary }]}>
                       Aggiungi "Prossimo passo" alla fine delle risposte
                     </Text>
@@ -2316,7 +2325,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               <View style={[styles.settingsSection, { borderBottomWidth: 0 }]}>
                 <View style={styles.settingsToggleRow}>
                   <View style={styles.settingsToggleLabel}>
-                    <Text style={[styles.settingsSectionTitle, { color: colors.text }]}>Cronologia locale</Text>
+                    <View style={styles.settingsSectionHeader}>
+                      <View style={[styles.settingsSectionDot, { backgroundColor: colors.primary }]} />
+                      <Text style={[styles.settingsSectionTitle, { color: colors.primary }]}>Cronologia locale</Text>
+                    </View>
                     <Text style={[styles.settingsSectionSubtitle, { color: colors.textSecondary }]}>
                       Salva i messaggi localmente per visualizzarli offline
                     </Text>
@@ -3113,12 +3125,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     paddingBottom: 20,
   },
-  settingsSectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+  settingsSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 12,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
+  },
+  settingsSectionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  settingsSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   settingsSectionSubtitle: {
     fontSize: 13,

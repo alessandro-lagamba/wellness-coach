@@ -10,11 +10,12 @@ import { useTheme } from '../contexts/ThemeContext';
 type Props = {
   value: 1|2|3|4|5;
   note?: string;
+  hasExistingCheckin?: boolean; // 🆕 Indica se esiste già un check-in salvato per oggi
   onChange: (v:1|2|3|4|5)=>void;
   onSave: (payload:{ value:1|2|3|4|5; note:string })=>Promise<void>|void;
 };
 
-export default function MoodCheckinCard({ value, note: initialNote='', onChange, onSave }: Props) {
+export default function MoodCheckinCard({ value, note: initialNote='', hasExistingCheckin=false, onChange, onSave }: Props) {
   const { t } = useTranslation();
   const { colors: themeColors, mode } = useTheme();
   const MOODS = [
@@ -28,29 +29,15 @@ export default function MoodCheckinCard({ value, note: initialNote='', onChange,
   const current = useMemo(()=> MOODS.find(m => m.v === value) ?? MOODS[2], [value, MOODS]);
   const [note, setNote] = useState(initialNote);
   const [saving, setSaving] = useState(false);
-  const [hasNoteText, setHasNoteText] = useState(false);
 
-  // Salva automaticamente quando si clicca sull'emoticon (solo il valore, senza note)
-  const handleMoodChange = async (newValue: 1|2|3|4|5) => {
+  // Cambia solo il valore, senza salvare automaticamente
+  const handleMoodChange = (newValue: 1|2|3|4|5) => {
     Haptics.selectionAsync();
     onChange(newValue);
-    
-    // Salva automaticamente il valore senza note
-    try {
-      setSaving(true);
-      await Promise.resolve(onSave({ value: newValue, note: '' }));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
-      console.error('Error saving mood:', error);
-    } finally {
-      setSaving(false);
-    }
   };
 
-  // Salva quando l'utente clicca sul pulsante (solo se ci sono note)
-  const handleSaveWithNote = async () => {
-    if (!hasNoteText) return;
-    
+  // Salva quando l'utente clicca sul pulsante "Salva Umore"
+  const handleSave = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     try {
       setSaving(true);
@@ -58,10 +45,9 @@ export default function MoodCheckinCard({ value, note: initialNote='', onChange,
     } finally { setSaving(false); }
   };
 
-  // Controlla se c'è testo nelle note
+  // Gestisce il cambio delle note
   const handleNoteChange = (text: string) => {
     setNote(text);
-    setHasNoteText(text.trim().length > 0);
   };
 
   return (
@@ -120,17 +106,13 @@ export default function MoodCheckinCard({ value, note: initialNote='', onChange,
         />
       </View>
 
-      {/* footer - mostra solo se ci sono note */}
-      {hasNoteText && (
-        <>
-          <View style={{height:12}} />
-          <PrimaryCTA
-            label={t('dailyCheckIn.mood.saveMood')}
-            onPress={handleSaveWithNote}
-            loading={saving}
-          />
-        </>
-      )}
+      {/* footer - mostra sempre il pulsante Salva/Modifica */}
+      <View style={{height:12}} />
+      <PrimaryCTA
+        label={hasExistingCheckin ? t('dailyCheckIn.mood.editMood') : t('dailyCheckIn.mood.saveMood')}
+        onPress={handleSave}
+        loading={saving}
+      />
     </CheckinCard>
   );
 }

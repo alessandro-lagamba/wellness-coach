@@ -185,12 +185,46 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // Carica l'avatar al mount e quando la schermata torna in focus
   const loadAvatar = useCallback(async () => {
     try {
+      // Prima prova a recuperare dal database (user_profiles.avatar_url)
+      const currentUser = await AuthService.getCurrentUser();
+      if (currentUser?.id) {
+        const userProfile = await AuthService.getUserProfile(currentUser.id);
+        if (userProfile?.avatar_url) {
+          setAvatarUri(userProfile.avatar_url);
+          // Salva anche in AsyncStorage come cache locale
+          await AsyncStorage.setItem('user:avatarUri', userProfile.avatar_url);
+          return;
+        }
+      }
+      
+      // Fallback: recupera da AsyncStorage (per retrocompatibilità)
       const savedAvatar = await AsyncStorage.getItem('user:avatarUri');
       if (savedAvatar) {
         setAvatarUri(savedAvatar);
+        
+        // 🔄 MIGRAZIONE: Se l'avatar esiste in AsyncStorage ma non nel DB, migralo al DB
+        // Questo assicura che gli avatar esistenti vengano sincronizzati nel database
+        if (currentUser?.id && savedAvatar.startsWith('http')) {
+          try {
+            await AuthService.updateUserProfile(currentUser.id, { avatar_url: savedAvatar });
+            console.log('✅ Avatar migrato da AsyncStorage al database');
+          } catch (migrationError) {
+            // Non bloccare se la migrazione fallisce (non critico)
+            console.warn('⚠️ Errore durante migrazione avatar al DB (non critico):', migrationError);
+          }
+        }
       }
     } catch (error) {
-      console.error('Error loading avatar from storage:', error);
+      console.error('Error loading avatar:', error);
+      // In caso di errore, prova comunque AsyncStorage
+      try {
+        const savedAvatar = await AsyncStorage.getItem('user:avatarUri');
+        if (savedAvatar) {
+          setAvatarUri(savedAvatar);
+        }
+      } catch (storageError) {
+        console.error('Error loading avatar from storage:', storageError);
+      }
     }
   }, []);
 
@@ -473,6 +507,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [moodNote, setMoodNote] = useState('');
   const [sleepNote, setSleepNote] = useState('');
   const [restLevel, setRestLevel] = useState<1|2|3|4|5>(3);
+  const [hasExistingMoodCheckin, setHasExistingMoodCheckin] = useState(false); // 🆕 Traccia se esiste già un check-in mood
+  const [hasExistingSleepCheckin, setHasExistingSleepCheckin] = useState(false); // 🆕 Traccia se esiste già un check-in sleep
 
   // 🆕 moodDescriptors con traduzioni
   const moodDescriptors = [
@@ -683,6 +719,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         if (savedMoodNote) setMoodNote(savedMoodNote);
         if (savedSleepNote) setSleepNote(savedSleepNote);
         if (savedRestLevel) setRestLevel(parseInt(savedRestLevel, 10) as 1|2|3|4|5);
+        
+        // 🆕 Verifica se esistono check-in nel database per oggi
+        const currentUser = await AuthService.getCurrentUser();
+        if (currentUser?.id) {
+          const { supabase } = await import('../lib/supabase');
+          const { data: existingCheckin } = await supabase
+            .from('daily_copilot_analyses')
+            .select('mood, sleep_quality')
+            .eq('user_id', currentUser.id)
+            .eq('date', dk)
+            .maybeSingle();
+          
+          if (existingCheckin) {
+            setHasExistingMoodCheckin(existingCheckin.mood !== null && existingCheckin.mood !== undefined);
+            setHasExistingSleepCheckin(existingCheckin.sleep_quality !== null && existingCheckin.sleep_quality !== undefined && existingCheckin.sleep_quality > 0);
+          }
+        }
       } catch {}
     })();
   }, []);
@@ -701,6 +754,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // nuove funzioni di salvataggio con note
   async function saveMoodCheckin(value: number, note: string) {
     const dk = dayKey();
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    
+    // 🔥 FIX: Verifica che la data sia quella di oggi (non permettere salvataggi per giorni passati/futuri)
+    if (dk !== today) {
+      UserFeedbackService.showError('Puoi salvare il check-in solo per oggi. La data non corrisponde.');
+      return;
+    }
     
     // 🆕 Validazione dati prima del salvataggio
     const validation = DataValidationService.validateMoodCheckin({ value, note });
@@ -733,54 +793,65 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             async () => {
               const { supabase } = await import('../lib/supabase');
               
-              // Controlla se esiste già un record per oggi
-              const { data: existingRecord, error: fetchError } = await supabase
+              // 🔥 FIX: Usa UPSERT invece di check-then-insert/update per evitare race conditions
+              // Il constraint UNIQUE(user_id, date) gestisce automaticamente i duplicati
+              
+              // Controlla se esiste già un record per preservare i valori esistenti e mostrare warning
+              const { data: existing } = await supabase
                 .from('daily_copilot_analyses')
-                .select('id')
+                .select('id, mood, mood_note, sleep_hours, sleep_quality, sleep_note, overall_score, health_metrics, recommendations, summary, created_at')
                 .eq('user_id', currentUser.id)
                 .eq('date', dk)
                 .maybeSingle();
-
-              if (fetchError && fetchError.code !== 'PGRST116') {
-                throw new Error(`Error fetching existing check-in: ${fetchError.message}`);
+              
+              // 🔥 FIX: Warning se si sta aggiornando un check-in già esistente
+              if (existing && existing.mood !== null && existing.mood !== undefined) {
+                // Calcola il tempo trascorso dal primo salvataggio
+                const createdAt = new Date(existing.created_at);
+                const now = new Date();
+                const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+                
+                // Mostra warning se è passato più di 1 ora (permette correzioni immediate)
+                if (hoursSinceCreation > 1) {
+                  UserFeedbackService.showWarning(`Stai aggiornando un check-in salvato ${Math.round(hoursSinceCreation)} ore fa.`);
+                }
               }
-
-              const updateData: any = {
+              
+              const upsertData = {
+                user_id: currentUser.id,
+                date: dk,
                 mood: value,
+                mood_note: note || null, // Salva la nota (o null se vuota)
                 updated_at: new Date().toISOString(),
+                // Preserva i valori esistenti per sleep e altri campi se esistono
+                ...(existing ? {
+                  sleep_hours: existing.sleep_hours,
+                  sleep_quality: existing.sleep_quality,
+                  sleep_note: existing.sleep_note,
+                  overall_score: existing.overall_score,
+                  health_metrics: existing.health_metrics,
+                  recommendations: existing.recommendations,
+                  summary: existing.summary,
+                } : {
+                  // Valori di default per nuovo record
+                  overall_score: 50,
+                  sleep_hours: 0,
+                  sleep_quality: 0,
+                  health_metrics: {},
+                  recommendations: [],
+                  summary: {},
+                }),
               };
 
-              // Se esiste già un record, aggiornalo
-              if (existingRecord) {
-                const { error: updateError } = await supabase
-                  .from('daily_copilot_analyses')
-                  .update(updateData)
-                  .eq('id', existingRecord.id);
+              const { error: upsertError } = await supabase
+                .from('daily_copilot_analyses')
+                .upsert(upsertData, { 
+                  onConflict: 'user_id,date',
+                  ignoreDuplicates: false 
+                });
 
-                if (updateError) {
-                  throw new Error(`Error updating mood check-in: ${updateError.message}`);
-                }
-              } else {
-                // Crea un nuovo record con valori di default
-                const { error: insertError } = await supabase
-                  .from('daily_copilot_analyses')
-                  .insert({
-                    user_id: currentUser.id,
-                    date: dk,
-                    mood: value,
-                    overall_score: 50, // Default score
-                    sleep_hours: 0,
-                    sleep_quality: 0,
-                    health_metrics: {},
-                    recommendations: [],
-                    summary: {},
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                  });
-
-                if (insertError) {
-                  throw new Error(`Error inserting mood check-in: ${insertError.message}`);
-                }
+              if (upsertError) {
+                throw new Error(`Error upserting mood check-in: ${upsertError.message}`);
               }
               
               // 🆕 Verifica post-salvataggio che i dati siano nel database
@@ -789,6 +860,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 UserFeedbackService.showWarning('Il check-in è stato salvato ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
               } else {
                 UserFeedbackService.showSaveSuccess('check-in');
+                // 🆕 Aggiorna lo stato per cambiare il testo del pulsante
+                setHasExistingMoodCheckin(true);
               }
             },
             'save_mood_checkin',
@@ -817,6 +890,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   async function saveSleepCheckin(quality: number, note: string, restLevel: number) {
     const dk = dayKey();
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    
+    // 🔥 FIX: Verifica che la data sia quella di oggi (non permettere salvataggi per giorni passati/futuri)
+    if (dk !== today) {
+      UserFeedbackService.showError('Puoi salvare il check-in solo per oggi. La data non corrisponde.');
+      return;
+    }
     
     // 🆕 Validazione dati prima del salvataggio
     const sleepWidget = widgetData.find(w => w.id === 'sleep');
@@ -852,55 +932,64 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             async () => {
               const { supabase } = await import('../lib/supabase');
               
-              // Controlla se esiste già un record per oggi
-              const { data: existingRecord, error: fetchError } = await supabase
+              // 🔥 FIX: Usa UPSERT invece di check-then-insert/update per evitare race conditions
+              // Il constraint UNIQUE(user_id, date) gestisce automaticamente i duplicati
+              
+              // Controlla se esiste già un record per preservare i valori esistenti e mostrare warning
+              const { data: existing } = await supabase
                 .from('daily_copilot_analyses')
-                .select('id')
+                .select('id, mood, mood_note, sleep_quality, sleep_hours, sleep_note, overall_score, health_metrics, recommendations, summary, created_at')
                 .eq('user_id', currentUser.id)
                 .eq('date', dk)
                 .maybeSingle();
-
-              if (fetchError && fetchError.code !== 'PGRST116') {
-                throw new Error(`Error fetching existing check-in: ${fetchError.message}`);
+              
+              // 🔥 FIX: Warning se si sta aggiornando un check-in già esistente
+              if (existing && existing.sleep_quality !== null && existing.sleep_quality !== undefined && existing.sleep_quality > 0) {
+                // Calcola il tempo trascorso dal primo salvataggio
+                const createdAt = new Date(existing.created_at);
+                const now = new Date();
+                const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+                
+                // Mostra warning se è passato più di 1 ora (permette correzioni immediate)
+                if (hoursSinceCreation > 1) {
+                  UserFeedbackService.showWarning(`Stai aggiornando un check-in salvato ${Math.round(hoursSinceCreation)} ore fa.`);
+                }
               }
-
-              const updateData: any = {
+              
+              const upsertData = {
+                user_id: currentUser.id,
+                date: dk,
                 sleep_quality: quality,
                 sleep_hours: sleepHours,
+                sleep_note: note || null, // Salva la nota (o null se vuota)
                 updated_at: new Date().toISOString(),
+                // Preserva i valori esistenti per mood e altri campi se esistono
+                ...(existing ? {
+                  mood: existing.mood,
+                  mood_note: existing.mood_note,
+                  overall_score: existing.overall_score,
+                  health_metrics: existing.health_metrics,
+                  recommendations: existing.recommendations,
+                  summary: existing.summary,
+                } : {
+                  // Valori di default per nuovo record
+                  mood: 3,
+                  overall_score: 50,
+                  health_metrics: {},
+                  recommendations: [],
+                  summary: {},
+                }),
               };
 
-              // Se esiste già un record, aggiornalo
-              if (existingRecord) {
-                const { error: updateError } = await supabase
-                  .from('daily_copilot_analyses')
-                  .update(updateData)
-                  .eq('id', existingRecord.id);
+              const { error: upsertError } = await supabase
+                .from('daily_copilot_analyses')
+                .upsert(upsertData, { 
+                  onConflict: 'user_id,date',
+                  ignoreDuplicates: false 
+                });
 
-                if (updateError) {
-                  throw new Error(`Error updating sleep check-in: ${updateError.message}`);
-                }
-              } else {
-                // Crea un nuovo record con valori di default
-                const { error: insertError } = await supabase
-                  .from('daily_copilot_analyses')
-                  .insert({
-                    user_id: currentUser.id,
-                    date: dk,
-                    mood: 3, // Default mood
-                    overall_score: 50, // Default score
-                    sleep_hours: sleepHours,
-                    sleep_quality: quality,
-                    health_metrics: {},
-                    recommendations: [],
-                    summary: {},
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                  });
-
-                if (insertError) {
-                  throw new Error(`Error inserting sleep check-in: ${insertError.message}`);
-                }
+              if (upsertError) {
+                throw new Error(`Error upserting sleep check-in: ${upsertError.message}`);
               }
               
               // 🆕 Verifica post-salvataggio che i dati siano nel database
@@ -909,6 +998,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 UserFeedbackService.showWarning('Il check-in è stato salvato ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
               } else {
                 UserFeedbackService.showSaveSuccess('check-in');
+                // 🆕 Aggiorna lo stato per cambiare il testo del pulsante
+                setHasExistingSleepCheckin(true);
               }
             },
             'save_sleep_checkin',
@@ -1809,6 +1900,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
             <MoodCheckinCard
               value={moodValue as 1|2|3|4|5}
               note={moodNote}
+              hasExistingCheckin={hasExistingMoodCheckin}
               onChange={(v) => { setMoodValue(v); }}
               onSave={async ({value, note}) => { setMoodValue(value); setMoodNote(note); await saveMoodCheckin(value, note); }}
             />
@@ -1822,6 +1914,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               waketime={sleepStats?.wakeTime ?? '7:30 AM'}
               note={sleepNote}
               restLevel={restLevel}
+              hasExistingCheckin={hasExistingSleepCheckin}
               onChangeRestLevel={(level) => { setRestLevel(level); }}
               onSave={async ({quality, note}) => { setSleepQuality(quality); setSleepNote(note); await saveSleepCheckin(quality, note, restLevel); }}
             />
@@ -2430,6 +2523,8 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     marginTop: 4,
     fontSize: 12,
+    flexWrap: 'wrap',
+    flexShrink: 1,
     // Colore gestito inline con themeColors.textSecondary
   },
   widgetGrid: {

@@ -14,13 +14,14 @@ type Props = {
   bedtime: string;
   waketime: string;
   note?: string;
+  hasExistingCheckin?: boolean; // 🆕 Indica se esiste già un check-in salvato per oggi
   onSave: (payload:{ hours:number; quality:number; note:string })=>Promise<void>|void;
   restLevel?: 1|2|3|4|5;
   onChangeRestLevel?: (level:1|2|3|4|5)=>void;
 };
 
 export default function SleepCheckinCard({
-  hours, quality, bedtime, waketime, note: initialNote='', onSave, restLevel: initialRestLevel=3, onChangeRestLevel,
+  hours, quality, bedtime, waketime, note: initialNote='', hasExistingCheckin=false, onSave, restLevel: initialRestLevel=3, onChangeRestLevel,
 }: Props) {
   const { t } = useTranslation();
   const { colors: themeColors, mode } = useTheme();
@@ -35,48 +36,33 @@ export default function SleepCheckinCard({
   const [note, setNote] = useState(initialNote);
   const [saving, setSaving] = useState(false);
   const [restLevel, setRestLevel] = useState<1|2|3|4|5>(initialRestLevel);
-  const [hasNoteText, setHasNoteText] = useState(false);
 
   const currentRest = REST_LEVELS.find(r => r.v === restLevel) ?? REST_LEVELS[2];
 
-  // Salva automaticamente quando si cambia il livello di riposo (solo il valore, senza note)
-  const handleRestLevelChange = async (newLevel: 1|2|3|4|5) => {
+  // Cambia solo il livello di riposo, senza salvare automaticamente
+  const handleRestLevelChange = (newLevel: 1|2|3|4|5) => {
     Haptics.selectionAsync();
     setRestLevel(newLevel);
     if (onChangeRestLevel) {
       onChangeRestLevel(newLevel);
     }
-    
-    // Salva automaticamente il valore senza note
-    // Mappa il restLevel (1-5) a quality (0-100) per compatibilità
-    const qualityFromRestLevel = ((newLevel - 1) / 4) * 100; // 1->0%, 2->25%, 3->50%, 4->75%, 5->100%
-    
-    try {
-      setSaving(true);
-      await Promise.resolve(onSave({ hours, quality: qualityFromRestLevel, note: '' }));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
-      console.error('Error saving sleep level:', error);
-    } finally {
-      setSaving(false);
-    }
   };
 
-  // Salva quando l'utente clicca sul pulsante (solo se ci sono note)
-  const handleSaveWithNote = async () => {
-    if (!hasNoteText) return;
+  // Salva quando l'utente clicca sul pulsante "Salva Riposo"
+  const handleSave = async () => {
+    // Mappa il restLevel (1-5) a quality (0-100) per compatibilità
+    const qualityFromRestLevel = ((restLevel - 1) / 4) * 100; // 1->0%, 2->25%, 3->50%, 4->75%, 5->100%
     
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     try {
       setSaving(true);
-      await Promise.resolve(onSave({ hours, quality, note: note.trim() }));
+      await Promise.resolve(onSave({ hours, quality: qualityFromRestLevel, note: note.trim() }));
     } finally { setSaving(false); }
   };
 
-  // Controlla se c'è testo nelle note
+  // Gestisce il cambio delle note
   const handleNoteChange = (text: string) => {
     setNote(text);
-    setHasNoteText(text.trim().length > 0);
   };
 
   // animazione per i pallini
@@ -93,11 +79,6 @@ export default function SleepCheckinCard({
     }).start();
   }, [restLevel]);
 
-  const handleSave = async () => {
-    setSaving(true);
-    try { await Promise.resolve(onSave({ hours, quality, note: note.trim() })); }
-    finally { setSaving(false); }
-  };
 
   return (
     <CheckinCard
@@ -206,17 +187,13 @@ export default function SleepCheckinCard({
         />
       </View>
 
-      {/* footer - mostra solo se ci sono note */}
-      {hasNoteText && (
-        <>
-          <View style={{height:12}} />
-          <PrimaryCTA
-            label={t('dailyCheckIn.sleep.saveRestLevel')}
-            onPress={handleSaveWithNote}
-            loading={saving}
-          />
-        </>
-      )}
+      {/* footer - mostra sempre il pulsante Salva/Modifica */}
+      <View style={{height:12}} />
+      <PrimaryCTA
+        label={hasExistingCheckin ? t('dailyCheckIn.sleep.editRestLevel') : t('dailyCheckIn.sleep.saveRestLevel')}
+        onPress={handleSave}
+        loading={saving}
+      />
     </CheckinCard>
   );
 }
@@ -229,7 +206,7 @@ const styles = StyleSheet.create({
 
   // === layout base ===
   sliderWrap:{ marginTop:8, position:'relative', paddingTop:8, paddingBottom:10 },
-  sliderLabels:{ flexDirection:'row', justifyContent:'space-between', marginBottom:10, paddingHorizontal:2 },
+  sliderLabels:{ flexDirection:'row', justifyContent:'space-between', marginBottom:16, paddingHorizontal:2, marginTop: -4 },
   sliderEmoji:{ fontSize:22 },
 
   // === rail + dots ===

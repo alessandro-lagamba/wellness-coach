@@ -32,6 +32,7 @@ export interface UserProfile {
     fats_percentage?: number;
     source?: 'manual' | 'ai_suggested' | 'nutritionist';
   };
+  avatar_url?: string; // URL dell'avatar generato
   created_at: string;
   updated_at: string;
 }
