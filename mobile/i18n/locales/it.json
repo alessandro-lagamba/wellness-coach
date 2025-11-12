@@ -190,6 +190,9 @@
     "subtitle": "Routine curate per mantenere lo slancio",
     "edit": "Modifica",
     "done": "Fatto",
+    "addChart": "Aggiungi grafico",
+    "glasses": "bicchieri",
+    "minutes": "min",
     "loadingWidgets": "Caricamento widget...",
     "moodBalance": "Equilibrio Umore",
     "restfulSleep": "Sonno Riparatore",
@@ -270,7 +273,9 @@
       "today": "Oggi",
       "quality": "qualità",
       "current": "Valore attuale",
-      "heartRate": "Battito cardiaco"
+      "heartRate": "Battito cardiaco",
+      "disabledCharts": "Grafici disabilitati",
+      "noCharts": "Nessun grafico abilitato. Usa il pulsante \"Modifica\" per abilitare i grafici."
     },
     "permissions": {
       "required": "Permessi Necessari",
@@ -1156,6 +1161,13 @@
     "disableToReAdd": "Disabilita un widget per riaggiungerlo qui.",
     "error": "Errore",
     "addError": "Errore durante l'aggiunta del widget"
+  },
+  "chartSelection": {
+    "title": "Aggiungi grafico",
+    "subtitle": "Scegli un grafico da aggiungere al tuo progresso settimanale.",
+    "tapToAdd": "Tocca per aggiungere",
+    "allAdded": "Tutti i grafici sono stati aggiunti!",
+    "disableToReAdd": "Disabilita un grafico dalla schermata principale per riaggiungerlo."
   },
   "wellnessSuggestions": {
     "title": "Suggerimenti di Benessere",

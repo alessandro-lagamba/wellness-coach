@@ -337,22 +337,58 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     })();
   }, [currentUser, selectedDayKey]);
 
+  // 🆕 Helper per verificare se una data è nel futuro
+  const isFutureDate = (isoDate: string): boolean => {
+    const today = DailyJournalService.todayKey();
+    return isoDate > today;
+  };
+
   // 🆕 Scroll automatico al giorno selezionato nella barra orizzontale
+  // 🔥 FIX: Centra sempre la data odierna quando si apre il Journal
+  useEffect(() => {
+    if (monthStripScrollRef.current && monthDays.length > 0) {
+      const today = DailyJournalService.todayKey();
+      const todayIndex = monthDays.indexOf(today);
+      
+      // Se la data odierna è nel mese corrente, centrarla
+      if (todayIndex >= 0) {
+        const timer = setTimeout(() => {
+          monthStripScrollRef.current?.scrollTo({ 
+            x: Math.max(0, todayIndex * 60 - width / 2 + 30), // Centra la data odierna
+            animated: true 
+          });
+        }, 100);
+        
+        return () => clearTimeout(timer);
+      } else if (selectedDayKey && monthDays.includes(selectedDayKey)) {
+        // Altrimenti, centra il giorno selezionato
+        const index = monthDays.indexOf(selectedDayKey);
+        const timer = setTimeout(() => {
+          monthStripScrollRef.current?.scrollTo({ 
+            x: Math.max(0, index * 60 - width / 2 + 30), // Centra il giorno selezionato
+            animated: true 
+          });
+        }, 100);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [monthDays]); // 🔥 FIX: Esegui solo quando monthDays cambia (all'apertura del Journal)
+
+  // 🆕 Scroll quando cambia selectedDayKey (ma solo se non è la prima apertura)
   useEffect(() => {
     if (monthStripScrollRef.current && selectedDayKey && monthDays.includes(selectedDayKey)) {
       const index = monthDays.indexOf(selectedDayKey);
-      // Delay per permettere al layout di completarsi
-      // 🔥 FIX: Memory leak - aggiungiamo cleanup per setTimeout
       const timer = setTimeout(() => {
         monthStripScrollRef.current?.scrollTo({ 
-          x: Math.max(0, index * 60 - width / 4), // Scroll per centrare approssimativamente
+          x: Math.max(0, index * 60 - width / 2 + 30), // Centra il giorno selezionato
           animated: true 
         });
       }, 100);
       
       return () => clearTimeout(timer);
     }
-  }, [selectedDayKey, monthDays]);
+  }, [selectedDayKey]);
 
   // 🆕 Helper per creare ISO date senza problemi di timezone
   const toISODateSafe = (year: number, month: number, day: number): string => {
@@ -1806,11 +1842,33 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   const active = iso === selectedDayKey;
                   const dayNum = parseInt(iso.slice(8,10), 10);
                   const hasEntry = journal?.hasEntry || false;
+                  const isFuture = isFutureDate(iso); // 🆕 Verifica se è una data futura
                   
                   return (
-                    <TouchableOpacity key={iso} onPress={() => setSelectedDayKey(iso)} style={[styles.dayPill, { backgroundColor: colors.surface, borderColor: colors.border }, active && { borderColor: '#6366f1', backgroundColor: '#eef2ff' }]}> 
+                    <TouchableOpacity 
+                      key={iso} 
+                      onPress={() => {
+                        if (!isFuture) {
+                          setSelectedDayKey(iso);
+                        }
+                      }}
+                      disabled={isFuture} // 🆕 Disabilita i giorni futuri
+                      style={[
+                        styles.dayPill, 
+                        { backgroundColor: colors.surface, borderColor: colors.border }, 
+                        active && { borderColor: '#6366f1', backgroundColor: '#eef2ff' },
+                        isFuture && { opacity: 0.4 } // 🆕 Stile visivo per giorni futuri
+                      ]}
+                    > 
                       {hasEntry && <View style={[styles.colorDot, { backgroundColor: color }]} />}
-                      <Text style={[styles.dayText, { color: colors.text }, active && { color: '#3730a3', fontWeight: '800' }]}>{String(dayNum)}</Text>
+                      <Text style={[
+                        styles.dayText, 
+                        { color: colors.text }, 
+                        active && { color: '#3730a3', fontWeight: '800' },
+                        isFuture && { color: colors.textTertiary } // 🆕 Testo più chiaro per giorni futuri
+                      ]}>
+                        {String(dayNum)}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -1905,6 +1963,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                             
                             const active = iso === selectedDayKey;
                             const hasEntry = journal?.hasEntry || false; // 🆕 Mostra pallino solo se c'è entry
+                            const isFuture = isFutureDate(iso); // 🆕 Verifica se è una data futura
                             
                             cells.push(
                               <TouchableOpacity 
@@ -1912,14 +1971,25 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                                 style={[
                                   styles.calCell, 
                                   { backgroundColor: colors.surface, borderColor: colors.border }, 
-                                  active && { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
+                                  active && { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+                                  isFuture && { opacity: 0.4 } // 🆕 Stile visivo per giorni futuri
                                 ]} 
                                 onPress={() => { 
-                                  setSelectedDayKey(iso); 
-                                  setShowMonthPicker(false); 
+                                  if (!isFuture) {
+                                    setSelectedDayKey(iso); 
+                                    setShowMonthPicker(false);
+                                  }
                                 }}
+                                disabled={isFuture} // 🆕 Disabilita i giorni futuri
                               >
-                                <Text style={[styles.calDayTxt, { color: colors.text }, active && { color: colors.primary, fontWeight:'800' }]}>{String(dayNum)}</Text>
+                                <Text style={[
+                                  styles.calDayTxt, 
+                                  { color: colors.text }, 
+                                  active && { color: colors.primary, fontWeight:'800' },
+                                  isFuture && { color: colors.textTertiary } // 🆕 Testo più chiaro per giorni futuri
+                                ]}>
+                                  {String(dayNum)}
+                                </Text>
                                 {hasEntry && <View style={[styles.calDot, { backgroundColor: color }]} />}
                               </TouchableOpacity>
                             );

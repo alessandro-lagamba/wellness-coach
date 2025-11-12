@@ -338,6 +338,9 @@ export const FoodAnalysisScreen: React.FC = () => {
   // 🔥 FIX: Spostato prima degli useEffect per rispettare le regole degli hook
   const cameraInitializedRef = useRef(false);
 
+  // 🔥 FIX: Spostato hook useAnalysisStore prima dei return condizionali per rispettare le regole degli hook
+  const foodHistory = useAnalysisStore((state) => state.getSafeFoodHistory());
+
   const startDisabled = permissionChecking || analyzing || !analysisReady || !!analysisError;
   const captureDisabled = !cameraController.ready || cameraController.detecting || permissionChecking || analyzing || cameraSwitching;
 
@@ -1751,9 +1754,7 @@ export const FoodAnalysisScreen: React.FC = () => {
         
         {/* Daily Progress: Calories Bar + Macro Gauges */}
         {(() => {
-          // ✅ Use reactive hook instead of getState() for automatic updates
-          const foodHistory = useAnalysisStore((state) => state.getSafeFoodHistory());
-          
+          // 🔥 FIX: Hook spostato all'inizio del componente - usa la variabile già definita
           // Calculate today's totals from food history
           const todayHistory = foodHistory.filter(session => {
             const sessionDate = new Date(session.timestamp);

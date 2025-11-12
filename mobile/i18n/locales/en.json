@@ -188,6 +188,9 @@
     "subtitle": "Curated routines to keep momentum going",
     "edit": "Edit",
     "done": "Done",
+    "addChart": "Add chart",
+    "glasses": "glasses",
+    "minutes": "min",
     "loadingWidgets": "Loading widgets...",
     "moodBalance": "Mood Balance",
     "restfulSleep": "Restful Sleep",
@@ -268,7 +271,9 @@
       "today": "Today",
       "quality": "quality",
       "current": "Current value",
-      "heartRate": "Heart rate"
+      "heartRate": "Heart rate",
+      "disabledCharts": "Disabled charts",
+      "noCharts": "No charts enabled. Use the \"Edit\" button to enable charts."
     },
     "permissions": {
       "required": "Permissions Required",
@@ -1148,6 +1153,13 @@
     "disableToReAdd": "Disable a widget to re-add it here.",
     "error": "Error",
     "addError": "Error adding widget"
+  },
+  "chartSelection": {
+    "title": "Add chart",
+    "subtitle": "Choose a chart to add to your weekly progress.",
+    "tapToAdd": "Tap to add",
+    "allAdded": "All charts have been added!",
+    "disableToReAdd": "Disable a chart from the main screen to re-add it."
   },
   "wellnessSuggestions": {
     "title": "Wellness Suggestions",

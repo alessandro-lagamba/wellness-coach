@@ -969,7 +969,7 @@ export class HealthDataService {
             return 0;
           };
 
-          const hrvRecordTypes = ['HeartRateVariabilityRmssd', 'HeartRateVariability'];
+          const hrvRecordTypes = ['HeartRateVariabilityRmssd'];
 
           const collectHrvDataset = async (options: any) => {
             for (const type of hrvRecordTypes) {

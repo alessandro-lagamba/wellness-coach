@@ -1977,7 +1977,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
         {/* Weekly Progress Section */}
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderContent}>
-            <View>
+            <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
                 {t('home.weeklyProgress.title') || 'I tuoi progressi questa settimana'}
               </Text>
@@ -1994,7 +1994,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                       style={[styles.addChartButton, { backgroundColor: themeColors.primary, borderColor: themeColors.primaryDark }]}
                     >
                       <FontAwesome name="plus" size={14} color="#ffffff" />
-                      <Text style={styles.addChartButtonText}>{t('home.addChart') || 'Aggiungi'}</Text>
+                      <Text style={styles.addChartButtonText}>{t('home.addChart')}</Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity 
@@ -2221,10 +2221,10 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               <View style={styles.progressCardContent}>
                 <View style={styles.progressCardLeft}>
                   <Text style={[styles.progressCardValue, { color: themeColors.text }]} numberOfLines={1}>
-                    {Math.round((healthData.hydration || 0) / 250)} {t('home.glasses') || 'bicchieri'}
+                    {Math.round((healthData.hydration || 0) / 250)} {t('home.glasses')}
                   </Text>
                   <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
-                    {healthData.hydration ? `${Math.round(healthData.hydration)} ml` : t('home.weeklyProgress.today')}
+                    {healthData.hydration ? `${(healthData.hydration / 1000).toFixed(1)} L` : t('home.weeklyProgress.today')}
                   </Text>
                 </View>
                 <View style={styles.progressCardRight}>
@@ -2263,7 +2263,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               <View style={styles.progressCardContent}>
                 <View style={styles.progressCardLeft}>
                   <Text style={[styles.progressCardValue, { color: themeColors.text }]} numberOfLines={1}>
-                    {Math.round(healthData.mindfulnessMinutes || 0)} {t('home.minutes') || 'min'}
+                    {Math.round(healthData.mindfulnessMinutes || 0)} {t('home.minutes')}
                   </Text>
                   <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
                     {t('home.weeklyProgress.today')}
@@ -2752,7 +2752,8 @@ const styles = StyleSheet.create({
   sectionHeaderContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
   },
   sectionTitle: {
     fontSize: 18,

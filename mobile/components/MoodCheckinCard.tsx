@@ -54,7 +54,6 @@ export default function MoodCheckinCard({ value, note: initialNote='', hasExisti
     <CheckinCard
       tint="mint"
       title={t('dailyCheckIn.mood.title')}
-      subtitle={t('dailyCheckIn.mood.subtitle')}
       headerIcon={<Text style={{fontSize:22}}>😊</Text>}
       minHeight={350}
       bodyMinHeight={220}
@@ -86,13 +85,24 @@ export default function MoodCheckinCard({ value, note: initialNote='', hasExisti
       </View>
 
       {/* note */}
-      <View style={{marginTop:32}}>
-        <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>{t('dailyCheckIn.mood.addNote')}</Text>
+      <View style={{marginTop:32, position: 'relative'}}>
+        {!note && (
+          <Text 
+            style={[
+              styles.placeholderText,
+              {
+                color: themeColors.textTertiary,
+              }
+            ]}
+            pointerEvents="none"
+          >
+            {t('dailyCheckIn.mood.subtitle')}
+          </Text>
+        )}
         <TextInput
           value={note}
           onChangeText={handleNoteChange}
-          placeholder={t('dailyCheckIn.mood.notePlaceholder')}
-          placeholderTextColor={themeColors.textTertiary}
+          placeholder=""
           multiline
           numberOfLines={4}
           style={[
@@ -131,4 +141,13 @@ const styles = StyleSheet.create({
   fieldLabel:{ fontSize:13, fontWeight:'700', marginBottom:6 },
   textarea:{ borderWidth:1, borderRadius:16, padding:12, minHeight:96,
     fontSize:14 },
+  placeholderText: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
+    fontSize: 14,
+    fontStyle: 'italic',
+    zIndex: 1,
+  },
 });
