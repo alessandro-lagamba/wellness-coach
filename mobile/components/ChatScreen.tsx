@@ -1707,7 +1707,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   return (
                     <TouchableOpacity key={iso} onPress={() => setSelectedDayKey(iso)} style={[styles.dayPill, { backgroundColor: colors.surface, borderColor: colors.border }, active && { borderColor: '#6366f1', backgroundColor: '#eef2ff' }]}> 
                       {hasEntry && <View style={[styles.colorDot, { backgroundColor: color }]} />}
-                      <Text style={[styles.dayText, active && { color: '#3730a3', fontWeight: '800' }]}>{String(dayNum)}</Text>
+                      <Text style={[styles.dayText, { color: colors.text }, active && { color: '#3730a3', fontWeight: '800' }]}>{String(dayNum)}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -2611,7 +2611,7 @@ const styles = StyleSheet.create({
   monthStripContent: { paddingHorizontal: 8, gap: 8 },
   dayPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#fff' },
   colorDot: { width: 8, height: 8, borderRadius: 4 },
-  dayText: { fontSize: 12, color: '#334155', fontWeight: '700' },
+  dayText: { fontSize: 12, fontWeight: '700' }, // Colore gestito dinamicamente con colors.text
   monthHeader: { marginTop: 8, marginHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   monthHeaderModal: { marginHorizontal: 0, marginTop: 0, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   monthNavBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
@@ -2631,7 +2631,7 @@ const styles = StyleSheet.create({
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 4, paddingBottom: 6 },
   calCell: { width: `${100/7}%`, height: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   calCellEmpty: { width: `${100/7}%`, height: 52, borderWidth: 1 },
-  calDayTxt: { fontSize: 13, color: '#0f172a', marginBottom: 8 },
+  calDayTxt: { fontSize: 13, marginBottom: 8 }, // Colore gestito dinamicamente con colors.text
   calDot: { width: 10, height: 10, borderRadius: 5 },
   modalCloseBtn: { alignSelf: 'flex-end', marginTop: 12, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: '#e0e7ff' },
   modalCloseTxt: { fontSize: 13, fontWeight: '800', color: '#3730a3' },
@@ -3114,9 +3114,11 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   settingsSectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     marginBottom: 12,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   settingsSectionSubtitle: {
     fontSize: 13,

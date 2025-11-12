@@ -228,12 +228,12 @@ export const generateAvatarFromPhoto = async ({
     const modelStartTime = Date.now();
 
     // 7) Esecuzione del modello con predictions API per audit e migliore controllo
+    // Nota: Replicate gestisce i timeout internamente, non possiamo specificare un timeout personalizzato
     const prediction = await withRetry(
       () => (replicate as any).predictions.create({
         model: 'black-forest-labs/flux-kontext-pro',
         input,
         wait: true,
-        timeout: 120_000,
       }),
       2 // 2 retry attempts (totale 3 tentativi)
     ) as any;
