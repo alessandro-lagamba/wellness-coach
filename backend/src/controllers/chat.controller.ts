@@ -16,7 +16,10 @@ export const respondToChat = async (req: Request, res: Response) => {
       skinContext, 
       userContext,
       userId,
-      analysisIntent
+      analysisIntent,
+      tone,
+      responseLength,
+      includeActionSteps
     } = req.body;
 
     if (!message || typeof message !== 'string') {
@@ -47,6 +50,9 @@ export const respondToChat = async (req: Request, res: Response) => {
       skinContext,
       userContext,
       analysisIntent,
+      tone,
+      responseLength,
+      includeActionSteps,
       model: req.body.model || 'gpt-4o-mini'
     });
 

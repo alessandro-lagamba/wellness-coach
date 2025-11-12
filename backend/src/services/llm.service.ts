@@ -20,6 +20,9 @@ export interface LLMOptions {
   model?: string;
   temperature?: number;
   maxTokens?: number;
+  tone?: 'empathetic' | 'neutral' | 'motivational' | 'professional';
+  responseLength?: 'short' | 'standard' | 'detailed';
+  includeActionSteps?: boolean;
   emotionContext?: any;
   skinContext?: any;
   userContext?: {
@@ -81,8 +84,19 @@ export async function generateWellnessResponse(
       model = process.env.DEFAULT_LLM_MODEL || 'gpt-4o-mini',
       temperature = 0.7,
       maxTokens = 500,
+      tone = 'empathetic',
+      responseLength = 'standard',
+      includeActionSteps = true,
       emotionContext
     } = options;
+
+    // Adjust maxTokens based on responseLength
+    const lengthMultipliers = {
+      short: 0.5,
+      standard: 1,
+      detailed: 1.5
+    };
+    const adjustedMaxTokens = Math.floor(maxTokens * lengthMultipliers[responseLength]);
 
     // Build system prompt based on complete context
     const systemPrompt = buildSystemPrompt(options);
@@ -110,7 +124,7 @@ export async function generateWellnessResponse(
       model,
       messages,
       temperature,
-      max_tokens: maxTokens,
+      max_tokens: adjustedMaxTokens,
     });
 
     const response = completion.choices[0]?.message?.content || 'Mi dispiace, non sono riuscito a elaborare una risposta.';
@@ -135,13 +149,42 @@ export async function generateWellnessResponse(
 }
 
 function buildSystemPrompt(options: LLMOptions = {}): string {
-  const { emotionContext, skinContext, userContext } = options;
+  const { emotionContext, skinContext, userContext, tone = 'empathetic', responseLength = 'standard', includeActionSteps = true } = options;
   
   // Extract user name from context
   const userName = userContext?.firstName || userContext?.first_name || userContext?.name || null;
   const userGreeting = userName ? `Ciao ${userName}!` : 'Ciao!';
   
+  // Tone instructions
+  const toneInstructions = {
+    empathetic: 'Sii empatico, comprensivo e caloroso. Mostra comprensione per le emozioni dell\'utente e usa un linguaggio accogliente.',
+    neutral: 'Mantieni un tono professionale e bilanciato. Sii chiaro e diretto senza essere freddo.',
+    motivational: 'Sii energico, positivo e incoraggiante. Usa un linguaggio che ispira azione e progresso. Mantieni le risposte brevi e incisive.',
+    professional: 'Mantieni un tono professionale, competente e autorevole. Usa un linguaggio preciso e basato su evidenze.'
+  };
+
+  // Response length instructions
+  const lengthInstructions = {
+    short: 'Mantieni le risposte BREVI (50-100 parole). Vai dritto al punto, evita dettagli non essenziali.',
+    standard: 'Mantieni le risposte di lunghezza STANDARD (100-200 parole). Bilanciate tra chiarezza e completezza.',
+    detailed: 'Puoi fornire risposte DETTAGLIATE (200-400 parole) quando necessario. Include spiegazioni e contesto quando utile.'
+  };
+
+  // Action steps instructions
+  const actionStepsInstruction = includeActionSteps 
+    ? 'Alla fine di ogni risposta, quando appropriato, aggiungi un "Prossimo passo" concreto e actionable (es. "Prossimo passo: prova 5 minuti di respirazione profonda").'
+    : 'Non aggiungere "prossimi passi" automaticamente. Suggerisci azioni solo quando esplicitamente richiesto o quando è molto rilevante.';
+
   const basePrompt = `Sei WellnessCoach, un AI coach avanzato per il benessere integrato che combina analisi emotive e della pelle per offrire supporto personalizzato e actionable.
+
+🎭 TONO E STILE:
+${toneInstructions[tone]}
+
+📏 LUNGHEZZA RISPOSTA:
+${lengthInstructions[responseLength]}
+
+🎯 ACTION STEPS:
+${actionStepsInstruction}
 
 👤 PERSONALIZZAZIONE:
 - L'utente si chiama ${userName ? userName : '[nome non disponibile]'}

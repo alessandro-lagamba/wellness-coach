@@ -77,6 +77,15 @@ export class DailyJournalDBService {
     if (error) throw error;
     return data || [];
   }
+
+  static async deleteEntry(userId: string, isoDate: string) {
+    const { error } = await supabase
+      .from('daily_journal_entries')
+      .delete()
+      .eq('user_id', userId)
+      .eq('entry_date', isoDate);
+    if (error) throw error;
+  }
 }
 
 

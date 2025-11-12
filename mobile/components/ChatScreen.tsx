@@ -53,6 +53,9 @@ import { AuthService } from '../services/auth.service';
 import { AnalysisIntentService } from '../services/analysis-intent.service';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
+import { ChatSettingsService, ChatTone, ResponseLength } from '../services/chat-settings.service';
+import { JournalSettingsService, JournalTemplate } from '../services/journal-settings.service';
+import { ExportService } from '../services/export.service';
 
 const { width, height } = Dimensions.get('window');
 
@@ -219,6 +222,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [monthJournalMap, setMonthJournalMap] = useState<Record<string, { hasEntry: boolean; aiScore?: number }>>({}); // 🆕 Map per journal entries dal DB
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const monthStripScrollRef = useRef<ScrollView>(null); // 🆕 Ref per scroll automatico
+  const [showChatMenu, setShowChatMenu] = useState(false); // 🆕 Menu contestuale chat/journal
+  const [showChatSettings, setShowChatSettings] = useState(false); // 🆕 Modal impostazioni chat
+  const [showJournalSettings, setShowJournalSettings] = useState(false); // 🆕 Modal impostazioni journal
+  const [chatSettings, setChatSettings] = useState({ tone: 'empathetic' as ChatTone, responseLength: 'standard' as ResponseLength, includeActionSteps: true, localHistoryEnabled: true }); // 🆕 Preferenze chat
+  const [selectedTemplate, setSelectedTemplate] = useState<JournalTemplate>('free'); // 🆕 Template journal selezionato
 
   // 🔧 FIX: Messaggio iniziale personalizzato con traduzione
   // 🔥 FIX: Memoizziamo getInitialMessage per evitare ricreazioni
@@ -247,6 +255,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   }, []);
   useEffect(() => { AsyncStorage.setItem('chat:mode', mode); }, [mode]);
 
+  // 🆕 Carica preferenze chat e journal all'avvio
+  useEffect(() => {
+    (async () => {
+      const settings = await ChatSettingsService.getSettings();
+      setChatSettings(settings);
+      const template = await JournalSettingsService.getTemplate();
+      setSelectedTemplate(template);
+    })();
+  }, []);
+
   // Load journal local + remote, build prompt
   useEffect(() => {
     (async () => {
@@ -254,13 +272,27 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       const local = await DailyJournalService.getLocalEntry(selectedDayKey);
       setJournalText(local.content);
       setJournalPrompt(local.aiPrompt);
-      // Build prompt from mood/sleep notes if empty
+      // Build prompt from template or mood/sleep notes if empty
       if (!local.aiPrompt) {
+        const currentTemplate = await JournalSettingsService.getTemplate();
+        const templatePrompt = await JournalSettingsService.getTemplatePrompt();
         const moodNote = await AsyncStorage.getItem(`checkin:mood_note:${selectedDayKey}`);
         const sleepNote = await AsyncStorage.getItem(`checkin:sleep_note:${selectedDayKey}`);
-        const prompt = DailyJournalService.buildAIPrompt({ moodNote: moodNote || undefined, sleepNote: sleepNote || undefined });
+        
+        // Se c'è un template diverso da 'free', usa il prompt del template
+        // Altrimenti usa il prompt tradizionale basato su mood/sleep
+        const prompt = currentTemplate !== 'free' 
+          ? templatePrompt
+          : DailyJournalService.buildAIPrompt({ moodNote: moodNote || undefined, sleepNote: sleepNote || undefined });
         setJournalPrompt(prompt);
         await DailyJournalService.saveLocalEntry(selectedDayKey, local.content, prompt);
+      } else {
+        // Se c'è già un prompt ma il template è cambiato, aggiorna se non c'è contenuto
+        const currentTemplate = await JournalSettingsService.getTemplate();
+        if (currentTemplate !== 'free' && !local.content.trim()) {
+          const templatePrompt = await JournalSettingsService.getTemplatePrompt();
+          setJournalPrompt(templatePrompt);
+        }
       }
       // Recent history
       try {
@@ -765,6 +797,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           userContext,
           // 🆕 Invia l'analysis intent al backend
           analysisIntent: analysisIntent.confidence > 0.3 ? analysisIntent : undefined,
+          // 🆕 Invia preferenze chat
+          tone: chatSettings.tone,
+          responseLength: chatSettings.responseLength,
+          includeActionSteps: chatSettings.includeActionSteps,
           messageHistory: messages.slice(-5).map(msg => ({
             role: msg.sender === 'user' ? 'user' : 'assistant',
             content: msg.text
@@ -988,6 +1024,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           userContext,
           // 🆕 Invia l'analysis intent al backend
           analysisIntent: analysisIntent.confidence > 0.3 ? analysisIntent : undefined,
+          // 🆕 Invia preferenze chat
+          tone: chatSettings.tone,
+          responseLength: chatSettings.responseLength,
+          includeActionSteps: chatSettings.includeActionSteps,
           messageHistory: messages.slice(-5).map(msg => ({
             role: msg.sender === 'user' ? 'user' : 'assistant',
             content: msg.text
@@ -1113,6 +1153,157 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const handleQuickReply = useCallback((reply: string) => {
     setInputValue(reply);
   }, []);
+
+  // 🆕 Gestione menu contestuale chat/journal
+  const handleClearChat = () => {
+    Alert.alert(
+      t('chat.clearChat.title') || 'Cancella conversazione',
+      t('chat.clearChat.message') || 'Vuoi cancellare tutti i messaggi della conversazione?',
+      [
+        { text: t('common.cancel') || 'Annulla', style: 'cancel' },
+        {
+          text: t('common.delete') || 'Cancella',
+          style: 'destructive',
+          onPress: () => {
+            const welcomeMessage = getInitialMessage();
+            setMessages([{
+              id: 'welcome',
+              text: welcomeMessage,
+              sender: 'ai',
+              timestamp: new Date(Date.now() - 60000),
+            }]);
+            setShowChatMenu(false);
+            Alert.alert(t('common.success') || 'Successo', t('chat.clearChat.success') || 'Conversazione cancellata');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleClearJournalEntry = () => {
+    Alert.alert(
+      t('journal.clearEntry.title') || 'Cancella entry',
+      t('journal.clearEntry.message') || `Vuoi cancellare l'entry del ${selectedDayKey}?`,
+      [
+        { text: t('common.cancel') || 'Annulla', style: 'cancel' },
+        {
+          text: t('common.delete') || 'Cancella',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (currentUser?.id) {
+                await DailyJournalDBService.deleteEntry(currentUser.id, selectedDayKey);
+                setJournalText('');
+                setJournalPrompt('');
+                setAiSummary(null);
+                setAiScore(null);
+                setAiLabel(null);
+                setAiAnalysis(null);
+                await DailyJournalService.saveLocalEntry(selectedDayKey, '', '');
+                setMonthJournalMap(prev => {
+                  const updated = { ...prev };
+                  delete updated[selectedDayKey];
+                  return updated;
+                });
+                Alert.alert(t('common.success') || 'Successo', t('journal.clearEntry.success') || 'Entry cancellata');
+              }
+            } catch (error) {
+              console.error('Error clearing journal entry:', error);
+              Alert.alert(t('common.error') || 'Errore', t('journal.clearEntry.error') || 'Errore durante la cancellazione');
+            }
+            setShowChatMenu(false);
+          },
+        },
+      ]
+    );
+  };
+
+  const handleResetAIContext = async () => {
+    Alert.alert(
+      t('chat.resetContext.title') || 'Reset contesto AI',
+      t('chat.resetContext.message') || 'Vuoi resettare il contesto AI? Questo permetterà all\'assistente di iniziare con informazioni aggiornate.',
+      [
+        { text: t('common.cancel') || 'Annulla', style: 'cancel' },
+        {
+          text: t('common.reset') || 'Reset',
+          onPress: async () => {
+            try {
+              if (currentUser?.id) {
+                // Ricarica il contesto AI
+                const context = await AIContextService.getCompleteContext(currentUser.id);
+                setAiContext(context);
+                Alert.alert(t('common.success') || 'Successo', t('chat.resetContext.success') || 'Contesto AI resettato');
+              }
+            } catch (error) {
+              console.error('Error resetting AI context:', error);
+              Alert.alert(t('common.error') || 'Errore', t('chat.resetContext.error') || 'Errore durante il reset');
+            }
+            setShowChatMenu(false);
+          },
+        },
+      ]
+    );
+  };
+
+  // 🆕 Funzioni per esportazione
+  const handleExportChat = async (format: 'txt' | 'md') => {
+    try {
+      if (format === 'txt') {
+        await ExportService.exportChatToTXT(messages);
+      } else {
+        await ExportService.exportChatToMD(messages);
+      }
+      setShowChatMenu(false);
+    } catch (error) {
+      console.error('Error exporting chat:', error);
+    }
+  };
+
+  const handleExportJournal = async (format: 'txt' | 'md') => {
+    try {
+      const entry = {
+        date: selectedDayKey,
+        content: journalText,
+        aiSummary: aiSummary || undefined,
+        aiScore: aiScore || undefined,
+        aiLabel: aiLabel || undefined,
+      };
+      if (format === 'txt') {
+        await ExportService.exportJournalToTXT(entry);
+      } else {
+        await ExportService.exportJournalToMD(entry);
+      }
+      setShowChatMenu(false);
+    } catch (error) {
+      console.error('Error exporting journal:', error);
+    }
+  };
+
+  // 🆕 Funzione per cancellare cronologia locale
+  const handleClearLocalHistory = () => {
+    Alert.alert(
+      t('chat.clearHistory.title') || 'Cancella cronologia',
+      t('chat.clearHistory.message') || 'Vuoi cancellare tutta la cronologia locale? I messaggi salvati nel database non verranno eliminati.',
+      [
+        { text: t('common.cancel') || 'Annulla', style: 'cancel' },
+        {
+          text: t('common.delete') || 'Cancella',
+          style: 'destructive',
+          onPress: () => {
+            const welcomeMessage = getInitialMessage();
+            setMessages([{
+              id: 'welcome',
+              text: welcomeMessage,
+              sender: 'ai',
+              timestamp: new Date(Date.now() - 60000),
+            }]);
+            setShowChatMenu(false);
+            Alert.alert(t('common.success') || 'Successo', t('chat.clearHistory.success') || 'Cronologia locale cancellata');
+          },
+        },
+      ]
+    );
+  };
 
   const handleVoiceToggle = async () => {
     if (!isListening && !isSpeaking && !isProcessing) {
@@ -1311,7 +1502,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               </TouchableOpacity>
             </View>
           </View>
-          <TouchableOpacity style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}>
+          <TouchableOpacity 
+            style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}
+            onPress={() => setShowChatMenu(true)}
+          >
             <FontAwesome name="cog" size={18} color={colors.text} />
           </TouchableOpacity>
         </View>
@@ -1472,8 +1666,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth()-1, 1))} style={styles.monthNavBtn}>
                   <Text style={styles.monthNavTxt}>{'<'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setShowMonthPicker(true)} style={styles.monthTitleWrap}>
-                  <Text style={styles.monthTitle}>{currentMonth.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', { month: 'long', year: 'numeric' })}</Text>
+                <TouchableOpacity onPress={() => setShowMonthPicker(true)} style={[styles.monthTitleWrap, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
+                  <Text style={[styles.monthTitle, { color: colors.text }]}>{currentMonth.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', { month: 'long', year: 'numeric' })}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth()+1, 1))} style={styles.monthNavBtn}>
                   <Text style={styles.monthNavTxt}>{'>'}</Text>
@@ -1527,7 +1721,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth()-1, 1))} style={styles.monthNavBtn}>
                         <Text style={styles.monthNavTxt}>{'<'}</Text>
                       </TouchableOpacity>
-                      <Text style={styles.modalTitle}>{currentMonth.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', { month: 'long', year: 'numeric' })}</Text>
+                      <Text style={[styles.modalTitle, { color: colors.text }]}>{currentMonth.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', { month: 'long', year: 'numeric' })}</Text>
                       <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth()+1, 1))} style={styles.monthNavBtn}>
                         <Text style={styles.monthNavTxt}>{'>'}</Text>
                       </TouchableOpacity>
@@ -1581,7 +1775,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                         const jsFirst = first.getDay();
                         const startOffset = (jsFirst + 6) % 7; // how many blanks before day 1
                         const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
-                        const cells = [] as React.ReactNode[];
+                        const cells: React.ReactNode[] = [];
                         for (let i=0;i<totalCells;i++){
                           const dayNum = i - startOffset + 1;
                           if (dayNum < 1 || dayNum > daysInMonth) {
@@ -1623,12 +1817,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                                 }}
                               >
                                 <Text style={[styles.calDayTxt, { color: colors.text }, active && { color: colors.primary, fontWeight:'800' }]}>{String(dayNum)}</Text>
-                                {hasEntry && <View style={[styles.calDot, { backgroundColor: color }]} />} {/* 🆕 Mostra pallino solo se c'è entry */}
+                                {hasEntry && <View style={[styles.calDot, { backgroundColor: color }]} />}
                               </TouchableOpacity>
                             );
                           }
                         }
-                        return cells;
+                        return <>{cells}</>;
                       })()}
                     </View>
 
@@ -1888,6 +2082,308 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         onDismiss={handleDismissPopup}
         onStartExercise={handleStartExercise}
       />
+
+      {/* Chat/Journal Menu Modal */}
+      <Modal visible={showChatMenu} transparent animationType="fade" onRequestClose={() => setShowChatMenu(false)}>
+        <TouchableOpacity 
+          style={styles.menuModalBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowChatMenu(false)}
+        >
+          <View style={[styles.menuModalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.menuModalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.menuModalTitle, { color: colors.text }]}>
+                {mode === 'chat' ? 'Opzioni Chat' : 'Opzioni Journal'}
+              </Text>
+              <TouchableOpacity onPress={() => setShowChatMenu(false)}>
+                <FontAwesome name="times" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.menuOptions}>
+              {mode === 'chat' ? (
+                <>
+                  {/* Comportamento Assistente */}
+                  <TouchableOpacity
+                    style={[styles.menuOption, { borderBottomColor: colors.border }]}
+                    onPress={() => {
+                      setShowChatMenu(false);
+                      setShowChatSettings(true);
+                    }}
+                  >
+                    <FontAwesome name="sliders" size={18} color={colors.textSecondary} />
+                    <Text style={[styles.menuOptionText, { color: colors.text }]}>
+                      Comportamento Assistente
+                    </Text>
+                    <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                  
+                  {/* Cronologia & Esportazione */}
+                  <TouchableOpacity
+                    style={[styles.menuOption, { borderBottomColor: colors.border }]}
+                    onPress={() => {
+                      Alert.alert(
+                        'Esporta conversazione',
+                        'Scegli il formato:',
+                        [
+                          { text: 'Annulla', style: 'cancel' },
+                          { text: 'TXT', onPress: () => handleExportChat('txt') },
+                          { text: 'Markdown', onPress: () => handleExportChat('md') },
+                        ]
+                      );
+                    }}
+                  >
+                    <FontAwesome name="download" size={18} color={colors.textSecondary} />
+                    <Text style={[styles.menuOptionText, { color: colors.text }]}>
+                      Esporta conversazione
+                    </Text>
+                    <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.menuOption, { borderBottomColor: colors.border }]}
+                    onPress={() => {
+                      setShowChatMenu(false);
+                      handleClearLocalHistory();
+                    }}
+                  >
+                    <FontAwesome name="trash" size={18} color={colors.textSecondary} />
+                    <Text style={[styles.menuOptionText, { color: colors.text }]}>
+                      Cancella cronologia locale
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.menuOption, { borderBottomColor: colors.border }]}
+                    onPress={() => {
+                      setShowChatMenu(false);
+                      handleResetAIContext();
+                    }}
+                  >
+                    <FontAwesome name="refresh" size={18} color={colors.textSecondary} />
+                    <Text style={[styles.menuOptionText, { color: colors.text }]}>
+                      Reset contesto AI
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  {/* Template di scrittura */}
+                  <TouchableOpacity
+                    style={[styles.menuOption, { borderBottomColor: colors.border }]}
+                    onPress={() => {
+                      setShowChatMenu(false);
+                      setShowJournalSettings(true);
+                    }}
+                  >
+                    <FontAwesome name="file-text" size={18} color={colors.textSecondary} />
+                    <Text style={[styles.menuOptionText, { color: colors.text }]}>
+                      Template di scrittura
+                    </Text>
+                    <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                  
+                  {/* Esporta diario */}
+                  <TouchableOpacity
+                    style={[styles.menuOption, { borderBottomColor: colors.border }]}
+                    onPress={() => {
+                      Alert.alert(
+                        'Esporta diario',
+                        'Scegli il formato:',
+                        [
+                          { text: 'Annulla', style: 'cancel' },
+                          { text: 'TXT', onPress: () => handleExportJournal('txt') },
+                          { text: 'Markdown', onPress: () => handleExportJournal('md') },
+                        ]
+                      );
+                    }}
+                  >
+                    <FontAwesome name="download" size={18} color={colors.textSecondary} />
+                    <Text style={[styles.menuOptionText, { color: colors.text }]}>
+                      Esporta diario
+                    </Text>
+                    <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.menuOption]}
+                    onPress={() => {
+                      setShowChatMenu(false);
+                      handleClearJournalEntry();
+                    }}
+                  >
+                    <FontAwesome name="trash" size={18} color={colors.textSecondary} />
+                    <Text style={[styles.menuOptionText, { color: colors.text }]}>
+                      Cancella entry corrente
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Chat Settings Modal */}
+      <Modal visible={showChatSettings} transparent animationType="slide" onRequestClose={() => setShowChatSettings(false)}>
+        <View style={styles.settingsModalBackdrop}>
+          <View style={[styles.settingsModalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.settingsModalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.settingsModalTitle, { color: colors.text }]}>Comportamento Assistente</Text>
+              <TouchableOpacity onPress={() => setShowChatSettings(false)}>
+                <FontAwesome name="times" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.settingsModalBody} showsVerticalScrollIndicator={false}>
+              {/* Tono del coach */}
+              <View style={styles.settingsSection}>
+                <Text style={[styles.settingsSectionTitle, { color: colors.text }]}>Tono del coach</Text>
+                <View style={styles.settingsOptions}>
+                  {(['empathetic', 'neutral', 'motivational', 'professional'] as ChatTone[]).map((tone) => (
+                    <TouchableOpacity
+                      key={tone}
+                      style={[
+                        styles.settingsOption,
+                        { borderColor: colors.border },
+                        chatSettings.tone === tone && { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
+                      ]}
+                      onPress={async () => {
+                        const updated = { ...chatSettings, tone };
+                        setChatSettings(updated);
+                        await ChatSettingsService.saveSettings(updated);
+                      }}
+                    >
+                      <Text style={[styles.settingsOptionText, { color: colors.text }, chatSettings.tone === tone && { color: colors.primary, fontWeight: '700' }]}>
+                        {tone === 'empathetic' ? 'Empatico' : tone === 'neutral' ? 'Neutro' : tone === 'motivational' ? 'Motivante breve' : 'Professionale'}
+                      </Text>
+                      {chatSettings.tone === tone && <FontAwesome name="check" size={14} color={colors.primary} />}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Lunghezza risposta */}
+              <View style={styles.settingsSection}>
+                <Text style={[styles.settingsSectionTitle, { color: colors.text }]}>Lunghezza risposta</Text>
+                <View style={styles.settingsOptions}>
+                  {(['short', 'standard', 'detailed'] as ResponseLength[]).map((length) => (
+                    <TouchableOpacity
+                      key={length}
+                      style={[
+                        styles.settingsOption,
+                        { borderColor: colors.border },
+                        chatSettings.responseLength === length && { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
+                      ]}
+                      onPress={async () => {
+                        const updated = { ...chatSettings, responseLength: length };
+                        setChatSettings(updated);
+                        await ChatSettingsService.saveSettings(updated);
+                      }}
+                    >
+                      <Text style={[styles.settingsOptionText, { color: colors.text }, chatSettings.responseLength === length && { color: colors.primary, fontWeight: '700' }]}>
+                        {length === 'short' ? 'Breve' : length === 'standard' ? 'Standard' : 'Dettagliata'}
+                      </Text>
+                      {chatSettings.responseLength === length && <FontAwesome name="check" size={14} color={colors.primary} />}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Passi d'azione automatici */}
+              <View style={styles.settingsSection}>
+                <View style={styles.settingsToggleRow}>
+                  <View style={styles.settingsToggleLabel}>
+                    <Text style={[styles.settingsSectionTitle, { color: colors.text }]}>Passi d'azione automatici</Text>
+                    <Text style={[styles.settingsSectionSubtitle, { color: colors.textSecondary }]}>
+                      Aggiungi "Prossimo passo" alla fine delle risposte
+                    </Text>
+                  </View>
+                  <Switch
+                    value={chatSettings.includeActionSteps}
+                    onValueChange={async (value) => {
+                      const updated = { ...chatSettings, includeActionSteps: value };
+                      setChatSettings(updated);
+                      await ChatSettingsService.saveSettings(updated);
+                    }}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={chatSettings.includeActionSteps ? '#fff' : colors.textTertiary}
+                  />
+                </View>
+              </View>
+
+              {/* Cronologia locale */}
+              <View style={[styles.settingsSection, { borderBottomWidth: 0 }]}>
+                <View style={styles.settingsToggleRow}>
+                  <View style={styles.settingsToggleLabel}>
+                    <Text style={[styles.settingsSectionTitle, { color: colors.text }]}>Cronologia locale</Text>
+                    <Text style={[styles.settingsSectionSubtitle, { color: colors.textSecondary }]}>
+                      Salva i messaggi localmente per visualizzarli offline
+                    </Text>
+                  </View>
+                  <Switch
+                    value={chatSettings.localHistoryEnabled}
+                    onValueChange={async (value) => {
+                      const updated = { ...chatSettings, localHistoryEnabled: value };
+                      setChatSettings(updated);
+                      await ChatSettingsService.saveSettings(updated);
+                    }}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={chatSettings.localHistoryEnabled ? '#fff' : colors.textTertiary}
+                  />
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Journal Settings Modal */}
+      <Modal visible={showJournalSettings} transparent animationType="slide" onRequestClose={() => setShowJournalSettings(false)}>
+        <View style={styles.settingsModalBackdrop}>
+          <View style={[styles.settingsModalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.settingsModalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.settingsModalTitle, { color: colors.text }]}>Template di scrittura</Text>
+              <TouchableOpacity onPress={() => setShowJournalSettings(false)}>
+                <FontAwesome name="times" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.settingsModalBody} showsVerticalScrollIndicator={false}>
+              {JournalSettingsService.getAvailableTemplates().map((template) => (
+                <TouchableOpacity
+                  key={template.id}
+                  style={[
+                    styles.templateOption,
+                    { borderColor: colors.border },
+                    selectedTemplate === template.id && { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
+                  ]}
+                  onPress={async () => {
+                    setSelectedTemplate(template.id);
+                    await JournalSettingsService.saveTemplate(template.id);
+                    // Aggiorna il prompt se non c'è contenuto
+                    if (!journalText.trim()) {
+                      const prompt = template.prompt;
+                      setJournalPrompt(prompt);
+                      await DailyJournalService.saveLocalEntry(selectedDayKey, journalText, prompt);
+                    }
+                  }}
+                >
+                  <View style={styles.templateOptionContent}>
+                    <Text style={[styles.templateOptionName, { color: colors.text }, selectedTemplate === template.id && { color: colors.primary, fontWeight: '700' }]}>
+                      {template.name}
+                    </Text>
+                    <Text style={[styles.templateOptionDescription, { color: colors.textSecondary }]}>
+                      {template.description}
+                    </Text>
+                  </View>
+                  {selectedTemplate === template.id && <FontAwesome name="check" size={16} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -2121,10 +2617,10 @@ const styles = StyleSheet.create({
   monthNavBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
   monthNavTxt: { fontSize: 14, fontWeight: '800', color: '#334155' },
   monthTitleWrap: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, backgroundColor: '#eef2ff', borderWidth: 1, borderColor: '#c7d2fe' },
-  monthTitle: { fontSize: 14, fontWeight: '800', color: '#3730a3', textTransform: 'capitalize' },
+  monthTitle: { fontSize: 14, fontWeight: '800', textTransform: 'capitalize' }, // Colore gestito dinamicamente con colors.text
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'center', justifyContent: 'center' },
   monthPickerCard: { width: '86%', borderRadius: 16, padding: 16, borderWidth: 1 },
-  modalTitle: { fontSize: 16, fontWeight: '800', color: '#0f172a', marginBottom: 0, textTransform: 'capitalize' },
+  modalTitle: { fontSize: 16, fontWeight: '800', marginBottom: 0, textTransform: 'capitalize' }, // Colore gestito dinamicamente con colors.text
   yearRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, marginBottom: 8 },
   yearBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
   yearBtnActive: { },
@@ -2534,6 +3030,142 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 15,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  // Chat/Journal Menu Modal Styles
+  menuModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  menuModalContent: {
+    width: '85%',
+    maxWidth: 400,
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  menuModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    // borderBottomColor gestito dinamicamente
+  },
+  menuModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  menuOptions: {
+    paddingVertical: 8,
+  },
+  menuOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 12,
+    borderBottomWidth: 1,
+    // borderBottomColor gestito dinamicamente
+  },
+  menuOptionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    flex: 1,
+  },
+  // Settings Modal Styles
+  settingsModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  settingsModalContent: {
+    maxHeight: '80%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  settingsModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+  },
+  settingsModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  settingsModalBody: {
+    padding: 20,
+    maxHeight: 500,
+  },
+  settingsSection: {
+    marginBottom: 24,
+    borderBottomWidth: 1,
+    paddingBottom: 20,
+  },
+  settingsSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  settingsSectionSubtitle: {
+    fontSize: 13,
+    marginTop: 4,
+  },
+  settingsOptions: {
+    gap: 10,
+  },
+  settingsOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  settingsOptionText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  settingsToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  settingsToggleLabel: {
+    flex: 1,
+    marginRight: 16,
+  },
+  templateOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  templateOptionContent: {
+    flex: 1,
+    marginRight: 12,
+  },
+  templateOptionName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  templateOptionDescription: {
+    fontSize: 13,
   },
 });
 
