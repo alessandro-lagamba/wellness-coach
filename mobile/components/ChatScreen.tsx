@@ -204,13 +204,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [journalText, setJournalText] = useState('');
   const [journalPrompt, setJournalPrompt] = useState('');
   const [journalHistory, setJournalHistory] = useState<any[]>([]);
-  const dayKey = DailyJournalService.todayKey();
+  // 🔥 FIX: Usa una funzione per ottenere la data odierna invece di una costante
+  const getTodayKey = () => DailyJournalService.todayKey();
   // Database state (must be declared before effects using it)
   const [currentUser, setCurrentUser] = useState<any>(user);
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [showSavedChip, setShowSavedChip] = useState(false);
-  const [selectedDayKey, setSelectedDayKey] = useState(dayKey);
+  // 🔥 FIX: Inizializza sempre con la data odierna corrente
+  const [selectedDayKey, setSelectedDayKey] = useState(() => DailyJournalService.todayKey());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiScore, setAiScore] = useState<number | null>(null);
@@ -339,56 +341,90 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
   // 🆕 Helper per verificare se una data è nel futuro
   const isFutureDate = (isoDate: string): boolean => {
-    const today = DailyJournalService.todayKey();
+    const today = getTodayKey();
     return isoDate > today;
   };
 
+  // 🔥 FIX: Aggiorna selectedDayKey quando cambia il giorno del sistema
+  useEffect(() => {
+    const updateToday = () => {
+      const today = getTodayKey();
+      if (selectedDayKey !== today) {
+        setSelectedDayKey(today);
+      }
+    };
+
+    // Aggiorna immediatamente
+    updateToday();
+
+    // Aggiorna ogni minuto per catturare il cambio di giorno
+    const interval = setInterval(updateToday, 60000); // 1 minuto
+
+    return () => clearInterval(interval);
+  }, [selectedDayKey]);
+
   // 🆕 Scroll automatico al giorno selezionato nella barra orizzontale
-  // 🔥 FIX: Centra sempre la data odierna quando si apre il Journal
+  // 🔥 FIX: Centra sempre la data odierna quando si apre il Journal o quando cambia selectedDayKey
   useEffect(() => {
     if (monthStripScrollRef.current && monthDays.length > 0) {
-      const today = DailyJournalService.todayKey();
-      const todayIndex = monthDays.indexOf(today);
+      const today = getTodayKey();
+      // 🔥 FIX: Quando si apre il Journal, usa sempre la data odierna per centrare
+      const targetDate = selectedDayKey || today;
+      const targetIndex = monthDays.indexOf(targetDate);
       
-      // Se la data odierna è nel mese corrente, centrarla
-      if (todayIndex >= 0) {
+      // Se il giorno target è nel mese corrente, centrarlo
+      if (targetIndex >= 0) {
+        // 🔥 FIX: Aumentato il delay e migliorato il calcolo dello scroll
+        // Usa requestAnimationFrame per assicurarsi che il layout sia completato
         const timer = setTimeout(() => {
-          monthStripScrollRef.current?.scrollTo({ 
-            x: Math.max(0, todayIndex * 60 - width / 2 + 30), // Centra la data odierna
-            animated: true 
-          });
-        }, 100);
-        
-        return () => clearTimeout(timer);
-      } else if (selectedDayKey && monthDays.includes(selectedDayKey)) {
-        // Altrimenti, centra il giorno selezionato
-        const index = monthDays.indexOf(selectedDayKey);
-        const timer = setTimeout(() => {
-          monthStripScrollRef.current?.scrollTo({ 
-            x: Math.max(0, index * 60 - width / 2 + 30), // Centra il giorno selezionato
-            animated: true 
-          });
-        }, 100);
+          if (monthStripScrollRef.current) {
+            // 🔥 FIX: Calcolo più preciso dello scroll
+            // Ogni pill ha larghezza ~52px + gap 8px = ~60px totale
+            // Per centrare: scrollX = (indice * larghezza_totale) - (larghezza_schermo / 2) + (larghezza_totale / 2)
+            const pillWidth = 52; // Larghezza del pill (senza gap)
+            const gap = 8; // Gap tra i pill
+            const totalWidth = pillWidth + gap;
+            const scrollX = Math.max(0, targetIndex * totalWidth - (width / 2) + (totalWidth / 2));
+            
+            monthStripScrollRef.current.scrollTo({ 
+              x: scrollX,
+              animated: true 
+            });
+          }
+        }, 500); // 🔥 FIX: Aumentato delay per permettere al layout di completarsi completamente
         
         return () => clearTimeout(timer);
       }
     }
-  }, [monthDays]); // 🔥 FIX: Esegui solo quando monthDays cambia (all'apertura del Journal)
+  }, [monthDays, selectedDayKey]); // 🔥 FIX: Esegui quando cambiano monthDays o selectedDayKey
 
-  // 🆕 Scroll quando cambia selectedDayKey (ma solo se non è la prima apertura)
+  // 🔥 FIX: Aggiorna selectedDayKey alla data odierna quando si passa alla modalità Journal
   useEffect(() => {
-    if (monthStripScrollRef.current && selectedDayKey && monthDays.includes(selectedDayKey)) {
-      const index = monthDays.indexOf(selectedDayKey);
+    if (mode === 'journal') {
+      const today = getTodayKey();
+      // 🔥 FIX: Forza sempre l'aggiornamento alla data odierna quando si apre il Journal
+      setSelectedDayKey(today);
+      
+      // 🔥 FIX: Forza anche il centraggio dopo un breve delay per assicurarsi che monthDays sia popolato
       const timer = setTimeout(() => {
-        monthStripScrollRef.current?.scrollTo({ 
-          x: Math.max(0, index * 60 - width / 2 + 30), // Centra il giorno selezionato
-          animated: true 
-        });
-      }, 100);
+        if (monthStripScrollRef.current && monthDays.length > 0) {
+          const todayIndex = monthDays.indexOf(today);
+          if (todayIndex >= 0) {
+            const pillWidth = 52; // Larghezza del pill (senza gap)
+            const gap = 8; // Gap tra i pill
+            const totalWidth = pillWidth + gap;
+            const scrollX = Math.max(0, todayIndex * totalWidth - (width / 2) + (totalWidth / 2));
+            monthStripScrollRef.current.scrollTo({ 
+              x: scrollX,
+              animated: true 
+            });
+          }
+        }
+      }, 600); // 🔥 FIX: Delay più lungo per assicurarsi che tutto sia pronto
       
       return () => clearTimeout(timer);
     }
-  }, [selectedDayKey]);
+  }, [mode, monthDays]); // 🔥 FIX: Esegui quando si cambia modalità o quando monthDays cambia
 
   // 🆕 Helper per creare ISO date senza problemi di timezone
   const toISODateSafe = (year: number, month: number, day: number): string => {
@@ -2028,7 +2064,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   <View style={{ flexDirection:'row', alignItems:'center', gap:8 }}>
                     <Text style={[styles.editorTitle, { color: colors.text }]}>{t('journal.entryTitle')}</Text>
                     <View style={[styles.dateChip, { backgroundColor: surfaceSecondary }]}>
-                      <Text style={[styles.dateChipText, { color: colors.textSecondary }]}>{selectedDayKey}</Text>
+                      {/* 🔥 FIX: Mostra sempre la data odierna corrente se selectedDayKey è oggi, altrimenti mostra selectedDayKey */}
+                      <Text style={[styles.dateChipText, { color: colors.textSecondary }]}>
+                        {selectedDayKey === getTodayKey() ? getTodayKey() : selectedDayKey}
+                      </Text>
                     </View>
                   </View>
                   <Text style={[styles.counterText, { color: colors.textTertiary }]}>{journalText.length}/2000</Text>
@@ -2062,6 +2101,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     style={styles.journalSave}
                     onPress={async () => {
                       if (!currentUser) return;
+                      // 🔥 FIX: Usa selectedDayKey invece di dayKey (che non esiste più)
+                      const dayKey = selectedDayKey;
                       await DailyJournalService.saveLocalEntry(dayKey, journalText, journalPrompt);
                       
                       try {
