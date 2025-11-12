@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import { Alert } from 'react-native';
 
 // Dynamic import per expo-sharing (può non essere installato)
@@ -40,13 +40,14 @@ export class ExportService {
 
       const fullContent = `Conversazione WellnessCoach\n${'='.repeat(50)}\n\n${content}`;
       
-      const fileUri = FileSystem.documentDirectory + (filename || `chat_${Date.now()}.txt`);
-      await FileSystem.writeAsStringAsync(fileUri, fullContent);
+      const file = new File(Paths.document, filename ?? `chat_${Date.now()}.txt`);
+      file.create({ overwrite: true });
+      file.write(fullContent);
 
       if (Sharing && await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri);
+        await Sharing.shareAsync(file.uri);
       } else {
-        Alert.alert('Esportazione completata', `File salvato in: ${fileUri}`);
+        Alert.alert('Esportazione completata', `File salvato in: ${file.uri}`);
       }
     } catch (error) {
       console.error('[Export] Error exporting chat to TXT:', error);
@@ -70,13 +71,14 @@ export class ExportService {
 
       const fullContent = `# Conversazione WellnessCoach\n\n${content}`;
       
-      const fileUri = FileSystem.documentDirectory + (filename || `chat_${Date.now()}.md`);
-      await FileSystem.writeAsStringAsync(fileUri, fullContent);
+      const file = new File(Paths.document, filename ?? `chat_${Date.now()}.md`);
+      file.create({ overwrite: true });
+      file.write(fullContent);
 
       if (Sharing && await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri);
+        await Sharing.shareAsync(file.uri);
       } else {
-        Alert.alert('Esportazione completata', `File salvato in: ${fileUri}`);
+        Alert.alert('Esportazione completata', `File salvato in: ${file.uri}`);
       }
     } catch (error) {
       console.error('[Export] Error exporting chat to MD:', error);
@@ -105,13 +107,14 @@ export class ExportService {
         content += `## Label: ${entry.aiLabel}\n\n`;
       }
 
-      const fileUri = FileSystem.documentDirectory + (filename || `journal_${entry.date}.txt`);
-      await FileSystem.writeAsStringAsync(fileUri, content);
+      const file = new File(Paths.document, filename ?? `journal_${entry.date}.txt`);
+      file.create({ overwrite: true });
+      file.write(content);
 
       if (Sharing && await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri);
+        await Sharing.shareAsync(file.uri);
       } else {
-        Alert.alert('Esportazione completata', `File salvato in: ${fileUri}`);
+        Alert.alert('Esportazione completata', `File salvato in: ${file.uri}`);
       }
     } catch (error) {
       console.error('[Export] Error exporting journal to TXT:', error);
@@ -140,13 +143,14 @@ export class ExportService {
         content += `## Label: ${entry.aiLabel}\n\n`;
       }
 
-      const fileUri = FileSystem.documentDirectory + (filename || `journal_${entry.date}.md`);
-      await FileSystem.writeAsStringAsync(fileUri, content);
+      const file = new File(Paths.document, filename ?? `journal_${entry.date}.md`);
+      file.create({ overwrite: true });
+      file.write(content);
 
       if (Sharing && await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri);
+        await Sharing.shareAsync(file.uri);
       } else {
-        Alert.alert('Esportazione completata', `File salvato in: ${fileUri}`);
+        Alert.alert('Esportazione completata', `File salvato in: ${file.uri}`);
       }
     } catch (error) {
       console.error('[Export] Error exporting journal to MD:', error);
