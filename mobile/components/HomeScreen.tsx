@@ -648,10 +648,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       try {
         const { HealthPermissionsService } = await import('../services/health-permissions.service');
-        const [allRequiredGranted, setupCompleted] = await Promise.all([
-          HealthPermissionsService.hasAllRequiredPermissions(),
+        const [grantedPermissions, setupCompleted] = await Promise.all([
+          HealthPermissionsService.getGrantedPermissions(),
           HealthPermissionsService.isSetupCompleted(),
         ]);
+        
+        // Verifica se tutti i permessi richiesti sono concessi
+        const requiredPermissions = ['steps', 'heart_rate', 'sleep'];
+        const allRequiredGranted = requiredPermissions.every(perm => grantedPermissions.includes(perm));
 
         // Mostra il modal solo se mancano required e non abbiamo completato il setup
         if (!allRequiredGranted && !setupCompleted) {
@@ -1450,10 +1454,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const getWidgetWidth = (size: 'small' | 'medium' | 'large') => {
     const screenWidth = width - 40; // 20px margin on each side
     const rowWidth = screenWidth - 16; // 8px gap on each side
+    const gapBetweenWidgets = 8; // gap tra i widget nella riga
     switch (size) {
       case 'small': return rowWidth / 3;   // 1/3 della riga
-      case 'medium': return (rowWidth * 2) / 3;  // 2/3 della riga
-      case 'large': return rowWidth;   // 3/3 della riga (tutta la riga)
+      case 'medium': return (rowWidth * 2) / 3 + gapBetweenWidgets;  // 2/3 della riga + 1 gap
+      case 'large': return rowWidth + (gapBetweenWidgets * 2);   // 3/3 della riga + 2 gap (per allinearsi con 3 widget small)
       default: return rowWidth / 3;
     }
   };

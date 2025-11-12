@@ -1,7 +1,8 @@
 import { AuthService } from './auth.service';
-import { BACKEND_URL } from '../constants/env';
+import { getBackendURL } from '../constants/env';
 import { AIContextService } from './ai-context.service';
 import DailyCopilotDBService from './daily-copilot-db.service';
+import { RetryService } from './retry.service';
 
 export interface DailyCopilotData {
   overallScore: number;        // 0-100
@@ -208,13 +209,13 @@ class DailyCopilotService {
 
   /**
    * Genera l'analisi tramite AI
+   * ✅ Include: timeout, retry logic, gestione errori robusta
    */
   private async generateAIAnalysis(
     data: CopilotAnalysisRequest, 
     userId: string
   ): Promise<DailyCopilotData | null> {
-    try {
-      const userMessage = `Analizza i miei dati giornalieri e fornisci raccomandazioni personalizzate per affrontare al meglio la giornata. 
+    const userMessage = `Analizza i miei dati giornalieri e fornisci raccomandazioni personalizzate per affrontare al meglio la giornata. 
 
 Dati attuali:
 - Mood: ${data.mood}/5
@@ -265,35 +266,88 @@ IMPORTANTE: Rispondi SOLO con un JSON valido nel seguente formato:
 
 Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
 
-      const response = await fetch(`${BACKEND_URL}/api/chat/respond`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: userMessage,
-          sessionId: `daily-copilot-${Date.now()}`,
-          userId: userId,
-          userContext: {
-            userName: 'Utente',
-            isDailyCopilot: true
+    // Usa retry logic per gestire errori transienti (rete, timeout, 5xx)
+    try {
+      return await RetryService.withRetry(
+        async () => {
+          const backendURL = await getBackendURL();
+          
+          // Timeout per la chiamata API (30 secondi - analisi AI può richiedere tempo)
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => {
+            controller.abort();
+          }, 30000);
+
+          try {
+            const response = await fetch(`${backendURL}/api/chat/respond`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                message: userMessage,
+                sessionId: `daily-copilot-${Date.now()}`,
+                userId: userId,
+                userContext: {
+                  userName: 'Utente',
+                  isDailyCopilot: true
+                }
+              }),
+              signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+              // Errori non retryable (4xx client errors)
+              if (response.status >= 400 && response.status < 500) {
+                throw new Error(`Client error: ${response.status}`);
+              }
+              // Errori retryable (5xx server errors)
+              throw new Error(`Server error: ${response.status}`);
+            }
+
+            const aiResponse = await response.json();
+            const analysisText = aiResponse.response || aiResponse.message || aiResponse.text;
+
+            if (!analysisText) {
+              throw new Error('Empty response from AI');
+            }
+
+            // Parsing dell'analisi AI
+            return this.parseAIAnalysis(analysisText, data);
+          } catch (error: any) {
+            clearTimeout(timeoutId);
+            
+            // Gestione specifica per timeout
+            if (error.name === 'AbortError' || error.message?.includes('timeout')) {
+              throw new Error('AI analysis timeout: il server ha impiegato troppo tempo');
+            }
+            
+            throw error;
           }
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Backend request failed: ${response.status}`);
-      }
-
-      const aiResponse = await response.json();
-      const analysisText = aiResponse.response || aiResponse.message || aiResponse.text;
-
-      // Parsing dell'analisi AI (per ora usiamo dati mock, poi implementeremo il parsing)
-      return this.parseAIAnalysis(analysisText, data);
-
+        },
+        'daily_copilot_ai_analysis',
+        {
+          maxAttempts: 2, // 2 retry attempts (totale 3 tentativi)
+          delay: 2000, // 2 secondi tra i retry
+          backoff: 'exponential',
+          shouldRetry: (error: Error) => {
+            // Ritenta solo su errori di rete, timeout, o 5xx
+            const errorMessage = error.message.toLowerCase();
+            return (
+              errorMessage.includes('timeout') ||
+              errorMessage.includes('network') ||
+              errorMessage.includes('server error') ||
+              errorMessage.includes('failed to fetch') ||
+              errorMessage.includes('aborted')
+            );
+          },
+        }
+      );
     } catch (error) {
-      console.error('Error generating AI analysis:', error);
-      // Fallback con analisi basica
+      console.error('Error generating AI analysis after retries:', error);
+      // Fallback con analisi basica - sempre disponibile
       return this.generateFallbackAnalysis(data);
     }
   }

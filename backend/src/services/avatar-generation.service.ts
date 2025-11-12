@@ -129,10 +129,13 @@ export const generateAvatarFromPhoto = async ({
       bufferSize: photoBuffer.length 
     });
 
-    // Square crop + resize 1024x1024 con attention (centra il volto)
+    // Resize conservativo: non taglia, aggiunge padding neutro
     const processedBuffer = await sharp(photoBuffer)
-      .resize(1024, 1024, { fit: 'cover', position: 'attention' })
-      .toFormat('png')
+      .resize(1024, 1024, {
+        fit: 'contain',
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
+      })
+      .png()
       .toBuffer();
 
     console.log('[Avatar] Image processed:', { 
@@ -143,26 +146,6 @@ export const generateAvatarFromPhoto = async ({
     // 2) Idempotenza: hash del buffer per naming
     const digest = createHash('sha256').update(processedBuffer).digest('hex').slice(0, 16);
     const filename = `photo-${Date.now()}.png`;
-
-    // 3) (Facoltativo) se troviamo il file "avatar-icon.png" lo usiamo per arricchire il prompt
-    const possiblePaths = [
-      path.join(__dirname, '../../mobile/assets/avatar-icon.png'),
-      path.join(__dirname, '../assets/avatar-icon.png'),
-      path.join(process.cwd(), 'mobile/assets/avatar-icon.png'),
-      path.join(process.cwd(), 'assets/avatar-icon.png'),
-    ];
-
-    let hasLocalStyleRef = false;
-    for (const p of possiblePaths) {
-      if (fs.existsSync(p)) {
-        hasLocalStyleRef = true;
-        break;
-      }
-    }
-
-    const styleRefHint = hasLocalStyleRef
-      ? `Match the style of the internal reference icon (clean vector look, soft gradients, circular purple background, teal t-shirt).`
-      : `Use the described style precisely (clean vector look, soft gradients, circular purple background, teal t-shirt).`;
 
     // 4) Carica la foto dell'utente su Replicate come file (SDK recente)
     // Type assertion per files.upload che può non essere nel tipo ma esiste nell'SDK
@@ -220,90 +203,72 @@ export const generateAvatarFromPhoto = async ({
 
     // 6) Costruisci l'input del modello
     //    FLUX Kontext Pro è un img2img/stylizer: diamo un prompt "descrittivo dello stile" e la foto come conditioning
-    const seed = Number(process.env.AVATAR_SEED ?? 42);
-    const input = {
-      prompt: `${AVATAR_STYLE_PROMPT}
+    //    Usiamo seed random per evitare risultati simili tra generazioni
+    const seed = process.env.AVATAR_SEED 
+      ? Number(process.env.AVATAR_SEED) 
+      : Math.floor(Math.random() * 1000000);
+    
+    // Prompt semplificato per stile 90s cartoon
+    // Mantiene l'identità della persona ma applica lo stile cartoon degli anni 90
+    const identityPrompt = `Make this a 90s cartoon`;
 
-${styleRefHint}
-
-Preserve facial geometry and distinctive features (eye spacing, nose shape, jawline, beard density if present).
-Avoid over-smoothing facial structure. Use a clean vector look with soft gradients.
-Background: circular purple gradient. Shirt: simple teal crew-neck.
-No accessories not present in the input photo. Keep a clean, uncluttered composition.
-Compose as a head-and-shoulders portrait centered within the circular background.`,
-      input_image: uploadedInput, // URL gestito da Replicate o Supabase (signed se fallback)
-      // Opzioni utili: dipendono dal modello
+    // Input del modello: solo parametri supportati da flux-kontext-pro
+    const input: any = {
+      prompt: identityPrompt,
+      input_image: uploadedInput,
+      aspect_ratio: 'match_input_image',
       output_format: 'png',
-      width: 1024,
-      height: 1024,
-      // Seed per riproducibilità (configurabile via ENV)
+      safety_tolerance: 2,
       seed,
-      // Nota: strength/guidance potrebbero essere supportati dal modello, ma non li forziamo
-      // per compatibilità. Se necessario, aggiungere dopo test.
+      // opzionale: spesso meglio OFF per non alterare il testo
+      // prompt_upsampling: false,
     };
 
     console.log('[Avatar] Running Replicate model: black-forest-labs/flux-kontext-pro', { seed });
     const modelStartTime = Date.now();
 
-    // 7) Esecuzione del modello con timeout e retry logic
-    const modelPromise = withRetry(
-      () => replicate.run('black-forest-labs/flux-kontext-pro', { input }),
+    // 7) Esecuzione del modello con predictions API per audit e migliore controllo
+    const prediction = await withRetry(
+      () => (replicate as any).predictions.create({
+        model: 'black-forest-labs/flux-kontext-pro',
+        input,
+        wait: true,
+        timeout: 120_000,
+      }),
       2 // 2 retry attempts (totale 3 tentativi)
-    );
-    const timeoutPromise = new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error('Replicate model timeout after 120s')), 120_000)
-    );
+    ) as any;
 
-    const output = await Promise.race([modelPromise, timeoutPromise]) as ReplicateOutput;
     const modelDuration = Date.now() - modelStartTime;
-    console.log('[Avatar] Model completed:', { duration: `${modelDuration}ms`, seed });
+    console.log('[Avatar] Model completed:', { 
+      duration: `${modelDuration}ms`, 
+      seed,
+      predictTime: prediction.metrics?.predict_time ? `${Math.round(prediction.metrics.predict_time * 1000)}ms` : 'unknown'
+    });
 
-    // 8) Normalizzazione output -> otteniamo un Buffer PNG
+    // Estrai l'URL dell'immagine generata
+    let imageUrl: string | undefined;
+    if (typeof prediction.output === 'string') {
+      imageUrl = prediction.output;
+    } else if (Array.isArray(prediction.output) && prediction.output.length > 0) {
+      imageUrl = typeof prediction.output[0] === 'string' ? prediction.output[0] : undefined;
+    }
+
+    if (!imageUrl) {
+      throw new Error('No image URL in prediction output');
+    }
+
+    // (Facoltativo) Log per audit - possiamo persistere in DB se necessario
+    console.log('[Avatar] Prediction details:', {
+      inputImageUrl: prediction.input?.input_image ? prediction.input.input_image.substring(0, 50) + '...' : 'unknown',
+      promptLength: prediction.input?.prompt?.length || 0,
+      outputUrl: imageUrl.substring(0, 50) + '...',
+    });
+
+    // 8) Download dell'immagine generata da Replicate
     let avatarBuffer: Buffer | null = null;
-    let imageUrl: string | null = null;
 
-    // Case A: SDK nuovo con helper .url() (controllo più robusto)
-    if (output && typeof output === 'object' && 'url' in (output as any)) {
-      const urlProp = (output as any).url;
-      if (typeof urlProp === 'function') {
-        imageUrl = urlProp();
-      } else if (typeof urlProp === 'string' && urlProp.startsWith('http')) {
-        imageUrl = urlProp;
-      }
-    }
-
-    // Case B: output = string URL
-    if (!imageUrl && typeof output === 'string') {
-      const outputStr = output as string;
-      if (outputStr.startsWith('http')) {
-        imageUrl = outputStr;
-      }
-    }
-
-    // Case C: output = array di URL/string/oggetti
-    if (!imageUrl && Array.isArray(output) && output.length > 0) {
-      const first = output[0];
-      if (typeof first === 'string' && first.startsWith('http')) {
-        imageUrl = first;
-      } else if (first && typeof first === 'object' && 'url' in first) {
-        const urlProp = (first as any).url;
-        if (typeof urlProp === 'function') {
-          imageUrl = urlProp();
-        } else if (typeof urlProp === 'string' && urlProp.startsWith('http')) {
-          imageUrl = urlProp;
-        }
-      }
-    }
-
-    // Case D: alcuni wrapper ritornano direttamente bytes (Uint8Array o ArrayBuffer)
-    if (!imageUrl && output instanceof Uint8Array) {
-      avatarBuffer = Buffer.from(output);
-    } else if (!imageUrl && output instanceof ArrayBuffer) {
-      avatarBuffer = Buffer.from(output);
-    }
-
-    // Se abbiamo un URL: scarichiamo con timeout
-    if (!avatarBuffer && imageUrl) {
+    // Scarichiamo l'immagine dall'URL fornito da Replicate
+    if (imageUrl && imageUrl.startsWith('http')) {
       console.log('[Avatar] Downloading image from:', imageUrl.substring(0, 50) + '...');
       
       // Fallback fetch per Node <18 (lazy import)

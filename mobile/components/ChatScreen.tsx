@@ -1513,7 +1513,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   return (
                     <TouchableOpacity key={iso} onPress={() => setSelectedDayKey(iso)} style={[styles.dayPill, { backgroundColor: colors.surface, borderColor: colors.border }, active && { borderColor: '#6366f1', backgroundColor: '#eef2ff' }]}> 
                       {hasEntry && <View style={[styles.colorDot, { backgroundColor: color }]} />}
-                      <Text style={[styles.dayText, active && { color: '#3730a3', fontWeight: '800' }]}>{dayNum}</Text>
+                      <Text style={[styles.dayText, active && { color: '#3730a3', fontWeight: '800' }]}>{String(dayNum)}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -1622,7 +1622,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                                   setShowMonthPicker(false); 
                                 }}
                               >
-                                <Text style={[styles.calDayTxt, { color: colors.text }, active && { color: colors.primary, fontWeight:'800' }]}>{dayNum}</Text>
+                                <Text style={[styles.calDayTxt, { color: colors.text }, active && { color: colors.primary, fontWeight:'800' }]}>{String(dayNum)}</Text>
                                 {hasEntry && <View style={[styles.calDot, { backgroundColor: color }]} />} {/* 🆕 Mostra pallino solo se c'è entry */}
                               </TouchableOpacity>
                             );

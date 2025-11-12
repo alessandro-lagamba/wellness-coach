@@ -1,6 +1,6 @@
 // Wellness Activity Sync Service
 import CalendarService, { CalendarEvent } from './calendar.service';
-import NotificationService, { WellnessReminder } from './notification.service';
+import { NotificationService } from './notifications.service';
 
 export interface WellnessActivity {
   id: string;
@@ -17,10 +17,20 @@ export interface WellnessActivity {
   reminderId?: string;
 }
 
+// Helper interface per compatibilità
+interface WellnessReminder {
+  id: string;
+  title: string;
+  body: string;
+  triggerDate: Date;
+  category: 'wellness' | 'mindfulness' | 'movement' | 'nutrition' | 'recovery';
+  activityId: string;
+  repeat?: 'daily' | 'weekly' | 'monthly';
+}
+
 export class WellnessSyncService {
   private static instance: WellnessSyncService;
   private calendarService: CalendarService;
-  private notificationService: NotificationService;
 
   public static getInstance(): WellnessSyncService {
     if (!WellnessSyncService.instance) {
@@ -31,7 +41,6 @@ export class WellnessSyncService {
 
   constructor() {
     this.calendarService = CalendarService.getInstance();
-    this.notificationService = NotificationService.getInstance();
   }
 
   /**
@@ -40,11 +49,8 @@ export class WellnessSyncService {
   async initialize(): Promise<{ calendar: boolean; notifications: boolean }> {
     const [calendarResult, notificationResult] = await Promise.all([
       this.calendarService.initialize(),
-      this.notificationService.initialize(),
+      NotificationService.initialize(),
     ]);
-
-    // Setup notification handlers
-    this.notificationService.setupNotificationHandlers();
 
     return {
       calendar: calendarResult,
@@ -83,18 +89,54 @@ export class WellnessSyncService {
       if (activity.syncToReminders && activity.reminderMinutes) {
         const reminderTime = new Date(activity.startTime);
         reminderTime.setMinutes(reminderTime.getMinutes() - activity.reminderMinutes);
-
-        const reminder: WellnessReminder = {
-          id: `${activity.id}_reminder`,
-          title: activity.title,
-          body: `Time for your ${activity.category} activity: ${activity.description}`,
-          triggerDate: reminderTime,
-          category: activity.category,
-          activityId: activity.id,
-          repeat: activity.recurrence,
-        };
-
-        reminderId = await this.notificationService.scheduleReminder(reminder);
+        
+        // Convert category to NotificationCategory
+        const notificationCategory = this.mapCategoryToNotificationCategory(activity.category);
+        
+        // Calculate seconds from now for relative trigger
+        const now = new Date();
+        const secondsFromNow = Math.max(1, Math.floor((reminderTime.getTime() - now.getTime()) / 1000));
+        
+        // If reminder is in the future, schedule it
+        if (secondsFromNow > 0) {
+          reminderId = await NotificationService.schedule(
+            notificationCategory,
+            activity.title,
+            `Time for your ${activity.category} activity: ${activity.description}`,
+            {
+              secondsFromNow,
+              repeats: !!activity.recurrence,
+            },
+            {
+              activityId: activity.id,
+              category: activity.category,
+            }
+          );
+        } else {
+          // If reminder time has passed, schedule for the next occurrence
+          const hour = reminderTime.getHours();
+          const minute = reminderTime.getMinutes();
+          // Fix weekday: getDay() returns 0=Sun, 1=Mon... but Expo wants 1..7 with Sun=1
+          const weekday = activity.recurrence === 'weekly'
+            ? ((reminderTime.getDay() === 0 ? 7 : reminderTime.getDay()) as number)
+            : undefined;
+          
+          reminderId = await NotificationService.schedule(
+            notificationCategory,
+            activity.title,
+            `Time for your ${activity.category} activity: ${activity.description}`,
+            {
+              hour,
+              minute,
+              weekday,
+              repeats: !!activity.recurrence,
+            },
+            {
+              activityId: activity.id,
+              category: activity.category,
+            }
+          );
+        }
       }
 
       return {
@@ -136,26 +178,60 @@ export class WellnessSyncService {
       // Update reminder if it exists
       if (activity.reminderId && activity.syncToReminders) {
         // Cancel existing reminder
-        await this.notificationService.cancelReminder(activity.reminderId);
+        await NotificationService.cancel(activity.reminderId);
 
         // Schedule new reminder if reminder time is specified
         if (activity.reminderMinutes) {
           const reminderTime = new Date(activity.startTime);
           reminderTime.setMinutes(reminderTime.getMinutes() - activity.reminderMinutes);
-
-          const reminder: WellnessReminder = {
-            id: `${activity.id}_reminder`,
-            title: activity.title,
-            body: `Time for your ${activity.category} activity: ${activity.description}`,
-            triggerDate: reminderTime,
-            category: activity.category,
-            activityId: activity.id,
-            repeat: activity.recurrence,
-          };
-
-          const newReminderId = await this.notificationService.scheduleReminder(reminder);
-          if (newReminderId) {
-            activity.reminderId = newReminderId;
+          
+          const notificationCategory = this.mapCategoryToNotificationCategory(activity.category);
+          const now = new Date();
+          const secondsFromNow = Math.max(1, Math.floor((reminderTime.getTime() - now.getTime()) / 1000));
+          
+          if (secondsFromNow > 0) {
+            const newReminderId = await NotificationService.schedule(
+              notificationCategory,
+              activity.title,
+              `Time for your ${activity.category} activity: ${activity.description}`,
+              {
+                secondsFromNow,
+                repeats: !!activity.recurrence,
+              },
+              {
+                activityId: activity.id,
+                category: activity.category,
+              }
+            );
+            if (newReminderId) {
+              activity.reminderId = newReminderId;
+            }
+          } else {
+            const hour = reminderTime.getHours();
+            const minute = reminderTime.getMinutes();
+            // Fix weekday: getDay() returns 0=Sun, 1=Mon... but Expo wants 1..7 with Sun=1
+            const weekday = activity.recurrence === 'weekly'
+              ? ((reminderTime.getDay() === 0 ? 7 : reminderTime.getDay()) as number)
+              : undefined;
+            
+            const newReminderId = await NotificationService.schedule(
+              notificationCategory,
+              activity.title,
+              `Time for your ${activity.category} activity: ${activity.description}`,
+              {
+                hour,
+                minute,
+                weekday,
+                repeats: !!activity.recurrence,
+              },
+              {
+                activityId: activity.id,
+                category: activity.category,
+              }
+            );
+            if (newReminderId) {
+              activity.reminderId = newReminderId;
+            }
           }
         }
       }
@@ -185,11 +261,24 @@ export class WellnessSyncService {
 
       // Remove reminders if they exist
       if (activity.reminderId) {
-        await this.notificationService.cancelReminder(activity.reminderId);
+        await NotificationService.cancel(activity.reminderId);
       }
 
       // Also cancel any other reminders for this activity
-      await this.notificationService.cancelActivityReminders(activity.id);
+      // Note: notifications.service.ts doesn't have cancelActivityReminders,
+      // so we need to get all scheduled notifications and filter
+      try {
+        const { getAllScheduledNotificationsAsync, cancelScheduledNotificationAsync } = await import('expo-notifications');
+        const scheduled = await getAllScheduledNotificationsAsync();
+        const activityNotifications = scheduled.filter(
+          (n: any) => n.content?.data?.activityId === activity.id
+        );
+        for (const notification of activityNotifications) {
+          await cancelScheduledNotificationAsync(notification.identifier);
+        }
+      } catch (error) {
+        console.error('Failed to cancel activity reminders:', error);
+      }
 
       return { success: true };
     } catch (error) {
@@ -212,16 +301,32 @@ export class WellnessSyncService {
    * Get scheduled reminders
    */
   async getScheduledReminders() {
-    return await this.notificationService.getScheduledReminders();
+    try {
+      const { getAllScheduledNotificationsAsync } = await import('expo-notifications');
+      const scheduled = await getAllScheduledNotificationsAsync();
+      return scheduled.filter((n: any) => n.content?.data?.category);
+    } catch (error) {
+      console.error('Failed to get scheduled reminders:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get weekly trend data (placeholder - implement if needed)
+   */
+  async getWeeklyTrendData(userId: string): Promise<any> {
+    // TODO: Implement if needed
+    return [];
   }
 
   /**
    * Check permissions status
    */
-  getPermissionsStatus(): { calendar: boolean; notifications: boolean } {
+  async getPermissionsStatus(): Promise<{ calendar: boolean; notifications: boolean }> {
+    const notificationStatus = await NotificationService.ensurePermission();
     return {
       calendar: this.calendarService.hasCalendarPermissions(),
-      notifications: this.notificationService.hasNotificationPermissions(),
+      notifications: notificationStatus,
     };
   }
 
@@ -231,13 +336,31 @@ export class WellnessSyncService {
   async requestPermissions(): Promise<{ calendar: boolean; notifications: boolean }> {
     const [calendarResult, notificationResult] = await Promise.all([
       this.calendarService.requestPermissions(),
-      this.notificationService.requestPermissions(),
+      NotificationService.ensurePermission(),
     ]);
 
     return {
       calendar: calendarResult,
       notifications: notificationResult,
     };
+  }
+
+  /**
+   * Map wellness activity category to notification category
+   */
+  private mapCategoryToNotificationCategory(category: 'mindfulness' | 'movement' | 'nutrition' | 'recovery'): 'emotion_skin_reminder' | 'journal_reminder' | 'breathing_break' | 'hydration_reminder' {
+    switch (category) {
+      case 'mindfulness':
+        return 'breathing_break';
+      case 'movement':
+        return 'emotion_skin_reminder'; // Fallback, could add new category
+      case 'nutrition':
+        return 'hydration_reminder';
+      case 'recovery':
+        return 'journal_reminder';
+      default:
+        return 'journal_reminder';
+    }
   }
 
   /**

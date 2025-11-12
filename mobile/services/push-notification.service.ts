@@ -10,6 +10,16 @@ import { EmotionAnalysisService } from './emotion-analysis.service';
 const NOTIFICATION_STORAGE_KEY = '@wellness:push_notifications';
 const LAST_MOOD_NOTIFICATION_KEY = '@wellness:last_mood_notification';
 
+// 🔇 Silencer per evitare banner durante il (re)scheduling iniziale
+let silenceUntil = 0;
+
+/**
+ * Disattiva i banner/list/sound in foreground per ms millisecondi
+ */
+export function temporarilySilenceForegroundBanners(ms = 8000) {
+  silenceUntil = Date.now() + ms;
+}
+
 interface NotificationRule {
   id: string;
   name: string;
@@ -53,11 +63,15 @@ class PushNotificationService {
 
       // Configura handler per le notifiche
       Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowAlert: true,
-          shouldPlaySound: true,
-          shouldSetBadge: false,
-        }),
+        handleNotification: async () => {
+          const silent = Date.now() < silenceUntil;
+          return {
+            shouldShowBanner: !silent,
+            shouldShowList: !silent,
+            shouldPlaySound: !silent,
+            shouldSetBadge: false,
+          } as any;
+        },
       });
 
       // 🔥 FIX: Rimuoviamo console.log eccessivi

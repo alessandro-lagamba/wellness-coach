@@ -137,7 +137,7 @@ export const BiometricSecurityModal: React.FC<BiometricSecurityModalProps> = ({
       try {
         setIsLoading(true);
         console.log('🔐 Disabling biometric authentication...');
-        await BiometricAuthService.clearBiometricCredentials();
+        await BiometricAuthService.disableBiometric();
         setIsBiometricEnabled(false);
         Alert.alert(t('common.success'), t('modals.biometric.disabledSuccess'));
       } catch (err) {

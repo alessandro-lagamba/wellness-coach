@@ -10,10 +10,8 @@ import { InteractiveTutorial } from './InteractiveTutorial';
 import { BiometricPromptModal } from './BiometricPromptModal';
 import { TutorialProvider, useTutorial } from '../contexts/TutorialContext';
 import { useRouter } from 'expo-router';
-import PushNotificationService from '../services/push-notification.service'; // 🆕 Push notifications
+import PushNotificationService, { temporarilySilenceForegroundBanners } from '../services/push-notification.service'; // 🆕 Push notifications
 import { useStatusBarColor } from '../contexts/StatusBarContext'; // 🆕 StatusBar override
-import * as Notifications from 'expo-notifications'; // 🆕 Local notifications
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -107,10 +105,11 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           if (isBiometricEnabled && !biometricAvailable) {
             // Optionally disable biometric if device doesn't support it anymore
             try {
-              await BiometricAuthService.clearBiometricCredentials();
+              // Disabilita la biometria se il dispositivo non la supporta più
+              await BiometricAuthService.disableBiometric();
             } catch (e) {
               // 🔥 FIX: Solo errori critici in console
-              console.error('Error clearing biometric credentials:', e);
+              console.error('Error disabling biometric:', e);
             }
           }
           
@@ -254,110 +253,20 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   }, [isAuthenticated, user?.id]);
 
   // 🆕 Inizializza notifiche locali programmate quando l'utente è autenticato
-  const NOTIFICATIONS_SCHEDULED_KEY = '@notifications_scheduled';
-  const NOTIFICATIONS_LAST_SCHEDULED_KEY = '@notifications_last_scheduled';
-  const notificationsScheduledRef = useRef(false);
-  
+  // 🧹 PULIZIA: Rimossa logica ridondante - scheduleDefaults() gestisce tutto internamente con DEFAULTS_FLAG
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
-    
-    // Evita rischedulazioni multiple durante lo stesso mount
-    if (notificationsScheduledRef.current) {
-      return;
-    }
 
     const initLocalNotifications = async () => {
       // 🔥 FIX: Verifica se il componente è ancora montato
       if (!isMountedRef.current) return;
       
       try {
-        // 🔥 PRIMA verifica se ci sono già notifiche schedulate (PRIMA di chiamare initialize)
-        const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-        
-        // 🔥 MIGLIORATO: Verifica se ci sono notifiche valide (non scadute)
-        const now = Date.now();
-        const validNotifications = scheduled.filter(notif => {
-          if (!notif.trigger) return false;
-          // Verifica se la notifica è ricorrente o ha una data futura
-          if ('repeats' in notif.trigger && notif.trigger.repeats) {
-            return true; // Notifiche ricorrenti sono sempre valide
-          }
-          if ('date' in notif.trigger && notif.trigger.date) {
-            const triggerDate = new Date(notif.trigger.date).getTime();
-            return triggerDate > now; // Solo notifiche future
-          }
-          return false;
-        });
-        
-        // Se ci sono già notifiche valide (almeno 10), non rischedulare
-        if (validNotifications.length >= 10) {
-          await AsyncStorage.setItem(NOTIFICATIONS_SCHEDULED_KEY, 'true');
-          await AsyncStorage.setItem(NOTIFICATIONS_LAST_SCHEDULED_KEY, now.toString());
-          notificationsScheduledRef.current = true;
-          return;
-        }
-
-        // 🔥 MIGLIORATO: Verifica quando sono state schedulate l'ultima volta
-        const lastScheduledStr = await AsyncStorage.getItem(NOTIFICATIONS_LAST_SCHEDULED_KEY);
-        if (lastScheduledStr) {
-          const lastScheduled = parseInt(lastScheduledStr, 10);
-          const hoursSinceLastSchedule = (now - lastScheduled) / (1000 * 60 * 60);
-          
-          // Se sono state schedulate meno di 24 ore fa e ci sono ancora notifiche valide, non rischedulare
-          if (hoursSinceLastSchedule < 24 && validNotifications.length >= 5) {
-            notificationsScheduledRef.current = true;
-            return;
-          }
-        }
-
-        // Verifica se le notifiche sono già state schedulate in una sessione precedente
-        const wasScheduled = await AsyncStorage.getItem(NOTIFICATIONS_SCHEDULED_KEY);
-        if (wasScheduled === 'true' && validNotifications.length >= 10) {
-          notificationsScheduledRef.current = true;
-          return;
-        }
-
-        // 🔥 MIGLIORATO: Rischedula solo se necessario
-        // Se le notifiche sono state cancellate o non ci sono abbastanza notifiche valide, rischedula
-        if (validNotifications.length < 10) {
-          // 🔥 FIX: Verifica di nuovo se il componente è ancora montato
-          if (!isMountedRef.current) return;
-          
-          const { NotificationService } = await import('../services/notifications.service');
-          const granted = await NotificationService.initialize();
-          
-          if (granted) {
-            // Cancella solo le notifiche non valide (scadute)
-            const expiredNotifications = scheduled.filter(notif => {
-              if (!notif.trigger) return true;
-              if ('repeats' in notif.trigger && notif.trigger.repeats) {
-                return false; // Non cancellare notifiche ricorrenti
-              }
-              if ('date' in notif.trigger && notif.trigger.date) {
-                const triggerDate = new Date(notif.trigger.date).getTime();
-                return triggerDate <= now; // Cancella solo quelle scadute
-              }
-              return true;
-            });
-            
-            // Cancella solo le notifiche scadute
-            for (const notif of expiredNotifications) {
-              try {
-                await Notifications.cancelScheduledNotificationAsync(notif.identifier);
-              } catch (error) {
-                // Ignora errori se la notifica non esiste più
-              }
-            }
-            
-            // Schedula le nuove notifiche solo se necessario
-            const ids = await NotificationService.scheduleDefaults();
-            
-            // Salva il flag e il timestamp per evitare rischedulazioni future
-            await AsyncStorage.setItem(NOTIFICATIONS_SCHEDULED_KEY, 'true');
-            await AsyncStorage.setItem(NOTIFICATIONS_LAST_SCHEDULED_KEY, now.toString());
-            notificationsScheduledRef.current = true;
-          }
-        }
+        // 🔇 silenzia banner per qualche secondo durante il (re)scheduling
+        temporarilySilenceForegroundBanners(8000);
+        const { NotificationService } = await import('../services/notifications.service');
+        // scheduleDefaults() si occupa lui di non duplicare (controlla DEFAULTS_FLAG internamente)
+        await NotificationService.scheduleDefaults();
       } catch (error) {
         // 🔥 FIX: Solo errori critici in console
         console.error('[AuthWrapper] ❌ Error initializing local notifications:', error);
@@ -484,7 +393,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           switch (screen) {
             case 'home':
-              router.push('/(tabs)/');
+              router.push('/(tabs)');
               break;
             case 'emotion':
               router.push('/(tabs)/analysis');
@@ -494,6 +403,10 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
               break;
             case 'chat':
               router.push('/coach/chat');
+              break;
+            case 'suggestions':
+              // Le suggestions sono mostrate nella home screen
+              router.push('/(tabs)');
               break;
             default:
               // 🔥 FIX: Solo errori critici in console

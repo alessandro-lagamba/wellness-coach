@@ -60,24 +60,51 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
   const handleSignup = async () => {
     if (!validateForm()) return;
 
+    if (isLoading) return; // Previeni doppi submit
+
     setIsLoading(true);
+    
+    // Timeout per la chiamata API (15 secondi - registrazione può richiedere più tempo)
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Timeout: la richiesta ha impiegato troppo tempo')), 15000);
+    });
+
     try {
-      const { user, error } = await AuthService.signUp(email, password, `${firstName} ${lastName}`);
+      const signupPromise = AuthService.signUp(email.trim(), password, `${firstName.trim()} ${lastName.trim()}`);
+      const { user, error } = await Promise.race([signupPromise, timeoutPromise]);
       
       if (error) {
-        Alert.alert('Errore Registrazione', error.message || 'Errore durante la registrazione');
+        // Messaggi di errore più specifici
+        let errorMessage = 'Errore durante la registrazione';
+        if (error.message?.includes('User already registered')) {
+          errorMessage = 'Questa email è già registrata. Prova ad accedere';
+        } else if (error.message?.includes('Password')) {
+          errorMessage = 'La password non soddisfa i requisiti di sicurezza';
+        } else if (error.message?.includes('Email')) {
+          errorMessage = 'Indirizzo email non valido';
+        } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+          errorMessage = 'Errore di connessione. Verifica la tua connessione internet';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        Alert.alert('Errore Registrazione', errorMessage);
         return;
       }
 
       if (user) {
         // Aggiorna il profilo con i dati aggiuntivi
-        await AuthService.updateUserProfile(user.id, {
-          first_name: firstName,
-          last_name: lastName,
-          full_name: `${firstName} ${lastName}`,
-          age: age ? parseInt(age) : undefined,
-          gender: gender,
-        });
+        try {
+          await AuthService.updateUserProfile(user.id, {
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            full_name: `${firstName.trim()} ${lastName.trim()}`,
+            age: age ? parseInt(age) : undefined,
+            gender: gender,
+          });
+        } catch (profileError) {
+          // Non bloccare la registrazione se l'update del profilo fallisce
+          console.warn('Failed to update user profile:', profileError);
+        }
 
         Alert.alert(
           'Registrazione Completata',
@@ -90,8 +117,16 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
           ]
         );
       }
-    } catch (error) {
-      Alert.alert('Errore', 'Si è verificato un errore durante la registrazione');
+    } catch (error: any) {
+      let errorMessage = 'Si è verificato un errore durante la registrazione';
+      if (error.message?.includes('Timeout')) {
+        errorMessage = 'La richiesta ha impiegato troppo tempo. Riprova';
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorMessage = 'Errore di connessione. Verifica la tua connessione internet';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      Alert.alert('Errore', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -150,6 +185,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
                     value={firstName}
                     onChangeText={setFirstName}
                     autoCapitalize="words"
+                    editable={!isLoading}
                   />
                 </View>
 
@@ -162,6 +198,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
                     value={lastName}
                     onChangeText={setLastName}
                     autoCapitalize="words"
+                    editable={!isLoading}
                   />
                 </View>
               </View>
@@ -172,11 +209,12 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
                   style={styles.input}
                   placeholder="Inserisci la tua email"
                   placeholderTextColor="#999"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
                 />
               </View>
 
@@ -190,6 +228,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
                   onChangeText={setAge}
                   keyboardType="numeric"
                   maxLength={3}
+                  editable={!isLoading}
                 />
               </View>
 
@@ -230,6 +269,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!isLoading}
                 />
               </View>
 
@@ -244,6 +284,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!isLoading}
                 />
               </View>
 

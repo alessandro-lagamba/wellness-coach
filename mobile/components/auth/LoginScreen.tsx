@@ -26,28 +26,78 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+
+  // Validazione email in tempo reale
+  const validateEmail = (emailValue: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailValue) {
+      setEmailError('');
+      return false;
+    }
+    if (!emailRegex.test(emailValue)) {
+      setEmailError('Inserisci un indirizzo email valido');
+      return false;
+    }
+    setEmailError('');
+    return true;
+  };
 
   const handleLogin = async () => {
+    // Validazione input
     if (!email || !password) {
       Alert.alert('Errore', 'Inserisci email e password');
       return;
     }
 
+    if (!validateEmail(email)) {
+      Alert.alert('Errore', 'Inserisci un indirizzo email valido');
+      return;
+    }
+
+    if (isLoading) return; // Previeni doppi submit
+
     setIsLoading(true);
+    
+    // Timeout per la chiamata API (10 secondi)
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Timeout: la richiesta ha impiegato troppo tempo')), 10000);
+    });
+
     try {
-      const { user, error } = await AuthService.signIn(email, password);
+      const loginPromise = AuthService.signIn(email.trim(), password);
+      const { user, error } = await Promise.race([loginPromise, timeoutPromise]);
       
       if (error) {
-        Alert.alert('Errore Login', error.message || 'Credenziali non valide');
+        // Messaggi di errore più specifici
+        let errorMessage = 'Credenziali non valide';
+        if (error.message?.includes('Invalid login credentials')) {
+          errorMessage = 'Email o password non corretti';
+        } else if (error.message?.includes('Email not confirmed')) {
+          errorMessage = 'Email non confermata. Controlla la tua casella di posta';
+        } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+          errorMessage = 'Errore di connessione. Verifica la tua connessione internet';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        Alert.alert('Errore Login', errorMessage);
         return;
       }
 
       if (user) {
-        Alert.alert('Successo', 'Login effettuato con successo!');
+        // Rimuovi l'alert di successo per UX più fluida
         onLoginSuccess(user);
       }
-    } catch (error) {
-      Alert.alert('Errore', 'Si è verificato un errore durante il login');
+    } catch (error: any) {
+      let errorMessage = 'Si è verificato un errore durante il login';
+      if (error.message?.includes('Timeout')) {
+        errorMessage = 'La richiesta ha impiegato troppo tempo. Riprova';
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorMessage = 'Errore di connessione. Verifica la tua connessione internet';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      Alert.alert('Errore', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -98,15 +148,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Email</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, emailError && styles.inputError]}
                   placeholder="Inserisci la tua email"
                   placeholderTextColor="#999"
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    if (emailError) validateEmail(text);
+                  }}
+                  onBlur={() => validateEmail(email)}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!isLoading}
                 />
+                {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
               </View>
 
               <View style={styles.inputContainer}>
@@ -120,6 +176,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!isLoading}
                 />
               </View>
 
@@ -257,5 +314,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textDecorationLine: 'underline',
+  },
+  inputError: {
+    borderWidth: 1,
+    borderColor: '#ff6b6b',
+  },
+  errorText: {
+    color: '#ff6b6b',
+    fontSize: 12,
+    marginTop: 4,
   },
 });

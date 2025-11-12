@@ -138,8 +138,13 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
 
     if (isLastStep) {
       // Complete onboarding
-      await AsyncStorage.setItem('onboarding_completed', 'true');
-      await AsyncStorage.setItem('onboarding_completed_at', new Date().toISOString());
+      try {
+        await AsyncStorage.setItem('onboarding_completed', 'true');
+        await AsyncStorage.setItem('onboarding_completed_at', new Date().toISOString());
+      } catch (error) {
+        console.error('Error saving onboarding completion:', error);
+        // Continue anyway - non critico
+      }
       onComplete();
     } else {
       // Mark current step as completed
@@ -160,8 +165,13 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
 
   const handleSkip = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await AsyncStorage.setItem('onboarding_completed', 'true');
-    await AsyncStorage.setItem('onboarding_skipped', 'true');
+    try {
+      await AsyncStorage.setItem('onboarding_completed', 'true');
+      await AsyncStorage.setItem('onboarding_skipped', 'true');
+    } catch (error) {
+      console.error('Error saving onboarding skip:', error);
+      // Continue anyway - non critico
+    }
     onComplete();
   };
 
