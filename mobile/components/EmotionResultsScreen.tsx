@@ -26,6 +26,12 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
   const { colors } = useTheme();
   const { t } = useTranslation();
   const getEmotionData = (emotion: string) => {
+    // Helper function per ottenere tips con fallback sicuro
+    const getTips = (emotionKey: string): string[] => {
+      const tips = t(`analysis.emotion.results.tips.${emotionKey}`, { returnObjects: true });
+      return Array.isArray(tips) ? tips : [];
+    };
+
     const emotionData: { [key: string]: any } = {
       joy: {
         color: '#10b981',
@@ -33,7 +39,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         title: t('analysis.emotion.results.emotions.joy.title'),
         description: t('analysis.emotion.results.emotions.joy.description'),
         advice: t('analysis.emotion.results.emotions.joy.advice'),
-        tips: t('analysis.emotion.results.tips.joy', { returnObjects: true }) as string[],
+        tips: getTips('joy'),
         intensity: t('analysis.emotion.results.emotions.joy.intensity'),
         wellnessScore: 85
       },
@@ -43,7 +49,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         title: t('analysis.emotion.results.emotions.sadness.title'),
         description: t('analysis.emotion.results.emotions.sadness.description'),
         advice: t('analysis.emotion.results.emotions.sadness.advice'),
-        tips: t('analysis.emotion.results.tips.sadness', { returnObjects: true }) as string[],
+        tips: getTips('sadness'),
         intensity: t('analysis.emotion.results.emotions.sadness.intensity'),
         wellnessScore: 45
       },
@@ -53,7 +59,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         title: t('analysis.emotion.results.emotions.anger.title'),
         description: t('analysis.emotion.results.emotions.anger.description'),
         advice: t('analysis.emotion.results.emotions.anger.advice'),
-        tips: t('analysis.emotion.results.tips.anger', { returnObjects: true }) as string[],
+        tips: getTips('anger'),
         intensity: t('analysis.emotion.results.emotions.anger.intensity'),
         wellnessScore: 30
       },
@@ -63,7 +69,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         title: t('analysis.emotion.results.emotions.fear.title'),
         description: t('analysis.emotion.results.emotions.fear.description'),
         advice: t('analysis.emotion.results.emotions.fear.advice'),
-        tips: t('analysis.emotion.results.tips.fear', { returnObjects: true }) as string[],
+        tips: getTips('fear'),
         intensity: t('analysis.emotion.results.emotions.fear.intensity'),
         wellnessScore: 25
       },
@@ -73,7 +79,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         title: t('analysis.emotion.results.emotions.surprise.title'),
         description: t('analysis.emotion.results.emotions.surprise.description'),
         advice: t('analysis.emotion.results.emotions.surprise.advice'),
-        tips: t('analysis.emotion.results.tips.surprise', { returnObjects: true }) as string[],
+        tips: getTips('surprise'),
         intensity: t('analysis.emotion.results.emotions.surprise.intensity'),
         wellnessScore: 60
       },
@@ -83,7 +89,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         title: t('analysis.emotion.results.emotions.disgust.title'),
         description: t('analysis.emotion.results.emotions.disgust.description'),
         advice: t('analysis.emotion.results.emotions.disgust.advice'),
-        tips: t('analysis.emotion.results.tips.disgust', { returnObjects: true }) as string[],
+        tips: getTips('disgust'),
         intensity: t('analysis.emotion.results.emotions.disgust.intensity'),
         wellnessScore: 40
       },
@@ -93,7 +99,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         title: t('analysis.emotion.results.emotions.neutral.title'),
         description: t('analysis.emotion.results.emotions.neutral.description'),
         advice: t('analysis.emotion.results.emotions.neutral.advice'),
-        tips: t('analysis.emotion.results.tips.neutral', { returnObjects: true }) as string[],
+        tips: getTips('neutral'),
         intensity: t('analysis.emotion.results.emotions.neutral.intensity'),
         wellnessScore: 70
       },
@@ -164,14 +170,20 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
             <Text style={[styles.tipsTitle, { color: colors.text }]}>{t('analysis.emotion.results.wellnessTips')}</Text>
           </View>
           <View style={styles.tipsList}>
-            {emotionData.tips.map((tip: string, index: number) => (
-              <View key={index} style={styles.tipItem}>
-                <View style={styles.tipIcon}>
-                  <FontAwesome name="check" size={12} color="#10b981" />
+            {Array.isArray(emotionData.tips) && emotionData.tips.length > 0 ? (
+              emotionData.tips.map((tip: string, index: number) => (
+                <View key={index} style={styles.tipItem}>
+                  <View style={styles.tipIcon}>
+                    <FontAwesome name="check" size={12} color="#10b981" />
+                  </View>
+                  <Text style={[styles.tipText, { color: colors.text }]}>{tip}</Text>
                 </View>
-                <Text style={[styles.tipText, { color: colors.text }]}>{tip}</Text>
-              </View>
-            ))}
+              ))
+            ) : (
+              <Text style={[styles.tipText, { color: colors.textSecondary }]}>
+                {t('analysis.emotion.results.noTips') || 'Nessun consiglio disponibile al momento'}
+              </Text>
+            )}
           </View>
         </View>
 
