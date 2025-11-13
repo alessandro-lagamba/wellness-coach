@@ -160,6 +160,9 @@ importers:
       '@react-native-async-storage/async-storage':
         specifier: ^2.2.0
         version: 2.2.0(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0))
+      '@react-native-community/datetimepicker':
+        specifier: ^8.2.0
+        version: 8.5.0(expo@54.0.12)(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0))(react@19.1.0)
       '@react-native-community/netinfo':
         specifier: ^11.4.1
         version: 11.4.1(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0))
@@ -2015,6 +2018,19 @@ packages:
     resolution: {integrity: sha512-gvRvjR5JAaUZF8tv2Kcq/Gbt3JHwbKFYfmb445rhOj6NUMx3qPLixmDx5pZAyb9at1bYvJ4/eTUipU5aki45xw==}
     peerDependencies:
       react-native: ^0.0.0-0 || >=0.65 <1.0
+
+  '@react-native-community/datetimepicker@8.5.0':
+    resolution: {integrity: sha512-RMWll1aPppMtzdJz4we4poNzVj9WUw5URHID7D2ICjGZq3KjrwwexvBnzp75EIYE/ihHXCn/OvYKe73fws9Y/g==}
+    peerDependencies:
+      expo: '>=52.0.0'
+      react: '*'
+      react-native: '*'
+      react-native-windows: '*'
+    peerDependenciesMeta:
+      expo:
+        optional: true
+      react-native-windows:
+        optional: true
 
   '@react-native-community/netinfo@11.4.1':
     resolution: {integrity: sha512-B0BYAkghz3Q2V09BF88RA601XursIEA111tnc2JOaN7axJWmNefmfjZqw/KdSxKZp7CZUuPpjBmz/WCR9uaHYg==}
@@ -8958,6 +8974,14 @@ snapshots:
     dependencies:
       merge-options: 3.0.4
       react-native: 0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0)
+
+  '@react-native-community/datetimepicker@8.5.0(expo@54.0.12)(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      invariant: 2.2.4
+      react: 19.1.0
+      react-native: 0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0)
+    optionalDependencies:
+      expo: 54.0.12(@babel/core@7.28.4)(@expo/metro-runtime@6.1.2)(expo-router@6.0.12)(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0))(react@19.1.0)
 
   '@react-native-community/netinfo@11.4.1(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.2.0)(react@19.1.0))':
     dependencies:
