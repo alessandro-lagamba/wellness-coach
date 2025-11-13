@@ -141,7 +141,11 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
           </LinearGradient>
 
           {/* Content */}
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.content} 
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Action Card */}
             <View style={[
               styles.actionCard, 
@@ -247,6 +251,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 40,
   },
   backdropTouchable: {
     position: 'absolute',
@@ -257,7 +262,8 @@ const styles = StyleSheet.create({
   },
   popupContainer: {
     width: width * 0.95,
-    height: height * 0.85,
+    maxHeight: height * 0.85,
+    minHeight: 300,
     borderRadius: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -265,6 +271,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 20,
     overflow: 'hidden',
+    alignSelf: 'center',
     // Background gestito inline con themeColors.surface
   },
   header: {
@@ -309,9 +316,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: {
-    flex: 1,
     paddingHorizontal: 20,
     paddingVertical: 20,
+  },
+  contentContainer: {
+    paddingBottom: 20,
+    flexGrow: 1,
   },
   actionCard: {
     borderRadius: 16,

@@ -3882,9 +3882,9 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   valueContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 2,
   },
   progressCardValue: {
     fontSize: 22, // Leggermente ridotto per risparmiare spazio

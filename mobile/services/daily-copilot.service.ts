@@ -719,9 +719,9 @@ OUTPUT FORMAT (return ONLY valid JSON):
             icon: rec.icon || '💡',
             estimatedTime: rec.estimatedTime || '5 min',
             actionable: true,
-            detailedExplanation: rec.detailedExplanation || rec.reason || '',
-            correlations: rec.correlations || [],
-            expectedBenefits: rec.expectedBenefits || []
+            detailedExplanation: rec.detailedExplanation || (rec.reason ? `${rec.reason} Questa raccomandazione è basata sui tuoi dati attuali e può aiutarti a migliorare il tuo benessere generale.` : ''),
+            correlations: Array.isArray(rec.correlations) && rec.correlations.length > 0 ? rec.correlations : (rec.reason ? [`Questa raccomandazione è basata sui tuoi dati attuali`] : []),
+            expectedBenefits: Array.isArray(rec.expectedBenefits) && rec.expectedBenefits.length > 0 ? rec.expectedBenefits : (rec.reason ? [`Miglioramento del benessere generale`, `Supporto ai tuoi obiettivi di salute`] : [])
           })),
           summary: (() => {
             const fallbackSummary = this.generateSummary(data);
@@ -844,9 +844,9 @@ OUTPUT FORMAT (return ONLY valid JSON):
         icon: rec.icon || '💡',
         estimatedTime: rec.estimatedTime || '5 min',
         actionable: true,
-        detailedExplanation: rec.detailedExplanation || rec.reason || '',
-        correlations: rec.correlations || [],
-        expectedBenefits: rec.expectedBenefits || []
+        detailedExplanation: rec.detailedExplanation || (rec.reason ? `${rec.reason} Questa raccomandazione è basata sui tuoi dati attuali e può aiutarti a migliorare il tuo benessere generale.` : ''),
+        correlations: Array.isArray(rec.correlations) && rec.correlations.length > 0 ? rec.correlations : (rec.reason ? [`Questa raccomandazione è basata sui tuoi dati attuali`] : []),
+        expectedBenefits: Array.isArray(rec.expectedBenefits) && rec.expectedBenefits.length > 0 ? rec.expectedBenefits : (rec.reason ? [`Miglioramento del benessere generale`, `Supporto ai tuoi obiettivi di salute`] : [])
       }));
     }
 
@@ -915,7 +915,19 @@ OUTPUT FORMAT (return ONLY valid JSON):
         reason: 'Solo ' + data.healthMetrics.steps + ' passi oggi, muoviti di più',
         icon: '🚶',
         estimatedTime: '15 min',
-        actionable: true
+        actionable: true,
+        detailedExplanation: `Con solo ${data.healthMetrics.steps} passi oggi, sei ben al di sotto della raccomandazione di 10.000 passi giornalieri. Una camminata di 15 minuti può aumentare significativamente la circolazione sanguigna, migliorare l'umore attraverso il rilascio di endorfine, e aiutare a mantenere la massa muscolare. Il movimento regolare è essenziale per la salute cardiovascolare e il metabolismo.`,
+        correlations: [
+          `Bassi passi (${data.healthMetrics.steps}) correlati con minore energia diurna`,
+          `Mancanza di movimento può influenzare negativamente l'HRV (${data.healthMetrics.hrv}ms)`,
+          `Attività fisica regolare migliora la qualità del sonno`
+        ],
+        expectedBenefits: [
+          'Aumento della circolazione sanguigna',
+          'Miglioramento dell\'umore e dell\'energia',
+          'Supporto alla salute cardiovascolare',
+          'Miglioramento del metabolismo'
+        ]
       });
     }
 
@@ -929,7 +941,19 @@ OUTPUT FORMAT (return ONLY valid JSON):
         reason: 'HRV basso (' + data.healthMetrics.hrv + 'ms) indica stress elevato',
         icon: '🧘',
         estimatedTime: '15 min',
-        actionable: true
+        actionable: true,
+        detailedExplanation: `Il tuo HRV di ${data.healthMetrics.hrv}ms è al di sotto della media, indicando un sistema nervoso simpatico iperattivo e stress elevato. La meditazione e lo yoga attivano il sistema nervoso parasimpatico, aumentando la variabilità della frequenza cardiaca. Queste pratiche riducono i livelli di cortisolo e promuovono il recupero fisiologico.`,
+        correlations: [
+          `HRV basso (${data.healthMetrics.hrv}ms) correlato con stress cronico`,
+          `Sonno insufficiente (${data.sleep.hours}h) può contribuire a HRV basso`,
+          `Mood ${data.mood}/5 può essere influenzato dallo stress elevato`
+        ],
+        expectedBenefits: [
+          'Riduzione dei livelli di cortisolo',
+          'Aumento della variabilità della frequenza cardiaca',
+          'Miglioramento del recupero fisiologico',
+          'Riduzione dello stress percepito'
+        ]
       });
     }
 
@@ -943,7 +967,19 @@ OUTPUT FORMAT (return ONLY valid JSON):
         reason: 'Solo ' + data.healthMetrics.hydration + '/8 bicchieri, idratati di più',
         icon: '💧',
         estimatedTime: '2 min',
-        actionable: true
+        actionable: true,
+        detailedExplanation: `Con solo ${data.healthMetrics.hydration}/8 bicchieri d'acqua consumati oggi, sei al di sotto della raccomandazione giornaliera. L'idratazione adeguata è essenziale per il funzionamento ottimale di tutti i sistemi corporei, inclusi la circolazione, la digestione, la termoregolazione e la funzione cognitiva. Una disidratazione anche lieve può influenzare negativamente l'umore, l'energia e le performance fisiche.`,
+        correlations: [
+          `Bassa idratazione (${data.healthMetrics.hydration}/8) può influenzare l'energia diurna`,
+          `Disidratazione può contribuire a HRV basso (${data.healthMetrics.hrv}ms)`,
+          `Adeguata idratazione migliora la qualità della pelle e la funzione renale`
+        ],
+        expectedBenefits: [
+          'Miglioramento della funzione cognitiva',
+          'Aumento dell\'energia e riduzione della fatica',
+          'Supporto alla circolazione sanguigna',
+          'Miglioramento della qualità della pelle'
+        ]
       });
     }
 

@@ -311,7 +311,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
           
           {/* Right: Score Circle - Più visibile */}
           <Animated.View style={[styles.scoreContainer, progressStyle]}>
-            <Svg width={80} height={80}>
+            <Svg width={95} height={95}>
               <Defs>
                 <SvgLinearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                   <Stop offset="0%" stopColor={scoreColors[0]} />
@@ -319,24 +319,24 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                 </SvgLinearGradient>
               </Defs>
               <Circle
-                cx="40"
-                cy="40"
-                r="35"
+                cx="47.5"
+                cy="47.5"
+                r="42"
                 stroke={themeColors.borderLight}
                 strokeWidth="6"
                 fill="none"
               />
               <Circle
-                cx="40"
-                cy="40"
-                r="35"
+                cx="47.5"
+                cy="47.5"
+                r="42"
                 stroke="url(#scoreGradient)"
                 strokeWidth="6"
                 fill="none"
-                strokeDasharray={`${2 * Math.PI * 35}`}
-                strokeDashoffset={`${2 * Math.PI * 35 * (1 - copilotData.overallScore / 100)}`}
+                strokeDasharray={`${2 * Math.PI * 42}`}
+                strokeDashoffset={`${2 * Math.PI * 42 * (1 - copilotData.overallScore / 100)}`}
                 strokeLinecap="round"
-                transform="rotate(-90 40 40)"
+                transform="rotate(-90 47.5 47.5)"
               />
             </Svg>
             <View style={styles.scoreTextContainer}>
@@ -515,8 +515,8 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 80,
-    height: 80,
+    width: 95,
+    height: 95,
     flexShrink: 0,
   },
   scoreTextContainer: {
@@ -529,9 +529,9 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   scoreValue: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '900',
-    lineHeight: 28,
+    lineHeight: 30,
   },
   scoreLabel: {
     fontSize: 12,
