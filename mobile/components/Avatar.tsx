@@ -14,7 +14,6 @@ import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, wit
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { AuthService } from '../services/auth.service';
 
-const AVATAR_ICON = require('../assets/avatar-icon.png');
 const USER_PLUS_ICON = require('../assets/user-plus.png');
 
 interface AvatarProps {
@@ -197,20 +196,7 @@ export const Avatar: React.FC<AvatarProps> = ({
       return <Image source={{ uri: avatarUri }} style={styles.avatarImage} resizeMode="cover" />;
     }
 
-    // Se è il tuo account (o un account con avatar-icon), mostra avatar-icon.png
-    const isOwnerAccount = currentUserEmail && currentUserEmail.includes('@');
-    
-    if (isOwnerAccount) {
-      return (
-        <Image
-          source={AVATAR_ICON}
-          style={styles.avatarImage}
-          resizeMode="cover"
-        />
-      );
-    }
-
-    // Per gli altri utenti senza avatar, mostra user-plus con sfondo viola
+    // Mostra il placeholder user-plus con sfondo viola quando l'avatar non è ancora disponibile
     return (
       <LinearGradient
         colors={['#a855f7', '#8b5cf6']}
