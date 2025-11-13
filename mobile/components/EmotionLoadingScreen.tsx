@@ -188,6 +188,8 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 10,
     maxWidth: '100%',
+    flex: 1,
+    justifyContent: 'center',
   },
   detectingTitle: { 
     fontSize: 20, 

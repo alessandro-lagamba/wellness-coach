@@ -637,8 +637,16 @@
         "tip3": "Dormi 7-9 ore di sonno di qualità per la rigenerazione della pelle",
         "tip4": "Mangia cibi ricchi di antiossidanti come bacche e verdure a foglia verde",
         "goBack": "Indietro",
-        "retake": "Ripeti",
-        "skinHealth": "Salute della Pelle"
+        "retake": "Ripeti"
+      },
+      "loading": {
+        "title": "Analisi della Pelle in Corso",
+        "subtitle": "L'AI sta esaminando texture, idratazione e marker di salute della pelle...",
+        "progress": "{{percent}}% Completato",
+        "step1": "Immagine catturata",
+        "step2": "Analisi texture",
+        "step3": "Scansione idratazione",
+        "info": "Questo potrebbe richiedere alcuni momenti..."
       },
       "guideModal": {
         "expertGuide": "GUIDA ESPERTA",

@@ -635,8 +635,16 @@
         "tip3": "Get 7-9 hours of quality sleep for skin regeneration",
         "tip4": "Eat antioxidant-rich foods like berries and leafy greens",
         "goBack": "Go Back",
-        "retake": "Retake",
-        "skinHealth": "Skin Health"
+        "retake": "Retake"
+      },
+      "loading": {
+        "title": "Analyzing Your Skin",
+        "subtitle": "AI is examining texture, hydration, and skin health markers...",
+        "progress": "{{percent}}% Complete",
+        "step1": "Image captured",
+        "step2": "Texture analysis",
+        "step3": "Hydration scan",
+        "info": "This may take a few moments..."
       },
       "guideModal": {
         "expertGuide": "EXPERT GUIDE",

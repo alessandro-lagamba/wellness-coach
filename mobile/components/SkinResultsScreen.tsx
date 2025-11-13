@@ -22,7 +22,33 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
   onRetake,
 }) => {
   const { colors } = useTheme();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  
+  // Helper function to translate AI-generated issues/notes/recommendations if they're in English
+  const translateAIText = (text: string): string => {
+    if (!text || language === 'en') return text;
+    
+    // Common AI-generated phrases that need translation
+    const translations: { [key: string]: string } = {
+      'visible redness': 'rossore visibile',
+      'slight oiliness': 'leggera oleosità',
+      'lighting is slightly uneven': 'l\'illuminazione è leggermente irregolare',
+      'image is in focus': 'l\'immagine è a fuoco',
+      'use gentle cleanser': 'usa un detergente delicato',
+      'apply moisturizer': 'applica una crema idratante',
+      'consider soothing products': 'considera prodotti lenitivi',
+      'use sunscreen daily': 'usa la protezione solare quotidianamente',
+    };
+    
+    // Check if exact match exists
+    if (translations[text.toLowerCase()]) {
+      return translations[text.toLowerCase()];
+    }
+    
+    // Return original text if no translation found
+    return text;
+  };
+  
   if (!results) {
     return null;
   }
@@ -259,7 +285,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
                   <View style={styles.issueIcon}>
                     <FontAwesome name="warning" size={12} color="#ef4444" />
                   </View>
-                  <Text style={[styles.issueText, { color: colors.text }]}>{issue}</Text>
+                  <Text style={[styles.issueText, { color: colors.text }]}>{translateAIText(issue)}</Text>
                 </View>
               ))}
             </View>
@@ -279,7 +305,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
                   <View style={styles.noteIcon}>
                     <FontAwesome name="info" size={12} color="#3b82f6" />
                   </View>
-                  <Text style={[styles.noteText, { color: colors.text }]}>{note}</Text>
+                  <Text style={[styles.noteText, { color: colors.text }]}>{translateAIText(note)}</Text>
                 </View>
               ))}
             </View>
@@ -303,7 +329,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
                 <View style={styles.recommendationIcon}>
                   <FontAwesome name="check" size={12} color="#10b981" />
                 </View>
-                <Text style={[styles.recommendationText, { color: colors.text }]}>{item}</Text>
+                <Text style={[styles.recommendationText, { color: colors.text }]}>{translateAIText(item)}</Text>
               </View>
             ))}
           </View>

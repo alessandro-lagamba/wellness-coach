@@ -1441,19 +1441,21 @@ const SkinAnalysisScreen: React.FC = () => {
 
   if (analyzing) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["bottom"]}>
+      <View style={[styles.container, { backgroundColor: colors.background, flex: 1 }]}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
           {/* Keep camera mounted but hidden during analysis */}
-          <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}>
+          <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}>
             <CameraFrame />
           </View>
           
-          <SkinLoadingScreen onCancel={() => {
-            if (isMountedRef.current) {
-              setAnalyzing(false);
-              setResults(null);
-            }
-          }} />
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            <SkinLoadingScreen onCancel={() => {
+              if (isMountedRef.current) {
+                setAnalyzing(false);
+                setResults(null);
+              }
+            }} />
+          </View>
         </SafeAreaView>
       </View>
     );
