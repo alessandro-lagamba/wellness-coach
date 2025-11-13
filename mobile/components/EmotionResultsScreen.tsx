@@ -24,7 +24,30 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
   onRetake,
 }) => {
   const { colors } = useTheme();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  
+  // Helper function to translate AI-generated observations/recommendations if they're in English
+  const translateAIText = (text: string): string => {
+    if (!text || language === 'en') return text;
+    
+    // Common AI-generated phrases that need translation
+    const translations: { [key: string]: string } = {
+      'Facial expression appears neutral.': 'L\'espressione facciale appare neutra.',
+      'No strong emotional cues from eyebrows or mouth.': 'Nessun segnale emotivo forte da sopracciglia o bocca.',
+      'Eyes are relaxed, indicating low arousal.': 'Gli occhi sono rilassati, indicando bassa attivazione.',
+      'Consider engaging in activities that promote positive emotions.': 'Considera di impegnarti in attività che promuovono emozioni positive.',
+      'Monitor for any changes in emotional expression.': 'Monitora eventuali cambiamenti nell\'espressione emotiva.',
+    };
+    
+    // Check if exact match exists
+    if (translations[text]) {
+      return translations[text];
+    }
+    
+    // Return original text if no translation found
+    return text;
+  };
+  
   const getEmotionData = (emotion: string) => {
     // Helper function per ottenere tips con fallback sicuro
     const getTips = (emotionKey: string): string[] => {
@@ -245,7 +268,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
                   <View style={styles.observationIcon}>
                     <FontAwesome name="check" size={12} color="#3b82f6" />
                   </View>
-                  <Text style={[styles.observationText, { color: colors.text }]}>{observation}</Text>
+                  <Text style={[styles.observationText, { color: colors.text }]}>{translateAIText(observation)}</Text>
                 </View>
               ))}
             </View>
@@ -265,7 +288,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
                   <View style={styles.recommendationIcon}>
                     <FontAwesome name="arrow-right" size={12} color="#f59e0b" />
                   </View>
-                  <Text style={[styles.recommendationText, { color: colors.text }]}>{recommendation}</Text>
+                  <Text style={[styles.recommendationText, { color: colors.text }]}>{translateAIText(recommendation)}</Text>
                 </View>
               ))}
             </View>
@@ -280,7 +303,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
           </View>
           <Text style={[styles.adviceText, { color: colors.textSecondary }]}>
             {fullAnalysisResult?.recommendations && fullAnalysisResult.recommendations.length > 0 
-              ? fullAnalysisResult.recommendations.join('. ') + '.'
+              ? fullAnalysisResult.recommendations.map(translateAIText).join('. ') + '.'
               : emotionData.advice
             }
           </Text>

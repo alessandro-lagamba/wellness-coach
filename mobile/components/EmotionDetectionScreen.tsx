@@ -1146,20 +1146,22 @@ export const EmotionDetectionScreen: React.FC = () => {
   // Priority 1: Show detecting screen
   if (detecting) {
     return (
-      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={["bottom"]}>
+      <View style={[styles.container, { backgroundColor: themeColors.background, flex: 1 }]}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={["top", "bottom"]}>
           {/* Keep camera mounted but hidden during analysis */}
-          <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}>
+          <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}>
             <CameraFrame />
           </View>
           
-          <EmotionLoadingScreen onCancel={() => {
-            if (isMountedRef.current) {
-              setDetecting(false);
-              setCurrentEmotion(null);
-              setShowingResults(false);
-            }
-          }} />
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            <EmotionLoadingScreen onCancel={() => {
+              if (isMountedRef.current) {
+                setDetecting(false);
+                setCurrentEmotion(null);
+                setShowingResults(false);
+              }
+            }} />
+          </View>
         </SafeAreaView>
       </View>
     );

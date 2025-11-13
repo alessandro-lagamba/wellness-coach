@@ -487,6 +487,16 @@
             "Use this calm for reflection",
             "Maintain this balance"
           ]
+        },
+        "noTips": "No tips available at the moment",
+        "loading": {
+          "title": "Analyzing Your Emotions",
+          "subtitle": "AI is mapping micro-expressions and emotional patterns...",
+          "progress": "{{percent}}% Complete",
+          "step1": "Image captured",
+          "step2": "Expression analysis",
+          "step3": "Processing results",
+          "info": "This may take a few moments..."
         }
       },
       "howItWorks": {

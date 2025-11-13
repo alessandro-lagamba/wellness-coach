@@ -502,6 +502,16 @@
             "Usa questa calma per la riflessione",
             "Mantieni questo equilibrio"
           ]
+        },
+        "noTips": "Nessun consiglio disponibile al momento",
+        "loading": {
+          "title": "Analisi delle Emozioni in Corso",
+          "subtitle": "L'AI sta mappando micro-espressioni e pattern emotivi...",
+          "progress": "{{percent}}% Completato",
+          "step1": "Immagine catturata",
+          "step2": "Analisi espressione",
+          "step3": "Elaborazione risultati",
+          "info": "Questo potrebbe richiedere alcuni momenti..."
         }
       },
       "howItWorks": {

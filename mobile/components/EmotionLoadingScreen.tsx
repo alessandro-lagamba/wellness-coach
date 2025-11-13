@@ -9,12 +9,14 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface EmotionLoadingScreenProps {
   onCancel?: () => void;
 }
 
 export const EmotionLoadingScreen: React.FC<EmotionLoadingScreenProps> = ({ onCancel }) => {
+  const { t } = useTranslation();
   // Add a small delay to ensure smooth transition
   const [isVisible, setIsVisible] = useState(false);
   
@@ -123,15 +125,15 @@ export const EmotionLoadingScreen: React.FC<EmotionLoadingScreenProps> = ({ onCa
           <Animated.View style={[styles.particle3, particleAnimation3]} />
         </View>
         
-        <Text style={styles.detectingTitle}>Analyzing Your Emotions</Text>
-        <Text style={styles.detectingSubtitle}>AI is mapping micro-expressions and emotional patterns...</Text>
+        <Text style={styles.detectingTitle}>{t('analysis.emotion.loading.title')}</Text>
+        <Text style={styles.detectingSubtitle}>{t('analysis.emotion.loading.subtitle')}</Text>
         
         {/* Enhanced Progress Bar */}
         <View style={styles.progressContainer}>
           <View style={styles.progressTrack}>
             <Animated.View style={[styles.progressFill, { width: '70%', backgroundColor: '#6366f1' }]} />
           </View>
-          <Text style={styles.progressText}>70% Complete</Text>
+          <Text style={styles.progressText}>{t('analysis.emotion.loading.progress', { percent: 70 })}</Text>
         </View>
         
         {/* Analysis Steps with better design */}
@@ -140,25 +142,25 @@ export const EmotionLoadingScreen: React.FC<EmotionLoadingScreenProps> = ({ onCa
             <View style={[styles.stepIcon, { backgroundColor: '#10b981' }]}>
               <FontAwesome name="check" size={12} color="#ffffff" />
             </View>
-            <Text style={styles.analysisStepText}>Image captured</Text>
+            <Text style={styles.analysisStepText}>{t('analysis.emotion.loading.step1')}</Text>
           </View>
           <View style={styles.analysisStep}>
             <Animated.View style={[styles.stepIcon, { backgroundColor: '#6366f1' }, pulseAnimation]}>
               <FontAwesome name="spinner" size={12} color="#ffffff" />
             </Animated.View>
-            <Text style={styles.analysisStepText}>Expression analysis</Text>
+            <Text style={styles.analysisStepText}>{t('analysis.emotion.loading.step2')}</Text>
           </View>
           <View style={styles.analysisStep}>
             <View style={[styles.stepIcon, { backgroundColor: '#64748b' }]}>
               <FontAwesome name="clock-o" size={12} color="#ffffff" />
             </View>
-            <Text style={styles.analysisStepText}>Processing results</Text>
+            <Text style={styles.analysisStepText}>{t('analysis.emotion.loading.step3')}</Text>
           </View>
         </View>
         
         {/* Additional info */}
         <View style={styles.loadingInfo}>
-          <Text style={styles.loadingInfoText}>This may take a few moments...</Text>
+          <Text style={styles.loadingInfoText}>{t('analysis.emotion.loading.info')}</Text>
         </View>
       </LinearGradient>
     </View>
@@ -169,10 +171,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   detectingCard: {
     marginHorizontal: 20,
-    marginTop: 60,
+    marginTop: 0,
     borderRadius: 28,
     paddingVertical: 48,
     paddingHorizontal: 32,
@@ -183,6 +187,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.28,
     shadowRadius: 24,
     elevation: 10,
+    maxWidth: '100%',
   },
   detectingTitle: { 
     fontSize: 20, 
