@@ -38,6 +38,7 @@ export interface LLMOptions {
     first_name?: string; // 🔧 Nome utente per personalizzazione (legacy)
     last_name?: string; // 🔧 Cognome utente per personalizzazione (legacy)
     name?: string; // 🔧 Nome utente per personalizzazione (fallback)
+    language?: string; // 🔧 Lingua preferita dell'utente ('it' | 'en')
     // Nuovi campi per analisi avanzate
     temporalPatterns?: {
       timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
