@@ -388,7 +388,7 @@ const SkinAnalysisScreen: React.FC = () => {
       const ready = !!initResult?.overall;
       if (isMountedRef.current) {
         setAnalysisReady(ready);
-        setAnalysisError(ready ? null : 'Unable to initialize analysis service. Check OpenAI settings.');
+        setAnalysisError(ready ? null : t('analysis.skin.errors.initializationFailed'));
       }
       return ready;
     } catch (error) {
@@ -396,7 +396,7 @@ const SkinAnalysisScreen: React.FC = () => {
       console.error('❌ Analysis service initialization failed:', error);
       if (isMountedRef.current) {
         setAnalysisReady(false);
-        setAnalysisError('Unable to initialize analysis service. Check OpenAI settings.');
+        setAnalysisError(t('analysis.skin.errors.initializationFailed'));
       }
       return false;
     }
@@ -1289,6 +1289,9 @@ const SkinAnalysisScreen: React.FC = () => {
       nutrition: '#10b981',   // Green  
       routine: '#f59e0b',     // Orange
       timing: '#ef4444',      // Red
+      photoQuality: '#8b5cf6',
+      skinPreparation: '#10b981',
+      bestPractices: '#f59e0b',
     };
     return colors[key as keyof typeof colors] || '#6366f1';
   };
@@ -1299,8 +1302,37 @@ const SkinAnalysisScreen: React.FC = () => {
       nutrition: '🥗',
       routine: '📋',
       timing: '⏰',
+      photoQuality: '📸',
+      skinPreparation: '🧼',
+      bestPractices: '📋',
     };
     return emojis[key as keyof typeof emojis] || '📝';
+  };
+
+  const getSectionTitle = (key: string, guideId: string) => {
+    // Mappa le chiavi delle sezioni ai titoli tradotti
+    const titleMap: Record<string, string> = {
+      products: t('analysis.skin.guideSections.products.title'),
+      nutrition: guideId === 'redness' 
+        ? t('analysis.skin.guideSections.nutrition.antiInflammatory')
+        : guideId === 'oiliness'
+        ? t('analysis.skin.guideSections.nutrition.dietAdjustments')
+        : t('analysis.skin.guideSections.nutrition.title'),
+      routine: guideId === 'redness'
+        ? t('analysis.skin.guideSections.routine.soothing')
+        : guideId === 'oiliness'
+        ? t('analysis.skin.guideSections.routine.oilControl')
+        : t('analysis.skin.guideSections.routine.title'),
+      timing: guideId === 'redness'
+        ? t('analysis.skin.guideSections.timing.whenToApply')
+        : guideId === 'confidence'
+        ? t('analysis.skin.guideSections.timing.optimal')
+        : t('analysis.skin.guideSections.timing.title'),
+      photoQuality: t('analysis.skin.guideSections.photoQuality.title'),
+      skinPreparation: t('analysis.skin.guideSections.skinPreparation.title'),
+      bestPractices: t('analysis.skin.guideSections.bestPractices.title'),
+    };
+    return titleMap[key] || key;
   };
 
   const ProgressBar = ({ value, color }: { value: number; color: string }) => {
@@ -1396,7 +1428,7 @@ const SkinAnalysisScreen: React.FC = () => {
         isScreenFocused={true}
         controller={cameraController}
         facing={cameraType}
-        instructionText="Keep a steady, even light on your face for best accuracy"
+        instructionText={t('analysis.skin.camera.instructionText')}
         switching={cameraSwitching}
         onReady={handleCameraReady}
       />
@@ -1657,7 +1689,7 @@ const SkinAnalysisScreen: React.FC = () => {
           >
             <MaterialCommunityIcons name="face-woman-shimmer" size={20} color="#ffffff" />
             <Text style={styles.detailedAnalysisButtonText}>
-              Ricevi ulteriori dettagli della tua analisi
+              {t('analysis.skin.detailedAnalysis.buttonText')}
             </Text>
             <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
           </LinearGradient>
@@ -1683,11 +1715,14 @@ const SkinAnalysisScreen: React.FC = () => {
                 color="#8b5cf6"
                 subtitle={t('analysis.skin.metrics.textureSubtitle')}
                 trend={2}
-                description="Shows skin surface uniformity. Helps identify dryness, roughness, or damage. High values indicate smooth, healthy skin, while low values may indicate dryness, irregularities, or damage. Good texture is essential for a youthful and healthy appearance."
-                historicalData={skinHistory.map((capture, index) => ({
-                  date: `${index + 1}`,
-                  value: capture.scores?.texture || 0
-                }))}
+                description={t('analysis.skin.metrics.textureDescription')}
+                historicalData={skinHistory.map((capture) => {
+                  const date = new Date(capture.timestamp);
+                  return {
+                    date: `${date.getDate()}/${date.getMonth() + 1}`,
+                    value: capture.scores?.texture || 0
+                  };
+                })}
                 metric="texture"
                 icon="blur"
               />
@@ -1704,11 +1739,14 @@ const SkinAnalysisScreen: React.FC = () => {
                 color="#ef4444"
                 subtitle={t('analysis.skin.metrics.rednessSubtitle')}
                 trend={-3}
-                description="Measures skin irritation and inflammation. Low values indicate calm, healthy skin, while high values may indicate inflammation, sensitivity, or conditions like rosacea. Monitoring this value helps identify irritating triggers."
-                historicalData={skinHistory.map((capture, index) => ({
-                  date: `${index + 1}`,
-                  value: capture.scores?.redness || 0
-                }))}
+                description={t('analysis.skin.metrics.rednessDescription')}
+                historicalData={skinHistory.map((capture) => {
+                  const date = new Date(capture.timestamp);
+                  return {
+                    date: `${date.getDate()}/${date.getMonth() + 1}`,
+                    value: capture.scores?.redness || 0
+                  };
+                })}
                 metric="redness"
                 icon="fire"
               />
@@ -1727,11 +1765,14 @@ const SkinAnalysisScreen: React.FC = () => {
                 color="#f59e0b"
                 subtitle={t('analysis.skin.metrics.hydrationSubtitle')}
                 trend={1}
-                description="Shows surface water content. Helps prevent dryness and signs of fatigue. High values indicate well-hydrated and elastic skin, while low values indicate dryness and dehydration. Good hydration is essential for maintaining soft, elastic skin resistant to wrinkles."
-                historicalData={skinHistory.map((capture, index) => ({
-                  date: `${index + 1}`,
-                  value: capture.scores?.hydration || 0
-                }))}
+                description={t('analysis.skin.metrics.hydrationDescription')}
+                historicalData={skinHistory.map((capture) => {
+                  const date = new Date(capture.timestamp);
+                  return {
+                    date: `${date.getDate()}/${date.getMonth() + 1}`,
+                    value: capture.scores?.hydration || 0
+                  };
+                })}
                 metric="hydration"
                 icon="water"
               />
@@ -1748,11 +1789,14 @@ const SkinAnalysisScreen: React.FC = () => {
                 color="#8b5cf6"
                 subtitle={t('analysis.skin.metrics.oilinessSubtitle')}
                 trend={0}
-                description="Measures sebaceous activity and oil production. Helps balance skincare routine. High values indicate oily skin, while low values indicate dry skin. Balanced oiliness is essential for healthy skin barrier."
-                historicalData={skinHistory.map((capture, index) => ({
-                  date: `${index + 1}`,
-                  value: capture.scores?.oiliness || 0
-                }))}
+                description={t('analysis.skin.metrics.oilinessDescription')}
+                historicalData={skinHistory.map((capture) => {
+                  const date = new Date(capture.timestamp);
+                  return {
+                    date: `${date.getDate()}/${date.getMonth() + 1}`,
+                    value: capture.scores?.oiliness || 0
+                  };
+                })}
                 metric="oiliness"
                 icon="oil-can"
               />
@@ -1764,8 +1808,8 @@ const SkinAnalysisScreen: React.FC = () => {
         {qualityInfo && (
           <QualityBadge
             confidence={qualityInfo}
-            qualityMessage="Analysis quality is good. Results are reliable."
-            onRetakePress={() => alert('Retake analysis')}
+            qualityMessage={t('analysis.skin.quality.message')}
+            onRetakePress={() => alert(t('analysis.skin.retake'))}
             showRetakeButton={false}
             compact={true}
           />
@@ -1931,10 +1975,10 @@ const SkinAnalysisScreen: React.FC = () => {
                 <FontAwesome name="times" size={20} color={colors.text} />
               </TouchableOpacity>
               <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {skincareGuides[selectedGuide as keyof typeof skincareGuides]?.title}
+                {t(`analysis.skin.guides.${selectedGuide}.title`, { defaultValue: skincareGuides[selectedGuide as keyof typeof skincareGuides]?.title })}
               </Text>
               <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
-                {skincareGuides[selectedGuide as keyof typeof skincareGuides]?.subtitle}
+                {t(`analysis.skin.guides.${selectedGuide}.description`, { defaultValue: skincareGuides[selectedGuide as keyof typeof skincareGuides]?.subtitle })}
               </Text>
             </View>
             
@@ -1953,7 +1997,7 @@ const SkinAnalysisScreen: React.FC = () => {
                 />
                 <View style={styles.heroOverlay}>
                   <View style={styles.heroBadge}>
-                    <Text style={styles.heroBadgeText}>EXPERT GUIDE</Text>
+                    <Text style={styles.heroBadgeText}>{t('analysis.skin.guideModal.expertGuide')}</Text>
                   </View>
                 </View>
               </View>
@@ -1962,17 +2006,17 @@ const SkinAnalysisScreen: React.FC = () => {
               <View style={[styles.quickStatsRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <View style={styles.statItem}>
                   <Text style={[styles.statNumber, { color: colors.primary }]}>5</Text>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Key Tips</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('analysis.skin.guideModal.keyTips')}</Text>
                 </View>
                 <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
                 <View style={styles.statItem}>
                   <Text style={[styles.statNumber, { color: colors.primary }]}>4</Text>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Categories</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('analysis.skin.guideModal.categories')}</Text>
                 </View>
                 <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
                 <View style={styles.statItem}>
                   <Text style={[styles.statNumber, { color: colors.primary }]}>2-4</Text>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Weeks</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('analysis.skin.guideModal.weeks')}</Text>
                 </View>
               </View>
               
@@ -1993,7 +2037,7 @@ const SkinAnalysisScreen: React.FC = () => {
                         {getSectionEmoji(key)}
                       </Text>
                     </View>
-                   <Text style={[styles.sectionTitle, { color: colors.text }]}>{section.title}</Text>
+                   <Text style={[styles.sectionTitle, { color: colors.text }]}>{getSectionTitle(key, selectedGuide || '')}</Text>
                   </View>
                   
                   <View style={styles.itemsContainer}>
@@ -2013,7 +2057,7 @@ const SkinAnalysisScreen: React.FC = () => {
               <View style={styles.actionSection}>
                 <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
                   <FontAwesome name="heart" size={16} color="#ffffff" />
-                  <Text style={styles.actionButtonText}>Save to My Routine</Text>
+                  <Text style={styles.actionButtonText}>{t('analysis.skin.guideModal.saveToRoutine')}</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>

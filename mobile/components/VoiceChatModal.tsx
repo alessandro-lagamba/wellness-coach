@@ -126,6 +126,10 @@ export const VoiceChatModal: React.FC<VoiceChatModalProps> = ({
 
   const processUserInput = async (userQuery: string) => {
     try {
+      // 🔥 FIX: Ottieni la lingua dell'utente
+      const { getUserLanguage } = await import('../services/language.service');
+      const userLanguage = await getUserLanguage();
+      
       // Send to OpenAI via backend for real AI response
       const response = await fetch(`${BACKEND_URL}/api/chat/respond`, {
         method: 'POST',
@@ -135,6 +139,9 @@ export const VoiceChatModal: React.FC<VoiceChatModalProps> = ({
         body: JSON.stringify({
           message: userQuery,
           sessionId: 'mobile-voice-chat-modal',
+          userContext: {
+            language: userLanguage // 🔥 FIX: Includi la lingua per il backend
+          },
         }),
       });
 

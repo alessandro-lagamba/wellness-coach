@@ -49,13 +49,22 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
     try {
       let bucket, trendInfo, action;
       
+      // Extract historical values from historicalData (which is {date, value}[])
+      const historicalValues = historicalData.map(item => item.value).filter(v => typeof v === 'number' && !isNaN(v));
+      
       if (metric === 'valence' || metric === 'arousal') {
         bucket = MetricsService.getEmotionBucket(metric, value);
-        trendInfo = MetricsService.getPersonalizedTrendForMetric(metric, value, historicalData);
+        // Use getPersonalizedTrend directly with extracted values
+        trendInfo = historicalValues.length > 0 
+          ? MetricsService.getPersonalizedTrend(value, historicalValues)
+          : { trend: '→' as const, text: 'Prima misurazione', percentage: 0 };
         action = ActionsService.getNextBestAction(metric, value, bucket);
       } else {
         bucket = MetricsService.getSkinBucket(metric, value);
-        trendInfo = MetricsService.getPersonalizedTrendForMetric(metric, value, historicalData);
+        // Use getPersonalizedTrend directly with extracted values
+        trendInfo = historicalValues.length > 0 
+          ? MetricsService.getPersonalizedTrend(value, historicalValues)
+          : { trend: '→' as const, text: 'Prima misurazione', percentage: 0 };
         action = ActionsService.getNextBestAction(metric, value, bucket);
       }
       

@@ -21,6 +21,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { NutritionService } from '../services/nutrition.service';
 import { useSpeechRecognitionEvent, ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 import { fridgeItemsService } from '../services/fridge-items.service';
+import { getUserLanguage } from '../services/language.service';
 
 const MIN_INGREDIENTS_FOR_GENERATION = 3;
 interface IngredientRow {
@@ -239,7 +240,16 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
       setIsRecording(true);
       setTranscript('');
       setHasProcessedResult(false);
-      await ExpoSpeechRecognitionModule.start();
+      // 🔥 FIX: Ottieni la lingua dell'utente e passa le opzioni richieste
+      const userLanguage = await getUserLanguage();
+      const speechLang = userLanguage === 'it' ? 'it-IT' : 'en-US';
+      await ExpoSpeechRecognitionModule.start({
+        lang: speechLang,
+        interimResults: true,
+        continuous: false,
+        maxAlternatives: 1,
+        requiresOnDeviceRecognition: false,
+      });
     } catch (error) {
       console.error('Error starting recording:', error);
       Alert.alert(t('common.error'), t('analysis.food.fridge.recordingError'));

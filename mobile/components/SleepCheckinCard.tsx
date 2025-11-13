@@ -37,6 +37,15 @@ export default function SleepCheckinCard({
   const [saving, setSaving] = useState(false);
   const [restLevel, setRestLevel] = useState<1|2|3|4|5>(initialRestLevel);
 
+  // 🔥 FIX: Sincronizza lo stato quando cambiano le props (es. quando vengono caricati dal database)
+  useEffect(() => {
+    setNote(initialNote);
+  }, [initialNote]);
+
+  useEffect(() => {
+    setRestLevel(initialRestLevel);
+  }, [initialRestLevel]);
+
   const currentRest = REST_LEVELS.find(r => r.v === restLevel) ?? REST_LEVELS[2];
 
   // Cambia solo il livello di riposo, senza salvare automaticamente

@@ -282,9 +282,9 @@ export class HealthDataSyncService {
   }
 
   /**
-   * Get daily health data for the last 7 days for trend charts
+   * Get daily health data for trend charts (default 7 days, can be extended)
    */
-  async getWeeklyTrendData(userId: string): Promise<{
+  async getTrendData(userId: string, days: number = 7): Promise<{
     steps: number[];
     sleepHours: number[];
     hrv: number[];
@@ -294,7 +294,7 @@ export class HealthDataSyncService {
   }> {
     try {
       const endDate = new Date();
-      const startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
       const startDateStr = startDate.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
@@ -329,42 +329,42 @@ export class HealthDataSyncService {
         };
       }
 
-      // Crea un array per gli ultimi 7 giorni
-      const days: { [key: string]: { steps: number; sleepHours: number; hrv: number; heartRate: number; hydration: number; meditation: number } } = {};
+      // Crea un array per gli ultimi N giorni
+      const daysMap: { [key: string]: { steps: number; sleepHours: number; hrv: number; heartRate: number; hydration: number; meditation: number } } = {};
       
       // Inizializza tutti i giorni con 0
-      for (let i = 0; i < 7; i++) {
+      for (let i = 0; i < days; i++) {
         const date = new Date(startDate);
         date.setDate(date.getDate() + i);
         const dateStr = date.toISOString().split('T')[0];
-        days[dateStr] = { steps: 0, sleepHours: 0, hrv: 0, heartRate: 0, hydration: 0, meditation: 0 };
+        daysMap[dateStr] = { steps: 0, sleepHours: 0, hrv: 0, heartRate: 0, hydration: 0, meditation: 0 };
       }
 
       // Popola con i dati reali
       data.forEach((record) => {
         const dateStr = record.date;
-        if (days[dateStr]) {
-          days[dateStr].steps = record.steps || 0;
-          days[dateStr].sleepHours = record.sleep_hours || 0;
-          days[dateStr].hrv = record.hrv || 0;
-          days[dateStr].heartRate = record.heart_rate || 0;
-          days[dateStr].hydration = record.hydration || 0;
-          days[dateStr].meditation = record.mindfulness_minutes || 0;
+        if (daysMap[dateStr]) {
+          daysMap[dateStr].steps = record.steps || 0;
+          daysMap[dateStr].sleepHours = record.sleep_hours || 0;
+          daysMap[dateStr].hrv = record.hrv || 0;
+          daysMap[dateStr].heartRate = record.heart_rate || 0;
+          daysMap[dateStr].hydration = record.hydration || 0;
+          daysMap[dateStr].meditation = record.mindfulness_minutes || 0;
         }
       });
 
       // Converti in array ordinato per data
-      const sortedDates = Object.keys(days).sort();
-      const steps = sortedDates.map(date => days[date].steps);
-      const sleepHours = sortedDates.map(date => days[date].sleepHours);
-      const hrv = sortedDates.map(date => days[date].hrv);
-      const heartRate = sortedDates.map(date => days[date].heartRate);
-      const hydration = sortedDates.map(date => days[date].hydration);
-      const meditation = sortedDates.map(date => days[date].meditation);
+      const sortedDates = Object.keys(daysMap).sort();
+      const steps = sortedDates.map(date => daysMap[date].steps);
+      const sleepHours = sortedDates.map(date => daysMap[date].sleepHours);
+      const hrv = sortedDates.map(date => daysMap[date].hrv);
+      const heartRate = sortedDates.map(date => daysMap[date].heartRate);
+      const hydration = sortedDates.map(date => daysMap[date].hydration);
+      const meditation = sortedDates.map(date => daysMap[date].meditation);
 
       return { steps, sleepHours, hrv, heartRate, hydration, meditation };
     } catch (error) {
-      console.error('❌ Error in getWeeklyTrendData:', error);
+      console.error('❌ Error in getTrendData:', error);
       return {
         steps: [],
         sleepHours: [],
@@ -374,6 +374,20 @@ export class HealthDataSyncService {
         meditation: [],
       };
     }
+  }
+
+  /**
+   * Get weekly trend data (7 days) - retrocompatibilità
+   */
+  async getWeeklyTrendData(userId: string): Promise<{
+    steps: number[];
+    sleepHours: number[];
+    hrv: number[];
+    heartRate: number[];
+    hydration: number[];
+    meditation: number[];
+  }> {
+    return this.getTrendData(userId, 7);
   }
 
   /**

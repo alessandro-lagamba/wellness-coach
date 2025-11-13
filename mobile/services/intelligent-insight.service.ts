@@ -2,6 +2,7 @@ import { BACKEND_URL } from '../constants/env';
 import { AuthService } from './auth.service';
 import { AIContextService } from './ai-context.service';
 import { AnalysisIntentService } from './analysis-intent.service';
+import { getUserLanguage } from './language.service';
 
 export interface IntelligentInsight {
   id: string;
@@ -79,6 +80,7 @@ class IntelligentInsightService {
 
       // Prepare AI context
       const aiContext = await AIContextService.getCompleteContext(currentUser.id);
+      const userLanguage = await getUserLanguage(); // 🔥 FIX: Ottieni la lingua dell'utente
       const userContext = aiContext ? {
         emotionHistory: aiContext.emotionHistory,
         skinHistory: aiContext.skinHistory,
@@ -89,7 +91,8 @@ class IntelligentInsightService {
         behavioralInsights: aiContext.behavioralInsights,
         contextualFactors: aiContext.contextualFactors,
         firstName: currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
-        userName: currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente'
+        userName: currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
+        language: userLanguage // 🔥 FIX: Includi la lingua per il backend
       } : {
         emotionHistory: [],
         skinHistory: [],
@@ -100,7 +103,8 @@ class IntelligentInsightService {
         behavioralInsights: null,
         contextualFactors: null,
         userName: 'Utente',
-        isAnonymous: true
+        isAnonymous: true,
+        language: userLanguage // 🔥 FIX: Includi la lingua anche per utenti anonimi
       };
 
       // Generate AI analysis

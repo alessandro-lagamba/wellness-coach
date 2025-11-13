@@ -15,7 +15,9 @@
     "retry": "Riprova",
     "skip": "Salta",
     "continue": "Continua",
-    "back": "Indietro"
+    "back": "Indietro",
+    "update": "Aggiorna",
+    "reset": "Reset"
   },
   "settings": {
     "title": "Impostazioni",
@@ -115,6 +117,14 @@
     },
     "noEntry": "Nessuna entry per questo giorno",
     "loadingHistory": "Caricamento storia...",
+    "pastDate": {
+      "title": "Giorno passato",
+      "message": "Stai modificando un entry di un giorno passato. Vuoi continuare?"
+    },
+    "pastDateSave": {
+      "title": "Salvare entry di un giorno passato?",
+      "message": "Stai salvando un entry per un giorno passato. Vuoi continuare?"
+    },
     "dictationError": "Errore durante la dettatura. Riprova.",
     "errorLoading": "Errore nel caricamento"
   },
@@ -136,14 +146,24 @@
     },
     "quickStart": {
       "title": "Avvio rapido",
+      "toggle": "Messaggi suggeriti",
       "feelingStressed": "Mi sento stressato",
       "sleepBetter": "Aiutami a dormire meglio",
       "energyTips": "Dammi consigli energia",
       "skinAdvice": "Consigli cura pelle"
     },
+    "history": {
+      "title": "Cronologia Chat",
+      "unnamed": "Chat senza nome"
+    },
     "suggestionFeedback": {
       "title": "Ottimo!",
       "message": "Suggerimento applicato. Come ti senti dopo averlo provato?",
+    "activityAdded": {
+      "title": "Attività aggiunta",
+      "message": "Attività aggiunta per le {{time}}. Riceverai un promemoria 15 minuti prima.",
+      "error": "Errore durante il salvataggio dell'attività"
+    },
       "veryGood": "Molto bene",
       "good": "Bene",
       "soSo": "Così così",
@@ -154,7 +174,21 @@
       "notUseful": "Non utile"
     },
     "speechError": "Scusa, non ho capito cosa hai detto. Riprova.",
-    "sessionName": "Chat {{date}}"
+    "sessionName": "Chat {{date}}",
+    "resetContext": {
+      "title": "Reset Contesto AI",
+      "message": "Vuoi resettare il contesto dell'assistente? L'AI non conoscerà più la tua storia (emozioni, analisi pelle, ecc.) per questa sessione. I tuoi dati nel database non verranno eliminati.",
+      "menuTitle": "Reset Contesto AI",
+      "success": "Contesto AI resettato. L'assistente non conoscerà più la tua storia per questa sessione.",
+      "error": "Errore durante il reset"
+    },
+    "refreshContext": {
+      "title": "Aggiorna informazioni",
+      "message": "Vuoi aggiornare le informazioni che l'assistente conosce su di te? Questo ricaricherà i tuoi dati più recenti (umore, sonno, analisi) dal database per dare risposte più accurate.",
+      "menuTitle": "Aggiorna informazioni",
+      "success": "Informazioni aggiornate con successo",
+      "error": "Errore durante l'aggiornamento"
+    }
   },
   "voiceChat": {
     "title": "Chat Vocale",
@@ -194,8 +228,8 @@
     "glasses": "bicchieri",
     "minutes": "min",
     "loadingWidgets": "Caricamento widget...",
-    "moodBalance": "Equilibrio Umore",
-    "restfulSleep": "Sonno Riparatore",
+    "moodBalance": "Umore di Oggi",
+    "restfulSleep": "Qualità Sonno",
     "hydration": "Idratazione",
     "vsYesterday": "vs ieri",
     "sipWaterNow": "Bevi acqua ora",
@@ -275,7 +309,13 @@
       "current": "Valore attuale",
       "heartRate": "Battito cardiaco",
       "disabledCharts": "Grafici disabilitati",
-      "noCharts": "Nessun grafico abilitato. Usa il pulsante \"Modifica\" per abilitare i grafici."
+      "noCharts": "Nessun grafico abilitato. Usa il pulsante \"Modifica\" per abilitare i grafici.",
+      "week": "{{count}} settimana",
+      "month": "{{count}} mese",
+      "average": "Media",
+      "max": "Massimo",
+      "min": "Minimo",
+      "steps": "passi"
     },
     "permissions": {
       "required": "Permessi Necessari",
@@ -291,6 +331,10 @@
     "dailyCheckIn": {
       "title": "Check-In Giornaliero",
       "subtitle": "Uno sguardo a come si sentono corpo e mente"
+    },
+    "dailyCopilot": {
+      "title": "Cosa fare oggi",
+      "subtitle": "Il tuo spunto del giorno, pensato per te."
     }
   },
   "analysis": {
@@ -302,7 +346,15 @@
       },
       "banner": {
         "title": "EMOZIONE DOMINANTE",
-        "subtitle": "Rilevata nell’ultima sessione"
+        "subtitle": "Rilevata nell'ultima sessione"
+      },
+      "sessionCard": {
+        "dominantEmotion": "EMOZIONE DOMINANTE",
+        "detectedInLastSession": "Rilevata nell'ultima sessione",
+        "valenceWhyItMatters": "Misura la positività/negatività del tuo stato emotivo.",
+        "valenceHowItWorks": "Stima basata su segnali facciali (bocca/occhi/sopracciglia).",
+        "arousalWhyItMatters": "Indica quanta attivazione/energia emotiva c'è in questo momento.",
+        "arousalHowItWorks": "Valutazione dell'intensità dei segnali espressivi."
       },
       "hero": {
         "title": "Rilevamento Emotivo in tempo reale",
@@ -333,7 +385,124 @@
         "sessions": "Sessioni",
         "thisMonth": "Questo mese",
         "valenceDesc": "Misura la positività della tua espressione e dell'affetto generale.",
-        "arousalDesc": "Misura l'intensità/energia rilevata nel momento."
+        "arousalDesc": "Misura l'intensità/energia rilevata nel momento.",
+        "valenceDescription": "Valence misura quanto positive o negative sono le tue emozioni. Valori alti indicano felicità e soddisfazione, mentre valori bassi indicano tristezza o preoccupazione. Questo metrico ti aiuta a capire il tuo stato emotivo generale.",
+        "arousalDescription": "Arousal misura l'intensità delle tue emozioni, indipendentemente dal fatto che siano positive o negative. Valori alti indicano eccitazione o stress, mentre valori bassi indicano calma o rilassamento. Ti aiuta a capire il tuo livello di attivazione emotiva.",
+        "sessionsDescription": "Il numero di sessioni di analisi emotiva che hai completato questo mese. Tracciare regolarmente le tue emozioni ti aiuta a comprendere meglio i tuoi pattern emotivi e il tuo benessere generale."
+      },
+      "camera": {
+        "instructionText": "Allinea il tuo viso nel frame della fotocamera per iniziare il rilevamento delle emozioni"
+      },
+      "detailedAnalysis": {
+        "buttonText": "Ricevi ulteriori dettagli della tua analisi"
+      },
+      "results": {
+        "title": "Analisi Emotiva Completata",
+        "subtitle": "Ecco cosa abbiamo rilevato sul tuo stato emotivo",
+        "wellness": "Benessere",
+        "wellnessTips": "Consigli di Benessere",
+        "analysisDetails": "Dettagli Analisi",
+        "facialExpression": "Espressione Facciale",
+        "facialExpressionDesc": "Micro-espressioni e movimenti muscolari analizzati",
+        "aiProcessing": "Elaborazione AI",
+        "aiProcessingDesc": "Riconoscimento emotivo con rete neurale avanzata",
+        "analysisTime": "Tempo di Analisi",
+        "analysisTimeDesc": "Elaborazione in tempo reale completata",
+        "emotionalState": "Stato Emotivo",
+        "emotionalStateDesc": "Umore attuale e intensità emotiva",
+        "aiObservations": "Osservazioni AI",
+        "aiRecommendations": "Raccomandazioni AI",
+        "wellnessGuidance": "Guida al Benessere",
+        "goBack": "Indietro",
+        "retake": "Ripeti",
+        "emotions": {
+          "joy": {
+            "title": "Gioioso",
+            "description": "Stai irradiando energia positiva!",
+            "advice": "Ottimo! Il tuo umore positivo è meraviglioso. Considera di condividere questa gioia con gli altri o di impegnarti in attività che amplificano questa sensazione.",
+            "intensity": "Alta Positività"
+          },
+          "sadness": {
+            "title": "Malinconico",
+            "description": "Va bene sentirsi così a volte.",
+            "advice": "Va bene sentirsi tristi a volte. Prova attività delicate come ascoltare musica, parlare con un amico o fare una passeggiata tranquilla.",
+            "intensity": "Emozione Delicata"
+          },
+          "anger": {
+            "title": "Frustrato",
+            "description": "La rabbia è una risposta naturale alle sfide.",
+            "advice": "La rabbia è un'emozione naturale. Prova esercizi di respirazione profonda, conta fino a dieci o impegnati in attività fisiche per rilasciare la tensione.",
+            "intensity": "Alta Energia"
+          },
+          "fear": {
+            "title": "Preoccupato",
+            "description": "La paura può essere travolgente ma gestibile.",
+            "advice": "La paura può essere travolgente. Pratica tecniche di grounding come concentrarti sul respiro o identificare le cose che puoi controllare.",
+            "intensity": "Alto Allarme"
+          },
+          "surprise": {
+            "title": "Sorpreso",
+            "description": "Qualcosa di inaspettato ha catturato la tua attenzione.",
+            "advice": "La sorpresa può essere eccitante o sconvolgente. Prenditi un momento per elaborare cosa è successo e decidere come vorresti rispondere.",
+            "intensity": "Allarme Moderato"
+          },
+          "disgust": {
+            "title": "Scontento",
+            "description": "Qualcosa non si allinea con i tuoi valori.",
+            "advice": "Il disgusto spesso segnala che qualcosa non si allinea con i tuoi valori. Considera cosa sta causando questa sensazione e come affrontarla.",
+            "intensity": "Disagio Moderato"
+          },
+          "neutral": {
+            "title": "Equilibrato",
+            "description": "Sei in uno stato calmo e centrato.",
+            "advice": "Un umore neutro va benissimo. Questo stato calmo è ideale per la riflessione o per impegnarsi in attività di routine con consapevolezza.",
+            "intensity": "Stato Calmo"
+          }
+        },
+        "tips": {
+          "joy": [
+            "Condividi la tua felicità con gli amici",
+            "Impegnati in attività creative",
+            "Pratica la gratitudine",
+            "Aiuta qualcun altro a sentirsi bene"
+          ],
+          "sadness": [
+            "Ascolta musica rilassante",
+            "Parla con un amico fidato",
+            "Fai una passeggiata tranquilla",
+            "Pratica l'auto-compassione"
+          ],
+          "anger": [
+            "Pratica la respirazione profonda",
+            "Conta fino a dieci lentamente",
+            "Impegnati in attività fisiche",
+            "Esprimi i sentimenti in modo costruttivo"
+          ],
+          "fear": [
+            "Pratica tecniche di grounding",
+            "Concentrati sul tuo respiro",
+            "Identifica cosa puoi controllare",
+            "Cerca supporto se necessario"
+          ],
+          "surprise": [
+            "Prenditi tempo per elaborare",
+            "Resta aperto a nuove esperienze",
+            "Accogli l'inaspettato",
+            "Impara dalla situazione"
+          ],
+          "disgust": [
+            "Rifletti sui tuoi valori",
+            "Affronta la fonte se possibile",
+            "Pratica l'accettazione",
+            "Concentrati su alternative positive"
+          ],
+          "neutral": [
+            "Pratica la consapevolezza",
+            "Impegnati in attività di routine",
+            "Usa questa calma per la riflessione",
+            "Mantieni questo equilibrio"
+          ]
+        }
       },
       "howItWorks": {
         "title": "Come funziona il rilevamento delle emozioni",
@@ -404,7 +573,98 @@
         "hydration": "Idratazione",
         "hydrationSubtitle": "Contenuto d'acqua",
         "oiliness": "Oleosità",
-        "oilinessSubtitle": "Attività sebacea"
+        "oilinessSubtitle": "Attività sebacea",
+        "textureDescription": "Mostra l'uniformità della superficie cutanea. Aiuta a identificare secchezza, rugosità o danni. Valori alti indicano una pelle liscia e sana, mentre valori bassi possono indicare secchezza, irregolarità o danni. Una buona texture è essenziale per un aspetto giovane e sano.",
+        "rednessDescription": "Misura l'irritazione e l'infiammazione della pelle. Valori bassi indicano una pelle calma e sana, mentre valori alti possono indicare infiammazione, sensibilità o condizioni come la rosacea. Monitorare questo valore aiuta a identificare i fattori scatenanti irritanti.",
+        "hydrationDescription": "Mostra il contenuto d'acqua superficiale. Aiuta a prevenire la secchezza e i segni di affaticamento. Valori alti indicano una pelle ben idratata ed elastica, mentre valori bassi indicano secchezza e disidratazione. Una buona idratazione è essenziale per mantenere una pelle morbida ed elastica resistente alle rughe.",
+        "oilinessDescription": "Misura l'attività sebacea e la produzione di sebo. Aiuta a bilanciare la routine di cura della pelle. Valori alti indicano pelle grassa, mentre valori bassi indicano pelle secca. Un'oleosità bilanciata è essenziale per una barriera cutanea sana."
+      },
+      "camera": {
+        "instructionText": "Mantieni una luce costante e uniforme sul viso per la massima accuratezza"
+      },
+      "quality": {
+        "message": "La qualità dell'analisi è buona. I risultati sono affidabili."
+      },
+      "detailedAnalysis": {
+        "buttonText": "Ricevi ulteriori dettagli della tua analisi"
+      },
+      "retake": "Ripeti analisi",
+      "results": {
+        "title": "Analisi Pelle Completata",
+        "subtitle": "Valutazione completa della salute della pelle con AI",
+        "excellent": "Eccellente",
+        "good": "Buono",
+        "fair": "Discreto",
+        "needsCare": "Richiede Cura",
+        "excellentDesc": "La tua pelle è in ottime condizioni!",
+        "goodDesc": "La tua pelle è sana con margine di miglioramento.",
+        "fairDesc": "La tua pelle ha bisogno di attenzione e cura.",
+        "needsCareDesc": "La tua pelle richiede una routine di cura mirata.",
+        "overallScore": "Punteggio Complessivo",
+        "healthLevel": "Livello di Salute",
+        "analysis": "Analisi",
+        "complete": "Completata",
+        "detailedMetrics": "Metriche Dettagliate della Pelle",
+        "hydration": "Idratazione",
+        "texture": "Texture",
+        "redness": "Rossore",
+        "oiliness": "Oleosità",
+        "analysisDetails": "Dettagli Analisi",
+        "imageAnalysis": "Analisi Immagine",
+        "imageAnalysisDesc": "Analisi ad alta risoluzione della texture e del colore della pelle",
+        "aiProcessing": "Elaborazione AI",
+        "aiProcessingDesc": "Algoritmi avanzati di computer vision",
+        "analysisTime": "Tempo di Analisi",
+        "analysisTimeDesc": "Elaborazione in tempo reale completata",
+        "skinHealth": "Salute della Pelle",
+        "skinHealthDesc": "Valutazione completa del benessere",
+        "detectedIssues": "Problemi Rilevati",
+        "analysisNotes": "Note di Analisi",
+        "personalizedRecommendations": "Raccomandazioni Personalizzate",
+        "dailySkincareTips": "Consigli Giornalieri per la Cura della Pelle",
+        "tip1": "Usa sempre una crema solare SPF 30+, anche nelle giornate nuvolose",
+        "tip2": "Bevi 8-10 bicchieri d'acqua al giorno per un'idratazione ottimale",
+        "tip3": "Dormi 7-9 ore di sonno di qualità per la rigenerazione della pelle",
+        "tip4": "Mangia cibi ricchi di antiossidanti come bacche e verdure a foglia verde",
+        "goBack": "Indietro",
+        "retake": "Ripeti",
+        "skinHealth": "Salute della Pelle"
+      },
+      "guideModal": {
+        "expertGuide": "GUIDA ESPERTA",
+        "keyTips": "Consigli Chiave",
+        "categories": "Categorie",
+        "weeks": "Settimane",
+        "saveToRoutine": "Salva nella mia routine"
+      },
+      "guideSections": {
+        "products": {
+          "title": "🧴 Prodotti Consigliati"
+        },
+        "nutrition": {
+          "title": "🥗 Nutrizione e Dieta",
+          "antiInflammatory": "🥗 Alimenti Anti-Infiammatori",
+          "dietAdjustments": "🥗 Aggiustamenti Dietetici"
+        },
+        "routine": {
+          "title": "📋 Routine Giornaliera",
+          "soothing": "📋 Routine Lenitiva",
+          "oilControl": "📋 Routine Controllo Oleosità"
+        },
+        "timing": {
+          "title": "⏰ Timing Ottimale",
+          "whenToApply": "⏰ Quando Applicare",
+          "optimal": "⏰ Timing Ottimale"
+        },
+        "photoQuality": {
+          "title": "📸 Qualità Foto"
+        },
+        "skinPreparation": {
+          "title": "🧼 Preparazione Pelle"
+        },
+        "bestPractices": {
+          "title": "📋 Best Practices"
+        }
       },
       "howItWorks": {
         "title": "Come funziona l'analisi della pelle",
@@ -1106,9 +1366,13 @@
     "chat": "Chat",
     "settings": "Impostazioni"
   },
+  "timePicker": {
+    "title": "Seleziona orario",
+    "selectTimeFor": "Seleziona orario per {{title}}"
+  },
   "dailyCheckIn": {
     "mood": {
-      "title": "Equilibrio Umore",
+      "title": "Umore di Oggi",
       "subtitle": "Come ti senti oggi?",
       "addNote": "Aggiungi una nota",
       "notePlaceholder": "Scrivi dei tuoi sentimenti…",
@@ -1124,7 +1388,7 @@
       "great": "Ottimo"
     },
     "sleep": {
-      "title": "Sonno Riparatore",
+      "title": "Qualità Sonno",
       "subtitle": "Quanto ti senti riposato?",
       "notes": "Note",
       "notesPlaceholder": "Come ti sei sentito quando ti sei svegliato?",

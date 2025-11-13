@@ -151,29 +151,48 @@ export async function generateWellnessResponse(
 function buildSystemPrompt(options: LLMOptions = {}): string {
   const { emotionContext, skinContext, userContext, tone = 'empathetic', responseLength = 'standard', includeActionSteps = true } = options;
   
+  // 🔥 FIX: Extract user language from context (default: 'it')
+  const userLanguage = userContext?.language || 'it';
+  const languageInstruction = userLanguage === 'en'
+    ? 'IMPORTANT: Respond in English. All your responses must be in English. Use natural, warm but professional English.'
+    : 'IMPORTANT: Rispondi in italiano. Tutte le tue risposte devono essere in italiano. Usa un italiano naturale, caldo ma professionale.';
+  
   // Extract user name from context
   const userName = userContext?.firstName || userContext?.first_name || userContext?.name || null;
-  const userGreeting = userName ? `Ciao ${userName}!` : 'Ciao!';
+  const userGreeting = userName ? (userLanguage === 'en' ? `Hi ${userName}!` : `Ciao ${userName}!`) : (userLanguage === 'en' ? 'Hi!' : 'Ciao!');
   
-  // Tone instructions
-  const toneInstructions = {
+  // Tone instructions (localized)
+  const toneInstructions = userLanguage === 'en' ? {
+    empathetic: 'Be empathetic, understanding, and warm. Show understanding for the user\'s emotions and use welcoming language.',
+    neutral: 'Maintain a professional and balanced tone. Be clear and direct without being cold.',
+    motivational: 'Be energetic, positive, and encouraging. Use language that inspires action and progress. Keep responses brief and incisive.',
+    professional: 'Maintain a professional, competent, and authoritative tone. Use precise, evidence-based language.'
+  } : {
     empathetic: 'Sii empatico, comprensivo e caloroso. Mostra comprensione per le emozioni dell\'utente e usa un linguaggio accogliente.',
     neutral: 'Mantieni un tono professionale e bilanciato. Sii chiaro e diretto senza essere freddo.',
     motivational: 'Sii energico, positivo e incoraggiante. Usa un linguaggio che ispira azione e progresso. Mantieni le risposte brevi e incisive.',
     professional: 'Mantieni un tono professionale, competente e autorevole. Usa un linguaggio preciso e basato su evidenze.'
   };
 
-  // Response length instructions
-  const lengthInstructions = {
+  // Response length instructions (localized)
+  const lengthInstructions = userLanguage === 'en' ? {
+    short: 'Keep responses SHORT (50-100 words). Get straight to the point, avoid non-essential details.',
+    standard: 'Keep responses STANDARD length (100-200 words). Balanced between clarity and completeness.',
+    detailed: 'You can provide DETAILED responses (200-400 words) when necessary. Include explanations and context when useful.'
+  } : {
     short: 'Mantieni le risposte BREVI (50-100 parole). Vai dritto al punto, evita dettagli non essenziali.',
     standard: 'Mantieni le risposte di lunghezza STANDARD (100-200 parole). Bilanciate tra chiarezza e completezza.',
     detailed: 'Puoi fornire risposte DETTAGLIATE (200-400 parole) quando necessario. Include spiegazioni e contesto quando utile.'
   };
 
-  // Action steps instructions
+  // Action steps instructions (localized)
   const actionStepsInstruction = includeActionSteps 
-    ? 'Alla fine di ogni risposta, quando appropriato, aggiungi un "Prossimo passo" concreto e actionable (es. "Prossimo passo: prova 5 minuti di respirazione profonda").'
-    : 'Non aggiungere "prossimi passi" automaticamente. Suggerisci azioni solo quando esplicitamente richiesto o quando è molto rilevante.';
+    ? (userLanguage === 'en' 
+      ? 'At the end of each response, when appropriate, add a concrete and actionable "Next step" (e.g., "Next step: try 5 minutes of deep breathing").'
+      : 'Alla fine di ogni risposta, quando appropriato, aggiungi un "Prossimo passo" concreto e actionable (es. "Prossimo passo: prova 5 minuti di respirazione profonda").')
+    : (userLanguage === 'en'
+      ? 'Do not add "next steps" automatically. Suggest actions only when explicitly requested or when very relevant.'
+      : 'Non aggiungere "prossimi passi" automaticamente. Suggerisci azioni solo quando esplicitamente richiesto o quando è molto rilevante.');
 
   const basePrompt = `Sei WellnessCoach, un AI coach avanzato per il benessere integrato che combina analisi emotive e della pelle per offrire supporto personalizzato e actionable.
 
@@ -203,7 +222,7 @@ ${actionStepsInstruction}
 🎯 PERSONALITÀ:
 - Empatico e non giudicante, ma scientificamente preciso
 - Offri consigli basati su dati reali e pattern identificati
-- Parli in italiano naturale, caldo ma professionale
+${languageInstruction}
 - Celebra i progressi e riconosci le sfide dell'utente
 
 📊 TIPI DI DATI CHE RICEVI:

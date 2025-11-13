@@ -56,6 +56,7 @@ import { RetryService } from '../services/retry.service';
 import { OperationLockService } from '../services/operation-lock.service';
 import { AvatarService } from '../services/avatar.service';
 import AvatarCommunityModal from './AvatarCommunityModal';
+import { ChartDetailModal } from './ChartDetailModal';
 
 const { width } = Dimensions.get('window');
 
@@ -105,8 +106,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const { setShowTutorial } = useTutorial();
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
-  // 🆕 Costruisci activities dinamicamente con traduzioni usando useMemo per riapplicare quando cambia la lingua
-  const todaysActivities = useMemo<DailyActivity[]>(() => [
+  // 🆕 Attività hardcoded di default (sempre presenti)
+  const defaultActivities = useMemo<DailyActivity[]>(() => [
     {
       id: 'morning-meditation',
       title: t('home.activities.morningMeditation'),
@@ -145,6 +146,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       category: 'mindfulness',
     },
   ], [t, language]);
+
+  // 🆕 Attività caricate dal database
+  const [wellnessActivities, setWellnessActivities] = useState<DailyActivity[]>([]);
+  
+  // 🆕 Combina attività default con quelle dal database
+  const todaysActivities = useMemo<DailyActivity[]>(() => {
+    // Mappa le attività wellness dal database a DailyActivity
+    const mappedWellnessActivities: DailyActivity[] = wellnessActivities.map((activity) => ({
+      id: activity.id,
+      title: activity.title,
+      description: activity.description,
+      icon: activity.icon,
+      completed: activity.completed,
+      time: activity.time,
+      category: activity.category,
+      syncedToCalendar: activity.syncedToCalendar,
+      syncedToReminders: activity.syncedToReminders,
+    }));
+
+    // Combina: prima le default, poi quelle dal database
+    return [...defaultActivities, ...mappedWellnessActivities];
+  }, [defaultActivities, wellnessActivities]);
   
   // 🔥 Rimuoviamo stato duplicato - usiamo direttamente todaysActivities
   // const [activities, setActivities] = useState<DailyActivity[]>(() => todaysActivities);
@@ -266,6 +289,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   }>({ steps: [], sleepHours: [], hrv: [], heartRate: [], hydration: [], meditation: [] });
   const [chartEditMode, setChartEditMode] = useState<boolean>(false);
   const [chartSelectionModal, setChartSelectionModal] = useState<boolean>(false);
+  const [chartDetailModal, setChartDetailModal] = useState<{ visible: boolean; chartType: ChartType | null; currentValue?: number; color: string }>({
+    visible: false,
+    chartType: null,
+    currentValue: undefined,
+    color: '#10b981',
+  });
   
   // Chart configuration
   const { enabledCharts, toggleChart, config: chartConfig, enableChart, getAvailableCharts } = useChartConfig();
@@ -727,32 +756,81 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     (async () => {
       try {
         const dk = dayKey();
-        const savedMood = await AsyncStorage.getItem(STORAGE_KEYS.mood(dk));
-        const savedSleep = await AsyncStorage.getItem(STORAGE_KEYS.sleep(dk));
-        const savedMoodNote = await AsyncStorage.getItem(STORAGE_KEYS.moodNote(dk));
-        const savedSleepNote = await AsyncStorage.getItem(STORAGE_KEYS.sleepNote(dk));
-        const savedRestLevel = await AsyncStorage.getItem(STORAGE_KEYS.restLevel(dk));
-        if (savedMood) setMoodValue(parseInt(savedMood, 10));
-        if (savedSleep) setSleepQuality(parseInt(savedSleep, 10));
-        if (savedMoodNote) setMoodNote(savedMoodNote);
-        if (savedSleepNote) setSleepNote(savedSleepNote);
-        if (savedRestLevel) setRestLevel(parseInt(savedRestLevel, 10) as 1|2|3|4|5);
         
-        // 🆕 Verifica se esistono check-in nel database per oggi
+        // 🆕 Verifica PRIMA se esistono check-in nel database per oggi (priorità al database)
         const currentUser = await AuthService.getCurrentUser();
         if (currentUser?.id) {
           const { supabase } = await import('../lib/supabase');
           const { data: existingCheckin } = await supabase
             .from('daily_copilot_analyses')
-            .select('mood, sleep_quality')
+            .select('mood, sleep_quality, mood_note, sleep_note')
             .eq('user_id', currentUser.id)
             .eq('date', dk)
             .maybeSingle();
           
           if (existingCheckin) {
-            setHasExistingMoodCheckin(existingCheckin.mood !== null && existingCheckin.mood !== undefined);
-            setHasExistingSleepCheckin(existingCheckin.sleep_quality !== null && existingCheckin.sleep_quality !== undefined && existingCheckin.sleep_quality > 0);
+            // 🔥 FIX: Carica i valori dal database se esiste un check-in
+            if (existingCheckin.mood !== null && existingCheckin.mood !== undefined) {
+              setMoodValue(existingCheckin.mood as 1|2|3|4|5);
+              setHasExistingMoodCheckin(true);
+            } else {
+              setHasExistingMoodCheckin(false);
+            }
+            
+            if (existingCheckin.mood_note) {
+              setMoodNote(existingCheckin.mood_note);
+            }
+            
+            if (existingCheckin.sleep_quality !== null && existingCheckin.sleep_quality !== undefined && existingCheckin.sleep_quality > 0) {
+              setSleepQuality(existingCheckin.sleep_quality);
+              setHasExistingSleepCheckin(true);
+              
+              // 🔥 FIX: Calcola restLevel da sleep_quality (0-100 -> 1-5)
+              // sleep_quality: 0-20 -> 1, 21-40 -> 2, 41-60 -> 3, 61-80 -> 4, 81-100 -> 5
+              const calculatedRestLevel = Math.min(5, Math.max(1, Math.ceil((existingCheckin.sleep_quality / 100) * 5))) as 1|2|3|4|5;
+              setRestLevel(calculatedRestLevel);
+            } else {
+              setHasExistingSleepCheckin(false);
+            }
+            
+            if (existingCheckin.sleep_note) {
+              setSleepNote(existingCheckin.sleep_note);
+            }
+          } else {
+            // 🔥 FIX: Se non esiste un check-in nel database, usa AsyncStorage come fallback
+            const savedMood = await AsyncStorage.getItem(STORAGE_KEYS.mood(dk));
+            const savedSleep = await AsyncStorage.getItem(STORAGE_KEYS.sleep(dk));
+            const savedMoodNote = await AsyncStorage.getItem(STORAGE_KEYS.moodNote(dk));
+            const savedSleepNote = await AsyncStorage.getItem(STORAGE_KEYS.sleepNote(dk));
+            const savedRestLevel = await AsyncStorage.getItem(STORAGE_KEYS.restLevel(dk));
+            
+            if (savedMood) setMoodValue(parseInt(savedMood, 10));
+            if (savedSleep) setSleepQuality(parseInt(savedSleep, 10));
+            if (savedMoodNote) setMoodNote(savedMoodNote);
+            if (savedSleepNote) setSleepNote(savedSleepNote);
+            if (savedRestLevel) setRestLevel(parseInt(savedRestLevel, 10) as 1|2|3|4|5);
+            
+            // 🔥 FIX: Se non esiste un check-in nel database, imposta esplicitamente a false
+            setHasExistingMoodCheckin(false);
+            setHasExistingSleepCheckin(false);
           }
+        } else {
+          // 🔥 FIX: Se non c'è un utente, usa AsyncStorage come fallback
+          const savedMood = await AsyncStorage.getItem(STORAGE_KEYS.mood(dk));
+          const savedSleep = await AsyncStorage.getItem(STORAGE_KEYS.sleep(dk));
+          const savedMoodNote = await AsyncStorage.getItem(STORAGE_KEYS.moodNote(dk));
+          const savedSleepNote = await AsyncStorage.getItem(STORAGE_KEYS.sleepNote(dk));
+          const savedRestLevel = await AsyncStorage.getItem(STORAGE_KEYS.restLevel(dk));
+          
+          if (savedMood) setMoodValue(parseInt(savedMood, 10));
+          if (savedSleep) setSleepQuality(parseInt(savedSleep, 10));
+          if (savedMoodNote) setMoodNote(savedMoodNote);
+          if (savedSleepNote) setSleepNote(savedSleepNote);
+          if (savedRestLevel) setRestLevel(parseInt(savedRestLevel, 10) as 1|2|3|4|5);
+          
+          // 🔥 FIX: Se non c'è un utente, imposta esplicitamente a false
+          setHasExistingMoodCheckin(false);
+          setHasExistingSleepCheckin(false);
         }
       } catch {}
     })();
@@ -1244,6 +1322,60 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
     loadUserData();
   }, []); // 🔥 FIX: Rimuoviamo translateWidgetTitle dalle dipendenze - viene caricato solo al mount
+
+  // 🆕 Carica le attività wellness dal database
+  useEffect(() => {
+    const loadWellnessActivities = async () => {
+      try {
+        const currentUser = await AuthService.getCurrentUser();
+        if (!currentUser?.id) return;
+
+        const WellnessActivitiesService = (await import('../services/wellness-activities.service')).default;
+        const activities = await WellnessActivitiesService.getTodayActivities();
+
+        // Mappa le attività dal database a DailyActivity
+        const mappedActivities: DailyActivity[] = activities.map((activity) => {
+          // Determina l'icona in base alla categoria
+          const iconMap: Record<string, string> = {
+            mindfulness: 'leaf',
+            movement: 'road',
+            nutrition: 'tint',
+            recovery: 'moon-o',
+          };
+
+          // Formatta l'orario
+          const timeStr = activity.scheduled_time || '12:00';
+          const [hours, minutes] = timeStr.split(':');
+          const hour = parseInt(hours, 10);
+          const ampm = hour >= 12 ? 'PM' : 'AM';
+          const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+          const formattedTime = `${displayHour}:${minutes} ${ampm}`;
+
+          return {
+            id: activity.id,
+            title: activity.title,
+            description: activity.description,
+            icon: iconMap[activity.category] || 'heart',
+            completed: activity.completed,
+            time: formattedTime,
+            category: activity.category,
+            syncedToCalendar: !!activity.calendar_event_id,
+            syncedToReminders: !!activity.reminder_id,
+          };
+        });
+
+        setWellnessActivities(mappedActivities);
+      } catch (error) {
+        console.error('Error loading wellness activities:', error);
+      }
+    };
+
+    loadWellnessActivities();
+
+    // Ricarica ogni minuto per aggiornare le attività
+    const interval = setInterval(loadWellnessActivities, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // 🔥 Rimuoviamo useEffect non necessario - usiamo direttamente todaysActivities che è già memoizzato
 
@@ -1962,8 +2094,8 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
 
         {/* AI Daily Copilot Section */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>AI Daily Copilot</Text>
-          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>La tua guida personalizzata per oggi</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCopilot.title')}</Text>
+          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCopilot.subtitle')}</Text>
         </View>
         
         <DailyCopilot
@@ -2035,7 +2167,13 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               // Steps Progress
               if (chartConfig.id === 'steps' && healthData?.steps !== undefined) {
                 return (
-            <View key="steps" style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <TouchableOpacity
+              key="steps"
+              style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+              onPress={() => !chartEditMode && setChartDetailModal({ visible: true, chartType: 'steps', currentValue: healthData.steps, color: '#10b981' })}
+              activeOpacity={chartEditMode ? 1 : 0.7}
+              disabled={chartEditMode}
+            >
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="walk" size={24} color="#10b981" />
                 <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
@@ -2052,9 +2190,14 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               </View>
               <View style={styles.progressCardContent}>
                 <View style={styles.progressCardLeft}>
-                  <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                    {healthData.steps?.toLocaleString() || 0}
-                  </Text>
+                  <View style={styles.valueContainer}>
+                    <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
+                      {healthData.steps?.toLocaleString() || 0}
+                    </Text>
+                    <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
+                      {t('home.weeklyProgress.steps') || 'passi'}
+                    </Text>
+                  </View>
                   <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]}>
                     {t('home.weeklyProgress.today')}
                   </Text>
@@ -2070,14 +2213,20 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                   />
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
                 );
               }
               
               // Sleep Progress
               if (chartConfig.id === 'sleepHours' && healthData?.sleepHours !== undefined) {
                 return (
-            <View key="sleepHours" style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <TouchableOpacity
+              key="sleepHours"
+              style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+              onPress={() => !chartEditMode && setChartDetailModal({ visible: true, chartType: 'sleepHours', currentValue: healthData.sleepHours, color: '#6366f1' })}
+              activeOpacity={chartEditMode ? 1 : 0.7}
+              disabled={chartEditMode}
+            >
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="sleep" size={24} color="#6366f1" />
                 <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
@@ -2094,9 +2243,14 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               </View>
               <View style={styles.progressCardContent}>
                 <View style={styles.progressCardLeft}>
-                  <Text style={[styles.progressCardValue, { color: themeColors.text }]} numberOfLines={1}>
-                    {healthData.sleepHours ? `${Math.round(healthData.sleepHours * 10) / 10}h` : '—'}
-                  </Text>
+                  <View style={styles.valueContainer}>
+                    <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
+                      {healthData.sleepHours ? `${Math.round(healthData.sleepHours * 10) / 10}` : '—'}
+                    </Text>
+                    <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
+                      {healthData.sleepHours ? 'h' : ''}
+                    </Text>
+                  </View>
                   <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
                     {healthData.sleepQuality ? `${Math.round(healthData.sleepQuality)}% ${t('home.weeklyProgress.quality')}` : t('home.weeklyProgress.today')}
                   </Text>
@@ -2112,14 +2266,20 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                   />
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
                 );
               }
               
               // HRV Progress
               if (chartConfig.id === 'hrv' && healthData?.hrv !== undefined && healthData.hrv > 0) {
                 return (
-            <View key="hrv" style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <TouchableOpacity
+              key="hrv"
+              style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+              onPress={() => !chartEditMode && setChartDetailModal({ visible: true, chartType: 'hrv', currentValue: healthData.hrv, color: '#ef4444' })}
+              activeOpacity={chartEditMode ? 1 : 0.7}
+              disabled={chartEditMode}
+            >
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="heart-pulse" size={24} color="#ef4444" />
                 <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
@@ -2136,9 +2296,14 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               </View>
               <View style={styles.progressCardContent}>
                 <View style={styles.progressCardLeft}>
-                  <Text style={[styles.progressCardValue, { color: themeColors.text }]} numberOfLines={1}>
-                    {healthData.hrv >= 100 ? Math.round(healthData.hrv) : (Math.round(healthData.hrv * 10) / 10)}
-                  </Text>
+                  <View style={styles.valueContainer}>
+                    <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
+                      {healthData.hrv >= 100 ? Math.round(healthData.hrv) : (Math.round(healthData.hrv * 10) / 10)}
+                    </Text>
+                    <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
+                      ms
+                    </Text>
+                  </View>
                   <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={1}>
                     {t('home.weeklyProgress.current')}
                   </Text>
@@ -2154,14 +2319,20 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                   />
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
                 );
               }
               
               // Heart Rate Progress
               if (chartConfig.id === 'heartRate' && healthData?.heartRate !== undefined && healthData.heartRate > 0) {
                 return (
-            <View key="heartRate" style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <TouchableOpacity
+              key="heartRate"
+              style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+              onPress={() => !chartEditMode && setChartDetailModal({ visible: true, chartType: 'heartRate', currentValue: healthData.heartRate, color: '#ef4444' })}
+              activeOpacity={chartEditMode ? 1 : 0.7}
+              disabled={chartEditMode}
+            >
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="heart" size={24} color="#ef4444" />
                 <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
@@ -2178,9 +2349,14 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               </View>
               <View style={styles.progressCardContent}>
                 <View style={styles.progressCardLeft}>
-                  <Text style={[styles.progressCardValue, { color: themeColors.text }]} numberOfLines={1}>
-                    {Math.round(healthData.heartRate)} {t('home.bpm')}
-                  </Text>
+                  <View style={styles.valueContainer}>
+                    <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
+                      {Math.round(healthData.heartRate)}
+                    </Text>
+                    <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
+                      {t('home.bpm')}
+                    </Text>
+                  </View>
                   <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
                     {healthData.restingHeartRate ? `${t('home.hrv.restingHR')}: ${Math.round(healthData.restingHeartRate)} ${t('home.bpm')}` : t('home.weeklyProgress.current')}
                   </Text>
@@ -2196,14 +2372,20 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                   />
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
                 );
               }
               
               // Hydration Progress
               if (chartConfig.id === 'hydration') {
                 return (
-            <View key="hydration" style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <TouchableOpacity
+              key="hydration"
+              style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+              onPress={() => !chartEditMode && setChartDetailModal({ visible: true, chartType: 'hydration', currentValue: healthData.hydration || 0, color: '#3b82f6' })}
+              activeOpacity={chartEditMode ? 1 : 0.7}
+              disabled={chartEditMode}
+            >
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="cup-water" size={24} color="#3b82f6" />
                 <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
@@ -2220,9 +2402,14 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               </View>
               <View style={styles.progressCardContent}>
                 <View style={styles.progressCardLeft}>
-                  <Text style={[styles.progressCardValue, { color: themeColors.text }]} numberOfLines={1}>
-                    {Math.round((healthData.hydration || 0) / 250)} {t('home.glasses')}
-                  </Text>
+                  <View style={styles.valueContainer}>
+                    <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
+                      {Math.round((healthData.hydration || 0) / 250)}
+                    </Text>
+                    <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
+                      {t('home.glasses')}
+                    </Text>
+                  </View>
                   <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
                     {healthData.hydration ? `${(healthData.hydration / 1000).toFixed(1)} L` : t('home.weeklyProgress.today')}
                   </Text>
@@ -2238,14 +2425,20 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                   />
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
                 );
               }
               
               // Meditation Progress
               if (chartConfig.id === 'meditation') {
                 return (
-            <View key="meditation" style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <TouchableOpacity
+              key="meditation"
+              style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+              onPress={() => !chartEditMode && setChartDetailModal({ visible: true, chartType: 'meditation', currentValue: healthData.mindfulnessMinutes || 0, color: '#8b5cf6' })}
+              activeOpacity={chartEditMode ? 1 : 0.7}
+              disabled={chartEditMode}
+            >
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="meditation" size={24} color="#8b5cf6" />
                 <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
@@ -2262,9 +2455,14 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               </View>
               <View style={styles.progressCardContent}>
                 <View style={styles.progressCardLeft}>
-                  <Text style={[styles.progressCardValue, { color: themeColors.text }]} numberOfLines={1}>
-                    {Math.round(healthData.mindfulnessMinutes || 0)} {t('home.minutes')}
-                  </Text>
+                  <View style={styles.valueContainer}>
+                    <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
+                      {Math.round(healthData.mindfulnessMinutes || 0)}
+                    </Text>
+                    <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
+                      {t('home.minutes')}
+                    </Text>
+                  </View>
                   <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
                     {t('home.weeklyProgress.today')}
                   </Text>
@@ -2280,7 +2478,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                   />
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
                 );
               }
               
@@ -2450,6 +2648,17 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
         }}
         availableCharts={availableChartsList}
       />
+
+      {/* Chart Detail Modal */}
+      {chartDetailModal.chartType && (
+        <ChartDetailModal
+          visible={chartDetailModal.visible}
+          onClose={() => setChartDetailModal({ visible: false, chartType: null, currentValue: undefined, color: '#10b981' })}
+          chartType={chartDetailModal.chartType}
+          currentValue={chartDetailModal.currentValue}
+          color={chartDetailModal.color}
+        />
+      )}
 
     </SafeAreaView>
   );
@@ -3651,10 +3860,20 @@ const styles = StyleSheet.create({
     height: 150, // Aumentato da 130 a 150
     flexShrink: 0,
   },
+  valueContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
   progressCardValue: {
     fontSize: 22, // Leggermente ridotto per risparmiare spazio
     fontWeight: '700',
     marginBottom: 2, // Ridotto da 4 a 2
+  },
+  progressCardUnit: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 2,
   },
   progressCardSubtitle: {
     fontSize: 11, // Ridotto da 12 a 11

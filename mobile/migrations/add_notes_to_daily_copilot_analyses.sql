@@ -13,3 +13,4 @@ ADD COLUMN IF NOT EXISTS sleep_note TEXT;
 COMMENT ON COLUMN daily_copilot_analyses.mood_note IS 'User notes about their mood for the day';
 COMMENT ON COLUMN daily_copilot_analyses.sleep_note IS 'User notes about their sleep/rest for the day';
 
+

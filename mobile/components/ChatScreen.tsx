@@ -33,6 +33,7 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvoidSoftInput, AvoidSoftInputView } from 'react-native-avoid-softinput';
 import WellnessSuggestionPopup from './WellnessSuggestionPopup';
+import { TimePickerModal } from './TimePickerModal';
 
 import { BACKEND_URL, getBackendURL } from '../constants/env';
 
@@ -230,6 +231,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [showJournalSettings, setShowJournalSettings] = useState(false); // 🆕 Modal impostazioni journal
   const [chatSettings, setChatSettings] = useState({ tone: 'empathetic' as ChatTone, responseLength: 'standard' as ResponseLength, includeActionSteps: true, localHistoryEnabled: true }); // 🆕 Preferenze chat
   const [selectedTemplate, setSelectedTemplate] = useState<JournalTemplate>('free'); // 🆕 Template journal selezionato
+  const [chatHistory, setChatHistory] = useState<any[]>([]); // 🆕 History delle chat sessions
+  const [showChatHistory, setShowChatHistory] = useState(false); // 🆕 Mostra/nascondi history
+  const [quickRepliesExpanded, setQuickRepliesExpanded] = useState(false); // 🆕 Quick replies expandible/collapsible
+  const messagesListRef = useRef<FlatList>(null); // 🆕 Ref per auto-scroll dei messaggi
 
   // 🔧 FIX: Messaggio iniziale personalizzato con traduzione
   // 🔥 FIX: Memoizziamo getInitialMessage per evitare ricreazioni
@@ -343,6 +348,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const isFutureDate = (isoDate: string): boolean => {
     const today = getTodayKey();
     return isoDate > today;
+  };
+
+  // 🆕 Helper per verificare se una data è nel passato
+  const isPastDate = (isoDate: string): boolean => {
+    const today = getTodayKey();
+    return isoDate < today;
   };
 
   // 🔥 FIX: Aggiorna selectedDayKey quando cambia il giorno del sistema
@@ -575,6 +586,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [headerHeight, setHeaderHeight] = useState(0);
 
   // Wellness popup handlers
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [pendingSuggestion, setPendingSuggestion] = useState<any>(null);
+
   const handleAddToToday = async (suggestion: any) => {
     // 🎓 Learn from user interaction
     await WellnessSuggestionService.learnFromUserInteraction(
@@ -583,42 +597,137 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       'accepted'
     );
     
-    // Show completion feedback
-    Alert.alert(
-      t('chat.suggestionFeedback.title'),
-      t('chat.suggestionFeedback.message'),
-      [
-        { text: t('chat.suggestionFeedback.veryGood'), onPress: async () => {
-          await WellnessSuggestionService.learnFromUserInteraction(
-            currentUser.id,
-            suggestion.id,
-            'completed',
-            5,
-            t('chat.suggestionFeedback.veryEffective')
-          );
-        }},
-        { text: t('chat.suggestionFeedback.good'), onPress: async () => {
-          await WellnessSuggestionService.learnFromUserInteraction(
-            currentUser.id,
-            suggestion.id,
-            'completed',
-            4,
-            t('chat.suggestionFeedback.useful')
-          );
-        }},
-        { text: t('chat.suggestionFeedback.soSo'), onPress: async () => {
-          await WellnessSuggestionService.learnFromUserInteraction(
-            currentUser.id,
-            suggestion.id,
-            'completed',
-            3,
-            t('chat.suggestionFeedback.neutral')
-          );
-        }}
-      ]
-    );
+    // Mostra il modal per selezionare l'orario
+    setPendingSuggestion(suggestion);
+    setShowTimePicker(true);
     setShowWellnessPopup(false);
-    setWellnessSuggestion(null);
+  };
+
+  const handleTimeSelected = async (selectedTime: Date) => {
+    if (!pendingSuggestion || !currentUser?.id) return;
+
+    try {
+      const WellnessActivitiesService = (await import('../services/wellness-activities.service')).default;
+      const { default: WellnessSyncServiceClass } = await import('../services/wellness-sync.service');
+      const WellnessSyncService = WellnessSyncServiceClass.getInstance();
+
+      // Determina la categoria dall'attività
+      const categoryMap: Record<string, 'mindfulness' | 'movement' | 'nutrition' | 'recovery'> = {
+        'breathing-exercises': 'mindfulness',
+        'meditation': 'mindfulness',
+        'walk': 'movement',
+        'exercise': 'movement',
+        'water': 'nutrition',
+        'hydration': 'nutrition',
+        'sleep': 'recovery',
+        'rest': 'recovery',
+      };
+      
+      const category = categoryMap[pendingSuggestion.id] || 
+        (pendingSuggestion.category as 'mindfulness' | 'movement' | 'nutrition' | 'recovery') || 
+        'mindfulness';
+
+      // Imposta l'orario selezionato dall'utente
+      const today = new Date();
+      const scheduledTime = new Date(today);
+      scheduledTime.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+      
+      // Se l'orario è già passato oggi, programma per domani
+      if (scheduledTime < new Date()) {
+        scheduledTime.setDate(scheduledTime.getDate() + 1);
+      }
+
+      const endTime = new Date(scheduledTime.getTime() + 30 * 60 * 1000); // 30 minuti
+
+      // Crea l'attività wellness per la notifica
+      const wellnessActivity = {
+        id: `wellness-${Date.now()}-${pendingSuggestion.id}`,
+        title: pendingSuggestion.title,
+        description: pendingSuggestion.description || '',
+        startTime: scheduledTime,
+        endTime: endTime,
+        category,
+        reminderMinutes: 15, // 15 minuti prima
+        syncToCalendar: false,
+        syncToReminders: true,
+      };
+
+      // Schedula la notifica
+      const syncResult = await WellnessSyncService.addWellnessActivity(wellnessActivity);
+
+      // Salva l'attività nel database
+      const saveResult = await WellnessActivitiesService.saveActivity({
+        title: pendingSuggestion.title,
+        description: pendingSuggestion.description || '',
+        category,
+        scheduledTime,
+        reminderId: syncResult.reminderId,
+        calendarEventId: syncResult.calendarEventId,
+      });
+
+      if (saveResult.success) {
+        // Mostra feedback positivo
+        Alert.alert(
+          t('chat.activityAdded.title') || 'Attività aggiunta',
+          t('chat.activityAdded.message', { 
+            time: selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+          }) || `Attività aggiunta per le ${selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}. Riceverai un promemoria 15 minuti prima.`,
+          [{ text: t('common.ok') || 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          t('common.error') || 'Errore',
+          t('chat.activityAdded.error') || 'Errore durante il salvataggio dell\'attività',
+          [{ text: t('common.ok') || 'OK' }]
+        );
+      }
+
+      // Mostra feedback di completamento (opzionale)
+      Alert.alert(
+        t('chat.suggestionFeedback.title'),
+        t('chat.suggestionFeedback.message'),
+        [
+          { text: t('chat.suggestionFeedback.veryGood'), onPress: async () => {
+            await WellnessSuggestionService.learnFromUserInteraction(
+              currentUser.id,
+              pendingSuggestion.id,
+              'completed',
+              5,
+              t('chat.suggestionFeedback.veryEffective')
+            );
+          }},
+          { text: t('chat.suggestionFeedback.good'), onPress: async () => {
+            await WellnessSuggestionService.learnFromUserInteraction(
+              currentUser.id,
+              pendingSuggestion.id,
+              'completed',
+              4,
+              t('chat.suggestionFeedback.useful')
+            );
+          }},
+          { text: t('chat.suggestionFeedback.soSo'), onPress: async () => {
+            await WellnessSuggestionService.learnFromUserInteraction(
+              currentUser.id,
+              pendingSuggestion.id,
+              'completed',
+              3,
+              t('chat.suggestionFeedback.neutral')
+            );
+          }}
+        ]
+      );
+
+      setPendingSuggestion(null);
+      setWellnessSuggestion(null);
+    } catch (error) {
+      console.error('Error adding activity:', error);
+      Alert.alert(
+        t('common.error') || 'Errore',
+        t('chat.activityAdded.error') || 'Errore durante il salvataggio dell\'attività',
+        [{ text: t('common.ok') || 'OK' }]
+      );
+      setPendingSuggestion(null);
+    }
   };
 
   const handleDismissPopup = async () => {
@@ -765,6 +874,31 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     };
     initializeServices();
   }, [currentUser, tts, initializeDatabaseServices]);
+
+  // 🆕 Carica chat history quando cambia currentUser o quando si apre la modalità chat
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (!currentUser?.id || mode !== 'chat') return;
+      
+      try {
+        const sessions = await ChatService.getUserChatSessions(currentUser.id, 20);
+        setChatHistory(sessions);
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+      }
+    };
+    
+    loadChatHistory();
+  }, [currentUser?.id, mode]);
+
+  // 🆕 Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messagesListRef.current && messages.length > 0 && mode === 'chat') {
+      setTimeout(() => {
+        messagesListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages.length, mode]);
 
   // Auto-start voice mode when coming from Avatar mic button
   useEffect(() => {
@@ -1087,7 +1221,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         // 🔧 Aggiungi nome utente per personalizzazione (usa first_name se disponibile)
         firstName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
         lastName: currentUserProfile?.last_name || currentUser?.user_metadata?.full_name?.split(' ').slice(1).join(' ') || undefined,
-        userName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente'
+        userName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
+        language: language // 🔥 FIX: Includi la lingua per il backend
       } : {
         // 🔧 FALLBACK: Contesto base anche senza autenticazione
         emotionHistory: [],
@@ -1100,7 +1235,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         behavioralInsights: null,
         contextualFactors: null,
         userName: 'Utente',
-        isAnonymous: true
+        isAnonymous: true,
+        language: language // 🔥 FIX: Includi la lingua anche per utenti anonimi
       };
 
       // 🆕 Rimossi log per performance
@@ -1319,20 +1455,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
   const handleResetAIContext = async () => {
     Alert.alert(
-      t('chat.resetContext.title') || 'Reset contesto AI',
-      t('chat.resetContext.message') || 'Vuoi resettare il contesto AI? Questo permetterà all\'assistente di iniziare con informazioni aggiornate.',
+      t('chat.resetContext.title') || 'Reset Contesto AI',
+      t('chat.resetContext.message') || 'Vuoi resettare il contesto dell\'assistente? L\'AI non conoscerà più la tua storia (emozioni, analisi pelle, ecc.) per questa sessione. I tuoi dati nel database non verranno eliminati.',
       [
         { text: t('common.cancel') || 'Annulla', style: 'cancel' },
         {
           text: t('common.reset') || 'Reset',
+          style: 'destructive',
           onPress: async () => {
             try {
-              if (currentUser?.id) {
-                // Ricarica il contesto AI
-                const context = await AIContextService.getCompleteContext(currentUser.id);
-                setAiContext(context);
-                Alert.alert(t('common.success') || 'Successo', t('chat.resetContext.success') || 'Contesto AI resettato');
-              }
+              // 🔥 RESET: Imposta il contesto a null
+              // L'AI risponderà senza conoscere la storia dell'utente
+              // I dati nel database rimangono intatti
+              setAiContext(null);
+              Alert.alert(t('common.success') || 'Successo', t('chat.resetContext.success') || 'Contesto AI resettato. L\'assistente non conoscerà più la tua storia per questa sessione.');
             } catch (error) {
               console.error('Error resetting AI context:', error);
               Alert.alert(t('common.error') || 'Errore', t('chat.resetContext.error') || 'Errore durante il reset');
@@ -1515,8 +1651,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       setIsJournalDictating(true);
       setJournalTranscript('');
       setHasProcessedJournalResult(false);
+      // 🔥 FIX: Usa la lingua dell'utente invece di 'it-IT' hardcoded
+      const { getUserLanguage } = await import('../services/language.service');
+      const userLanguage = await getUserLanguage();
+      const speechLang = userLanguage === 'it' ? 'it-IT' : 'en-US';
       await ExpoSpeechRecognitionModule.start({
-        lang: 'it-IT',
+        lang: speechLang,
         interimResults: true,
         continuous: false,
         maxAlternatives: 1,
@@ -1589,6 +1729,88 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     }
   });
 
+  // 🆕 Funzione helper per salvare l'entry del journal
+  const saveJournalEntry = useCallback(async (dayKey: string) => {
+    if (!currentUser) return;
+    
+    await DailyJournalService.saveLocalEntry(dayKey, journalText, journalPrompt);
+    
+    try {
+      // Check if we need to generate AI judgment (only if content changed and no existing score)
+      let aiScore = null, aiLabel = null, aiSummary = null, aiAnalysis = null;
+      
+      // Check if we already have AI judgment for this entry
+      const hasExistingAI = aiScore || aiSummary;
+      
+      if (journalText.trim().length > 10 && !hasExistingAI) {
+        // 🆕 Rimossi log per performance
+        // 🔥 FIX: Recupera le note dal database invece che da AsyncStorage
+        let moodNote: string | null = null;
+        let sleepNote: string | null = null;
+        
+        try {
+          const { supabase } = await import('../lib/supabase');
+          const { data: checkinData } = await supabase
+            .from('daily_copilot_analyses')
+            .select('mood_note, sleep_note')
+            .eq('user_id', currentUser.id)
+            .eq('date', dayKey)
+            .maybeSingle();
+          
+          if (checkinData) {
+            moodNote = checkinData.mood_note || null;
+            sleepNote = checkinData.sleep_note || null;
+          }
+        } catch (error) {
+          // Fallback ad AsyncStorage per retrocompatibilità
+          moodNote = await AsyncStorage.getItem(`checkin:mood_note:${dayKey}`);
+          sleepNote = await AsyncStorage.getItem(`checkin:sleep_note:${dayKey}`);
+        }
+        
+        const aiJudgment = await DailyJournalService.generateAIJudgment(
+          currentUser.id, 
+          journalText, 
+          moodNote || undefined, 
+          sleepNote || undefined
+        );
+        
+        if (aiJudgment) {
+          aiScore = aiJudgment.ai_score;
+          aiLabel = aiJudgment.ai_label;
+          aiSummary = aiJudgment.ai_summary;
+          aiAnalysis = aiJudgment.ai_analysis;
+          
+          // Update local state
+          setAiScore(aiScore);
+          setAiLabel(aiLabel);
+          setAiSummary(aiSummary);
+          setAiAnalysis(aiAnalysis);
+        }
+      }
+
+      await DailyJournalService.syncToRemote(currentUser.id, dayKey, journalText, journalPrompt, aiSummary, aiScore, aiLabel, aiAnalysis);
+      const recent = await DailyJournalDBService.listRecent(currentUser.id, 10);
+      setJournalHistory(recent);
+      
+      // 🆕 Aggiorna monthJournalMap quando si salva una entry
+      setMonthJournalMap(prev => ({
+        ...prev,
+        [dayKey]: {
+          hasEntry: true,
+          aiScore: aiScore || undefined
+        }
+      }));
+      
+      const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setLastSavedAt(ts);
+      setShowSavedChip(true);
+      setTimeout(() => setShowSavedChip(false), 2000);
+      Alert.alert('Salvato', 'Journal salvato e analizzato correttamente');
+    } catch (e) {
+      Alert.alert('Offline', 'Journal salvato in locale, verrà sincronizzato');
+    }
+  }, [currentUser, journalText, journalPrompt]);
+
   // 🆕 Voice input handler memoizzato (solo per chat, non per journal)
   const handleVoiceInput = useCallback(async (text: string) => {
     // ✅ REAL VOICE INPUT - No more simulation!
@@ -1636,7 +1858,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     > 
       <AvoidSoftInputView
         style={styles.flex}
-        avoidOffset={36}
+        avoidOffset={42}
         showAnimationDelay={0}
         hideAnimationDelay={0}
         showAnimationDuration={100}
@@ -1753,38 +1975,144 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         <View style={styles.scrollArea}>
           {mode === 'chat' ? (
             <>
-              {/* Quick Replies */}
-              <View style={styles.quickRepliesContainer}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('chat.quickStart.title')}</Text>
-                <View style={styles.quickRepliesGrid}>
-                  {quickReplies.map((reply) => (
-                    <TouchableOpacity
-                      key={reply.text}
-                      style={[styles.quickReplyCard, { backgroundColor: themeMode === 'dark' ? `${reply.color}20` : `${reply.color}15` }]}
-                      onPress={() => handleQuickReply(reply.text)}
-                    >
-                      <FontAwesome name={reply.icon as any} size={16} color={reply.color} />
-                      <Text style={[styles.quickReplyText, { color: reply.color }]}>{reply.text}</Text>
-                    </TouchableOpacity>
-                  ))}
+              {/* Chat History */}
+              {chatHistory.length > 0 && (
+                <View style={styles.chatHistoryContainer}>
+                  <TouchableOpacity
+                    style={[styles.chatHistoryHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    onPress={() => setShowChatHistory(!showChatHistory)}
+                  >
+                    <View style={styles.chatHistoryHeaderLeft}>
+                      <FontAwesome name="history" size={16} color={colors.textSecondary} />
+                      <Text style={[styles.chatHistoryTitle, { color: colors.text }]}>
+                        {t('chat.history.title') || 'Cronologia Chat'}
+                      </Text>
+                      <Text style={[styles.chatHistoryCount, { color: colors.textTertiary }]}>
+                        ({chatHistory.length})
+                      </Text>
+                    </View>
+                    <FontAwesome 
+                      name={showChatHistory ? "chevron-up" : "chevron-down"} 
+                      size={14} 
+                      color={colors.textSecondary} 
+                    />
+                  </TouchableOpacity>
+                  
+                  {showChatHistory && (
+                    <View style={[styles.chatHistoryList, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.chatHistoryScrollContent}
+                      >
+                        {chatHistory.map((session) => {
+                          const sessionDate = new Date(session.started_at);
+                          const dateStr = sessionDate.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: sessionDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                          });
+                          
+                          return (
+                            <TouchableOpacity
+                              key={session.id}
+                              style={[
+                                styles.chatHistoryItem,
+                                { backgroundColor: surfaceSecondary, borderColor: colors.border },
+                                currentSessionId === session.id && { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
+                              ]}
+                              onPress={async () => {
+                                // Carica i messaggi della sessione selezionata
+                                const sessionMessages = await ChatService.getChatMessages(session.id);
+                                const formattedMessages: Message[] = sessionMessages.map((msg: any) => ({
+                                  id: msg.id,
+                                  text: msg.content,
+                                  sender: msg.role === 'user' ? 'user' : 'ai',
+                                  timestamp: new Date(msg.created_at),
+                                  sessionId: session.id,
+                                }));
+                                
+                                setMessages(formattedMessages.length > 0 ? formattedMessages : [{
+                                  id: 'welcome',
+                                  text: getInitialMessage(),
+                                  sender: 'ai',
+                                  timestamp: new Date(Date.now() - 60000),
+                                }]);
+                                setCurrentSessionId(session.id);
+                                setShowChatHistory(false);
+                              }}
+                            >
+                              <Text style={[styles.chatHistoryItemDate, { color: colors.textSecondary }]}>
+                                {dateStr}
+                              </Text>
+                              <Text 
+                                style={[styles.chatHistoryItemName, { color: colors.text }]}
+                                numberOfLines={1}
+                              >
+                                {session.session_name || t('chat.history.unnamed') || 'Chat senza nome'}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  )}
                 </View>
+              )}
+
+              {/* Quick Replies - Expandible/Collapsible */}
+              <View style={styles.quickRepliesContainer}>
+                <TouchableOpacity
+                  style={styles.quickRepliesHeader}
+                  onPress={() => setQuickRepliesExpanded(!quickRepliesExpanded)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.quickRepliesHeaderLeft}>
+                    <FontAwesome name="lightbulb-o" size={14} color={colors.textSecondary} />
+                    <Text style={[styles.quickRepliesToggleText, { color: colors.textSecondary }]}>
+                      {t('chat.quickStart.toggle') || 'Messaggi suggeriti'}
+                    </Text>
+                  </View>
+                  <FontAwesome 
+                    name={quickRepliesExpanded ? "chevron-up" : "chevron-down"} 
+                    size={12} 
+                    color={colors.textSecondary} 
+                  />
+                </TouchableOpacity>
+                
+                {quickRepliesExpanded && (
+                  <View style={styles.quickRepliesGrid}>
+                    {quickReplies.map((reply) => (
+                      <TouchableOpacity
+                        key={reply.text}
+                        style={[styles.quickReplyCard, { backgroundColor: themeMode === 'dark' ? `${reply.color}20` : `${reply.color}15` }]}
+                        onPress={() => {
+                          handleQuickReply(reply.text);
+                          setQuickRepliesExpanded(false); // Collassa dopo la selezione
+                        }}
+                      >
+                        <FontAwesome name={reply.icon as any} size={16} color={reply.color} />
+                        <Text style={[styles.quickReplyText, { color: reply.color }]}>{reply.text}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
 
-              {/* Messages - FlatList invertita */}
+              {/* Messages - FlatList normale (messaggi vecchi in alto, nuovi in basso) */}
               <FlatList
                 data={messages}
                 keyExtractor={(item) => item.id}
-                inverted
                 contentContainerStyle={[
                   styles.messagesContainer,
-                  // lasciamo sempre un "respiro" pari all'altezza dell'input
-                  { paddingBottom: inputBarHeight + (isKeyboardVisible ? 0 : insets.bottom) + 20 },
+                  // paddingTop per lasciare spazio in alto, paddingBottom per l'input
+                  { 
+                    paddingTop: 20,
+                    paddingBottom: inputBarHeight + (isKeyboardVisible ? 0 : insets.bottom) + 20 
+                  },
                 ]}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
-                maintainVisibleContentPosition={{
-                  minIndexForVisible: 1, // mantiene la posizione quando si aggiungono nuovi messaggi
-                }}
                 renderItem={({ item: message }) => (
                   <View
                     style={[
@@ -1827,6 +2155,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     </View>
                   ) : null
                 }
+                ref={messagesListRef}
               />
             </>
           ) : (
@@ -1879,16 +2208,32 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   const dayNum = parseInt(iso.slice(8,10), 10);
                   const hasEntry = journal?.hasEntry || false;
                   const isFuture = isFutureDate(iso); // 🆕 Verifica se è una data futura
+                  const isPast = isPastDate(iso); // 🆕 Verifica se è una data passata
                   
                   return (
                     <TouchableOpacity 
                       key={iso} 
                       onPress={() => {
                         if (!isFuture) {
-                          setSelectedDayKey(iso);
+                          // 🆕 Mostra alert se si seleziona un giorno passato
+                          if (isPast) {
+                            Alert.alert(
+                              t('journal.pastDate.title') || 'Giorno passato',
+                              t('journal.pastDate.message') || 'Stai modificando un entry di un giorno passato. Vuoi continuare?',
+                              [
+                                { text: t('common.cancel') || 'Annulla', style: 'cancel' },
+                                {
+                                  text: t('common.continue') || 'Continua',
+                                  onPress: () => setSelectedDayKey(iso)
+                                }
+                              ]
+                            );
+                          } else {
+                            setSelectedDayKey(iso);
+                          }
                         }
                       }}
-                      disabled={isFuture} // 🆕 Disabilita i giorni futuri
+                      disabled={isFuture} // 🆕 Disabilita solo i giorni futuri
                       style={[
                         styles.dayPill, 
                         { backgroundColor: colors.surface, borderColor: colors.border }, 
@@ -2000,6 +2345,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                             const active = iso === selectedDayKey;
                             const hasEntry = journal?.hasEntry || false; // 🆕 Mostra pallino solo se c'è entry
                             const isFuture = isFutureDate(iso); // 🆕 Verifica se è una data futura
+                            const isPast = isPastDate(iso); // 🆕 Verifica se è una data passata
                             
                             cells.push(
                               <TouchableOpacity 
@@ -2012,11 +2358,29 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                                 ]} 
                                 onPress={() => { 
                                   if (!isFuture) {
-                                    setSelectedDayKey(iso); 
-                                    setShowMonthPicker(false);
+                                    // 🆕 Mostra alert se si seleziona un giorno passato
+                                    if (isPast) {
+                                      Alert.alert(
+                                        t('journal.pastDate.title') || 'Giorno passato',
+                                        t('journal.pastDate.message') || 'Stai modificando un entry di un giorno passato. Vuoi continuare?',
+                                        [
+                                          { text: t('common.cancel') || 'Annulla', style: 'cancel' },
+                                          {
+                                            text: t('common.continue') || 'Continua',
+                                            onPress: () => {
+                                              setSelectedDayKey(iso);
+                                              setShowMonthPicker(false);
+                                            }
+                                          }
+                                        ]
+                                      );
+                                    } else {
+                                      setSelectedDayKey(iso); 
+                                      setShowMonthPicker(false);
+                                    }
                                   }
                                 }}
-                                disabled={isFuture} // 🆕 Disabilita i giorni futuri
+                                disabled={isFuture} // 🆕 Disabilita solo i giorni futuri
                               >
                                 <Text style={[
                                   styles.calDayTxt, 
@@ -2103,82 +2467,29 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       if (!currentUser) return;
                       // 🔥 FIX: Usa selectedDayKey invece di dayKey (che non esiste più)
                       const dayKey = selectedDayKey;
-                      await DailyJournalService.saveLocalEntry(dayKey, journalText, journalPrompt);
                       
-                      try {
-                        // Check if we need to generate AI judgment (only if content changed and no existing score)
-                        let aiScore = null, aiLabel = null, aiSummary = null, aiAnalysis = null;
-                        
-                        // Check if we already have AI judgment for this entry
-                        const hasExistingAI = aiScore || aiSummary;
-                        
-                        if (journalText.trim().length > 10 && !hasExistingAI) {
-                          // 🆕 Rimossi log per performance
-                          // 🔥 FIX: Recupera le note dal database invece che da AsyncStorage
-                          let moodNote: string | null = null;
-                          let sleepNote: string | null = null;
-                          
-                          try {
-                            const { supabase } = await import('../lib/supabase');
-                            const { data: checkinData } = await supabase
-                              .from('daily_copilot_analyses')
-                              .select('mood_note, sleep_note')
-                              .eq('user_id', currentUser.id)
-                              .eq('date', dayKey)
-                              .maybeSingle();
-                            
-                            if (checkinData) {
-                              moodNote = checkinData.mood_note || null;
-                              sleepNote = checkinData.sleep_note || null;
+                      // 🆕 Verifica se si sta salvando per un giorno passato
+                      const isPast = isPastDate(dayKey);
+                      if (isPast) {
+                        // Mostra alert di conferma per giorni passati
+                        Alert.alert(
+                          t('journal.pastDateSave.title') || 'Salvare entry di un giorno passato?',
+                          t('journal.pastDateSave.message') || 'Stai salvando un entry per un giorno passato. Vuoi continuare?',
+                          [
+                            { text: t('common.cancel') || 'Annulla', style: 'cancel' },
+                            {
+                              text: t('common.save') || 'Salva',
+                              onPress: async () => {
+                                await saveJournalEntry(dayKey);
+                              }
                             }
-                          } catch (error) {
-                            // Fallback ad AsyncStorage per retrocompatibilità
-                            moodNote = await AsyncStorage.getItem(`checkin:mood_note:${dayKey}`);
-                            sleepNote = await AsyncStorage.getItem(`checkin:sleep_note:${dayKey}`);
-                          }
-                          
-                          const aiJudgment = await DailyJournalService.generateAIJudgment(
-                            currentUser.id, 
-                            journalText, 
-                            moodNote || undefined, 
-                            sleepNote || undefined
-                          );
-                          
-                          if (aiJudgment) {
-                            aiScore = aiJudgment.ai_score;
-                            aiLabel = aiJudgment.ai_label;
-                            aiSummary = aiJudgment.ai_summary;
-                            aiAnalysis = aiJudgment.ai_analysis;
-                            
-                            // Update local state
-                            setAiScore(aiScore);
-                            setAiLabel(aiLabel);
-                            setAiSummary(aiSummary);
-                            setAiAnalysis(aiAnalysis);
-                          }
-                        }
-
-                        await DailyJournalService.syncToRemote(currentUser.id, selectedDayKey, journalText, journalPrompt, aiSummary, aiScore, aiLabel, aiAnalysis); // 🆕 Usa selectedDayKey
-                        const recent = await DailyJournalDBService.listRecent(currentUser.id, 10);
-                        setJournalHistory(recent);
-                        
-                        // 🆕 Aggiorna monthJournalMap quando si salva una entry
-                        setMonthJournalMap(prev => ({
-                          ...prev,
-                          [selectedDayKey]: {
-                            hasEntry: true,
-                            aiScore: aiScore || undefined
-                          }
-                        }));
-                        
-                        const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        setLastSavedAt(ts);
-                        setShowSavedChip(true);
-                        setTimeout(() => setShowSavedChip(false), 2000);
-                        Alert.alert('Salvato', 'Journal salvato e analizzato correttamente');
-                      } catch (e) {
-                        Alert.alert('Offline', 'Journal salvato in locale, verrà sincronizzato');
+                          ]
+                        );
+                        return;
                       }
+                      
+                      // Salva normalmente per giorni odierni
+                      await saveJournalEntry(dayKey);
                     }}
                   >
                     <Text style={styles.journalSaveText}>{t('journal.save')}</Text>
@@ -2204,7 +2515,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     </View>
                     {typeof aiScore === 'number' && (
                       <View style={[styles.aiInsightScore, { backgroundColor: DailyJournalService.colorForScore(aiScore) }]}>
-                        <Text style={styles.aiInsightScoreText}>{aiScore}/5</Text>
+                        <Text style={styles.aiInsightScoreText}>{aiScore}/3</Text>
                       </View>
                     )}
                   </View>
@@ -2329,6 +2640,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         onStartExercise={handleStartExercise}
       />
 
+      <TimePickerModal
+        visible={showTimePicker}
+        onClose={() => {
+          setShowTimePicker(false);
+          setPendingSuggestion(null);
+        }}
+        onConfirm={handleTimeSelected}
+        title={pendingSuggestion ? t('timePicker.selectTimeFor', { title: pendingSuggestion.title }) || `Seleziona orario per ${pendingSuggestion.title}` : undefined}
+      />
+
       {/* Chat/Journal Menu Modal */}
       <Modal visible={showChatMenu} transparent animationType="fade" onRequestClose={() => setShowChatMenu(false)}>
         <TouchableOpacity 
@@ -2406,9 +2727,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       handleResetAIContext();
                     }}
                   >
-                    <FontAwesome name="refresh" size={18} color={colors.textSecondary} />
+                    <FontAwesome name="ban" size={18} color={colors.textSecondary} />
                     <Text style={[styles.menuOptionText, { color: colors.text }]}>
-                      Reset contesto AI
+                      {t('chat.resetContext.menuTitle') || 'Reset Contesto AI'}
                     </Text>
                   </TouchableOpacity>
                 </>
@@ -2838,7 +3159,23 @@ const styles = StyleSheet.create({
   },
   quickRepliesContainer: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 12,
+  },
+  quickRepliesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  quickRepliesHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  quickRepliesToggleText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   sectionTitle: {
     fontSize: 16,
@@ -2850,6 +3187,63 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginTop: 8,
+    paddingBottom: 8,
+  },
+  chatHistoryContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    marginBottom: 8,
+  },
+  chatHistoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  chatHistoryHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  chatHistoryTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  chatHistoryCount: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  chatHistoryList: {
+    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 8,
+  },
+  chatHistoryScrollContent: {
+    paddingHorizontal: 8,
+    gap: 8,
+  },
+  chatHistoryItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    minWidth: 120,
+    maxWidth: 180,
+  },
+  chatHistoryItemDate: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  chatHistoryItemName: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   quickReplyCard: {
     flexDirection: 'row',

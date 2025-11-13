@@ -176,7 +176,7 @@ export const EmotionDetectionScreen: React.FC = () => {
       console.error('❌ Analysis service initialization failed:', error);
       if (isMountedRef.current) {
         setAnalysisReady(false);
-        setAnalysisError('Unable to initialize analysis service. Check OpenAI settings.');
+        setAnalysisError(t('analysis.emotion.errors.initializationFailed'));
       }
       return false;
     }
@@ -1132,7 +1132,7 @@ export const EmotionDetectionScreen: React.FC = () => {
         isScreenFocused={true}
         controller={cameraController}
         facing="front"
-        instructionText="Align your face within the camera frame to begin emotion detection"
+        instructionText={t('analysis.emotion.camera.instructionText')}
         switching={false}
       />
     );
@@ -1396,7 +1396,7 @@ export const EmotionDetectionScreen: React.FC = () => {
           >
             <MaterialCommunityIcons name="brain" size={20} color="#ffffff" />
             <Text style={styles.detailedAnalysisButtonText}>
-              Ricevi ulteriori dettagli della tua analisi
+              {t('analysis.emotion.detailedAnalysis.buttonText')}
             </Text>
             <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
           </LinearGradient>
@@ -1415,51 +1415,53 @@ export const EmotionDetectionScreen: React.FC = () => {
               const store = useAnalysisStore.getState();
               const emotionHistory = store.getSafeEmotionHistory();
               
+              // Calculate average valence (normalize from -1..1 to 0..100)
+              const avgValence = emotionHistory.length > 0
+                ? emotionHistory.reduce((sum, session) => sum + (session.avg_valence || 0), 0) / emotionHistory.length
+                : 0;
+              const normalizedValence = Math.round(((avgValence + 1) / 2) * 100);
+              
+              // Calculate average arousal (normalize from 0..1 to 0..100)
+              const avgArousal = emotionHistory.length > 0
+                ? emotionHistory.reduce((sum, session) => sum + (session.avg_arousal || 0), 0) / emotionHistory.length
+                : 0.5;
+              const normalizedArousal = Math.round(avgArousal * 100);
+              
+              // Format dates for historical data (use actual timestamps)
+              const formatDate = (timestamp: Date) => {
+                const date = new Date(timestamp);
+                return `${date.getDate()}/${date.getMonth() + 1}`;
+              };
+              
               return (
                 <>
                   <GaugeChart
-                    value={
-                      emotionHistory.length > 0
-                        ? Math.round(
-                            (emotionHistory.reduce((sum, session) => sum + (session.avg_valence || 0), 0) /
-                              emotionHistory.length +
-                              1) * 50,
-                          )
-                        : 65
-                    }
+                    value={normalizedValence || 50}
                     maxValue={100}
                     label={t('analysis.emotion.metrics.valence')}
                     color="#10b981"
                     subtitle={t('analysis.emotion.metrics.positivity')}
                     trend={2}
-                    description="Valence misura quanto positive o negative sono le tue emozioni. Valori alti indicano felicità e soddisfazione, mentre valori bassi indicano tristezza o preoccupazione. Questo metrico ti aiuta a capire il tuo stato emotivo generale."
-                    historicalData={emotionHistory.map((session, index) => ({
-                      date: `${index + 1}`,
-                      value: Math.round(((session.avg_valence || 0) + 1) * 50),
+                    description={t('analysis.emotion.metrics.valenceDescription')}
+                    historicalData={emotionHistory.map((session) => ({
+                      date: formatDate(session.timestamp),
+                      value: Math.round(((session.avg_valence || 0) + 1) / 2 * 100),
                     }))}
                     metric="valence"
                     icon="emoticon-happy"
                   />
 
                   <GaugeChart
-                    value={
-                      emotionHistory.length > 0
-                        ? Math.round(
-                            (emotionHistory.reduce((sum, session) => sum + (session.avg_arousal || 0), 0) /
-                              emotionHistory.length +
-                              1) * 50,
-                          )
-                        : 45
-                    }
+                    value={normalizedArousal || 50}
                     maxValue={100}
                     label={t('analysis.emotion.metrics.arousal')}
                     color="#ef4444"
                     subtitle={t('analysis.emotion.metrics.intensity')}
                     trend={-1}
-                    description="Arousal misura l'intensità delle tue emozioni, indipendentemente dal fatto che siano positive o negative. Valori alti indicano eccitazione o stress, mentre valori bassi indicano calma o rilassamento. Ti aiuta a capire il tuo livello di attivazione emotiva."
-                    historicalData={emotionHistory.map((session, index) => ({
-                      date: `${index + 1}`,
-                      value: Math.round(((session.avg_arousal || 0) + 1) * 50),
+                    description={t('analysis.emotion.metrics.arousalDescription')}
+                    historicalData={emotionHistory.map((session) => ({
+                      date: formatDate(session.timestamp),
+                      value: Math.round((session.avg_arousal || 0) * 100),
                     }))}
                     metric="arousal"
                     icon="trending-up"
@@ -1472,9 +1474,9 @@ export const EmotionDetectionScreen: React.FC = () => {
                     color="#6366f1"
                     subtitle={t('analysis.emotion.metrics.thisMonth')}
                     trend={1}
-                    description="Il numero di sessioni di analisi emotiva che hai completato questo mese..."
+                    description={t('analysis.emotion.metrics.sessionsDescription')}
                     historicalData={emotionHistory.map((session, index) => ({
-                      date: `${index + 1}`,
+                      date: formatDate(session.timestamp),
                       value: index + 1,
                     }))}
                   />
@@ -1486,30 +1488,30 @@ export const EmotionDetectionScreen: React.FC = () => {
               return (
                 <>
                   <GaugeChart 
-                    value={65} 
+                    value={50} 
                     maxValue={100} 
                     label={t('analysis.emotion.metrics.valence')} 
                     color="#10b981" 
                     subtitle={t('analysis.emotion.metrics.positivity')} 
-                    trend={2} 
-                    description="Valence measuring" 
+                    trend={0} 
+                    description={t('analysis.emotion.metrics.valenceDescription')} 
                     historicalData={[]} 
                     metric="valence"
                     icon="emoticon-happy"
                   />
                   <GaugeChart 
-                    value={45} 
+                    value={50} 
                     maxValue={100} 
                     label={t('analysis.emotion.metrics.arousal')} 
                     color="#ef4444" 
                     subtitle={t('analysis.emotion.metrics.intensity')} 
-                    trend={-1} 
-                    description="Arousal measuring" 
+                    trend={0} 
+                    description={t('analysis.emotion.metrics.arousalDescription')} 
                     historicalData={[]} 
                     metric="arousal"
                     icon="trending-up"
                   />
-                  <GaugeChart value={0} maxValue={30} label={t('analysis.emotion.metrics.sessions')} color="#6366f1" subtitle={t('analysis.emotion.metrics.thisMonth')} trend={1} description="Analysis sessions" historicalData={[]} />
+                  <GaugeChart value={0} maxValue={30} label={t('analysis.emotion.metrics.sessions')} color="#6366f1" subtitle={t('analysis.emotion.metrics.thisMonth')} trend={0} description={t('analysis.emotion.metrics.sessionsDescription')} historicalData={[]} />
                 </>
               );
             }

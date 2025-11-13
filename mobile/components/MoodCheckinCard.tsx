@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, TextInput } from 'react-native';
 import CheckinCard from './CheckinCard';
 import * as Haptics from 'expo-haptics';
@@ -29,6 +29,11 @@ export default function MoodCheckinCard({ value, note: initialNote='', hasExisti
   const current = useMemo(()=> MOODS.find(m => m.v === value) ?? MOODS[2], [value, MOODS]);
   const [note, setNote] = useState(initialNote);
   const [saving, setSaving] = useState(false);
+
+  // 🔥 FIX: Sincronizza lo stato quando cambia la prop initialNote (es. quando viene caricato dal database)
+  useEffect(() => {
+    setNote(initialNote);
+  }, [initialNote]);
 
   // Cambia solo il valore, senza salvare automaticamente
   const handleMoodChange = (newValue: 1|2|3|4|5) => {

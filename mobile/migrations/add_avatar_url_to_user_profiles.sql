@@ -8,3 +8,4 @@ ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 -- Add comment for documentation
 COMMENT ON COLUMN user_profiles.avatar_url IS 'URL of the AI-generated avatar image stored in Supabase Storage';
 
+

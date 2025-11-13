@@ -44,21 +44,26 @@ export class DailyJournalService {
 
   static colorForScore(score?: number) {
     if (!score) return '#e2e8f0';
-    if (score <= 1) return '#ef4444';
-    if (score === 2) return '#f59e0b';
-    if (score === 3) return '#facc15';
-    if (score === 4) return '#10b981';
-    return '#059669';
+    // Sistema semplificato: 1=rosso, 2=giallo, 3=verde
+    if (score === 1) return '#ef4444'; // Rosso
+    if (score === 2) return '#facc15'; // Giallo
+    if (score === 3) return '#10b981'; // Verde
+    // Fallback per valori legacy (4-5) - converti a verde
+    if (score >= 4) return '#10b981'; // 4-5 -> verde
+    // Fallback per valori < 1 - converti a rosso
+    return '#ef4444'; // < 1 -> rosso
   }
 
   static buildAIJudgmentPrompt(content: string, moodNote?: string, sleepNote?: string) {
-    return `Sei un coach del benessere. Analizza questa entry giornaliera e restituisci JSON con i campi: ai_score (1-5), ai_label (string), ai_summary (max 3 frasi), ai_analysis (testo completo).\nEntry:\n${content}\nNote mood:${moodNote||''}\nNote sleep:${sleepNote||''}`;
+    return `Sei un coach del benessere. Analizza questa entry giornaliera e restituisci JSON con i campi: ai_score (1-3, dove 1=rosso/basso, 2=giallo/medio, 3=verde/buono), ai_label (string), ai_summary (max 3 frasi), ai_analysis (testo completo).\nEntry:\n${content}\nNote mood:${moodNote||''}\nNote sleep:${sleepNote||''}`;
   }
 
   static async generateAIJudgment(userId: string, content: string, moodNote?: string, sleepNote?: string): Promise<{ ai_score: number; ai_label: string; ai_summary: string; ai_analysis: string } | null> {
     try {
       const { getBackendURL } = await import('../constants/env');
+      const { getUserLanguage } = await import('./language.service');
       const backendURL = await getBackendURL();
+      const userLanguage = await getUserLanguage(); // 🔥 FIX: Ottieni la lingua dell'utente
       
       const response = await fetch(`${backendURL}/api/chat/respond`, {
         method: 'POST',
@@ -69,6 +74,9 @@ export class DailyJournalService {
           message: this.buildAIJudgmentPrompt(content, moodNote, sleepNote),
           userId,
           context: 'journal_analysis',
+          userContext: {
+            language: userLanguage // 🔥 FIX: Includi la lingua per il backend
+          },
         }),
       });
 
@@ -85,8 +93,16 @@ export class DailyJournalService {
         const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
+          // Normalizza lo score a 1-3
+          let normalizedScore = parsed.ai_score || 2;
+          if (normalizedScore > 3) {
+            // Se arriva un valore legacy (4-5), convertilo a 3
+            normalizedScore = 3;
+          } else if (normalizedScore < 1) {
+            normalizedScore = 1;
+          }
           return {
-            ai_score: Math.max(1, Math.min(5, parsed.ai_score || 3)),
+            ai_score: Math.max(1, Math.min(3, Math.round(normalizedScore))),
             ai_label: parsed.ai_label || 'Neutrale',
             ai_summary: parsed.ai_summary || 'Analisi non disponibile',
             ai_analysis: parsed.ai_analysis || aiResponse,
@@ -96,9 +112,9 @@ export class DailyJournalService {
         console.warn('Failed to parse AI JSON response:', parseError);
       }
 
-      // Fallback: create a basic judgment from the response
+      // Fallback: create a basic judgment from the response (default: 2 = giallo/medio)
       return {
-        ai_score: 3,
+        ai_score: 2,
         ai_label: 'Analizzato',
         ai_summary: aiResponse.slice(0, 200) + (aiResponse.length > 200 ? '...' : ''),
         ai_analysis: aiResponse,

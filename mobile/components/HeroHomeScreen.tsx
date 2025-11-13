@@ -51,6 +51,10 @@ export const HeroHomeScreen: React.FC = () => {
     setMessage('');
 
     try {
+      // 🔥 FIX: Ottieni la lingua dell'utente
+      const { getUserLanguage } = await import('../services/language.service');
+      const userLanguage = await getUserLanguage();
+      
       const response = await fetch(`${BACKEND_URL}/api/chat/respond`, {
         method: 'POST',
         headers: {
@@ -59,6 +63,9 @@ export const HeroHomeScreen: React.FC = () => {
         body: JSON.stringify({
           message: message,
           sessionId: 'mobile-app',
+          userContext: {
+            language: userLanguage // 🔥 FIX: Includi la lingua per il backend
+          },
         }),
       });
 

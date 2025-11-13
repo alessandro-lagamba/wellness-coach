@@ -38,6 +38,23 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
   const { copilotData, loading, error } = useDailyCopilot();
   const { colors: themeColors } = useTheme();
 
+  // 🔥 DEBUG: Log per capire perché non mostra i dati
+  useEffect(() => {
+    if (loading) {
+      console.log('🔄 DailyCopilot: Loading...');
+    } else if (error) {
+      console.log('❌ DailyCopilot: Error:', error);
+    } else if (copilotData) {
+      console.log('✅ DailyCopilot: Data loaded:', {
+        overallScore: copilotData.overallScore,
+        recommendationsCount: copilotData.recommendations?.length || 0,
+        summary: copilotData.summary
+      });
+    } else {
+      console.log('⚠️ DailyCopilot: No data, no error, not loading');
+    }
+  }, [copilotData, loading, error]);
+
   // Animation values
   const progressValue = useSharedValue(0);
   const fadeInValue = useSharedValue(0);
@@ -141,6 +158,19 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
     );
   }
 
+  // 🔥 FIX: Assicurati che recommendations sia sempre un array
+  const recommendations = Array.isArray(copilotData.recommendations) 
+    ? copilotData.recommendations 
+    : [];
+
+  // 🔥 FIX: Assicurati che summary abbia tutti i campi necessari
+  const summary = copilotData.summary || {
+    focus: 'Benessere generale',
+    energy: 'medium' as const,
+    recovery: 'good' as const,
+    mood: 'neutral' as const,
+  };
+
   const scoreColors = getScoreColor(copilotData.overallScore);
   const scoreLabel = getScoreLabel(copilotData.overallScore);
 
@@ -241,30 +271,14 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
         end={{ x: 1, y: 1 }}
         style={[styles.card, { borderColor: themeColors.border }]}
       >
-        {/* Header */}
+        {/* Header - Compatto */}
         <View style={styles.header}>
-          <View style={styles.titleRow}>
-            <Text style={styles.emoji}>🧠</Text>
-            <View style={styles.titleContainer}>
-              <Text style={[styles.title, { color: themeColors.text }]}>AI Daily Copilot</Text>
-              <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>La tua guida personalizzata per oggi</Text>
-            </View>
-          </View>
+          {/* Left: Emoji */}
+          <Text style={styles.emoji}>🧠</Text>
           
-          {/* Header Buttons - Solo history, refresh rimosso */}
-          {onViewHistory && (
-            <TouchableOpacity 
-              style={styles.historyButton}
-              onPress={onViewHistory}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons name="history" size={20} color={themeColors.primary} />
-            </TouchableOpacity>
-          )}
-          
-          {/* Score Circle */}
+          {/* Center: Score Circle - Più compatto */}
           <Animated.View style={[styles.scoreContainer, progressStyle]}>
-            <Svg width={80} height={80}>
+            <Svg width={70} height={70}>
               <Defs>
                 <SvgLinearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                   <Stop offset="0%" stopColor={scoreColors[0]} />
@@ -272,24 +286,24 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                 </SvgLinearGradient>
               </Defs>
               <Circle
-                cx="40"
-                cy="40"
-                r="35"
+                cx="35"
+                cy="35"
+                r="30"
                 stroke={themeColors.borderLight}
-                strokeWidth="6"
+                strokeWidth="5"
                 fill="none"
               />
               <Circle
-                cx="40"
-                cy="40"
-                r="35"
+                cx="35"
+                cy="35"
+                r="30"
                 stroke="url(#scoreGradient)"
-                strokeWidth="6"
+                strokeWidth="5"
                 fill="none"
-                strokeDasharray={`${2 * Math.PI * 35}`}
-                strokeDashoffset={`${2 * Math.PI * 35 * (1 - copilotData.overallScore / 100)}`}
+                strokeDasharray={`${2 * Math.PI * 30}`}
+                strokeDashoffset={`${2 * Math.PI * 30 * (1 - copilotData.overallScore / 100)}`}
                 strokeLinecap="round"
-                transform="rotate(-90 40 40)"
+                transform="rotate(-90 35 35)"
               />
             </Svg>
             <View style={styles.scoreTextContainer}>
@@ -299,36 +313,47 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
               <Text style={[styles.scoreLabel, { color: themeColors.textSecondary }]}>/100</Text>
             </View>
           </Animated.View>
+          
+          {/* Right: History Button */}
+          {onViewHistory && (
+            <TouchableOpacity 
+              style={styles.historyButton}
+              onPress={onViewHistory}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="history" size={20} color={themeColors.primary} />
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Summary */}
+        {/* Summary - Compatto */}
         <View style={styles.summaryContainer}>
           <Text style={[styles.focusText, { color: themeColors.text }]}>
-            Oggi focus su: <Text style={[styles.focusBold, { color: themeColors.text }]}>{copilotData.summary.focus}</Text>
+            Oggi focus su: <Text style={[styles.focusBold, { color: themeColors.text }]}>{summary.focus}</Text>
           </Text>
           
           <View style={styles.statusRow}>
             <View style={styles.statusItem}>
               <MaterialCommunityIcons 
                 name="lightning-bolt" 
-                size={16} 
-                color={copilotData.summary.energy === 'high' ? themeColors.success : copilotData.summary.energy === 'medium' ? themeColors.warning : themeColors.error} 
+                size={18} 
+                color={summary.energy === 'high' ? '#10b981' : summary.energy === 'medium' ? '#f59e0b' : '#ef4444'} 
               />
               <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>Energia</Text>
             </View>
             <View style={styles.statusItem}>
               <MaterialCommunityIcons 
                 name="bed" 
-                size={16} 
-                color={copilotData.summary.recovery === 'excellent' ? themeColors.success : copilotData.summary.recovery === 'good' ? themeColors.warning : themeColors.error} 
+                size={18} 
+                color={summary.recovery === 'excellent' ? '#10b981' : summary.recovery === 'good' ? '#f59e0b' : '#ef4444'} 
               />
               <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>Recupero</Text>
             </View>
             <View style={styles.statusItem}>
               <MaterialCommunityIcons 
                 name="emoticon-happy" 
-                size={16} 
-                color={copilotData.summary.mood === 'positive' ? themeColors.success : copilotData.summary.mood === 'neutral' ? themeColors.warning : themeColors.error} 
+                size={18} 
+                color={summary.mood === 'positive' ? '#10b981' : summary.mood === 'neutral' ? '#f59e0b' : '#ef4444'} 
               />
               <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>Umore</Text>
             </View>
@@ -340,7 +365,15 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
           <Text style={[styles.recommendationsTitle, { color: themeColors.text }]}>Raccomandazioni per oggi</Text>
           
           <View style={styles.recommendationsList}>
-            {copilotData.recommendations.map((rec, index) => (
+            {recommendations.length === 0 ? (
+              <View style={[styles.emptyRecommendations, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
+                <MaterialCommunityIcons name="information-outline" size={24} color={themeColors.textSecondary} />
+                <Text style={[styles.emptyRecommendationsText, { color: themeColors.textSecondary }]}>
+                  Nessuna raccomandazione disponibile al momento
+                </Text>
+              </View>
+            ) : (
+              recommendations.map((rec, index) => (
               <TouchableOpacity
                 key={rec.id}
                 style={[
@@ -396,7 +429,8 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                   )}
                 </View>
               </TouchableOpacity>
-            ))}
+              ))
+            )}
           </View>
         </View>
 
@@ -468,7 +502,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16, // Ridotto da 20
+    paddingVertical: 4, // Aggiunto padding verticale minimo
+  },
+  emoji: {
+    fontSize: 28, // Ridotto da 32
   },
   historyButton: {
     width: 40,
@@ -477,15 +515,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.7,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  emoji: {
-    fontSize: 32,
-    marginRight: 12,
   },
   titleContainer: {
     flex: 1,
@@ -505,30 +534,37 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
+    width: 70,
+    height: 70,
   },
   scoreTextContainer: {
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   scoreValue: {
-    fontSize: 24,
+    fontSize: 20, // Ridotto da 24
     fontWeight: '900',
-    lineHeight: 28,
+    lineHeight: 24,
   },
   scoreLabel: {
-    fontSize: 12,
+    fontSize: 11, // Ridotto da 12
     color: '#6b7280',
     fontWeight: '600',
   },
   summaryContainer: {
-    marginBottom: 24,
+    marginBottom: 20, // Ridotto da 24
   },
   focusText: {
-    fontSize: 16,
+    fontSize: 15, // Ridotto da 16
     color: '#374151',
-    marginBottom: 16,
+    marginBottom: 12, // Ridotto da 16
     textAlign: 'center',
+    lineHeight: 20,
   },
   focusBold: {
     fontWeight: '700',
@@ -538,15 +574,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: 20,
+    marginTop: 4,
   },
   statusItem: {
     alignItems: 'center',
-    gap: 4,
+    gap: 6, // Aumentato da 4
   },
   statusText: {
     fontSize: 12,
     color: '#6b7280',
     fontWeight: '600',
+    marginTop: 2,
+  },
+  emptyRecommendations: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  emptyRecommendationsText: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500',
   },
   recommendationsContainer: {
     marginBottom: 20,

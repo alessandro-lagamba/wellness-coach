@@ -42,7 +42,7 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
   analysisType,
   analysisData,
 }) => {
-  const { t } = useTranslation(); // 🆕 i18n hook
+  const { t, language } = useTranslation(); // 🆕 i18n hook
   const [analysis, setAnalysis] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +135,8 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
         behavioralInsights: aiContext.behavioralInsights,
         contextualFactors: aiContext.contextualFactors,
         firstName: currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
-        userName: currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente'
+        userName: currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
+        language: language // 🔥 FIX: Includi la lingua per il backend
       } : {
         emotionHistory: [],
         skinHistory: [],
@@ -146,7 +147,8 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
         behavioralInsights: null,
         contextualFactors: null,
         userName: 'Utente',
-        isAnonymous: true
+        isAnonymous: true,
+        language: language // 🔥 FIX: Includi la lingua anche per utenti anonimi
       };
 
       const emotionContext = analysisType === 'emotion' ? analysisData : undefined;

@@ -86,6 +86,10 @@ export const VoiceChatTest: React.FC = () => {
     try {
       console.log('Processing voice input:', userInput);
       
+      // 🔥 FIX: Ottieni la lingua dell'utente
+      const { getUserLanguage } = await import('../services/language.service');
+      const userLanguage = await getUserLanguage();
+      
       // Send to OpenAI via backend
       const response = await fetch(`${BACKEND_URL}/api/chat/respond`, {
         method: 'POST',
@@ -95,6 +99,9 @@ export const VoiceChatTest: React.FC = () => {
         body: JSON.stringify({
           message: userInput,
           sessionId: 'voice-chat-test',
+          userContext: {
+            language: userLanguage // 🔥 FIX: Includi la lingua per il backend
+          },
         }),
       });
 

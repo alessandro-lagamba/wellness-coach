@@ -25,6 +25,7 @@ import { AIContextService } from '../services/ai-context.service';
 import { AuthService } from '../services/auth.service';
 import { AnalysisIntentService } from '../services/analysis-intent.service';
 import { AnalysisActionButtons } from './AnalysisActionButtons';
+import { getUserLanguage } from '../services/language.service';
 
 const { width } = Dimensions.get('window');
 
@@ -209,6 +210,7 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({ onClose, onUserInput, onNa
       console.log('🔍 Analysis intent detected in VoiceChat:', analysisIntent);
 
       // Prepare context for AI
+      const userLanguage = await getUserLanguage(); // 🔥 FIX: Ottieni la lingua dell'utente
       const userContext = aiContext ? {
         emotionHistory: aiContext.emotionHistory,
         skinHistory: aiContext.skinHistory,
@@ -218,8 +220,11 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({ onClose, onUserInput, onNa
         // Nuovi campi per analisi avanzate
         temporalPatterns: aiContext.temporalPatterns,
         behavioralInsights: aiContext.behavioralInsights,
-        contextualFactors: aiContext.contextualFactors
-      } : undefined;
+        contextualFactors: aiContext.contextualFactors,
+        language: userLanguage // 🔥 FIX: Includi la lingua per il backend
+      } : {
+        language: userLanguage // 🔥 FIX: Includi la lingua anche se non c'è contesto
+      };
 
       // Send to OpenAI via backend for real AI response
       const response = await fetch(`${BACKEND_URL}/api/chat/respond`, {

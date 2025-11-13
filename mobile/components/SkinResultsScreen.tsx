@@ -6,6 +6,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SkinCapture } from '../stores/analysis.store';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface SkinResultsScreenProps {
   results: SkinCapture | null;
@@ -21,6 +22,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
   onRetake,
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   if (!results) {
     return null;
   }
@@ -33,10 +35,10 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
   };
 
   const getSkinHealthLevel = (score: number) => {
-    if (score >= 80) return { level: 'Excellent', color: '#10b981', description: 'Your skin is in great condition!' };
-    if (score >= 60) return { level: 'Good', color: '#3b82f6', description: 'Your skin is healthy with room for improvement.' };
-    if (score >= 40) return { level: 'Fair', color: '#f59e0b', description: 'Your skin needs some attention and care.' };
-    return { level: 'Needs Care', color: '#ef4444', description: 'Your skin requires focused skincare routine.' };
+    if (score >= 80) return { level: t('analysis.skin.results.excellent'), color: '#10b981', description: t('analysis.skin.results.excellentDesc') };
+    if (score >= 60) return { level: t('analysis.skin.results.good'), color: '#3b82f6', description: t('analysis.skin.results.goodDesc') };
+    if (score >= 40) return { level: t('analysis.skin.results.fair'), color: '#f59e0b', description: t('analysis.skin.results.fairDesc') };
+    return { level: t('analysis.skin.results.needsCare'), color: '#ef4444', description: t('analysis.skin.results.needsCareDesc') };
   };
 
   const overallScore = getOverallSkinScore();
@@ -53,8 +55,8 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
         >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Skin Analysis Complete</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Comprehensive AI-powered skin health assessment</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('analysis.skin.results.title')}</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>{t('analysis.skin.results.subtitle')}</Text>
         </View>
 
         {/* Main Skin Health Card */}
@@ -68,21 +70,21 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
             <View style={styles.skinHealthIconContainer}>
               <FontAwesome name="heart" size={48} color="#ffffff" />
             </View>
-            <Text style={styles.skinHealthTitle}>{healthLevel.level} Skin Health</Text>
+            <Text style={styles.skinHealthTitle}>{healthLevel.level} {t('analysis.skin.results.skinHealth')}</Text>
             <Text style={styles.skinHealthDescription}>{healthLevel.description}</Text>
             
             <View style={styles.skinMetricsRow}>
               <View style={styles.skinMetricItem}>
-                <Text style={styles.skinMetricLabel}>Overall Score</Text>
+                <Text style={styles.skinMetricLabel}>{t('analysis.skin.results.overallScore')}</Text>
                 <Text style={styles.skinMetricValue}>{overallScore}/100</Text>
               </View>
               <View style={styles.skinMetricItem}>
-                <Text style={styles.skinMetricLabel}>Health Level</Text>
+                <Text style={styles.skinMetricLabel}>{t('analysis.skin.results.healthLevel')}</Text>
                 <Text style={styles.skinMetricValue}>{healthLevel.level}</Text>
               </View>
               <View style={styles.skinMetricItem}>
-                <Text style={styles.skinMetricLabel}>Analysis</Text>
-                <Text style={styles.skinMetricValue}>Complete</Text>
+                <Text style={styles.skinMetricLabel}>{t('analysis.skin.results.analysis')}</Text>
+                <Text style={styles.skinMetricValue}>{t('analysis.skin.results.complete')}</Text>
               </View>
             </View>
           </LinearGradient>
@@ -95,7 +97,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
           end={{ x: 1, y: 1 }}
           style={[styles.metricsCard, { borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Detailed Skin Metrics</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.results.detailedMetrics')}</Text>
           <View style={styles.skinMetricsGrid}>
             {/* Hydration Metric */}
             <View style={styles.skinMetricCard}>
@@ -105,7 +107,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
                     <FontAwesome name="tint" size={20} color="#10b981" />
                   </View>
                   <View style={styles.metricInfo}>
-                    <Text style={[styles.metricName, { color: colors.text }]}>Hydration</Text>
+                    <Text style={[styles.metricName, { color: colors.text }]}>{t('analysis.skin.results.hydration')}</Text>
                     <Text style={[styles.metricPercentage, { color: '#10b981' }]}>
                       {fullAnalysisResult?.scores?.hydration || 60}%
                     </Text>
@@ -130,7 +132,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
                     <FontAwesome name="circle-o" size={20} color="#f59e0b" />
                   </View>
                   <View style={styles.metricInfo}>
-                    <Text style={[styles.metricName, { color: colors.text }]}>Texture</Text>
+                    <Text style={[styles.metricName, { color: colors.text }]}>{t('analysis.skin.results.texture')}</Text>
                     <Text style={[styles.metricPercentage, { color: '#f59e0b' }]}>
                       {fullAnalysisResult?.scores?.texture || 70}%
                     </Text>
@@ -155,7 +157,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
                     <FontAwesome name="heart" size={20} color="#ef4444" />
                   </View>
                   <View style={styles.metricInfo}>
-                    <Text style={[styles.metricName, { color: colors.text }]}>Redness</Text>
+                    <Text style={[styles.metricName, { color: colors.text }]}>{t('analysis.skin.results.redness')}</Text>
                     <Text style={[styles.metricPercentage, { color: '#ef4444' }]}>
                       {fullAnalysisResult?.scores?.redness || 30}%
                     </Text>
@@ -180,7 +182,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
                     <FontAwesome name="circle" size={20} color="#ef4444" />
                   </View>
                   <View style={styles.metricInfo}>
-                    <Text style={[styles.metricName, { color: colors.text }]}>Oiliness</Text>
+                    <Text style={[styles.metricName, { color: colors.text }]}>{t('analysis.skin.results.oiliness')}</Text>
                     <Text style={[styles.metricPercentage, { color: '#ef4444' }]}>
                       {fullAnalysisResult?.scores?.oiliness || 40}%
                     </Text>
@@ -201,15 +203,15 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
 
         {/* Analysis Details */}
         <View style={[styles.detailsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.detailsTitle, { color: colors.text }]}>Analysis Details</Text>
+          <Text style={[styles.detailsTitle, { color: colors.text }]}>{t('analysis.skin.results.analysisDetails')}</Text>
           
           <View style={styles.detailRow}>
             <View style={styles.detailIcon}>
               <FontAwesome name="camera" size={16} color="#6366f1" />
             </View>
             <View style={styles.detailContent}>
-              <Text style={[styles.detailLabel, { color: colors.text }]}>Image Analysis</Text>
-              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>High-resolution skin texture and color analysis</Text>
+              <Text style={[styles.detailLabel, { color: colors.text }]}>{t('analysis.skin.results.imageAnalysis')}</Text>
+              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>{t('analysis.skin.results.imageAnalysisDesc')}</Text>
             </View>
           </View>
 
@@ -218,8 +220,8 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
               <FontAwesome name="cogs" size={16} color="#8b5cf6" />
             </View>
             <View style={styles.detailContent}>
-              <Text style={[styles.detailLabel, { color: colors.text }]}>AI Processing</Text>
-              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>Advanced computer vision algorithms</Text>
+              <Text style={[styles.detailLabel, { color: colors.text }]}>{t('analysis.skin.results.aiProcessing')}</Text>
+              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>{t('analysis.skin.results.aiProcessingDesc')}</Text>
             </View>
           </View>
 
@@ -228,8 +230,8 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
               <FontAwesome name="clock-o" size={16} color="#10b981" />
             </View>
             <View style={styles.detailContent}>
-              <Text style={[styles.detailLabel, { color: colors.text }]}>Analysis Time</Text>
-              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>Real-time processing completed</Text>
+              <Text style={[styles.detailLabel, { color: colors.text }]}>{t('analysis.skin.results.analysisTime')}</Text>
+              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>{t('analysis.skin.results.analysisTimeDesc')}</Text>
             </View>
           </View>
 
@@ -238,8 +240,8 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
               <FontAwesome name="heart" size={16} color="#ef4444" />
             </View>
             <View style={styles.detailContent}>
-              <Text style={[styles.detailLabel, { color: colors.text }]}>Skin Health</Text>
-              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>Comprehensive wellness assessment</Text>
+              <Text style={[styles.detailLabel, { color: colors.text }]}>{t('analysis.skin.results.skinHealth')}</Text>
+              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>{t('analysis.skin.results.skinHealthDesc')}</Text>
             </View>
           </View>
         </View>
@@ -249,7 +251,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
           <View style={[styles.issuesCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.issuesHeader}>
               <FontAwesome name="exclamation-triangle" size={20} color="#ef4444" />
-              <Text style={[styles.issuesTitle, { color: colors.text }]}>Detected Issues</Text>
+              <Text style={[styles.issuesTitle, { color: colors.text }]}>{t('analysis.skin.results.detectedIssues')}</Text>
             </View>
             <View style={styles.issuesList}>
               {fullAnalysisResult.issues.map((issue: string, index: number) => (
@@ -269,7 +271,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
           <View style={[styles.notesCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.notesHeader}>
               <FontAwesome name="info-circle" size={20} color="#3b82f6" />
-              <Text style={[styles.notesTitle, { color: colors.text }]}>Analysis Notes</Text>
+              <Text style={[styles.notesTitle, { color: colors.text }]}>{t('analysis.skin.results.analysisNotes')}</Text>
             </View>
             <View style={styles.notesList}>
               {fullAnalysisResult.notes.map((note: string, index: number) => (
@@ -293,7 +295,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
         >
           <View style={styles.recommendationsHeader}>
             <FontAwesome name="lightbulb-o" size={20} color="#f59e0b" />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Personalized Recommendations</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.results.personalizedRecommendations')}</Text>
           </View>
           <View style={styles.recommendationsList}>
             {(fullAnalysisResult?.recommendations || []).map((item: string, index: number) => (
@@ -311,32 +313,32 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
         <View style={[styles.tipsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.tipsHeader}>
             <FontAwesome name="star" size={20} color="#8b5cf6" />
-            <Text style={[styles.tipsTitle, { color: colors.text }]}>Daily Skincare Tips</Text>
+            <Text style={[styles.tipsTitle, { color: colors.text }]}>{t('analysis.skin.results.dailySkincareTips')}</Text>
           </View>
           <View style={styles.tipsList}>
             <View style={styles.tipItem}>
               <View style={styles.tipIcon}>
                 <FontAwesome name="sun-o" size={12} color="#f59e0b" />
               </View>
-              <Text style={[styles.tipText, { color: colors.text }]}>Always use SPF 30+ sunscreen, even on cloudy days</Text>
+              <Text style={[styles.tipText, { color: colors.text }]}>{t('analysis.skin.results.tip1')}</Text>
             </View>
             <View style={styles.tipItem}>
               <View style={styles.tipIcon}>
                 <FontAwesome name="tint" size={12} color="#3b82f6" />
               </View>
-              <Text style={[styles.tipText, { color: colors.text }]}>Drink 8-10 glasses of water daily for optimal hydration</Text>
+              <Text style={[styles.tipText, { color: colors.text }]}>{t('analysis.skin.results.tip2')}</Text>
             </View>
             <View style={styles.tipItem}>
               <View style={styles.tipIcon}>
                 <FontAwesome name="moon-o" size={12} color="#6366f1" />
               </View>
-              <Text style={[styles.tipText, { color: colors.text }]}>Get 7-9 hours of quality sleep for skin regeneration</Text>
+              <Text style={[styles.tipText, { color: colors.text }]}>{t('analysis.skin.results.tip3')}</Text>
             </View>
             <View style={styles.tipItem}>
               <View style={styles.tipIcon}>
                 <FontAwesome name="leaf" size={12} color="#10b981" />
               </View>
-              <Text style={[styles.tipText, { color: colors.text }]}>Eat antioxidant-rich foods like berries and leafy greens</Text>
+              <Text style={[styles.tipText, { color: colors.text }]}>{t('analysis.skin.results.tip4')}</Text>
             </View>
           </View>
         </View>
@@ -348,7 +350,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
             onPress={onGoBack}
           >
             <FontAwesome name="arrow-left" size={16} color={colors.primary} />
-            <Text style={[styles.goBackButtonText, { color: colors.primary }]}>Go Back</Text>
+            <Text style={[styles.goBackButtonText, { color: colors.primary }]}>{t('analysis.skin.results.goBack')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -356,7 +358,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
             onPress={onRetake}
           >
             <FontAwesome name="refresh" size={16} color="#ffffff" />
-            <Text style={styles.retakeButtonText}>Retake</Text>
+            <Text style={styles.retakeButtonText}>{t('analysis.skin.results.retake')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

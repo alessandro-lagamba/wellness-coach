@@ -18,22 +18,22 @@ interface EmotionSessionCardProps {
 // -----------------------------------------------------
 // Emotion definitions
 // -----------------------------------------------------
-const EMOTION_DEFINITIONS = {
+const getEmotionDefinitions = (t: (k: string) => string) => ({
   valence: {
     label: 'analysis.emotion.metrics.valence',
-    whyItMatters: 'Misura la positività/negatività del tuo stato emotivo.',
-    howItWorks: "Stima basata su segnali facciali (bocca/occhi/sopracciglia).",
+    whyItMatters: t('analysis.emotion.sessionCard.valenceWhyItMatters'),
+    howItWorks: t('analysis.emotion.sessionCard.valenceHowItWorks'),
     color: '#10b981',
     icon: 'sentiment-very-satisfied' as const,
   },
   arousal: {
     label: 'analysis.emotion.metrics.arousal',
-    whyItMatters: "Indica quanta attivazione/energia emotiva c'è in questo momento.",
-    howItWorks: "Valutazione dell'intensità dei segnali espressivi.",
+    whyItMatters: t('analysis.emotion.sessionCard.arousalWhyItMatters'),
+    howItWorks: t('analysis.emotion.sessionCard.arousalHowItWorks'),
     color: '#f59e0b',
     icon: 'trending-up' as const,
   },
-};
+});
 
 // Colori/icône per la dominante (più espressive con MaterialCommunityIcons)
 const EMOTION_COLORS: Record<string, string> = {
@@ -115,7 +115,7 @@ const Collapsible: React.FC<{ expanded: boolean; children: React.ReactNode }> = 
 // -----------------------------------------------------
 // Tile (riusato per Valence e Arousal) — 2 colonne uguali
 // -----------------------------------------------------
-type EmotionKey = keyof typeof EMOTION_DEFINITIONS;
+type EmotionKey = 'valence' | 'arousal';
 
 const GRID_GAP = 12;
 
@@ -123,10 +123,11 @@ const MetricTile: React.FC<{
   metricKey: EmotionKey;
   value: number;
 }> = ({ metricKey, value }) => {
-  const def = EMOTION_DEFINITIONS[metricKey];
   const { t } = useTranslation();
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
+  const EMOTION_DEFINITIONS = getEmotionDefinitions(t);
+  const def = EMOTION_DEFINITIONS[metricKey];
 
   const valueColor =
     metricKey === 'valence'
@@ -184,6 +185,7 @@ const MetricTile: React.FC<{
 // -----------------------------------------------------
 const DominantBanner: React.FC<{ emotion?: string }> = ({ emotion }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const key = (emotion || 'neutral').toLowerCase();
   const color = EMOTION_COLORS[key] ?? '#6b7280';
   const iconName = (EMOTION_MC_ICONS[key] ?? 'emoticon-neutral-outline') as any;
@@ -194,9 +196,9 @@ const DominantBanner: React.FC<{ emotion?: string }> = ({ emotion }) => {
         <MaterialCommunityIcons name={iconName} size={30} color={color} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[styles.bannerEyebrow, { color: colors.textSecondary }]}>DOMINANT EMOTION</Text>
+        <Text style={[styles.bannerEyebrow, { color: colors.textSecondary }]}>{t('analysis.emotion.sessionCard.dominantEmotion')}</Text>
         <Text style={[styles.bannerEmotion, { color }]}>{prettyEmotion(emotion)}</Text>
-        <Text style={[styles.bannerSubtitle, { color: colors.textSecondary }]}>Rilevata nell'ultima sessione</Text>
+        <Text style={[styles.bannerSubtitle, { color: colors.textSecondary }]}>{t('analysis.emotion.sessionCard.detectedInLastSession')}</Text>
       </View>
     </View>
   );

@@ -15,7 +15,9 @@
     "retry": "Retry",
     "skip": "Skip",
     "continue": "Continue",
-    "back": "Back"
+    "back": "Back",
+    "update": "Update",
+    "reset": "Reset"
   },
   "settings": {
     "title": "Settings",
@@ -113,6 +115,14 @@
     },
     "noEntry": "No entry for this day",
     "loadingHistory": "Loading history...",
+    "pastDate": {
+      "title": "Past date",
+      "message": "You are modifying an entry from a past day. Do you want to continue?"
+    },
+    "pastDateSave": {
+      "title": "Save entry for a past day?",
+      "message": "You are saving an entry for a past day. Do you want to continue?"
+    },
     "dictationError": "Error during dictation. Please try again.",
     "errorLoading": "Error loading"
   },
@@ -134,14 +144,24 @@
     },
     "quickStart": {
       "title": "Quick Start",
+      "toggle": "Suggested messages",
       "feelingStressed": "I'm feeling stressed",
       "sleepBetter": "Help me sleep better",
       "energyTips": "Give me energy tips",
       "skinAdvice": "Skin care advice"
     },
+    "history": {
+      "title": "Chat History",
+      "unnamed": "Unnamed chat"
+    },
     "suggestionFeedback": {
       "title": "Great!",
       "message": "Suggestion applied. How do you feel after trying it?",
+    "activityAdded": {
+      "title": "Activity added",
+      "message": "Activity added for {{time}}. You will receive a reminder 15 minutes before.",
+      "error": "Error saving activity"
+    },
       "veryGood": "Very good",
       "good": "Good",
       "soSo": "So-so",
@@ -152,7 +172,21 @@
       "notUseful": "Not useful"
     },
     "speechError": "Sorry, I couldn't understand what you said. Please try again.",
-    "sessionName": "Chat {{date}}"
+    "sessionName": "Chat {{date}}",
+    "resetContext": {
+      "title": "Reset AI Context",
+      "message": "Do you want to reset the assistant's context? The AI will no longer know your history (emotions, skin analyses, etc.) for this session. Your data in the database will not be deleted.",
+      "menuTitle": "Reset AI Context",
+      "success": "AI context reset. The assistant will no longer know your history for this session.",
+      "error": "Error during reset"
+    },
+    "refreshContext": {
+      "title": "Update information",
+      "message": "Do you want to update the information the assistant knows about you? This will reload your most recent data (mood, sleep, analyses) from the database to provide more accurate responses.",
+      "menuTitle": "Update information",
+      "success": "Information updated successfully",
+      "error": "Error during update"
+    }
   },
   "voiceChat": {
     "title": "Voice Chat",
@@ -273,7 +307,13 @@
       "current": "Current value",
       "heartRate": "Heart rate",
       "disabledCharts": "Disabled charts",
-      "noCharts": "No charts enabled. Use the \"Edit\" button to enable charts."
+      "noCharts": "No charts enabled. Use the \"Edit\" button to enable charts.",
+      "week": "{{count}} week",
+      "month": "{{count}} month",
+      "average": "Average",
+      "max": "Maximum",
+      "min": "Minimum",
+      "steps": "steps"
     },
     "permissions": {
       "required": "Permissions Required",
@@ -289,6 +329,10 @@
     "dailyCheckIn": {
       "title": "Daily Check-In",
       "subtitle": "A glance at how your body and mind feel"
+    },
+    "dailyCopilot": {
+      "title": "What to do today",
+      "subtitle": "Your daily insight, tailored for you."
     }
   },
   "analysis": {
@@ -301,6 +345,14 @@
       "banner": {
         "title": "DOMINANT EMOTION",
         "subtitle": "Detected in the last session"
+      },
+      "sessionCard": {
+        "dominantEmotion": "DOMINANT EMOTION",
+        "detectedInLastSession": "Detected in the last session",
+        "valenceWhyItMatters": "Measures the positivity/negativity of your emotional state.",
+        "valenceHowItWorks": "Estimate based on facial signals (mouth/eyes/eyebrows).",
+        "arousalWhyItMatters": "Indicates how much activation/emotional energy there is at this moment.",
+        "arousalHowItWorks": "Assessment of the intensity of expressive signals."
       },
       "hero": {
         "title": "Real-time Emotion Detection",
@@ -318,7 +370,124 @@
         "sessions": "Sessions",
         "thisMonth": "This month",
         "valenceDesc": "Tracks the positivity of your expression and overall affect.",
-        "arousalDesc": "Measures the intensity or energy level detected at the moment."
+        "arousalDesc": "Measures the intensity or energy level detected at the moment.",
+        "valenceDescription": "Valence measures how positive or negative your emotions are. High values indicate happiness and satisfaction, while low values indicate sadness or worry. This metric helps you understand your overall emotional state.",
+        "arousalDescription": "Arousal measures the intensity of your emotions, regardless of whether they are positive or negative. High values indicate excitement or stress, while low values indicate calm or relaxation. It helps you understand your level of emotional activation.",
+        "sessionsDescription": "The number of emotion analysis sessions you have completed this month. Regularly tracking your emotions helps you better understand your emotional patterns and overall well-being."
+      },
+      "camera": {
+        "instructionText": "Align your face within the camera frame to begin emotion detection"
+      },
+      "detailedAnalysis": {
+        "buttonText": "Get more details about your analysis"
+      },
+      "results": {
+        "title": "Emotion Analysis Complete",
+        "subtitle": "Here's what we detected about your emotional state",
+        "wellness": "Wellness",
+        "wellnessTips": "Wellness Tips",
+        "analysisDetails": "Analysis Details",
+        "facialExpression": "Facial Expression",
+        "facialExpressionDesc": "Micro-expressions and muscle movements analyzed",
+        "aiProcessing": "AI Processing",
+        "aiProcessingDesc": "Advanced neural network emotion recognition",
+        "analysisTime": "Analysis Time",
+        "analysisTimeDesc": "Real-time processing completed",
+        "emotionalState": "Emotional State",
+        "emotionalStateDesc": "Current mood and emotional intensity",
+        "aiObservations": "AI Observations",
+        "aiRecommendations": "AI Recommendations",
+        "wellnessGuidance": "Wellness Guidance",
+        "goBack": "Go Back",
+        "retake": "Retake",
+        "emotions": {
+          "joy": {
+            "title": "Joyful",
+            "description": "You're radiating positive energy!",
+            "advice": "Great! Your positive mood is wonderful. Consider sharing this joy with others or engaging in activities that amplify this feeling.",
+            "intensity": "High Positivity"
+          },
+          "sadness": {
+            "title": "Melancholy",
+            "description": "It's okay to feel this way sometimes.",
+            "advice": "It's okay to feel sad sometimes. Try gentle activities like listening to music, talking to a friend, or taking a peaceful walk.",
+            "intensity": "Gentle Emotion"
+          },
+          "anger": {
+            "title": "Frustrated",
+            "description": "Anger is a natural response to challenges.",
+            "advice": "Anger is a natural emotion. Try deep breathing exercises, counting to ten, or engaging in physical activity to release tension.",
+            "intensity": "High Energy"
+          },
+          "fear": {
+            "title": "Concerned",
+            "description": "Fear can be overwhelming but manageable.",
+            "advice": "Fear can be overwhelming. Practice grounding techniques like focusing on your breathing or identifying things you can control.",
+            "intensity": "High Alert"
+          },
+          "surprise": {
+            "title": "Surprised",
+            "description": "Something unexpected has caught your attention.",
+            "advice": "Surprise can be exciting or unsettling. Take a moment to process what happened and decide how you'd like to respond.",
+            "intensity": "Moderate Alert"
+          },
+          "disgust": {
+            "title": "Displeased",
+            "description": "Something doesn't align with your values.",
+            "advice": "Disgust often signals something doesn't align with your values. Consider what's causing this feeling and how to address it.",
+            "intensity": "Moderate Discomfort"
+          },
+          "neutral": {
+            "title": "Balanced",
+            "description": "You're in a calm, centered state.",
+            "advice": "A neutral mood is perfectly fine. This calm state is ideal for reflection or engaging in routine activities mindfully.",
+            "intensity": "Calm State"
+          }
+        },
+        "tips": {
+          "joy": [
+            "Share your happiness with friends",
+            "Engage in creative activities",
+            "Practice gratitude",
+            "Help someone else feel good"
+          ],
+          "sadness": [
+            "Listen to calming music",
+            "Talk to a trusted friend",
+            "Take a peaceful walk",
+            "Practice self-compassion"
+          ],
+          "anger": [
+            "Practice deep breathing",
+            "Count to ten slowly",
+            "Engage in physical activity",
+            "Express feelings constructively"
+          ],
+          "fear": [
+            "Practice grounding techniques",
+            "Focus on your breathing",
+            "Identify what you can control",
+            "Seek support if needed"
+          ],
+          "surprise": [
+            "Take time to process",
+            "Stay open to new experiences",
+            "Embrace the unexpected",
+            "Learn from the situation"
+          ],
+          "disgust": [
+            "Reflect on your values",
+            "Address the source if possible",
+            "Practice acceptance",
+            "Focus on positive alternatives"
+          ],
+          "neutral": [
+            "Practice mindfulness",
+            "Engage in routine activities",
+            "Use this calm for reflection",
+            "Maintain this balance"
+          ]
+        }
       },
       "howItWorks": {
         "title": "How Emotion Detection Works",
@@ -402,7 +571,98 @@
         "hydration": "Hydration",
         "hydrationSubtitle": "Water Content",
         "oiliness": "Oiliness",
-        "oilinessSubtitle": "Sebaceous Activity"
+        "oilinessSubtitle": "Sebaceous Activity",
+        "textureDescription": "Shows skin surface uniformity. Helps identify dryness, roughness, or damage. High values indicate smooth, healthy skin, while low values may indicate dryness, irregularities, or damage. Good texture is essential for a youthful and healthy appearance.",
+        "rednessDescription": "Measures skin irritation and inflammation. Low values indicate calm, healthy skin, while high values may indicate inflammation, sensitivity, or conditions like rosacea. Monitoring this value helps identify irritating triggers.",
+        "hydrationDescription": "Shows surface water content. Helps prevent dryness and signs of fatigue. High values indicate well-hydrated and elastic skin, while low values indicate dryness and dehydration. Good hydration is essential for maintaining soft, elastic skin resistant to wrinkles.",
+        "oilinessDescription": "Measures sebaceous activity and oil production. Helps balance skincare routine. High values indicate oily skin, while low values indicate dry skin. Balanced oiliness is essential for healthy skin barrier."
+      },
+      "camera": {
+        "instructionText": "Keep a steady, even light on your face for best accuracy"
+      },
+      "quality": {
+        "message": "Analysis quality is good. Results are reliable."
+      },
+      "detailedAnalysis": {
+        "buttonText": "Get more details about your analysis"
+      },
+      "retake": "Retake analysis",
+      "results": {
+        "title": "Skin Analysis Complete",
+        "subtitle": "Comprehensive AI-powered skin health assessment",
+        "excellent": "Excellent",
+        "good": "Good",
+        "fair": "Fair",
+        "needsCare": "Needs Care",
+        "excellentDesc": "Your skin is in great condition!",
+        "goodDesc": "Your skin is healthy with room for improvement.",
+        "fairDesc": "Your skin needs some attention and care.",
+        "needsCareDesc": "Your skin requires focused skincare routine.",
+        "overallScore": "Overall Score",
+        "healthLevel": "Health Level",
+        "analysis": "Analysis",
+        "complete": "Complete",
+        "detailedMetrics": "Detailed Skin Metrics",
+        "hydration": "Hydration",
+        "texture": "Texture",
+        "redness": "Redness",
+        "oiliness": "Oiliness",
+        "analysisDetails": "Analysis Details",
+        "imageAnalysis": "Image Analysis",
+        "imageAnalysisDesc": "High-resolution skin texture and color analysis",
+        "aiProcessing": "AI Processing",
+        "aiProcessingDesc": "Advanced computer vision algorithms",
+        "analysisTime": "Analysis Time",
+        "analysisTimeDesc": "Real-time processing completed",
+        "skinHealth": "Skin Health",
+        "skinHealthDesc": "Comprehensive wellness assessment",
+        "detectedIssues": "Detected Issues",
+        "analysisNotes": "Analysis Notes",
+        "personalizedRecommendations": "Personalized Recommendations",
+        "dailySkincareTips": "Daily Skincare Tips",
+        "tip1": "Always use SPF 30+ sunscreen, even on cloudy days",
+        "tip2": "Drink 8-10 glasses of water daily for optimal hydration",
+        "tip3": "Get 7-9 hours of quality sleep for skin regeneration",
+        "tip4": "Eat antioxidant-rich foods like berries and leafy greens",
+        "goBack": "Go Back",
+        "retake": "Retake",
+        "skinHealth": "Skin Health"
+      },
+      "guideModal": {
+        "expertGuide": "EXPERT GUIDE",
+        "keyTips": "Key Tips",
+        "categories": "Categories",
+        "weeks": "Weeks",
+        "saveToRoutine": "Save to My Routine"
+      },
+      "guideSections": {
+        "products": {
+          "title": "🧴 Recommended Products"
+        },
+        "nutrition": {
+          "title": "🥗 Nutrition & Diet",
+          "antiInflammatory": "🥗 Anti-Inflammatory Foods",
+          "dietAdjustments": "🥗 Diet Adjustments"
+        },
+        "routine": {
+          "title": "📋 Daily Routine",
+          "soothing": "📋 Soothing Routine",
+          "oilControl": "📋 Oil-Control Routine"
+        },
+        "timing": {
+          "title": "⏰ Best Timing",
+          "whenToApply": "⏰ When to Apply",
+          "optimal": "⏰ Optimal Timing"
+        },
+        "photoQuality": {
+          "title": "📸 Photo Quality"
+        },
+        "skinPreparation": {
+          "title": "🧼 Skin Preparation"
+        },
+        "bestPractices": {
+          "title": "📋 Best Practices"
+        }
       },
       "howItWorks": {
         "title": "How Skin Analysis Works",
@@ -1097,6 +1357,10 @@
     "library": "Library",
     "chat": "Chat",
     "settings": "Settings"
+  },
+  "timePicker": {
+    "title": "Select time",
+    "selectTimeFor": "Select time for {{title}}"
   },
   "dailyCheckIn": {
     "mood": {

@@ -244,7 +244,7 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.text }]}>{t('profile.height')}</Text>
             <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <FontAwesome name="ruler-vertical" size={16} color={colors.primary} style={styles.inputIcon} />
+              <FontAwesome name="arrows-v" size={16} color={colors.primary} style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { color: colors.text }]}
                 value={profile.height}

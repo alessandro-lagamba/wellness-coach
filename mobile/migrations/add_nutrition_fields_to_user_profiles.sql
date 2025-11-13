@@ -27,3 +27,4 @@ COMMENT ON COLUMN user_profiles.nutritional_goals IS 'User nutritional goals inc
 
 
 
+

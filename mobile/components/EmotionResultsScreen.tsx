@@ -6,6 +6,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
 import { EmotionSession } from '../stores/analysis.store';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface EmotionResultsScreenProps {
   currentEmotion: string | null;
@@ -23,76 +24,77 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
   onRetake,
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const getEmotionData = (emotion: string) => {
     const emotionData: { [key: string]: any } = {
       joy: {
         color: '#10b981',
         icon: 'smile-o',
-        title: 'Joyful',
-        description: 'You\'re radiating positive energy!',
-        advice: "Great! Your positive mood is wonderful. Consider sharing this joy with others or engaging in activities that amplify this feeling.",
-        tips: ['Share your happiness with friends', 'Engage in creative activities', 'Practice gratitude', 'Help someone else feel good'],
-        intensity: 'High Positivity',
+        title: t('analysis.emotion.results.emotions.joy.title'),
+        description: t('analysis.emotion.results.emotions.joy.description'),
+        advice: t('analysis.emotion.results.emotions.joy.advice'),
+        tips: t('analysis.emotion.results.tips.joy', { returnObjects: true }) as string[],
+        intensity: t('analysis.emotion.results.emotions.joy.intensity'),
         wellnessScore: 85
       },
       sadness: {
         color: '#3b82f6',
         icon: 'frown-o',
-        title: 'Melancholy',
-        description: 'It\'s okay to feel this way sometimes.',
-        advice: "It's okay to feel sad sometimes. Try gentle activities like listening to music, talking to a friend, or taking a peaceful walk.",
-        tips: ['Listen to calming music', 'Talk to a trusted friend', 'Take a peaceful walk', 'Practice self-compassion'],
-        intensity: 'Gentle Emotion',
+        title: t('analysis.emotion.results.emotions.sadness.title'),
+        description: t('analysis.emotion.results.emotions.sadness.description'),
+        advice: t('analysis.emotion.results.emotions.sadness.advice'),
+        tips: t('analysis.emotion.results.tips.sadness', { returnObjects: true }) as string[],
+        intensity: t('analysis.emotion.results.emotions.sadness.intensity'),
         wellnessScore: 45
       },
       anger: {
         color: '#ef4444',
         icon: 'fire',
-        title: 'Frustrated',
-        description: 'Anger is a natural response to challenges.',
-        advice: "Anger is a natural emotion. Try deep breathing exercises, counting to ten, or engaging in physical activity to release tension.",
-        tips: ['Practice deep breathing', 'Count to ten slowly', 'Engage in physical activity', 'Express feelings constructively'],
-        intensity: 'High Energy',
+        title: t('analysis.emotion.results.emotions.anger.title'),
+        description: t('analysis.emotion.results.emotions.anger.description'),
+        advice: t('analysis.emotion.results.emotions.anger.advice'),
+        tips: t('analysis.emotion.results.tips.anger', { returnObjects: true }) as string[],
+        intensity: t('analysis.emotion.results.emotions.anger.intensity'),
         wellnessScore: 30
       },
       fear: {
         color: '#8b5cf6',
         icon: 'exclamation-triangle',
-        title: 'Concerned',
-        description: 'Fear can be overwhelming but manageable.',
-        advice: "Fear can be overwhelming. Practice grounding techniques like focusing on your breathing or identifying things you can control.",
-        tips: ['Practice grounding techniques', 'Focus on your breathing', 'Identify what you can control', 'Seek support if needed'],
-        intensity: 'High Alert',
+        title: t('analysis.emotion.results.emotions.fear.title'),
+        description: t('analysis.emotion.results.emotions.fear.description'),
+        advice: t('analysis.emotion.results.emotions.fear.advice'),
+        tips: t('analysis.emotion.results.tips.fear', { returnObjects: true }) as string[],
+        intensity: t('analysis.emotion.results.emotions.fear.intensity'),
         wellnessScore: 25
       },
       surprise: {
         color: '#f59e0b',
         icon: 'star',
-        title: 'Surprised',
-        description: 'Something unexpected has caught your attention.',
-        advice: "Surprise can be exciting or unsettling. Take a moment to process what happened and decide how you'd like to respond.",
-        tips: ['Take time to process', 'Stay open to new experiences', 'Embrace the unexpected', 'Learn from the situation'],
-        intensity: 'Moderate Alert',
+        title: t('analysis.emotion.results.emotions.surprise.title'),
+        description: t('analysis.emotion.results.emotions.surprise.description'),
+        advice: t('analysis.emotion.results.emotions.surprise.advice'),
+        tips: t('analysis.emotion.results.tips.surprise', { returnObjects: true }) as string[],
+        intensity: t('analysis.emotion.results.emotions.surprise.intensity'),
         wellnessScore: 60
       },
       disgust: {
         color: '#84cc16',
         icon: 'thumbs-down',
-        title: 'Displeased',
-        description: 'Something doesn\'t align with your values.',
-        advice: "Disgust often signals something doesn't align with your values. Consider what's causing this feeling and how to address it.",
-        tips: ['Reflect on your values', 'Address the source if possible', 'Practice acceptance', 'Focus on positive alternatives'],
-        intensity: 'Moderate Discomfort',
+        title: t('analysis.emotion.results.emotions.disgust.title'),
+        description: t('analysis.emotion.results.emotions.disgust.description'),
+        advice: t('analysis.emotion.results.emotions.disgust.advice'),
+        tips: t('analysis.emotion.results.tips.disgust', { returnObjects: true }) as string[],
+        intensity: t('analysis.emotion.results.emotions.disgust.intensity'),
         wellnessScore: 40
       },
       neutral: {
         color: '#6b7280',
         icon: 'meh-o',
-        title: 'Balanced',
-        description: 'You\'re in a calm, centered state.',
-        advice: "A neutral mood is perfectly fine. This calm state is ideal for reflection or engaging in routine activities mindfully.",
-        tips: ['Practice mindfulness', 'Engage in routine activities', 'Use this calm for reflection', 'Maintain this balance'],
-        intensity: 'Calm State',
+        title: t('analysis.emotion.results.emotions.neutral.title'),
+        description: t('analysis.emotion.results.emotions.neutral.description'),
+        advice: t('analysis.emotion.results.emotions.neutral.advice'),
+        tips: t('analysis.emotion.results.tips.neutral', { returnObjects: true }) as string[],
+        intensity: t('analysis.emotion.results.emotions.neutral.intensity'),
         wellnessScore: 70
       },
     };
@@ -116,8 +118,8 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Emotion Analysis Complete</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Here's what we detected about your emotional state</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('analysis.emotion.results.title')}</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>{t('analysis.emotion.results.subtitle')}</Text>
         </View>
 
         {/* Main Emotion Card */}
@@ -140,15 +142,15 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
             
             <View style={styles.metricsRow}>
               <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>Valence</Text>
+                <Text style={styles.metricLabel}>{t('analysis.emotion.metrics.valence')}</Text>
                 <Text style={styles.metricValue}>{fullAnalysisResult?.valence ? Math.round(fullAnalysisResult.valence * 100) : 0}%</Text>
               </View>
               <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>Arousal</Text>
+                <Text style={styles.metricLabel}>{t('analysis.emotion.metrics.arousal')}</Text>
                 <Text style={styles.metricValue}>{fullAnalysisResult?.arousal ? Math.round(fullAnalysisResult.arousal * 100) : 0}%</Text>
               </View>
               <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>Wellness</Text>
+                <Text style={styles.metricLabel}>{t('analysis.emotion.results.wellness')}</Text>
                 <Text style={styles.metricValue}>{emotionData.wellnessScore}/100</Text>
               </View>
             </View>
@@ -159,7 +161,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         <View style={[styles.tipsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.tipsHeader}>
             <FontAwesome name="lightbulb-o" size={20} color="#f59e0b" />
-            <Text style={[styles.tipsTitle, { color: colors.text }]}>Wellness Tips</Text>
+            <Text style={[styles.tipsTitle, { color: colors.text }]}>{t('analysis.emotion.results.wellnessTips')}</Text>
           </View>
           <View style={styles.tipsList}>
             {emotionData.tips.map((tip: string, index: number) => (
@@ -175,15 +177,15 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
 
         {/* Analysis Details */}
         <View style={[styles.detailsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.detailsTitle, { color: colors.text }]}>Analysis Details</Text>
+          <Text style={[styles.detailsTitle, { color: colors.text }]}>{t('analysis.emotion.results.analysisDetails')}</Text>
           
           <View style={styles.detailRow}>
             <View style={styles.detailIcon}>
               <FontAwesome name="eye" size={16} color="#6366f1" />
             </View>
             <View style={styles.detailContent}>
-              <Text style={[styles.detailLabel, { color: colors.text }]}>Facial Expression</Text>
-              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>Micro-expressions and muscle movements analyzed</Text>
+              <Text style={[styles.detailLabel, { color: colors.text }]}>{t('analysis.emotion.results.facialExpression')}</Text>
+              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>{t('analysis.emotion.results.facialExpressionDesc')}</Text>
             </View>
           </View>
 
@@ -192,8 +194,8 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
               <FontAwesome name="cogs" size={16} color="#8b5cf6" />
             </View>
             <View style={styles.detailContent}>
-              <Text style={[styles.detailLabel, { color: colors.text }]}>AI Processing</Text>
-              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>Advanced neural network emotion recognition</Text>
+              <Text style={[styles.detailLabel, { color: colors.text }]}>{t('analysis.emotion.results.aiProcessing')}</Text>
+              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>{t('analysis.emotion.results.aiProcessingDesc')}</Text>
             </View>
           </View>
 
@@ -202,8 +204,8 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
               <FontAwesome name="clock-o" size={16} color="#10b981" />
             </View>
             <View style={styles.detailContent}>
-              <Text style={[styles.detailLabel, { color: colors.text }]}>Analysis Time</Text>
-              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>Real-time processing completed</Text>
+              <Text style={[styles.detailLabel, { color: colors.text }]}>{t('analysis.emotion.results.analysisTime')}</Text>
+              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>{t('analysis.emotion.results.analysisTimeDesc')}</Text>
             </View>
           </View>
 
@@ -212,8 +214,8 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
               <FontAwesome name="heart" size={16} color="#ef4444" />
             </View>
             <View style={styles.detailContent}>
-              <Text style={[styles.detailLabel, { color: colors.text }]}>Emotional State</Text>
-              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>Current mood and emotional intensity</Text>
+              <Text style={[styles.detailLabel, { color: colors.text }]}>{t('analysis.emotion.results.emotionalState')}</Text>
+              <Text style={[styles.detailValue, { color: colors.textSecondary }]}>{t('analysis.emotion.results.emotionalStateDesc')}</Text>
             </View>
           </View>
         </View>
@@ -223,7 +225,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
           <View style={[styles.observationsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.observationsHeader}>
               <FontAwesome name="search" size={20} color="#3b82f6" />
-              <Text style={[styles.observationsTitle, { color: colors.text }]}>AI Observations</Text>
+              <Text style={[styles.observationsTitle, { color: colors.text }]}>{t('analysis.emotion.results.aiObservations')}</Text>
             </View>
             <View style={styles.observationsList}>
               {fullAnalysisResult.observations.map((observation: string, index: number) => (
@@ -243,7 +245,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
           <View style={[styles.recommendationsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.recommendationsHeader}>
               <FontAwesome name="lightbulb-o" size={20} color="#f59e0b" />
-              <Text style={[styles.recommendationsTitle, { color: colors.text }]}>AI Recommendations</Text>
+              <Text style={[styles.recommendationsTitle, { color: colors.text }]}>{t('analysis.emotion.results.aiRecommendations')}</Text>
             </View>
             <View style={styles.recommendationsList}>
               {fullAnalysisResult.recommendations.map((recommendation: string, index: number) => (
@@ -262,7 +264,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         <View style={[styles.adviceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.adviceHeader}>
             <FontAwesome name="heart" size={20} color="#ef4444" />
-            <Text style={[styles.adviceTitle, { color: colors.text }]}>Wellness Guidance</Text>
+            <Text style={[styles.adviceTitle, { color: colors.text }]}>{t('analysis.emotion.results.wellnessGuidance')}</Text>
           </View>
           <Text style={[styles.adviceText, { color: colors.textSecondary }]}>
             {fullAnalysisResult?.recommendations && fullAnalysisResult.recommendations.length > 0 
@@ -279,7 +281,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
             onPress={onGoBack}
           >
             <FontAwesome name="arrow-left" size={16} color={colors.primary} />
-            <Text style={[styles.goBackButtonText, { color: colors.primary }]}>Go Back</Text>
+            <Text style={[styles.goBackButtonText, { color: colors.primary }]}>{t('analysis.emotion.results.goBack')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -287,7 +289,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
             onPress={onRetake}
           >
             <FontAwesome name="refresh" size={16} color="#ffffff" />
-            <Text style={styles.retakeButtonText}>Retake</Text>
+            <Text style={styles.retakeButtonText}>{t('analysis.emotion.results.retake')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

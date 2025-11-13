@@ -15,6 +15,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import DailyCopilot from './DailyCopilot';
+import { useTranslation } from '../hooks/useTranslation';
 
 const { width, height } = Dimensions.get('window');
 
@@ -27,6 +28,7 @@ export const DailyCopilotPopup: React.FC<DailyCopilotPopupProps> = ({
   visible,
   onClose,
 }) => {
+  const { t } = useTranslation();
   // Animation styles
   const backdropStyle = useAnimatedStyle(() => {
     return {
@@ -69,8 +71,8 @@ export const DailyCopilotPopup: React.FC<DailyCopilotPopupProps> = ({
               <View style={styles.titleContainer}>
                 <Text style={styles.emoji}>🧠</Text>
                 <View style={styles.titleTextContainer}>
-                  <Text style={styles.title}>AI Daily Copilot</Text>
-                  <Text style={styles.subtitle}>Analisi completa per oggi</Text>
+                  <Text style={styles.title}>{t('home.dailyCopilot.title')}</Text>
+                  <Text style={styles.subtitle}>{t('home.dailyCopilot.subtitle')}</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
