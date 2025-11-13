@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from '../hooks/useTranslation';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface EmotionLoadingScreenProps {
   onCancel?: () => void;
@@ -17,6 +18,7 @@ interface EmotionLoadingScreenProps {
 
 export const EmotionLoadingScreen: React.FC<EmotionLoadingScreenProps> = ({ onCancel }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   // Add a small delay to ensure smooth transition
   const [isVisible, setIsVisible] = useState(false);
   
@@ -83,15 +85,13 @@ export const EmotionLoadingScreen: React.FC<EmotionLoadingScreenProps> = ({ onCa
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={['#f0f9ff', '#e0f2fe', '#bae6fd']}
+          colors={[colors.accent, colors.accentDark]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.detectingCard}
+          style={styles.gradient}
         >
-          <View style={styles.loadingContainer}>
-            <View style={styles.loadingOrb}>
-              <FontAwesome name="heart" size={28} color="#ffffff" />
-            </View>
+          <View style={styles.loadingOrb}>
+            <FontAwesome name="heart" size={40} color={colors.textInverse} />
           </View>
         </LinearGradient>
       </View>
@@ -101,66 +101,45 @@ export const EmotionLoadingScreen: React.FC<EmotionLoadingScreenProps> = ({ onCa
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#f0f9ff', '#e0f2fe', '#bae6fd']}
+        colors={[colors.accent, colors.accentDark]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.detectingCard}
+        style={styles.gradient}
       >
-        {/* Enhanced Loading Animation */}
-        <View style={styles.loadingContainer}>
-          {/* Outer rotating ring */}
-          <Animated.View style={[styles.loadingRing, ringRotation]} />
+        {/* Outer expanding circles */}
+        <Animated.View style={[styles.outerPulse, styles.outerPulse2]} />
+        <Animated.View style={[styles.outerPulse, styles.outerPulse1]} />
+        
+        {/* Main loading elements */}
+        <Animated.View style={[styles.loadingRing, ringRotation, { 
+          borderTopColor: colors.accent,
+          borderRightColor: colors.accentDark,
+          borderBottomColor: colors.accent,
+        }]} />
+        <Animated.View style={[styles.loadingOrb, pulseAnimation, { 
+          backgroundColor: colors.accent,
+          shadowColor: colors.accent,
+        }]}>
+          <FontAwesome name="heart" size={40} color={colors.textInverse} />
+        </Animated.View>
+        
+        {/* Floating particles */}
+        <Animated.View style={[styles.particle, styles.particle1, particleAnimation1, { backgroundColor: colors.accent }]} />
+        <Animated.View style={[styles.particle, styles.particle2, particleAnimation2, { backgroundColor: colors.accent }]} />
+        <Animated.View style={[styles.particle, styles.particle3, particleAnimation3, { backgroundColor: colors.accent }]} />
+        
+        {/* Text content */}
+        <View style={styles.loadingTextContainer}>
+          <Text style={[styles.loadingTitle, { color: colors.textInverse }]}>{t('analysis.emotion.loading.title')}</Text>
+          <Text style={[styles.loadingSubtitle, { color: 'rgba(255,255,255,0.85)' }]}>
+            {t('analysis.emotion.loading.subtitle')}
+          </Text>
           
-          {/* Middle pulsing ring */}
-          <Animated.View style={[styles.loadingRingMiddle, pulseAnimation]} />
-          
-          {/* Inner orb with emotion icon */}
-          <Animated.View style={[styles.loadingOrb, pulseAnimation]}>
-            <FontAwesome name="heart" size={28} color="#ffffff" />
-          </Animated.View>
-          
-          {/* Floating particles */}
-          <Animated.View style={[styles.particle1, particleAnimation1]} />
-          <Animated.View style={[styles.particle2, particleAnimation2]} />
-          <Animated.View style={[styles.particle3, particleAnimation3]} />
-        </View>
-        
-        <Text style={styles.detectingTitle}>{t('analysis.emotion.loading.title')}</Text>
-        <Text style={styles.detectingSubtitle}>{t('analysis.emotion.loading.subtitle')}</Text>
-        
-        {/* Enhanced Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressTrack}>
-            <Animated.View style={[styles.progressFill, { width: '70%', backgroundColor: '#6366f1' }]} />
+          <View style={styles.loadingDots}>
+            <Animated.View style={[styles.loadingDot, styles.dot1, { backgroundColor: colors.accent }]} />
+            <Animated.View style={[styles.loadingDot, styles.dot2, { backgroundColor: colors.accent }]} />
+            <Animated.View style={[styles.loadingDot, styles.dot3, { backgroundColor: colors.accent }]} />
           </View>
-          <Text style={styles.progressText}>{t('analysis.emotion.loading.progress', { percent: 70 })}</Text>
-        </View>
-        
-        {/* Analysis Steps with better design */}
-        <View style={styles.analysisSteps}>
-          <View style={styles.analysisStep}>
-            <View style={[styles.stepIcon, { backgroundColor: '#10b981' }]}>
-              <FontAwesome name="check" size={12} color="#ffffff" />
-            </View>
-            <Text style={styles.analysisStepText}>{t('analysis.emotion.loading.step1')}</Text>
-          </View>
-          <View style={styles.analysisStep}>
-            <Animated.View style={[styles.stepIcon, { backgroundColor: '#6366f1' }, pulseAnimation]}>
-              <FontAwesome name="spinner" size={12} color="#ffffff" />
-            </Animated.View>
-            <Text style={styles.analysisStepText}>{t('analysis.emotion.loading.step2')}</Text>
-          </View>
-          <View style={styles.analysisStep}>
-            <View style={[styles.stepIcon, { backgroundColor: '#64748b' }]}>
-              <FontAwesome name="clock-o" size={12} color="#ffffff" />
-            </View>
-            <Text style={styles.analysisStepText}>{t('analysis.emotion.loading.step3')}</Text>
-          </View>
-        </View>
-        
-        {/* Additional info */}
-        <View style={styles.loadingInfo}>
-          <Text style={styles.loadingInfoText}>{t('analysis.emotion.loading.info')}</Text>
         </View>
       </LinearGradient>
     </View>
@@ -170,154 +149,105 @@ export const EmotionLoadingScreen: React.FC<EmotionLoadingScreenProps> = ({ onCa
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  detectingCard: {
-    marginHorizontal: 20,
-    marginTop: 0,
-    borderRadius: 28,
-    paddingVertical: 48,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-    gap: 18,
-    shadowColor: '#c7d2fe',
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.28,
-    shadowRadius: 24,
-    elevation: 10,
-    maxWidth: '100%',
+  gradient: {
     flex: 1,
+    width: '100%',
     justifyContent: 'center',
-  },
-  detectingTitle: { 
-    fontSize: 20, 
-    fontWeight: '600', 
-    color: '#1e293b' 
-  },
-  detectingSubtitle: { 
-    fontSize: 14, 
-    color: '#475569', 
-    textAlign: 'center', 
-    lineHeight: 20 
-  },
-  loadingContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
   },
   loadingRing: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 8,
+    borderColor: 'transparent',
+    top: '40%',
+  },
+  loadingOrb: {
+    position: 'absolute',
     width: 100,
     height: 100,
     borderRadius: 50,
-    borderWidth: 3,
-    borderColor: '#6366f1',
-    borderTopColor: 'transparent',
-    position: 'absolute',
-  },
-  loadingRingMiddle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 2,
-    borderColor: '#8b5cf6',
-    borderTopColor: 'transparent',
-    position: 'absolute',
-  },
-  loadingOrb: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#6366f1',
-    alignItems: 'center',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 12,
     justifyContent: 'center',
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    alignItems: 'center',
   },
-  particle1: {
+  outerPulse: {
     position: 'absolute',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#6366f1',
-    top: 20,
-    left: 30,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    top: '41%',
+    borderWidth: 2,
+    borderColor: 'rgba(99, 102, 241, 0.2)',
   },
-  particle2: {
+  outerPulse1: {
+    width: 140,
+    height: 140,
+  },
+  outerPulse2: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    top: '39%',
+  },
+  particle: {
     position: 'absolute',
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#8b5cf6',
-    top: 40,
-    right: 25,
+  },
+  particle1: {
+    top: '30%',
+    left: '40%',
+  },
+  particle2: {
+    top: '55%',
+    left: '60%',
   },
   particle3: {
+    top: '45%',
+    left: '65%',
+  },
+  loadingTextContainer: {
     position: 'absolute',
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#a78bfa',
-    bottom: 30,
-    left: 40,
-  },
-  stepIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    top: '60%',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
+    paddingHorizontal: 40,
   },
-  loadingInfo: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  loadingInfoText: {
-    fontSize: 12,
-    color: '#64748b',
-    fontStyle: 'italic',
-  },
-  progressContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  progressTrack: {
-    width: '100%',
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#e2e8f0',
-    overflow: 'hidden',
-  },
-  progressFill: { 
-    height: '100%', 
-    borderRadius: 3 
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#6366f1',
+  loadingTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 12,
     textAlign: 'center',
-    marginTop: 8,
-    fontWeight: '600',
   },
-  analysisSteps: {
+  loadingSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  loadingDots: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  analysisStep: {
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
   },
-  analysisStepText: {
-    fontSize: 11,
-    color: '#64748b',
-    fontWeight: '500',
+  loadingDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
+  dot1: {},
+  dot2: {},
+  dot3: {},
 });
 
 export default EmotionLoadingScreen;
