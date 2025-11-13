@@ -174,7 +174,7 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
                     color={categoryColor} 
                   />
                   <Text style={[styles.categoryText, { color: categoryColor }]}>
-                    {recommendation.category}
+                    {t(`popups.recommendation.categories.${recommendation.category}`)}
                   </Text>
                 </View>
                 {recommendation.estimatedTime && (
@@ -184,7 +184,7 @@ const RecommendationDetailModal: React.FC<RecommendationDetailModalProps> = ({
             </View>
 
             {/* Detailed Explanation */}
-            {recommendation.detailedExplanation && (
+            {recommendation.detailedExplanation && recommendation.detailedExplanation.trim() !== '' && (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <MaterialCommunityIcons name="brain" size={20} color={themeColors.primary} />

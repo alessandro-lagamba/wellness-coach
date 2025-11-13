@@ -1013,7 +1013,14 @@
       "subtitle": "Analisi approfondita",
       "scientificExplanation": "Spiegazione Scientifica",
       "correlations": "Correlazioni con i tuoi dati",
-      "expectedBenefits": "Benefici Attesi"
+      "expectedBenefits": "Benefici Attesi",
+      "categories": {
+        "nutrition": "Nutrizione",
+        "energy": "Energia",
+        "movement": "Movimento",
+        "recovery": "Recupero",
+        "mindfulness": "Mindfulness"
+      }
     },
     "pillDetail": {
       "streak": {

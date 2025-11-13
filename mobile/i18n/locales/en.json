@@ -1124,7 +1124,14 @@
       "subtitle": "Detailed Analysis",
       "scientificExplanation": "Scientific Explanation",
       "correlations": "Correlations with Your Data",
-      "expectedBenefits": "Expected Benefits"
+      "expectedBenefits": "Expected Benefits",
+      "categories": {
+        "nutrition": "Nutrition",
+        "energy": "Energy",
+        "movement": "Movement",
+        "recovery": "Recovery",
+        "mindfulness": "Mindfulness"
+      }
     },
     "pillDetail": {
       "streak": {

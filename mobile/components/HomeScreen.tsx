@@ -2094,8 +2094,21 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
 
         {/* AI Daily Copilot Section */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCopilot.title')}</Text>
-          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCopilot.subtitle')}</Text>
+          <View style={styles.sectionHeaderContent}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCopilot.title')}</Text>
+              <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCopilot.subtitle')}</Text>
+            </View>
+            {showHistory !== undefined && (
+              <TouchableOpacity 
+                onPress={() => setShowHistory(true)}
+                style={styles.historyButtonHeader}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="history" size={20} color={themeColors.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
         
         <DailyCopilot
@@ -2103,7 +2116,6 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
           onRecommendationPress={(recommendation) => {
             setRecommendationModal({ visible: true, recommendation });
           }}
-          onViewHistory={() => setShowHistory(true)}
         />
 
         {/* Weekly Progress Section */}
@@ -2963,6 +2975,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     flexWrap: 'wrap',
+  },
+  historyButtonHeader: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    marginLeft: 12,
   },
   sectionTitle: {
     fontSize: 18,

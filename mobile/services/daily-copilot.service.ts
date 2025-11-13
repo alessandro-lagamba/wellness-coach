@@ -507,9 +507,11 @@ TASK:
 
      • reason: why this recommendation matters today  
 
-     • correlations: how different data points are linked  
+     • detailedExplanation: a scientific explanation of why this recommendation works (2-3 sentences, based on real health science)
 
-     • expectedBenefits: measurable improvements the user can expect  
+     • correlations: an array of 2-3 specific correlations with the user's data (e.g., "Good hydration is correlated with brighter skin")
+
+     • expectedBenefits: an array of 2-4 specific, measurable benefits the user can expect (e.g., "Brighter skin", "Better body temperature regulation")
 
      • estimatedTime: how long it takes (minutes or hours)
 
@@ -553,6 +555,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
       "action": "Take a 10–15 minute brisk walk early in the day.",
       "reason": "Your sleep quality is lower than usual and steps are behind your normal pattern.",
       "estimatedTime": "15 min",
+      "detailedExplanation": "Morning movement activates the sympathetic nervous system, increasing blood flow and oxygen delivery to tissues. This helps reset circadian rhythms disrupted by poor sleep and boosts daytime energy by enhancing mitochondrial function. Regular light exercise also improves HRV by training the autonomic nervous system to recover more efficiently.",
       "correlations": [
         "Lower HRV suggests reduced recovery",
         "Low steps often correlate with lower daytime energy"
@@ -716,7 +719,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
             icon: rec.icon || '💡',
             estimatedTime: rec.estimatedTime || '5 min',
             actionable: true,
-            detailedExplanation: rec.detailedExplanation || 'Spiegazione dettagliata non disponibile',
+            detailedExplanation: rec.detailedExplanation || rec.reason || '',
             correlations: rec.correlations || [],
             expectedBenefits: rec.expectedBenefits || []
           })),
@@ -841,7 +844,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
         icon: rec.icon || '💡',
         estimatedTime: rec.estimatedTime || '5 min',
         actionable: true,
-        detailedExplanation: rec.detailedExplanation || 'Spiegazione dettagliata non disponibile',
+        detailedExplanation: rec.detailedExplanation || rec.reason || '',
         correlations: rec.correlations || [],
         expectedBenefits: rec.expectedBenefits || []
       }));
