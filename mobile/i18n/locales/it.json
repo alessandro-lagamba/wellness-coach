@@ -124,10 +124,11 @@
     },
     "pastDateSave": {
       "title": "Salvare entry di un giorno passato?",
-      "message": "Stai salvando un entry per un giorno passato. Vuoi continuare?"
+      "message": "Stai modificando una entry di un giorno passato. Sei sicuro di voler continuare?"
     },
     "dictationError": "Errore durante la dettatura. Riprova.",
-    "errorLoading": "Errore nel caricamento"
+    "errorLoading": "Errore nel caricamento",
+    "errorSaving": "Errore durante il salvataggio dell'entry"
   },
   "chat": {
     "title": "Chat",

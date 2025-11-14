@@ -7,7 +7,6 @@ export type DailyJournalEntry = {
   content: string;
   voice_url?: string | null;
   ai_prompt?: string | null;
-  ai_summary?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -15,13 +14,13 @@ export type DailyJournalEntry = {
 export class DailyJournalDBService {
   static async getEntryByDate(userId: string, isoDate: string) {
     const { data, error } = await supabase
-      .from<DailyJournalEntry>('daily_journal_entries')
+      .from('daily_journal_entries')
       .select('*')
       .eq('user_id', userId)
       .eq('entry_date', isoDate)
       .maybeSingle();
     if (error) throw error;
-    return data || null;
+    return data as DailyJournalEntry | null;
   }
 
   static async upsertEntry(params: {
@@ -44,9 +43,6 @@ export class DailyJournalDBService {
         ai_prompt: aiPrompt ?? null,
         ai_score: aiScore ?? null,
         ai_analysis: aiAnalysis ?? null,
-        // Manteniamo ai_summary e ai_label come null per retrocompatibilità
-        ai_summary: null,
-        ai_label: null,
       }, { onConflict: 'user_id,entry_date' })
       .select('*')
       .maybeSingle();
@@ -56,25 +52,25 @@ export class DailyJournalDBService {
 
   static async listRecent(userId: string, limit = 10) {
     const { data, error } = await supabase
-      .from<DailyJournalEntry>('daily_journal_entries')
+      .from('daily_journal_entries')
       .select('*')
       .eq('user_id', userId)
       .order('entry_date', { ascending: false })
       .limit(limit);
     if (error) throw error;
-    return data || [];
+    return (data || []) as DailyJournalEntry[];
   }
 
   static async listByDateRange(userId: string, startIso: string, endIso: string) {
     const { data, error } = await supabase
-      .from<DailyJournalEntry>('daily_journal_entries')
+      .from('daily_journal_entries')
       .select('*')
       .eq('user_id', userId)
       .gte('entry_date', startIso)
       .lte('entry_date', endIso)
       .order('entry_date', { ascending: true });
     if (error) throw error;
-    return data || [];
+    return (data || []) as DailyJournalEntry[];
   }
 
   static async deleteEntry(userId: string, isoDate: string) {

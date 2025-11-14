@@ -353,19 +353,26 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     return isoDate < today;
   };
 
-  // 🔥 FIX: Aggiorna selectedDayKey quando cambia il giorno del sistema
+  // 🔥 FIX: Aggiorna selectedDayKey quando cambia il giorno del sistema (solo se non è un giorno passato selezionato manualmente)
   useEffect(() => {
     const updateToday = () => {
       const today = getTodayKey();
-      if (selectedDayKey !== today) {
+      // 🆕 Aggiorna solo se selectedDayKey è già oggi o è un giorno futuro
+      // Non forzare il reset se l'utente ha selezionato manualmente un giorno passato
+      const isPast = isPastDate(selectedDayKey);
+      if (!isPast && selectedDayKey !== today) {
         setSelectedDayKey(today);
       }
     };
 
-    // Aggiorna immediatamente
-    updateToday();
+    // Aggiorna immediatamente (solo se non è un giorno passato)
+    const today = getTodayKey();
+    const isPast = isPastDate(selectedDayKey);
+    if (!isPast && selectedDayKey !== today) {
+      setSelectedDayKey(today);
+    }
 
-    // Aggiorna ogni minuto per catturare il cambio di giorno
+    // Aggiorna ogni minuto per catturare il cambio di giorno (solo se non è un giorno passato)
     const interval = setInterval(updateToday, 60000); // 1 minuto
 
     return () => clearInterval(interval);
@@ -392,7 +399,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             const pillWidth = 52; // Larghezza del pill (senza gap)
             const gap = 8; // Gap tra i pill
             const totalWidth = pillWidth + gap;
-            const scrollX = Math.max(0, targetIndex * totalWidth - (width / 2) + (totalWidth / 2));
+            const offsetRight = 20; // 🆕 Offset per spostare più a destra (in pixel)
+            const scrollX = Math.max(0, targetIndex * totalWidth - (width / 2) + (totalWidth / 2) + offsetRight);
             
             monthStripScrollRef.current.scrollTo({ 
               x: scrollX,
@@ -406,22 +414,22 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     }
   }, [monthDays, selectedDayKey]); // 🔥 FIX: Esegui quando cambiano monthDays o selectedDayKey
 
-  // 🔥 FIX: Aggiorna selectedDayKey alla data odierna quando si passa alla modalità Journal
+  // 🔥 FIX: Centra il giorno selezionato quando si passa alla modalità Journal (solo se non c'è già una selezione)
   useEffect(() => {
     if (mode === 'journal') {
-      const today = getTodayKey();
-      // 🔥 FIX: Forza sempre l'aggiornamento alla data odierna quando si apre il Journal
-      setSelectedDayKey(today);
+      // 🆕 Non forzare il reset se l'utente ha già selezionato un giorno specifico
+      // Solo centra il giorno selezionato (che potrebbe essere oggi o un giorno passato)
       
       // 🔥 FIX: Forza anche il centraggio dopo un breve delay per assicurarsi che monthDays sia popolato
       const timer = setTimeout(() => {
-        if (monthStripScrollRef.current && monthDays.length > 0) {
-          const todayIndex = monthDays.indexOf(today);
-          if (todayIndex >= 0) {
+        if (monthStripScrollRef.current && monthDays.length > 0 && selectedDayKey) {
+          const selectedIndex = monthDays.indexOf(selectedDayKey);
+          if (selectedIndex >= 0) {
             const pillWidth = 52; // Larghezza del pill (senza gap)
             const gap = 8; // Gap tra i pill
             const totalWidth = pillWidth + gap;
-            const scrollX = Math.max(0, todayIndex * totalWidth - (width / 2) + (totalWidth / 2));
+            const offsetRight = 205; // 🆕 Offset per spostare più a destra (in pixel)
+            const scrollX = Math.max(0, selectedIndex * totalWidth - (width / 2) + (totalWidth / 2) - offsetRight);
             monthStripScrollRef.current.scrollTo({ 
               x: scrollX,
               animated: true 
@@ -432,7 +440,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       
       return () => clearTimeout(timer);
     }
-  }, [mode, monthDays]); // 🔥 FIX: Esegui quando si cambia modalità o quando monthDays cambia
+  }, [mode, monthDays, selectedDayKey]); // 🔥 FIX: Esegui quando si cambia modalità, monthDays o selectedDayKey
 
   // 🆕 Helper per creare ISO date senza problemi di timezone
   const toISODateSafe = (year: number, month: number, day: number): string => {
@@ -713,13 +721,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       setPendingSuggestion(null);
       setWellnessSuggestion(null);
     } catch (error) {
-      console.error('Error adding activity:', error);
+      // 🆕 Gestione errori per evitare rebuild dell'app
+      console.error('Error adding wellness activity:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
       Alert.alert(
         t('common.error') || 'Errore',
-        t('chat.activityAdded.error') || 'Errore durante il salvataggio dell\'attività',
+        t('chat.activityAdded.error') || `Errore durante il salvataggio dell'attività: ${errorMessage}`,
         [{ text: t('common.ok') || 'OK' }]
       );
       setPendingSuggestion(null);
+      setWellnessSuggestion(null);
     }
   };
 
@@ -1743,7 +1754,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       setOriginalJournalText(journalText);
       Alert.alert('Salvato', 'Journal salvato e analizzato correttamente');
     } catch (e) {
-      Alert.alert('Offline', 'Journal salvato in locale, verrà sincronizzato');
+      // 🆕 Log dell'errore per debugging
+      console.error('Error saving journal entry:', e);
+      // 🆕 Mostra messaggio più specifico se possibile
+      const errorMessage = e instanceof Error ? e.message : 'Errore sconosciuto';
+      Alert.alert(
+        'Offline', 
+        `Journal salvato in locale, verrà sincronizzato. ${errorMessage.includes('network') || errorMessage.includes('fetch') ? '(Problema di connessione)' : ''}`
+      );
     }
   }, [currentUser, journalText, journalPrompt]);
 
@@ -2072,7 +2090,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 ListFooterComponent={
                   showLoadingCloud ? (
                     <View style={[styles.messageWrapper, styles.aiWrapper]}>
-                      <View style={[styles.messageBubble, styles.aiBubble]}>
+                      <View style={[styles.messageBubble, styles.aiBubble, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                         <MessageLoadingDots isVisible={showLoadingCloud} />
                       </View>
                     </View>
@@ -2358,9 +2376,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                             {
                               text: t('common.continue') || 'Continua',
                               onPress: async () => {
-                                await saveJournalEntry(dayKey);
-                                // Aggiorna il testo originale dopo il salvataggio
-                                setOriginalJournalText(journalText);
+                                try {
+                                  await saveJournalEntry(dayKey);
+                                  // Aggiorna il testo originale dopo il salvataggio
+                                  setOriginalJournalText(journalText);
+                                } catch (error) {
+                                  console.error('Error saving journal entry:', error);
+                                  Alert.alert(
+                                    t('common.error') || 'Errore',
+                                    t('journal.errorSaving') || 'Errore durante il salvataggio dell\'entry'
+                                  );
+                                }
                               }
                             }
                           ]

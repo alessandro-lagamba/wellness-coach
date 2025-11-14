@@ -122,10 +122,11 @@
     },
     "pastDateSave": {
       "title": "Save entry for a past day?",
-      "message": "You are saving an entry for a past day. Do you want to continue?"
+      "message": "You are modifying an entry from a past day. Are you sure you want to continue?"
     },
     "dictationError": "Error during dictation. Please try again.",
-    "errorLoading": "Error loading"
+    "errorLoading": "Error loading",
+    "errorSaving": "Error saving entry"
   },
   "chat": {
     "title": "Chat",
