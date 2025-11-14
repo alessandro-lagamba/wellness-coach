@@ -36,16 +36,7 @@ export const WellnessSuggestionsScreen: React.FC = () => {
 
   // Helper function to translate category
   const getTranslatedCategory = (category: typeof WELLNESS_CATEGORIES[0]) => {
-    const fallbacks: any = {
-      'mind-body': { en: { name: 'Mind & Body', description: 'Mental wellness and physical movement' }, it: { name: 'Mente e Corpo', description: 'Benessere mentale e movimento fisico' } },
-      'nutrition': { en: { name: 'Nutrition', description: 'Healthy eating and hydration' }, it: { name: 'Nutrizione', description: 'Alimentazione sana e idratazione' } },
-      'recovery': { en: { name: 'Recovery', description: 'Sleep and relaxation routines' }, it: { name: 'Recupero', description: 'Routine di sonno e relax' } },
-      'mindfulness': { en: { name: 'Mindfulness', description: 'Meditation and mental clarity' }, it: { name: 'Mindfulness', description: 'Meditazione e chiarezza mentale' } },
-      'energy': { en: { name: 'Energy', description: 'Boosting vitality and motivation' }, it: { name: 'Energia', description: 'Aumentare vitalità e motivazione' } },
-    };
-
-    const fb = fallbacks[category.id] || { en: { name: category.name, description: category.description }, it: { name: category.name, description: category.description } };
-
+    // Mappa le chiavi delle categorie alle chiavi di traduzione
     const map: { [key: string]: { k: string } } = {
       'mind-body': { k: 'mindBody' },
       'nutrition': { k: 'nutrition' },
@@ -53,12 +44,25 @@ export const WellnessSuggestionsScreen: React.FC = () => {
       'mindfulness': { k: 'mindfulness' },
       'energy': { k: 'energy' },
     };
-    const kk = map[category.id]?.k;
+    const translationKey = map[category.id]?.k;
 
-    const name = kk ? safeT(`wellnessSuggestions.categories.${kk}.name`, fb.en.name, fb.it.name) : category.name;
-    const description = kk ? safeT(`wellnessSuggestions.categories.${kk}.description`, fb.en.description, fb.it.description) : category.description;
+    // Usa sempre le traduzioni dai file di traduzione con fallback
+    if (translationKey) {
+      const name = safeT(
+        `wellnessSuggestions.categories.${translationKey}.name`,
+        category.name, // fallback EN
+        category.name  // fallback IT (le traduzioni sono già nei file)
+      );
+      const description = safeT(
+        `wellnessSuggestions.categories.${translationKey}.description`,
+        category.description, // fallback EN
+        category.description  // fallback IT (le traduzioni sono già nei file)
+      );
+      return { name, description };
+    }
 
-    return { name, description };
+    // Fallback se la chiave non esiste
+    return { name: category.name, description: category.description };
   };
 
   // Helper function to translate suggestion

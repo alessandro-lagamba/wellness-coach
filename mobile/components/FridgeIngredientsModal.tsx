@@ -210,14 +210,14 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
       return [...base, ...confirmed];
     });
     
-    // Salva su Supabase
+    // Salva su Supabase (scadenza opzionale)
     try {
       await fridgeItemsService.addFridgeItems(
         parsedChips.map(chip => ({
           name: chip.name,
           quantity: chip.quantity,
           unit: chip.unit,
-          expiry_date: chip.expiry,
+          expiry_date: chip.expiry || undefined, // Scadenza opzionale
         }))
       );
     } catch (error) {
@@ -227,6 +227,53 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
     
     setParsedChips([]);
     setTranscript('');
+  };
+
+  // Salva ingredienti senza generare ricetta (scadenza opzionale)
+  const handleSaveIngredients = async () => {
+    // Valida: solo nome non vuoto, scadenza opzionale
+    const validIngredients = ingredients
+      .map(ing => ({ 
+        name: ing.name.trim(), 
+        expiry: (ing.expiry || '').trim() || undefined,
+        quantity: ing.quantity,
+        unit: ing.unit,
+      }))
+      .filter(ing => ing.name.length > 0);
+    
+    if (validIngredients.length === 0) {
+      Alert.alert(t('common.error'), t('analysis.food.fridge.noIngredients'));
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await fridgeItemsService.addFridgeItems(
+        validIngredients.map(ing => ({
+          name: ing.name,
+          quantity: ing.quantity,
+          unit: ing.unit,
+          expiry_date: ing.expiry || undefined, // Scadenza opzionale
+        }))
+      );
+      Alert.alert(
+        t('common.success'),
+        t('analysis.food.fridge.ingredientsSaved')
+      );
+      // Reset form
+      setIngredients([{ name: '' }]);
+      setBulkText('');
+      setTranscript('');
+      setParsedChips([]);
+    } catch (error) {
+      console.error('Error saving ingredients:', error);
+      Alert.alert(
+        t('common.error'),
+        t('analysis.food.fridge.saveError') || 'Errore durante il salvataggio degli ingredienti'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Rimuovi chip
@@ -243,6 +290,12 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
       // 🔥 FIX: Ottieni la lingua dell'utente e passa le opzioni richieste
       const userLanguage = await getUserLanguage();
       const speechLang = userLanguage === 'it' ? 'it-IT' : 'en-US';
+      
+      // Verifica che il modulo sia disponibile e che start sia una funzione
+      if (!ExpoSpeechRecognitionModule || typeof ExpoSpeechRecognitionModule.start !== 'function') {
+        throw new Error('Speech recognition module not available');
+      }
+      
       await ExpoSpeechRecognitionModule.start({
         lang: speechLang,
         interimResults: true,
@@ -710,22 +763,40 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
 
               <View style={[styles.buttonContainer, { borderTopColor: colors.border }]}>
                 {!generatedRecipe ? (
-                  <TouchableOpacity
-                    style={[styles.generateButton, { backgroundColor: colors.primary }]}
-                    onPress={handleGenerateRecipe}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <ActivityIndicator size="small" color={colors.textInverse} />
-                    ) : (
-                      <>
-                        <MaterialCommunityIcons name="chef-hat" size={18} color={colors.textInverse} />
-                        <Text style={[styles.generateButtonText, { color: colors.textInverse }]}>
-                          {t('analysis.food.fridge.generateRecipe')}
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
+                  <View style={styles.ingredientsActions}>
+                    <TouchableOpacity
+                      style={[styles.saveButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                      onPress={handleSaveIngredients}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <ActivityIndicator size="small" color={colors.primary} />
+                      ) : (
+                        <>
+                          <FontAwesome name="save" size={16} color={colors.primary} />
+                          <Text style={[styles.saveButtonText, { color: colors.primary }]}>
+                            {t('analysis.food.fridge.saveIngredients') || 'Salva Ingredienti'}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.generateButton, { backgroundColor: colors.primary }]}
+                      onPress={handleGenerateRecipe}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <ActivityIndicator size="small" color={colors.textInverse} />
+                      ) : (
+                        <>
+                          <MaterialCommunityIcons name="chef-hat" size={18} color={colors.textInverse} />
+                          <Text style={[styles.generateButtonText, { color: colors.textInverse }]}>
+                            {t('analysis.food.fridge.generateRecipe')}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 ) : (
                   <View style={styles.recipeActions}>
                     <TouchableOpacity
@@ -1104,7 +1175,26 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     backgroundColor: 'transparent',
   },
+  ingredientsActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  saveButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 10,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
   generateButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

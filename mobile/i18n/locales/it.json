@@ -914,7 +914,10 @@
         "tips": "Consigli",
         "missingIngredients": "Ingredienti Mancanti",
         "optional": "opzionale",
-        "newRecipe": "Nuova Ricetta"
+        "newRecipe": "Nuova Ricetta",
+        "saveIngredients": "Salva Ingredienti",
+        "ingredientsSaved": "Ingredienti salvati con successo!",
+        "saveError": "Errore durante il salvataggio degli ingredienti"
       },
       "goals": {
         "title": "Obiettivi Nutrizionali",

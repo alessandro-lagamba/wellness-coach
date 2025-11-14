@@ -61,8 +61,13 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
       });
 
       setInsights(response.insights.slice(0, maxInsights));
-      // Filter out the fallback trend summary text
-      const filteredTrendSummary = response.trendSummary === 'Analisi trend non disponibile' ? '' : response.trendSummary;
+      // Filter out the fallback trend summary text and empty/placeholder messages
+      const filteredTrendSummary = (
+        response.trendSummary === 'Analisi trend non disponibile' || 
+        response.trendSummary === 'Nessun trend disponibile' ||
+        !response.trendSummary || 
+        response.trendSummary.trim() === ''
+      ) ? '' : response.trendSummary;
       setTrendSummary(filteredTrendSummary);
       setOverallScore(response.overallScore || 70);
       setFocus(response.focus || 'Miglioramento generale');
@@ -140,32 +145,32 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
     switch (category) {
       case 'emotion':
         return {
-          title: 'Intelligent Insights Emotivi',
-          subtitle: 'Analisi AI personalizzata del tuo benessere emotivo',
+          title: 'Cosa fare oggi',
+          subtitle: 'Suggerimenti personalizzati per il tuo benessere emotivo',
           icon: 'brain',
           colors: ['#8b5cf6', '#a855f7'],
           bgColors: ['#faf5ff', '#f3e8ff'],
         };
       case 'skin':
         return {
-          title: 'Intelligent Insights Pelle',
-          subtitle: 'Analisi AI personalizzata della salute della tua pelle',
+          title: 'Cosa fare oggi',
+          subtitle: 'Suggerimenti personalizzati per la tua pelle',
           icon: 'face-woman-shimmer',
           colors: ['#22d3ee', '#6366f1'],
           bgColors: ['#f0fdfa', '#e0f2fe'],
         };
       case 'food':
         return {
-          title: 'Intelligent Insights Nutrizionali',
-          subtitle: 'Analisi AI personalizzata della tua alimentazione',
+          title: 'Cosa fare oggi',
+          subtitle: 'Suggerimenti personalizzati per la tua alimentazione',
           icon: 'food-apple',
           colors: ['#f59e0b', '#ef4444'],
           bgColors: ['#fef3c7', '#fee2e2'],
         };
       default:
         return {
-          title: 'Intelligent Insights',
-          subtitle: 'Analisi AI personalizzata',
+          title: 'Cosa fare oggi',
+          subtitle: 'Suggerimenti personalizzati per te',
           icon: 'lightbulb',
           colors: ['#6b7280', '#9ca3af'],
           bgColors: ['#f9fafb', '#f3f4f6'],

@@ -1806,8 +1806,8 @@ const SkinAnalysisScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Quality Badge */}
-        {qualityInfo && (
+        {/* Quality Badge - Removed "Bassa" badge as requested */}
+        {qualityInfo && qualityInfo.level !== 'low' && (
           <QualityBadge
             confidence={qualityInfo}
             qualityMessage={t('analysis.skin.quality.message')}

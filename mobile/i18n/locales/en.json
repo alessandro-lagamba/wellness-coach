@@ -912,7 +912,10 @@
         "tips": "Tips",
         "missingIngredients": "Missing Ingredients",
         "optional": "optional",
-        "newRecipe": "New Recipe"
+        "newRecipe": "New Recipe",
+        "saveIngredients": "Save Ingredients",
+        "ingredientsSaved": "Ingredients saved successfully!",
+        "saveError": "Error saving ingredients"
       },
       "goals": {
         "title": "Nutritional Goals",

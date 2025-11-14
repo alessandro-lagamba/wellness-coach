@@ -23,6 +23,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useFocusEffect } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -296,7 +297,7 @@ export const Breathing478: React.FC<Props> = ({ onComplete, enableMusic = true }
     circleScale.value = withTiming(1, { duration: 300 });
     circleOpacity.value = withTiming(0.9, { duration: 300 });
     
-    // Ferma tutta l'audio
+    // Ferma tutta l'audio quando si ferma l'esercizio
     await stopAllAudio();
   };
 
@@ -315,6 +316,7 @@ export const Breathing478: React.FC<Props> = ({ onComplete, enableMusic = true }
     setTimeout(() => onComplete?.(), 800);
   };
 
+  // Cleanup quando il componente viene smontato
   useEffect(() => {
     return () => {
       activeRef.current = false;
@@ -322,10 +324,26 @@ export const Breathing478: React.FC<Props> = ({ onComplete, enableMusic = true }
       stopHalo();
       cancelAnimation(circleScale);
       cancelAnimation(circleOpacity);
-      // Cleanup audio
+      // Cleanup audio quando il componente viene smontato
       stopAllAudio();
     };
   }, []);
+
+  // Cleanup quando la pagina perde il focus (navigazione via, cambio pagina, ecc.)
+  useFocusEffect(
+    React.useCallback(() => {
+      // Quando la pagina guadagna il focus, non facciamo nulla
+      return () => {
+        // Quando la pagina perde il focus, ferma la musica
+        activeRef.current = false;
+        clearTimers();
+        stopHalo();
+        cancelAnimation(circleScale);
+        cancelAnimation(circleOpacity);
+        stopAllAudio();
+      };
+    }, [])
+  );
 
   // Progress (solo per eventuali usi, non mostriamo più barre)
   useMemo(() => {
