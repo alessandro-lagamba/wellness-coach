@@ -1,6 +1,7 @@
 // Wellness Activity Sync Service
 import CalendarService, { CalendarEvent } from './calendar.service';
 import { NotificationService } from './notifications.service';
+import { getUserLanguage } from './language.service';
 
 export interface WellnessActivity {
   id: string;
@@ -97,12 +98,18 @@ export class WellnessSyncService {
         const now = new Date();
         const secondsFromNow = Math.max(1, Math.floor((reminderTime.getTime() - now.getTime()) / 1000));
         
+        // 🆕 Ottieni la lingua dell'utente per tradurre la notifica
+        const userLanguage = await getUserLanguage();
+        const notificationBody = userLanguage === 'it' 
+          ? `${activity.title}: ${activity.description || 'È il momento della tua attività'}` 
+          : `${activity.title}: ${activity.description || 'Time for your activity'}`;
+        
         // If reminder is in the future, schedule it
         if (secondsFromNow > 0) {
           reminderId = await NotificationService.schedule(
             notificationCategory,
             activity.title,
-            `Time for your ${activity.category} activity: ${activity.description}`,
+            notificationBody,
             {
               secondsFromNow,
               repeats: !!activity.recurrence,
@@ -124,7 +131,7 @@ export class WellnessSyncService {
           reminderId = await NotificationService.schedule(
             notificationCategory,
             activity.title,
-            `Time for your ${activity.category} activity: ${activity.description}`,
+            notificationBody,
             {
               hour,
               minute,
@@ -189,11 +196,17 @@ export class WellnessSyncService {
           const now = new Date();
           const secondsFromNow = Math.max(1, Math.floor((reminderTime.getTime() - now.getTime()) / 1000));
           
+          // 🆕 Ottieni la lingua dell'utente per tradurre la notifica
+          const userLanguage = await getUserLanguage();
+          const notificationBody = userLanguage === 'it' 
+            ? `${activity.title}: ${activity.description || 'È il momento della tua attività'}` 
+            : `${activity.title}: ${activity.description || 'Time for your activity'}`;
+          
           if (secondsFromNow > 0) {
             const newReminderId = await NotificationService.schedule(
               notificationCategory,
               activity.title,
-              `Time for your ${activity.category} activity: ${activity.description}`,
+              notificationBody,
               {
                 secondsFromNow,
                 repeats: !!activity.recurrence,
@@ -217,7 +230,7 @@ export class WellnessSyncService {
             const newReminderId = await NotificationService.schedule(
               notificationCategory,
               activity.title,
-              `Time for your ${activity.category} activity: ${activity.description}`,
+              notificationBody,
               {
                 hour,
                 minute,

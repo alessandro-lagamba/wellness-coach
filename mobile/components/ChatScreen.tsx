@@ -616,6 +616,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       const categoryMap: Record<string, 'mindfulness' | 'movement' | 'nutrition' | 'recovery'> = {
         'breathing-exercises': 'mindfulness',
         'meditation': 'mindfulness',
+        'gentle-stretching': 'movement', // 🆕 Aggiunto mapping per gentle-stretching
+        'stretching': 'movement',
         'walk': 'movement',
         'exercise': 'movement',
         'water': 'nutrition',
@@ -624,9 +626,42 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         'rest': 'recovery',
       };
       
-      const category = categoryMap[pendingSuggestion.id] || 
-        (pendingSuggestion.category as 'mindfulness' | 'movement' | 'nutrition' | 'recovery') || 
-        'mindfulness';
+      // 🆕 Normalizza l'ID per gestire varianti (es. 'gentle-stretching' -> 'stretching')
+      const normalizedId = pendingSuggestion.id?.toLowerCase() || '';
+      let category = categoryMap[normalizedId];
+      
+      // Se non trovato, prova a cercare per parola chiave
+      if (!category) {
+        if (normalizedId.includes('stretch') || normalizedId.includes('allungamento')) {
+          category = 'movement';
+        } else if (normalizedId.includes('breath') || normalizedId.includes('meditation') || normalizedId.includes('mindful')) {
+          category = 'mindfulness';
+        } else if (normalizedId.includes('water') || normalizedId.includes('hydration') || normalizedId.includes('nutrition')) {
+          category = 'nutrition';
+        } else if (normalizedId.includes('sleep') || normalizedId.includes('rest') || normalizedId.includes('recovery')) {
+          category = 'recovery';
+        }
+      }
+      
+      // Fallback: usa category dal suggestion o default
+      // 🆕 Assicurati che category sia sempre una stringa valida
+      if (!category && pendingSuggestion.category) {
+        const suggestionCategory = typeof pendingSuggestion.category === 'string' 
+          ? pendingSuggestion.category 
+          : String(pendingSuggestion.category);
+        if (['mindfulness', 'movement', 'nutrition', 'recovery'].includes(suggestionCategory)) {
+          category = suggestionCategory as 'mindfulness' | 'movement' | 'nutrition' | 'recovery';
+        }
+      }
+      
+      // Fallback finale
+      category = category || 'mindfulness';
+      
+      // 🆕 Verifica finale che category sia valida (safety check)
+      if (!['mindfulness', 'movement', 'nutrition', 'recovery'].includes(category)) {
+        console.warn(`Invalid category "${category}", defaulting to "mindfulness"`);
+        category = 'mindfulness';
+      }
 
       // Imposta l'orario selezionato dall'utente
       const today = new Date();
@@ -683,41 +718,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         );
       }
 
-      // Mostra feedback di completamento (opzionale)
-      Alert.alert(
-        t('chat.suggestionFeedback.title'),
-        t('chat.suggestionFeedback.message'),
-        [
-          { text: t('chat.suggestionFeedback.veryGood'), onPress: async () => {
-            await WellnessSuggestionService.learnFromUserInteraction(
-              currentUser.id,
-              pendingSuggestion.id,
-              'completed',
-              5,
-              t('chat.suggestionFeedback.veryEffective')
-            );
-          }},
-          { text: t('chat.suggestionFeedback.good'), onPress: async () => {
-            await WellnessSuggestionService.learnFromUserInteraction(
-              currentUser.id,
-              pendingSuggestion.id,
-              'completed',
-              4,
-              t('chat.suggestionFeedback.useful')
-            );
-          }},
-          { text: t('chat.suggestionFeedback.soSo'), onPress: async () => {
-            await WellnessSuggestionService.learnFromUserInteraction(
-              currentUser.id,
-              pendingSuggestion.id,
-              'completed',
-              3,
-              t('chat.suggestionFeedback.neutral')
-            );
-          }}
-        ]
-      );
-
+      // 🆕 Rimossa l'alert di feedback immediato - sarà mostrato solo quando l'utente completa l'attività
       setPendingSuggestion(null);
       setWellnessSuggestion(null);
     } catch (error) {

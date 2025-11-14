@@ -148,13 +148,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    paddingRight: 4, // 🆕 Aggiungi padding per evitare che la X sia troppo a destra
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
+    flex: 1, // 🆕 Permetti al titolo di occupare lo spazio disponibile
   },
   closeButton: {
     padding: 4,
+    marginLeft: 12, // 🆕 Aggiungi margine sinistro per spostare la X più a sinistra
   },
   content: {
     marginVertical: 20,
