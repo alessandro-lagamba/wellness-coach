@@ -202,6 +202,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     },
   ]);
   const [journalText, setJournalText] = useState('');
+  const [originalJournalText, setOriginalJournalText] = useState(''); // 🆕 Traccia il testo originale per verificare modifiche
   const [journalPrompt, setJournalPrompt] = useState('');
   const [journalHistory, setJournalHistory] = useState<any[]>([]);
   // 🔥 FIX: Usa una funzione per ottenere la data odierna invece di una costante
@@ -276,6 +277,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       if (!currentUser) return;
       const local = await DailyJournalService.getLocalEntry(selectedDayKey);
       setJournalText(local.content);
+      setOriginalJournalText(local.content); // 🆕 Salva il testo originale quando si carica un giorno
       setJournalPrompt(local.aiPrompt);
       // Build prompt from template or mood/sleep notes if empty
       if (!local.aiPrompt) {
@@ -1406,7 +1408,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     );
   };
 
-  const handleClearJournalEntry = () => {
+  const handleClearJournalEntry = async () => {
     Alert.alert(
       t('journal.clearEntry.title') || 'Cancella entry',
       t('journal.clearEntry.message') || `Vuoi cancellare l'entry del ${selectedDayKey}?`,
@@ -1418,17 +1420,48 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           onPress: async () => {
             try {
               if (currentUser?.id) {
+                // Cancella da Supabase
                 await DailyJournalDBService.deleteEntry(currentUser.id, selectedDayKey);
+                
+                // Reset tutti gli stati locali
                 setJournalText('');
                 setJournalPrompt('');
                 setAiScore(null);
                 setAiAnalysis(null);
+                
+                // Cancella anche da AsyncStorage
                 await DailyJournalService.saveLocalEntry(selectedDayKey, '', '');
+                
+                // Aggiorna monthJournalMap per rimuovere l'entry
                 setMonthJournalMap(prev => {
                   const updated = { ...prev };
                   delete updated[selectedDayKey];
                   return updated;
                 });
+                
+                // Ricarica la lista delle entry recenti per aggiornare la sezione "Ultime note"
+                try {
+                  const recent = await DailyJournalDBService.listRecent(currentUser.id, 10);
+                  setJournalHistory(recent);
+                } catch (e) {
+                  console.error('Error reloading journal history:', e);
+                }
+                
+                // Forza il refresh dei dati per il giorno selezionato
+                // Verifica che non ci siano più dati nel database
+                try {
+                  const existing = await DailyJournalDBService.getEntryByDate(currentUser.id, selectedDayKey);
+                  if (!existing) {
+                    // Conferma che è stata cancellata - resetta anche gli stati AI
+                    setAiScore(null);
+                    setAiAnalysis(null);
+                  }
+                } catch (e) {
+                  // Se non esiste, va bene - significa che è stata cancellata
+                  setAiScore(null);
+                  setAiAnalysis(null);
+                }
+                
                 Alert.alert(t('common.success') || 'Successo', t('journal.clearEntry.success') || 'Entry cancellata');
               }
             } catch (error) {
@@ -1706,6 +1739,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       setLastSavedAt(ts);
       setShowSavedChip(true);
       setTimeout(() => setShowSavedChip(false), 2000);
+      // Aggiorna il testo originale dopo il salvataggio
+      setOriginalJournalText(journalText);
       Alert.alert('Salvato', 'Journal salvato e analizzato correttamente');
     } catch (e) {
       Alert.alert('Offline', 'Journal salvato in locale, verrà sincronizzato');
@@ -2103,22 +2138,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       key={iso} 
                       onPress={() => {
                         if (!isFuture) {
-                          // 🆕 Mostra alert se si seleziona un giorno passato
-                          if (isPast) {
-                            Alert.alert(
-                              t('journal.pastDate.title') || 'Giorno passato',
-                              t('journal.pastDate.message') || 'Stai modificando un entry di un giorno passato. Vuoi continuare?',
-                              [
-                                { text: t('common.cancel') || 'Annulla', style: 'cancel' },
-                                {
-                                  text: t('common.continue') || 'Continua',
-                                  onPress: () => setSelectedDayKey(iso)
-                                }
-                              ]
-                            );
-                          } else {
-                            setSelectedDayKey(iso);
-                          }
+                          // Permetti la selezione di giorni passati senza alert - l'alert apparirà solo quando si prova a salvare/modificare
+                          setSelectedDayKey(iso);
                         }
                       }}
                       disabled={isFuture} // 🆕 Disabilita solo i giorni futuri
@@ -2246,26 +2267,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                                 ]} 
                                 onPress={() => { 
                                   if (!isFuture) {
-                                    // 🆕 Mostra alert se si seleziona un giorno passato
-                                    if (isPast) {
-                                      Alert.alert(
-                                        t('journal.pastDate.title') || 'Giorno passato',
-                                        t('journal.pastDate.message') || 'Stai modificando un entry di un giorno passato. Vuoi continuare?',
-                                        [
-                                          { text: t('common.cancel') || 'Annulla', style: 'cancel' },
-                                          {
-                                            text: t('common.continue') || 'Continua',
-                                            onPress: () => {
-                                              setSelectedDayKey(iso);
-                                              setShowMonthPicker(false);
-                                            }
-                                          }
-                                        ]
-                                      );
-                                    } else {
-                                      setSelectedDayKey(iso); 
-                                      setShowMonthPicker(false);
-                                    }
+                                    // Permetti la selezione di giorni passati senza alert - l'alert apparirà solo quando si prova a salvare/modificare
+                                    setSelectedDayKey(iso);
+                                    setShowMonthPicker(false);
                                   }
                                 }}
                                 disabled={isFuture} // 🆕 Disabilita solo i giorni futuri
@@ -2340,19 +2344,23 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       // 🔥 FIX: Usa selectedDayKey invece di dayKey (che non esiste più)
                       const dayKey = selectedDayKey;
                       
-                      // 🆕 Verifica se si sta salvando per un giorno passato
+                      // 🆕 Verifica se si sta salvando per un giorno passato E se il testo è stato modificato
                       const isPast = isPastDate(dayKey);
-                      if (isPast) {
-                        // Mostra alert di conferma per giorni passati
+                      const hasTextChanged = journalText.trim() !== originalJournalText.trim();
+                      
+                      // Mostra alert solo se è un giorno passato E il testo è stato modificato
+                      if (isPast && hasTextChanged) {
                         Alert.alert(
-                          t('journal.pastDateSave.title') || 'Salvare entry di un giorno passato?',
-                          t('journal.pastDateSave.message') || 'Stai salvando un entry per un giorno passato. Vuoi continuare?',
+                          t('journal.pastDateSave.title') || 'Modificare entry di un giorno passato?',
+                          t('journal.pastDateSave.message') || 'Stai modificando un entry di un giorno passato. Vuoi continuare?',
                           [
                             { text: t('common.cancel') || 'Annulla', style: 'cancel' },
                             {
-                              text: t('common.save') || 'Salva',
+                              text: t('common.continue') || 'Continua',
                               onPress: async () => {
                                 await saveJournalEntry(dayKey);
+                                // Aggiorna il testo originale dopo il salvataggio
+                                setOriginalJournalText(journalText);
                               }
                             }
                           ]
@@ -2360,8 +2368,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                         return;
                       }
                       
-                      // Salva normalmente per giorni odierni
+                      // Salva normalmente (giorno odierno o giorno passato senza modifiche)
                       await saveJournalEntry(dayKey);
+                      // Aggiorna il testo originale dopo il salvataggio
+                      setOriginalJournalText(journalText);
                     }}
                   >
                     <Text style={styles.journalSaveText}>{t('journal.save')}</Text>
@@ -2385,12 +2395,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   </View>
                   
                   <View style={styles.aiInsightContent}>
-                    <View style={styles.aiInsightLabelRow}>
-                      <Text style={styles.aiInsightEmoji}>
-                        {aiScore === 3 ? '😊' : aiScore === 2 ? '😐' : aiScore === 1 ? '😢' : '😐'}
-                      </Text>
-                    </View>
-                    
                     <Text style={[styles.aiInsightSummary, { color: colors.textSecondary }]}>{aiAnalysis}</Text>
                   </View>
                 </View>
@@ -3251,9 +3255,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     gap: 10, 
     marginBottom: 12,
-  },
-  aiInsightEmoji: {
-    fontSize: 20,
   },
   aiInsightLabel: { 
     fontSize: 14, 
