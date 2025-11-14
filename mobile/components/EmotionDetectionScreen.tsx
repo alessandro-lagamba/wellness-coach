@@ -1582,68 +1582,6 @@ export const EmotionDetectionScreen: React.FC = () => {
           }}
         />
 
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.valenceArousal.title')}</Text>
-          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.valenceArousal.subtitle')}</Text>
-        </View>
-
-        <View style={styles.metricGrid}>
-          <LinearGradient colors={[themeColors.surface, themeColors.surfaceElevated]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.metricCard, { borderColor: themeColors.border }]}>
-            <View style={[styles.metricIconWrap, { backgroundColor: `${themeColors.success}22` }]}>
-              <FontAwesome name="line-chart" size={18} color={themeColors.success} />
-            </View>
-            <Text style={[styles.metricTitle, { color: themeColors.text }]}>{t('analysis.emotion.metrics.valence')}</Text>
-            <Text style={[styles.metricBody, { color: themeColors.textSecondary }]}>{t('analysis.emotion.metrics.valenceDesc')}</Text>
-          </LinearGradient>
-
-          <LinearGradient colors={[themeColors.surface, themeColors.surfaceElevated]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.metricCard, { borderColor: themeColors.border }]}>
-            <View style={[styles.metricIconWrap, { backgroundColor: `${themeColors.info}22` }]}>
-              <FontAwesome name="area-chart" size={18} color={themeColors.info} />
-            </View>
-            <Text style={[styles.metricTitle, { color: themeColors.text }]}>{t('analysis.emotion.metrics.arousal')}</Text>
-            <Text style={[styles.metricBody, { color: themeColors.textSecondary }]}>{t('analysis.emotion.metrics.arousalDesc')}</Text>
-          </LinearGradient>
-        </View>
-
-        {/* How It Works */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.howItWorks.title')}</Text>
-          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.howItWorks.subtitle')}</Text>
-        </View>
-
-        <LinearGradient colors={[themeColors.surface, themeColors.surfaceElevated]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.howItWorksCard, { borderColor: themeColors.border }]}>
-          <View style={styles.howItWorksHeader}>
-            <View style={[styles.howItWorksIcon, { backgroundColor: `${themeColors.accent}22` }]}>
-              <FontAwesome name="cogs" size={20} color={themeColors.accent} />
-            </View>
-            <View style={styles.howItWorksContent}>
-              <Text style={[styles.howItWorksTitle, { color: themeColors.text }]}>{t('analysis.emotion.howItWorks.cardTitle')}</Text>
-              <Text style={[styles.howItWorksDescription, { color: themeColors.textSecondary }]}>{t('analysis.emotion.howItWorks.cardDesc')}</Text>
-            </View>
-          </View>
-
-          <View style={styles.howItWorksSteps}>
-            <View style={styles.howItWorksStep}>
-              <View style={[styles.stepNumber, { backgroundColor: themeColors.accent }]}>
-                <Text style={styles.stepNumberText}>1</Text>
-              </View>
-              <Text style={[styles.stepText, { color: themeColors.text }]}>{t('analysis.emotion.howItWorks.step1')}</Text>
-            </View>
-            <View style={styles.howItWorksStep}>
-              <View style={[styles.stepNumber, { backgroundColor: themeColors.accent }]}>
-                <Text style={styles.stepNumberText}>2</Text>
-              </View>
-              <Text style={[styles.stepText, { color: themeColors.text }]}>{t('analysis.emotion.howItWorks.step2')}</Text>
-            </View>
-            <View style={styles.howItWorksStep}>
-              <View style={[styles.stepNumber, { backgroundColor: themeColors.accent }]}>
-                <Text style={styles.stepNumberText}>3</Text>
-              </View>
-              <Text style={[styles.stepText, { color: themeColors.text }]}>{t('analysis.emotion.howItWorks.step3')}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-
       </ScrollView>
 
       {/* Detailed Analysis Popup */}

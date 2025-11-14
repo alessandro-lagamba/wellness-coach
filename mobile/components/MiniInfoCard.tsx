@@ -64,18 +64,7 @@ const MiniInfoCard: React.FC<Props> = ({
     return "#6b7280"
   }
 
-  const descriptorText = useMemo(() => {
-    if (showStatus) {
-      if (status === "completed") return "🎉 Completed"
-      if (status === "warning") return "⚠️ Attention needed"
-      return "⏳ Pending"
-    }
-    const lower = label.toLowerCase()
-    if (lower.includes("sleep")) return "😴 Rest quality"
-    if (lower.includes("hrv")) return "💓 Recovery status"
-    if (lower.includes("check")) return "🗒️ Wellness check"
-    return "✨ Keep going"
-  }, [label, showStatus, status])
+  // Rimossa la funzione descriptorText - non più necessaria
 
   const { primary, unit } = splitValue(value)
 
@@ -166,9 +155,6 @@ const MiniInfoCard: React.FC<Props> = ({
               {subtitle}
             </Text>
           )}
-          <Text style={[styles.miDescriptor, { color: colors.textSecondary }]} numberOfLines={1}>
-            {descriptorText}
-          </Text>
         </View>
 
         {showStatus && (
@@ -210,9 +196,6 @@ const MiniInfoCard: React.FC<Props> = ({
           <View style={styles.largeHeaderText}>
             <Text style={[styles.largeLabel, { color: colors.text }]} numberOfLines={1}>
               {label}
-            </Text>
-            <Text style={styles.largeDescriptor} numberOfLines={1}>
-              {descriptorText}
             </Text>
           </View>
         </View>
@@ -322,7 +305,6 @@ const styles = StyleSheet.create({
   miBodyWithRightPadding: { paddingRight: 96 },
   miValue: { fontSize: 20, lineHeight: 24, fontWeight: "900", color: "#0f172a" },
   miSubtitle: { marginTop: 4, fontSize: 12, color: "#475569", fontWeight: "700" },
-  miDescriptor: { marginTop: 4, fontSize: 12, color: "#1f2937", fontWeight: "700" },
 
   miStatusPill: { minWidth: 36, height: 32, borderRadius: 16, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 10, alignSelf: "flex-start" },
   miStatusPillText: { fontSize: 14, fontWeight: "900" },
@@ -354,7 +336,6 @@ const styles = StyleSheet.create({
   largeIconChip: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.2, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   largeIcon: { fontSize: 18 },
   largeLabel: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
-  largeDescriptor: { marginTop: 1, fontSize: 11.5, fontWeight: "600", color: "#64748b", letterSpacing: -0.1 },
 
   largeTrendBadge: { height: 28, paddingHorizontal: 10, borderRadius: 14, borderWidth: 1.2, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, flexShrink: 0 },
   largeTrendText: { fontSize: 11.5, fontWeight: "700" },

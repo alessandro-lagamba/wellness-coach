@@ -311,7 +311,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
           
           {/* Right: Score Circle - Più visibile */}
           <Animated.View style={[styles.scoreContainer, progressStyle]}>
-            <Svg width={95} height={95}>
+            <Svg width={120} height={120}>
               <Defs>
                 <SvgLinearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                   <Stop offset="0%" stopColor={scoreColors[0]} />
@@ -319,24 +319,24 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                 </SvgLinearGradient>
               </Defs>
               <Circle
-                cx="47.5"
-                cy="47.5"
-                r="42"
+                cx="60"
+                cy="60"
+                r="52"
                 stroke={themeColors.borderLight}
-                strokeWidth="6"
+                strokeWidth="7"
                 fill="none"
               />
               <Circle
-                cx="47.5"
-                cy="47.5"
-                r="42"
+                cx="60"
+                cy="60"
+                r="52"
                 stroke="url(#scoreGradient)"
-                strokeWidth="6"
+                strokeWidth="7"
                 fill="none"
-                strokeDasharray={`${2 * Math.PI * 42}`}
-                strokeDashoffset={`${2 * Math.PI * 42 * (1 - copilotData.overallScore / 100)}`}
+                strokeDasharray={`${2 * Math.PI * 52}`}
+                strokeDashoffset={`${2 * Math.PI * 52 * (1 - copilotData.overallScore / 100)}`}
                 strokeLinecap="round"
-                transform="rotate(-90 47.5 47.5)"
+                transform="rotate(-90 60 60)"
               />
             </Svg>
             <View style={styles.scoreTextContainer}>
@@ -515,8 +515,8 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 95,
-    height: 95,
+    width: 120,
+    height: 120,
     flexShrink: 0,
   },
   scoreTextContainer: {
@@ -529,9 +529,9 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   scoreValue: {
-    fontSize: 26,
+    fontSize: 32,
     fontWeight: '900',
-    lineHeight: 30,
+    lineHeight: 36,
   },
   scoreLabel: {
     fontSize: 12,

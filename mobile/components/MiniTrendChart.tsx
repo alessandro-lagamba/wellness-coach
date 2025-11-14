@@ -65,24 +65,33 @@ export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
     return value;
   });
 
-  // Calcola il valore massimo (usa maxValue se fornito, altrimenti il max dei dati)
-  const max = maxValue || Math.max(...normalizedData, 1);
-  const min = Math.min(...normalizedData, 0);
-  const range = max - min || 1;
+  // 🔥 FIX: Calcola il max reale dai dati (per normalizzazione corretta)
+  const dataMax = normalizedData.length > 0 ? Math.max(...normalizedData) : 0;
+  // 🔥 FIX: Usa il max reale per normalizzare i punti, così i valori sono posizionati correttamente
+  // maxValue viene usato solo per le etichette della scala (per avere valori "puliti")
+  const maxForNormalization = dataMax > 0 ? dataMax : 1; // Usa sempre il max reale per normalizzare
+  const maxForLabels = maxValue && maxValue >= dataMax ? maxValue : (dataMax > 0 ? dataMax : 1); // Usa maxValue arrotondato per le etichette
+  const min = 0; // Sempre inizia da 0 per tutti i grafici
+  const range = maxForNormalization - min || 1;
 
   // Calcola i valori per la scala verticale (3 valori: max, medio, min)
+  // 🔥 FIX: Usa maxForLabels per le etichette (valori "puliti"), ma normalizza con maxForNormalization
   const scaleValues = [
-    max,
-    min + range * 0.5,
+    maxForLabels,
+    maxForLabels * 0.5,
     min,
   ].filter(v => v >= 0);
 
   // Calcola i punti del grafico
+  // 🔥 FIX: Normalizzazione con max reale per posizionamento corretto
   const points: { x: number; y: number; value: number }[] = normalizedData.map((value, index) => {
     const x = PADDING_LEFT + (index * CHART_AREA_WIDTH) / (normalizedData.length - 1 || 1);
     // Inverti Y perché SVG ha Y=0 in alto
-    const normalizedValue = range > 0 ? ((value - min) / range) : 0.5;
-    const y = PADDING_TOP + CHART_AREA_HEIGHT * (1 - normalizedValue);
+    // Usa maxForNormalization (max reale) per normalizzare, così i valori sono posizionati correttamente
+    const normalizedValue = range > 0 ? (value / maxForNormalization) : 0;
+    // Clamp tra 0 e 1 per evitare valori fuori range
+    const clampedValue = Math.max(0, Math.min(1, normalizedValue));
+    const y = PADDING_TOP + CHART_AREA_HEIGHT * (1 - clampedValue);
     return { x, y, value };
   });
 
@@ -100,8 +109,13 @@ export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
       <Svg width={CHART_WIDTH} height={CHART_HEIGHT} style={styles.chart}>
         {/* Linee di griglia orizzontali */}
         {scaleValues.map((value, index) => {
-          const normalizedValue = range > 0 ? ((value - min) / range) : 0.5;
-          const y = PADDING_TOP + CHART_AREA_HEIGHT * (1 - normalizedValue);
+          // 🔥 FIX: Normalizza le etichette rispetto al max reale per posizionamento corretto
+          // Se value > maxForNormalization, posiziona al top (1.0)
+          const normalizedValue = value <= maxForNormalization 
+            ? (value / maxForNormalization) 
+            : 1.0;
+          const clampedValue = Math.max(0, Math.min(1, normalizedValue));
+          const y = PADDING_TOP + CHART_AREA_HEIGHT * (1 - clampedValue);
           return (
             <Line
               key={`grid-${index}`}
@@ -119,8 +133,13 @@ export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
 
         {/* Valori della scala verticale */}
         {scaleValues.map((value, index) => {
-          const normalizedValue = range > 0 ? ((value - min) / range) : 0.5;
-          const y = PADDING_TOP + CHART_AREA_HEIGHT * (1 - normalizedValue);
+          // 🔥 FIX: Normalizza le etichette rispetto al max reale per posizionamento corretto
+          // Se value > maxForNormalization, posiziona al top (1.0)
+          const normalizedValue = value <= maxForNormalization 
+            ? (value / maxForNormalization) 
+            : 1.0;
+          const clampedValue = Math.max(0, Math.min(1, normalizedValue));
+          const y = PADDING_TOP + CHART_AREA_HEIGHT * (1 - clampedValue);
           return (
             <SvgText
               key={`label-${index}`}

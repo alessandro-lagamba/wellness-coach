@@ -64,14 +64,7 @@ const MiniGaugeChart: React.FC<Props> = memo(({
     return "#6b7280"
   }
 
-  const descriptor = useMemo(() => {
-    const lower = label.toLowerCase()
-    const level = pct
-    if (lower.includes("step") || lower.includes("move")) return level >= 85 ? "🌟 Crushing it" : level >= 65 ? "🚶 Keep moving" : "👣 Start walking"
-    if (lower.includes("hydration") || lower.includes("water")) return level >= 85 ? "💦 Fully hydrated" : level >= 65 ? "💧 Good pace" : "🚰 Drink more"
-    if (lower.includes("meditation") || lower.includes("mind")) return level >= 85 ? "🧘 Zen master" : level >= 65 ? "🎧 Focused" : "🌸 Take a breath"
-    return level >= 85 ? "🌟 Excellent" : level >= 65 ? "💪 On track" : level >= 45 ? "🙂 Keep going" : "⚡️ Needs attention"
-  }, [label, pct])
+  // Rimossa la funzione descriptor - non più necessaria
 
   const detailChips = useMemo(() => {
     if (!additionalData) return []
@@ -112,10 +105,6 @@ const MiniGaugeChart: React.FC<Props> = memo(({
 
       <View style={styles.smallContent}>
         <View style={styles.smallNumberSection}>
-          <View style={{ flexDirection: "row", alignItems: "flex-end", marginBottom: 2 }}>
-            <Text style={[styles.smallNumber, { color }]}>{Math.round(pct)}</Text>
-            <Text style={[styles.smallUnit, { color: colors.textSecondary }]}>%</Text>
-          </View>
           {subtitle && <Text style={[styles.smallSubtitle, { color: colors.textSecondary }]} numberOfLines={2}>{subtitle}</Text>}
         </View>
 
@@ -169,8 +158,7 @@ const MiniGaugeChart: React.FC<Props> = memo(({
             <Circle cx={gaugeSize / 2} cy={gaugeSize / 2} r={R} stroke={`url(#grad-${color}-m)`} strokeWidth={stroke} fill="none" strokeDasharray={`${progress}, ${C}`} strokeLinecap="round" transform={`rotate(-90 ${gaugeSize / 2} ${gaugeSize / 2})`} />
           </Svg>
           <View style={styles.mGaugeCenter} pointerEvents="none">
-            <Text style={[styles.mGaugeValue, { color }]}>{Math.round(pct)}</Text>
-            <Text style={styles.mGaugeUnit}>%</Text>
+            <Text style={styles.gaugeEmojiSmall}>{icon ?? "📊"}</Text>
           </View>
         </View>
 
@@ -207,7 +195,6 @@ const MiniGaugeChart: React.FC<Props> = memo(({
           </View>
           <View style={styles.largeHeaderText}>
             <Text style={[styles.largeLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
-            <Text style={styles.largeDescriptor} numberOfLines={1}>{descriptor}</Text>
           </View>
         </View>
 
@@ -232,8 +219,7 @@ const MiniGaugeChart: React.FC<Props> = memo(({
           <Circle cx={gaugeSize / 2} cy={gaugeSize / 2} r={R} stroke={`url(#grad-${color}-l)`} strokeWidth={stroke} fill="none" strokeDasharray={`${progress}, ${C}`} strokeLinecap="round" transform={`rotate(-90 ${gaugeSize / 2} ${gaugeSize / 2})`} />
         </Svg>
         <View style={styles.gaugeCenterLarge} pointerEvents="none">
-          <Text style={[styles.gaugePctLarge, { color }]}>{Math.round(pct)}</Text>
-          <Text style={styles.gaugeUnitLarge}>%</Text>
+          <Text style={styles.gaugeEmojiSmall}>{icon ?? "📊"}</Text>
         </View>
       </View>
 
@@ -287,9 +273,7 @@ const styles = StyleSheet.create({
   smallTrendBadge: { width: 20, height: 20, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center", marginTop: -8, marginRight: -8 },
   smallContent: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   smallNumberSection: { flex: 1, justifyContent: "center" },
-  smallNumber: { fontSize: 26, lineHeight: 28, fontWeight: "800", letterSpacing: -0.2 },
-  smallUnit: { marginLeft: 3, marginBottom: 3, fontSize: 13, fontWeight: "600", color: "#64748b" },
-  smallSubtitle: { marginTop: 4, fontSize: 10, color: "#475569", fontWeight: "600", lineHeight: 14 },
+  smallSubtitle: { fontSize: 10, color: "#475569", fontWeight: "600", lineHeight: 14 },
   smallGaugeWrapper: { position: "relative", alignItems: "center", justifyContent: "center" },
   gaugeCenterSmall: { position: "absolute", alignItems: "center", justifyContent: "center" },
   gaugeEmojiSmall: { fontSize: 16, fontWeight: "400" },
@@ -304,9 +288,7 @@ const styles = StyleSheet.create({
   mTrendText: { fontSize: 11, fontWeight: "800" },
   mContentRow: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
   mGaugeBox: { width: 74, height: 74, justifyContent: "center", alignItems: "center" },
-  mGaugeCenter: { position: "absolute", flexDirection: "row", alignItems: "flex-end" },
-  mGaugeValue: { fontSize: 20, fontWeight: "900" },
-  mGaugeUnit: { marginLeft: 2, fontSize: 10, fontWeight: "800", color: "#94a3b8" },
+  mGaugeCenter: { position: "absolute", alignItems: "center", justifyContent: "center" },
   mKpiCol: { flex: 1, minWidth: 0, justifyContent: "center" },
   mKpiTitle: { fontSize: 12, fontWeight: "700", color: "#475569" },
   mDetailChip: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
@@ -324,14 +306,11 @@ const styles = StyleSheet.create({
   largeIconChip: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   largeIconEmoji: { fontSize: 19 },
   largeLabel: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
-  largeDescriptor: { marginTop: 2, fontSize: 11.5, fontWeight: "600", color: "#64748b", letterSpacing: -0.1 },
   largeTrendBadge: { height: 28, paddingHorizontal: 10, borderRadius: 14, borderWidth: 1.2, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, flexShrink: 0 },
   largeTrendText: { fontSize: 11.5, fontWeight: "700" },
 
   largeBody: { flexDirection: "row", alignItems: "center", flex: 1, gap: 12 },
-  gaugeCenterLarge: { position: "absolute", flexDirection: "row", alignItems: "flex-end" },
-  gaugePctLarge: { fontSize: 26, lineHeight: 26, fontWeight: "800", letterSpacing: -0.2 },
-  gaugeUnitLarge: { marginLeft: 2, fontSize: 12, fontWeight: "700", color: "#9ca3af" },
+  gaugeCenterLarge: { position: "absolute", alignItems: "center", justifyContent: "center" },
 
   largeSubtitleBox: { flex: 1, minWidth: 0 },
   largeSubtitle: { fontSize: 12.5, color: "#374151", fontWeight: "600", lineHeight: 16 },

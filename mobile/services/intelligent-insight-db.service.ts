@@ -71,31 +71,24 @@ class IntelligentInsightDBService {
         focus: insightsData.focus,
       };
 
+      // Use UPSERT to handle both insert and update in one operation
+      // This prevents race conditions and duplicate key errors
+      const { error: upsertError } = await supabase
+        .from('intelligent_insights')
+        .upsert(record, {
+          onConflict: 'user_id,category,analysis_date',
+          ignoreDuplicates: false
+        });
+
+      if (upsertError) {
+        console.error('Error upserting intelligent insights:', upsertError);
+        return { success: false, error: upsertError.message };
+      }
+      
       if (existingData) {
-        // Update existing record
-        console.log(`📝 Updating existing insights for ${category} on ${today}`);
-        const { error: updateError } = await supabase
-          .from('intelligent_insights')
-          .update(record)
-          .eq('id', existingData.id);
-
-        if (updateError) {
-          console.error('Error updating intelligent insights:', updateError);
-          return { success: false, error: updateError.message };
-        }
-        console.log(`✅ Updated intelligent insights for ${category}`);
+        console.log(`✅ Updated intelligent insights for ${category} on ${today}`);
       } else {
-        // Insert new record
-        console.log(`📝 Inserting new insights for ${category} on ${today}`);
-        const { error: insertError } = await supabase
-          .from('intelligent_insights')
-          .insert(record);
-
-        if (insertError) {
-          console.error('Error inserting intelligent insights:', insertError);
-          return { success: false, error: insertError.message };
-        }
-        console.log(`✅ Inserted new intelligent insights for ${category}`);
+        console.log(`✅ Inserted new intelligent insights for ${category} on ${today}`);
       }
       return { success: true };
     } catch (error: any) {

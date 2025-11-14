@@ -1864,63 +1864,6 @@ export const FoodAnalysisScreen: React.FC = () => {
           />
         )}
 
-        {/* How Food Analysis Works Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.howItWorks.title')}</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.howItWorks.subtitle')}</Text>
-        </View>
-        
-        <LinearGradient
-          colors={[colors.surface, colors.surfaceElevated]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.howItWorksCard, { borderColor: colors.border }]}
-        >
-          <View style={styles.howItWorksHeader}>
-            <View style={[styles.howItWorksIcon, { backgroundColor: `${colors.accent}22` }]}>
-              <FontAwesome name="cutlery" size={20} color={colors.accent} />
-            </View>
-            <View style={styles.howItWorksContent}>
-              <Text style={[styles.howItWorksTitle, { color: colors.text }]}>{t('analysis.food.howItWorks.cardTitle')}</Text>
-              <Text style={[styles.howItWorksDescription, { color: colors.textSecondary }]}>{t('analysis.food.howItWorks.cardDesc')}</Text>
-            </View>
-          </View>
-          
-          {/* Video Placeholder */}
-          <View style={styles.videoPlaceholder}>
-            <Image 
-              source={{ uri: heroImageUri }} 
-              style={styles.videoImage} 
-            />
-            <View style={styles.videoPlayButton}>
-              <FontAwesome name="play" size={16} color={colors.primaryDark} />
-            </View>
-          </View>
-          
-          <View style={styles.howItWorksSteps}>
-            <View style={styles.howItWorksStep}>
-              <View style={[styles.stepNumber, { backgroundColor: colors.accent }]}>
-                <Text style={styles.stepNumberText}>1</Text>
-              </View>
-              <Text style={[styles.stepText, { color: colors.text }]}>{t('analysis.food.howItWorks.step1')}</Text>
-            </View>
-            
-            <View style={styles.howItWorksStep}>
-              <View style={[styles.stepNumber, { backgroundColor: colors.accent }]}>
-                <Text style={styles.stepNumberText}>2</Text>
-              </View>
-              <Text style={[styles.stepText, { color: colors.text }]}>{t('analysis.food.howItWorks.step2')}</Text>
-            </View>
-            
-            <View style={styles.howItWorksStep}>
-              <View style={[styles.stepNumber, { backgroundColor: colors.accent }]}>
-                <Text style={styles.stepNumberText}>3</Text>
-              </View>
-              <Text style={[styles.stepText, { color: colors.text }]}>{t('analysis.food.howItWorks.step3')}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-
         {/* Recipes Section - AI Generated Recipes */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.recipes.title')}</Text>

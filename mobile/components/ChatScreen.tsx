@@ -1899,12 +1899,24 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               </TouchableOpacity>
             </View>
           </View>
-          <TouchableOpacity 
-            style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}
-            onPress={() => setShowChatMenu(true)}
-          >
-            <FontAwesome name="cog" size={18} color={colors.text} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {/* Cronologia Chat Button */}
+            {mode === 'chat' && chatHistory.length > 0 && (
+              <TouchableOpacity
+                style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}
+                onPress={() => setShowChatHistory(!showChatHistory)}
+              >
+                <FontAwesome name="history" size={18} color={colors.text} />
+              </TouchableOpacity>
+            )}
+            {/* Impostazioni Button */}
+            <TouchableOpacity 
+              style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}
+              onPress={() => setShowChatMenu(true)}
+            >
+              <FontAwesome name="cog" size={18} color={colors.text} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Wellness Suggestion Banner */}
@@ -1975,88 +1987,64 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         <View style={styles.scrollArea}>
           {mode === 'chat' ? (
             <>
-              {/* Chat History */}
-              {chatHistory.length > 0 && (
+              {/* Chat History Dropdown - Mostrato solo quando showChatHistory è true */}
+              {showChatHistory && chatHistory.length > 0 && (
                 <View style={styles.chatHistoryContainer}>
-                  <TouchableOpacity
-                    style={[styles.chatHistoryHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                    onPress={() => setShowChatHistory(!showChatHistory)}
-                  >
-                    <View style={styles.chatHistoryHeaderLeft}>
-                      <FontAwesome name="history" size={16} color={colors.textSecondary} />
-                      <Text style={[styles.chatHistoryTitle, { color: colors.text }]}>
-                        {t('chat.history.title') || 'Cronologia Chat'}
-                      </Text>
-                      <Text style={[styles.chatHistoryCount, { color: colors.textTertiary }]}>
-                        ({chatHistory.length})
-                      </Text>
-                    </View>
-                    <FontAwesome 
-                      name={showChatHistory ? "chevron-up" : "chevron-down"} 
-                      size={14} 
-                      color={colors.textSecondary} 
-                    />
-                  </TouchableOpacity>
-                  
-                  {showChatHistory && (
-                    <View style={[styles.chatHistoryList, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      <ScrollView 
-                        horizontal 
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.chatHistoryScrollContent}
-                      >
-                        {chatHistory.map((session) => {
-                          const sessionDate = new Date(session.started_at);
-                          const dateStr = sessionDate.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: sessionDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                          });
-                          
-                          return (
-                            <TouchableOpacity
-                              key={session.id}
-                              style={[
-                                styles.chatHistoryItem,
-                                { backgroundColor: surfaceSecondary, borderColor: colors.border },
-                                currentSessionId === session.id && { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
-                              ]}
-                              onPress={async () => {
-                                // Carica i messaggi della sessione selezionata
-                                const sessionMessages = await ChatService.getChatMessages(session.id);
-                                const formattedMessages: Message[] = sessionMessages.map((msg: any) => ({
-                                  id: msg.id,
-                                  text: msg.content,
-                                  sender: msg.role === 'user' ? 'user' : 'ai',
-                                  timestamp: new Date(msg.created_at),
-                                  sessionId: session.id,
-                                }));
-                                
-                                setMessages(formattedMessages.length > 0 ? formattedMessages : [{
-                                  id: 'welcome',
-                                  text: getInitialMessage(),
-                                  sender: 'ai',
-                                  timestamp: new Date(Date.now() - 60000),
-                                }]);
-                                setCurrentSessionId(session.id);
-                                setShowChatHistory(false);
-                              }}
+                  <View style={[styles.chatHistoryList, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <ScrollView 
+                      horizontal 
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.chatHistoryScrollContent}
+                    >
+                      {chatHistory.map((session: any) => {
+                        const firstMessage = session.firstUserMessage || '';
+                        const truncatedMessage = firstMessage.length > 50 
+                          ? firstMessage.substring(0, 50) + '...' 
+                          : firstMessage;
+                        
+                        return (
+                          <TouchableOpacity
+                            key={session.id}
+                            style={[
+                              styles.chatHistoryItem,
+                              { backgroundColor: surfaceSecondary, borderColor: colors.border },
+                              currentSessionId === session.id && { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
+                            ]}
+                            onPress={async () => {
+                              // Carica i messaggi della sessione selezionata
+                              const sessionMessages = await ChatService.getChatMessages(session.id);
+                              const formattedMessages: Message[] = sessionMessages.map((msg: any) => ({
+                                id: msg.id,
+                                text: msg.content,
+                                sender: msg.role === 'user' ? 'user' : 'ai',
+                                timestamp: new Date(msg.created_at),
+                                sessionId: session.id,
+                              }));
+                              
+                              setMessages(formattedMessages.length > 0 ? formattedMessages : [{
+                                id: 'welcome',
+                                text: getInitialMessage(),
+                                sender: 'ai',
+                                timestamp: new Date(Date.now() - 60000),
+                              }]);
+                              setCurrentSessionId(session.id);
+                              setShowChatHistory(false);
+                            }}
+                          >
+                            <Text 
+                              style={[styles.chatHistoryItemName, { color: colors.text }]}
+                              numberOfLines={2}
                             >
-                              <Text style={[styles.chatHistoryItemDate, { color: colors.textSecondary }]}>
-                                {dateStr}
-                              </Text>
-                              <Text 
-                                style={[styles.chatHistoryItemName, { color: colors.text }]}
-                                numberOfLines={1}
-                              >
-                                {session.session_name || t('chat.history.unnamed') || 'Chat senza nome'}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </ScrollView>
-                    </View>
-                  )}
+                              {truncatedMessage || session.session_name || t('chat.history.unnamed') || 'Chat senza nome'}
+                            </Text>
+                            {currentSessionId === session.id && (
+                              <View style={[styles.chatHistoryActiveIndicator, { backgroundColor: colors.primary }]} />
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
                 </View>
               )}
 
@@ -3195,31 +3183,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     marginBottom: 8,
   },
-  chatHistoryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  chatHistoryHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
-  chatHistoryTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  chatHistoryCount: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
   chatHistoryList: {
-    marginTop: 8,
     borderRadius: 12,
     borderWidth: 1,
     paddingVertical: 8,
@@ -3233,17 +3197,22 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    minWidth: 120,
-    maxWidth: 180,
-  },
-  chatHistoryItemDate: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 4,
+    minWidth: 150,
+    maxWidth: 220,
+    position: 'relative',
   },
   chatHistoryItemName: {
     fontSize: 13,
     fontWeight: '500',
+    lineHeight: 18,
+  },
+  chatHistoryActiveIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   quickReplyCard: {
     flexDirection: 'row',

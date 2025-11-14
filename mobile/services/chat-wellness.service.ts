@@ -96,23 +96,60 @@ export class ChatService {
   }
 
   /**
-   * Ottiene le sessioni di chat di un utente
+   * Ottiene le sessioni di chat di un utente con almeno un messaggio utente
+   * Include anche il primo messaggio dell'utente per identificare la chat
    */
-  static async getUserChatSessions(userId: string, limit: number = 10): Promise<ChatSession[]> {
+  static async getUserChatSessions(userId: string, limit: number = 10): Promise<(ChatSession & { firstUserMessage?: string })[]> {
     try {
-      const { data, error } = await supabase
+      // Prima ottieni tutte le sessioni
+      const { data: sessions, error: sessionsError } = await supabase
         .from(Tables.CHAT_SESSIONS)
         .select('*')
         .eq('user_id', userId)
         .order('started_at', { ascending: false })
-        .limit(limit);
+        .limit(limit * 2); // Prendi più sessioni per compensare il filtro
 
-      if (error) {
-        console.error('Error getting user chat sessions:', error);
+      if (sessionsError) {
+        console.error('Error getting user chat sessions:', sessionsError);
         return [];
       }
 
-      return data || [];
+      if (!sessions || sessions.length === 0) {
+        return [];
+      }
+
+      // Per ogni sessione, verifica se ha messaggi utente e ottieni il primo
+      const sessionsWithMessages: (ChatSession & { firstUserMessage?: string })[] = [];
+      
+      for (const session of sessions) {
+        const { data: messages, error: messagesError } = await supabase
+          .from(Tables.CHAT_MESSAGES)
+          .select('content, role, created_at')
+          .eq('session_id', session.id)
+          .eq('role', 'user')
+          .order('created_at', { ascending: true })
+          .limit(1);
+
+        if (messagesError) {
+          console.error('Error getting messages for session:', session.id, messagesError);
+          continue;
+        }
+
+        // Solo se c'è almeno un messaggio utente
+        if (messages && messages.length > 0) {
+          sessionsWithMessages.push({
+            ...session,
+            firstUserMessage: messages[0].content
+          });
+        }
+
+        // Limita il numero di sessioni restituite
+        if (sessionsWithMessages.length >= limit) {
+          break;
+        }
+      }
+
+      return sessionsWithMessages;
     } catch (error) {
       console.error('Error in getUserChatSessions:', error);
       return [];

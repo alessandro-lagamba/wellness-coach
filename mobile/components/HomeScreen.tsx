@@ -2216,11 +2216,32 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 </View>
                 <View style={styles.progressCardRight}>
                   <MiniTrendChart
-                    data={weeklyTrendData.steps}
+                    data={(() => {
+                      // Includi sempre il valore corrente per oggi come ultimo elemento
+                      const todayValue = healthData.steps || 0;
+                      const chartData = [...weeklyTrendData.steps];
+                      // Se l'ultimo valore non corrisponde a quello di oggi, sostituiscilo
+                      if (chartData.length > 0) {
+                        chartData[chartData.length - 1] = todayValue;
+                      } else {
+                        // Se non ci sono dati, crea un array con il valore di oggi
+                        chartData.push(todayValue);
+                      }
+                      // Assicurati che ci siano sempre 7 valori
+                      while (chartData.length < 7) {
+                        chartData.unshift(0);
+                      }
+                      return chartData.slice(-7);
+                    })()}
                     color="#10b981"
-                    maxValue={weeklyTrendData.steps.length > 0 
-                      ? Math.max(...weeklyTrendData.steps, healthData.steps || 0, 1)
-                      : healthData.steps || 10000}
+                    maxValue={(() => {
+                      const todayValue = healthData.steps || 0;
+                      const allValues = [...weeklyTrendData.steps, todayValue].filter(v => v > 0);
+                      if (allValues.length === 0) return 10000;
+                      const max = Math.max(...allValues);
+                      // Arrotonda a un valore "pulito" per la scala (es. 10000, 15000, 20000)
+                      return Math.ceil(max / 5000) * 5000 || 10000;
+                    })()}
                     formatValue={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toString()}
                   />
                 </View>
@@ -2269,11 +2290,32 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 </View>
                 <View style={styles.progressCardRight}>
                   <MiniTrendChart
-                    data={weeklyTrendData.sleepHours}
+                    data={(() => {
+                      // Includi sempre il valore corrente per oggi come ultimo elemento
+                      const todayValue = healthData.sleepHours || 0;
+                      const chartData = [...weeklyTrendData.sleepHours];
+                      // Se l'ultimo valore non corrisponde a quello di oggi, sostituiscilo
+                      if (chartData.length > 0) {
+                        chartData[chartData.length - 1] = todayValue;
+                      } else {
+                        // Se non ci sono dati, crea un array con il valore di oggi
+                        chartData.push(todayValue);
+                      }
+                      // Assicurati che ci siano sempre 7 valori
+                      while (chartData.length < 7) {
+                        chartData.unshift(0);
+                      }
+                      return chartData.slice(-7);
+                    })()}
                     color="#6366f1"
-                    maxValue={weeklyTrendData.sleepHours.length > 0
-                      ? Math.max(...weeklyTrendData.sleepHours, healthData.sleepHours || 0, 1)
-                      : healthData.sleepHours || 10}
+                    maxValue={(() => {
+                      const todayValue = healthData.sleepHours || 0;
+                      const allValues = [...weeklyTrendData.sleepHours, todayValue].filter(v => v > 0);
+                      if (allValues.length === 0) return 10;
+                      const max = Math.max(...allValues);
+                      // Arrotonda a un valore "pulito" per la scala (es. 8, 10, 12)
+                      return Math.ceil(max / 2) * 2 || 10;
+                    })()}
                     formatValue={(v) => `${v.toFixed(1)}h`}
                   />
                 </View>
@@ -2322,11 +2364,32 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 </View>
                 <View style={styles.progressCardRight}>
                   <MiniTrendChart
-                    data={weeklyTrendData.hrv}
+                    data={(() => {
+                      // Includi sempre il valore corrente per oggi come ultimo elemento
+                      const todayValue = healthData.hrv || 0;
+                      const chartData = [...weeklyTrendData.hrv];
+                      // Se l'ultimo valore non corrisponde a quello di oggi, sostituiscilo
+                      if (chartData.length > 0) {
+                        chartData[chartData.length - 1] = todayValue;
+                      } else {
+                        // Se non ci sono dati, crea un array con il valore di oggi
+                        chartData.push(todayValue);
+                      }
+                      // Assicurati che ci siano sempre 7 valori
+                      while (chartData.length < 7) {
+                        chartData.unshift(0);
+                      }
+                      return chartData.slice(-7);
+                    })()}
                     color="#ef4444"
-                    maxValue={weeklyTrendData.hrv.length > 0
-                      ? Math.max(...weeklyTrendData.hrv, healthData.hrv || 0, 1)
-                      : healthData.hrv || 100}
+                    maxValue={(() => {
+                      const todayValue = healthData.hrv || 0;
+                      const allValues = [...weeklyTrendData.hrv, todayValue].filter(v => v > 0);
+                      if (allValues.length === 0) return 100;
+                      const max = Math.max(...allValues);
+                      // Arrotonda a un valore "pulito" per la scala (es. 50, 100, 150)
+                      return Math.ceil(max / 25) * 25 || 100;
+                    })()}
                     formatValue={(v) => v >= 100 ? Math.round(v).toString() : v.toFixed(1)}
                   />
                 </View>
@@ -2375,11 +2438,32 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 </View>
                 <View style={styles.progressCardRight}>
                   <MiniTrendChart
-                    data={weeklyTrendData.heartRate}
+                    data={(() => {
+                      // Includi sempre il valore corrente per oggi come ultimo elemento
+                      const todayValue = healthData.heartRate || 0;
+                      const chartData = [...weeklyTrendData.heartRate];
+                      // Se l'ultimo valore non corrisponde a quello di oggi, sostituiscilo
+                      if (chartData.length > 0) {
+                        chartData[chartData.length - 1] = todayValue;
+                      } else {
+                        // Se non ci sono dati, crea un array con il valore di oggi
+                        chartData.push(todayValue);
+                      }
+                      // Assicurati che ci siano sempre 7 valori
+                      while (chartData.length < 7) {
+                        chartData.unshift(0);
+                      }
+                      return chartData.slice(-7);
+                    })()}
                     color="#ef4444"
-                    maxValue={weeklyTrendData.heartRate.length > 0
-                      ? Math.max(...weeklyTrendData.heartRate, healthData.heartRate || 0, 1)
-                      : healthData.heartRate || 100}
+                    maxValue={(() => {
+                      const todayValue = healthData.heartRate || 0;
+                      const allValues = [...weeklyTrendData.heartRate, todayValue].filter(v => v > 0);
+                      if (allValues.length === 0) return 100;
+                      const max = Math.max(...allValues);
+                      // Arrotonda a un valore "pulito" per la scala (es. 50, 100, 150)
+                      return Math.ceil(max / 25) * 25 || 100;
+                    })()}
                     formatValue={(v) => `${Math.round(v)}`}
                   />
                 </View>
@@ -2428,11 +2512,32 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 </View>
                 <View style={styles.progressCardRight}>
                   <MiniTrendChart
-                    data={weeklyTrendData.hydration.map(v => Math.round(v / 250))}
+                    data={(() => {
+                      // Includi sempre il valore corrente per oggi come ultimo elemento (convertito in bicchieri)
+                      const todayValue = Math.round((healthData.hydration || 0) / 250);
+                      const chartData = weeklyTrendData.hydration.map(v => Math.round(v / 250));
+                      // Se l'ultimo valore non corrisponde a quello di oggi, sostituiscilo
+                      if (chartData.length > 0) {
+                        chartData[chartData.length - 1] = todayValue;
+                      } else {
+                        // Se non ci sono dati, crea un array con il valore di oggi
+                        chartData.push(todayValue);
+                      }
+                      // Assicurati che ci siano sempre 7 valori
+                      while (chartData.length < 7) {
+                        chartData.unshift(0);
+                      }
+                      return chartData.slice(-7);
+                    })()}
                     color="#3b82f6"
-                    maxValue={weeklyTrendData.hydration.length > 0
-                      ? Math.max(...weeklyTrendData.hydration.map(v => Math.round(v / 250)), Math.round((healthData.hydration || 0) / 250), 1)
-                      : Math.round((healthData.hydration || 0) / 250) || 8}
+                    maxValue={(() => {
+                      const todayValue = Math.round((healthData.hydration || 0) / 250);
+                      const allValues = [...weeklyTrendData.hydration.map(v => Math.round(v / 250)), todayValue].filter(v => v > 0);
+                      if (allValues.length === 0) return 8;
+                      const max = Math.max(...allValues);
+                      // Arrotonda a un valore "pulito" per la scala (es. 8, 10, 12)
+                      return Math.ceil(max / 2) * 2 || 8;
+                    })()}
                     formatValue={(v) => `${Math.round(v)}`}
                   />
                 </View>
@@ -2481,11 +2586,32 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 </View>
                 <View style={styles.progressCardRight}>
                   <MiniTrendChart
-                    data={weeklyTrendData.meditation}
+                    data={(() => {
+                      // Includi sempre il valore corrente per oggi come ultimo elemento
+                      const todayValue = healthData.mindfulnessMinutes || 0;
+                      const chartData = [...weeklyTrendData.meditation];
+                      // Se l'ultimo valore non corrisponde a quello di oggi, sostituiscilo
+                      if (chartData.length > 0) {
+                        chartData[chartData.length - 1] = todayValue;
+                      } else {
+                        // Se non ci sono dati, crea un array con il valore di oggi
+                        chartData.push(todayValue);
+                      }
+                      // Assicurati che ci siano sempre 7 valori
+                      while (chartData.length < 7) {
+                        chartData.unshift(0);
+                      }
+                      return chartData.slice(-7);
+                    })()}
                     color="#8b5cf6"
-                    maxValue={weeklyTrendData.meditation.length > 0
-                      ? Math.max(...weeklyTrendData.meditation, healthData.mindfulnessMinutes || 0, 1)
-                      : healthData.mindfulnessMinutes || 30}
+                    maxValue={(() => {
+                      const todayValue = healthData.mindfulnessMinutes || 0;
+                      const allValues = [...weeklyTrendData.meditation, todayValue].filter(v => v > 0);
+                      if (allValues.length === 0) return 30;
+                      const max = Math.max(...allValues);
+                      // Arrotonda a un valore "pulito" per la scala (es. 30, 60, 90)
+                      return Math.ceil(max / 15) * 15 || 30;
+                    })()}
                     formatValue={(v) => `${Math.round(v)}`}
                   />
                 </View>

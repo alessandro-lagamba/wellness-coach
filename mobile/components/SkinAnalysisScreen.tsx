@@ -1860,64 +1860,6 @@ const SkinAnalysisScreen: React.FC = () => {
           }}
         />
 
-        {/* How Skin Analysis Works Video Section */}
-        <View style={styles.sectionHeader}>
-         <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.howItWorks.title')}</Text>
-          <Text style={styles.sectionSubtitle}>{t('analysis.skin.howItWorks.subtitle')}</Text>
-        </View>
-        
-        <LinearGradient
-          colors={[colors.surface, colors.surfaceElevated]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.howItWorksCard, { borderColor: colors.border }]}
-        >
-          <View style={styles.howItWorksHeader}>
-            <View style={[styles.howItWorksIcon, { backgroundColor: `${colors.accent}22` }]}>
-              <FontAwesome name="cogs" size={20} color={colors.accent} />
-            </View>
-            <View style={styles.howItWorksContent}>
-              <Text style={[styles.howItWorksTitle, { color: colors.text }]}>{t('analysis.skin.howItWorks.cardTitle')}</Text>
-              <Text style={[styles.howItWorksDescription, { color: colors.textSecondary }]}>{t('analysis.skin.howItWorks.cardDesc')}</Text>
-            </View>
-          </View>
-          
-          {/* Video Placeholder */}
-          <View style={styles.videoPlaceholder}>
-            <Image 
-              source={{ uri: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?auto=format&fit=crop&w=1200&q=80' }} 
-              style={styles.videoImage} 
-            />
-            <View style={styles.videoPlayButton}>
-              <FontAwesome name="play" size={16} color="#312e81" />
-            </View>
-          </View>
-          
-          <View style={styles.howItWorksSteps}>
-            <View style={styles.howItWorksStep}>
-              <View style={[styles.stepNumber, { backgroundColor: colors.accent }]}>
-                <Text style={styles.stepNumberText}>1</Text>
-              </View>
-              <Text style={[styles.stepText, { color: colors.text }]}>{t('analysis.skin.howItWorks.step1')}</Text>
-            </View>
-            
-            <View style={styles.howItWorksStep}>
-              <View style={[styles.stepNumber, { backgroundColor: colors.accent }]}>
-                <Text style={styles.stepNumberText}>2</Text>
-              </View>
-              <Text style={[styles.stepText, { color: colors.text }]}>{t('analysis.skin.howItWorks.step2')}</Text>
-            </View>
-            
-            <View style={styles.howItWorksStep}>
-              <View style={[styles.stepNumber, { backgroundColor: colors.accent }]}>
-                <Text style={styles.stepNumberText}>3</Text>
-              </View>
-              <Text style={[styles.stepText, { color: colors.text }]}>{t('analysis.skin.howItWorks.step3')}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-
-
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.advancedModules.title')}</Text>
           <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.skin.advancedModules.subtitle')}</Text>
