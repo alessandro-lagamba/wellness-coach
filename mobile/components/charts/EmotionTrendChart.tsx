@@ -29,35 +29,6 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
   const hasData = data.length > 0;
   const latestValence = chartData[chartData.length - 1]?.valence || 0;
   const latestArousal = chartData[chartData.length - 1]?.arousal || 0;
-  const latestEmotion = chartData[chartData.length - 1]?.emotion || 'neutral';
-
-  const getEmotionColor = (emotion: string) => {
-    switch (emotion.toLowerCase()) {
-      case 'happy': return '#facc15';
-      case 'neutral': return '#94a3b8';
-      case 'sad': return '#60a5fa';
-      case 'angry': return '#ef4444';
-      case 'excited': return '#22d3ee';
-      case 'calm': return '#10b981';
-      case 'stressed': return '#f59e0b';
-      case 'content': return '#8b5cf6';
-      default: return '#6b7280';
-    }
-  };
-
-  const getEmotionIcon = (emotion: string) => {
-    switch (emotion.toLowerCase()) {
-      case 'happy': return 'smile-o';
-      case 'neutral': return 'meh-o';
-      case 'sad': return 'frown-o';
-      case 'angry': return 'angry';
-      case 'excited': return 'star';
-      case 'calm': return 'leaf';
-      case 'stressed': return 'exclamation-triangle';
-      case 'content': return 'heart';
-      default: return 'circle';
-    }
-  };
 
   // Calculate SVG path for the lines
   const chartWidth = width - 120;
@@ -102,17 +73,6 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
           <View style={styles.titleContainer}>
             <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
             {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
-          </View>
-          
-          <View style={styles.emotionContainer}>
-            <FontAwesome
-              name={getEmotionIcon(latestEmotion) as any}
-              size={20}
-              color={getEmotionColor(latestEmotion)}
-            />
-            <Text style={[styles.emotionText, { color: getEmotionColor(latestEmotion) }]}>
-              {latestEmotion}
-            </Text>
           </View>
         </View>
 
@@ -269,15 +229,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 12,
     fontWeight: '500',
-  },
-  emotionContainer: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  emotionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'capitalize',
   },
   chartContainer: {
     alignItems: 'center',

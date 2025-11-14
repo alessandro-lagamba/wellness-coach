@@ -77,8 +77,30 @@ const getConfidenceColor = (confidence: number) => {
   return '#ef4444';
 };
 
-const prettyEmotion = (e?: string) =>
-  (e || 'neutral').charAt(0).toUpperCase() + (e || 'neutral').slice(1);
+const prettyEmotion = (e?: string, t?: (k: string) => string) => {
+  if (!t) return (e || 'neutral').charAt(0).toUpperCase() + (e || 'neutral').slice(1);
+  const key = (e || 'neutral').toLowerCase();
+  // Prova prima con la chiave esatta, poi con varianti comuni
+  let translationKey = `analysis.emotion.names.${key}`;
+  let translated = t(translationKey);
+  
+  // Se la traduzione non esiste, prova con varianti
+  if (translated === translationKey) {
+    // Mappa varianti comuni
+    const variantMap: Record<string, string> = {
+      'happy': 'joy',
+      'sad': 'sadness',
+    };
+    const variant = variantMap[key];
+    if (variant) {
+      translationKey = `analysis.emotion.names.${variant}`;
+      translated = t(translationKey);
+    }
+  }
+  
+  // Se ancora non esiste, fallback al nome capitalizzato
+  return translated !== translationKey ? translated : (e || 'neutral').charAt(0).toUpperCase() + (e || 'neutral').slice(1);
+};
 
 // -----------------------------------------------------
 // Collapsible (misura invisibile + maxHeight animata)
@@ -197,7 +219,7 @@ const DominantBanner: React.FC<{ emotion?: string }> = ({ emotion }) => {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.bannerEyebrow, { color: colors.textSecondary }]}>{t('analysis.emotion.sessionCard.dominantEmotion')}</Text>
-        <Text style={[styles.bannerEmotion, { color }]}>{prettyEmotion(emotion)}</Text>
+        <Text style={[styles.bannerEmotion, { color }]}>{prettyEmotion(emotion, t)}</Text>
         <Text style={[styles.bannerSubtitle, { color: colors.textSecondary }]}>{t('analysis.emotion.sessionCard.detectedInLastSession')}</Text>
       </View>
     </View>

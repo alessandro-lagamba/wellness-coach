@@ -96,11 +96,6 @@ const MiniGaugeChart: React.FC<Props> = memo(({
     <LinearGradient colors={[colors.surface, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.innerGradient}>
       <View style={styles.smallHeader}>
         <Text style={[styles.smallLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
-        {trendValue && (
-          <View style={[styles.smallTrendBadge, { backgroundColor: `${getTrendColor()}14`, borderColor: `${getTrendColor()}28` }]}>
-            <MaterialCommunityIcons name={trendValue.includes("+") ? "trending-up" : trendValue.includes("-") ? "trending-down" : "minus"} size={11} color={getTrendColor()} />
-          </View>
-        )}
       </View>
 
       <View style={styles.smallContent}>
@@ -137,12 +132,6 @@ const MiniGaugeChart: React.FC<Props> = memo(({
           </View>
           <Text style={[styles.mTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
         </View>
-        {trendValue ? (
-          <View style={[styles.mTrendBadge, { backgroundColor: `${getTrendColor()}14`, borderColor: `${getTrendColor()}30` }]}>
-            <MaterialCommunityIcons name={trendValue.includes("+") ? "trending-up" : trendValue.includes("-") ? "trending-down" : "minus"} size={12} color={getTrendColor()} />
-            <Text style={[styles.mTrendText, { color: getTrendColor() }]} numberOfLines={1}>{trendValue}</Text>
-          </View>
-        ) : null}
       </View>
 
       <View style={styles.mContentRow}>
@@ -187,7 +176,7 @@ const MiniGaugeChart: React.FC<Props> = memo(({
       // padding destro extra per non sovrapporre il gauge al testo
       style={[styles.innerGradient, styles.lPadRight]}
     >
-      {/* Header con titolo + trend */}
+      {/* Header con titolo */}
       <View style={styles.largeHeader}>
         <View style={styles.largeHeaderLeft}>
           <View style={[styles.largeIconChip, { backgroundColor: `${color}18`, borderColor: `${color}35` }]}>
@@ -197,13 +186,6 @@ const MiniGaugeChart: React.FC<Props> = memo(({
             <Text style={[styles.largeLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
           </View>
         </View>
-
-        {trendValue && (
-          <View style={[styles.largeTrendBadge, { backgroundColor: `${getTrendColor()}16`, borderColor: `${getTrendColor()}32` }]}>
-            <MaterialCommunityIcons name={trendValue.includes("+") ? "trending-up" : trendValue.includes("-") ? "trending-down" : "minus"} size={13} color={getTrendColor()} />
-            <Text style={[styles.largeTrendText, { color: getTrendColor() }]}>{trendValue}</Text>
-          </View>
-        )}
       </View>
 
       {/* Gauge fissato in alto a destra */}
@@ -270,7 +252,6 @@ const styles = StyleSheet.create({
   /* SMALL */
   smallHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, paddingTop: 2 },
   smallLabel: { fontSize: 14, fontWeight: "700", color: "#111827", letterSpacing: -0.1, flex: 1 },
-  smallTrendBadge: { width: 20, height: 20, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center", marginTop: -8, marginRight: -8 },
   smallContent: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   smallNumberSection: { flex: 1, justifyContent: "center" },
   smallSubtitle: { fontSize: 10, color: "#475569", fontWeight: "600", lineHeight: 14 },
@@ -284,8 +265,6 @@ const styles = StyleSheet.create({
   mIconChip: { height: 28, width: 28, borderRadius: 14, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   mIconEmoji: { fontSize: 16 },
   mTitle: { flexShrink: 1, fontSize: 15, fontWeight: "800", color: "#0f172a" },
-  mTrendBadge: { height: 26, paddingHorizontal: 8, borderRadius: 13, borderWidth: 1, flexDirection: "row", alignItems: "center", gap: 4 },
-  mTrendText: { fontSize: 11, fontWeight: "800" },
   mContentRow: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
   mGaugeBox: { width: 74, height: 74, justifyContent: "center", alignItems: "center" },
   mGaugeCenter: { position: "absolute", alignItems: "center", justifyContent: "center" },
@@ -306,8 +285,6 @@ const styles = StyleSheet.create({
   largeIconChip: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   largeIconEmoji: { fontSize: 19 },
   largeLabel: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
-  largeTrendBadge: { height: 28, paddingHorizontal: 10, borderRadius: 14, borderWidth: 1.2, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, flexShrink: 0 },
-  largeTrendText: { fontSize: 11.5, fontWeight: "700" },
 
   largeBody: { flexDirection: "row", alignItems: "center", flex: 1, gap: 12 },
   gaugeCenterLarge: { position: "absolute", alignItems: "center", justifyContent: "center" },

@@ -19,9 +19,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from '../hooks/useTranslation';
 import { useTheme } from '../contexts/ThemeContext';
 import { NutritionService } from '../services/nutrition.service';
-import { useSpeechRecognitionEvent, ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 import { fridgeItemsService } from '../services/fridge-items.service';
-import { getUserLanguage } from '../services/language.service';
 
 const MIN_INGREDIENTS_FOR_GENERATION = 3;
 interface IngredientRow {
@@ -59,12 +57,8 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   const [bulkText, setBulkText] = useState('');
   const bulkInputRef = useRef<TextInput | null>(null);
   
-  // Voice recording state
-  const [isRecording, setIsRecording] = useState(false);
-  const [transcript, setTranscript] = useState('');
   const [parsingTranscript, setParsingTranscript] = useState(false);
   const [parsedChips, setParsedChips] = useState<ParsedIngredientChip[]>([]);
-  const [hasProcessedResult, setHasProcessedResult] = useState(false);
 
   const addIngredient = () => {
     setIngredients([...ingredients, { name: '' }]);
@@ -281,77 +275,6 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
     setParsedChips(prev => prev.filter(chip => chip.id !== chipId));
   };
 
-  // Voice recognition handlers
-  const handleStartRecording = async () => {
-    try {
-      setIsRecording(true);
-      setTranscript('');
-      setHasProcessedResult(false);
-      // 🔥 FIX: Ottieni la lingua dell'utente e passa le opzioni richieste
-      const userLanguage = await getUserLanguage();
-      const speechLang = userLanguage === 'it' ? 'it-IT' : 'en-US';
-      
-      // Verifica che il modulo sia disponibile e che start sia una funzione
-      if (!ExpoSpeechRecognitionModule || typeof ExpoSpeechRecognitionModule.start !== 'function') {
-        throw new Error('Speech recognition module not available');
-      }
-      
-      await ExpoSpeechRecognitionModule.start({
-        lang: speechLang,
-        interimResults: true,
-        continuous: false,
-        maxAlternatives: 1,
-        requiresOnDeviceRecognition: false,
-      });
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      Alert.alert(t('common.error'), t('analysis.food.fridge.recordingError'));
-      setIsRecording(false);
-    }
-  };
-
-  const handleStopRecording = async () => {
-    try {
-      await ExpoSpeechRecognitionModule.stop();
-      setIsRecording(false);
-    } catch (error) {
-      console.error('Error stopping recording:', error);
-      setIsRecording(false);
-    }
-  };
-
-  // Speech recognition events
-  useSpeechRecognitionEvent('result', (event) => {
-    if (event.results && event.results.length > 0) {
-      const result = event.results[0];
-      const text = result.transcript || '';
-      const isFinal = event.isFinal || false;
-
-      setTranscript(text);
-
-      if (isFinal && text.trim().length > 2 && !hasProcessedResult) {
-        setHasProcessedResult(true);
-        handleStopRecording();
-        // Parse automaticamente quando finisce la dettatura
-        setBulkText(text);
-        parseBulkInput();
-      }
-    }
-  });
-
-  useSpeechRecognitionEvent('start', () => {
-    setIsRecording(true);
-  });
-
-  useSpeechRecognitionEvent('end', () => {
-    setIsRecording(false);
-  });
-
-  useSpeechRecognitionEvent('error', (event) => {
-    console.warn('Speech recognition error:', event?.error);
-    setIsRecording(false);
-    Alert.alert(t('common.error'), t('analysis.food.fridge.recordingError'));
-  });
 
   const handleGenerateRecipe = async () => {
     // Valida: nome non vuoto, data in formato YYYY-MM-DD se presente
@@ -429,14 +352,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
     setIngredients([{ name: '' }]);
     setGeneratedRecipe(null);
     setBulkText('');
-    setTranscript('');
     setParsedChips([]);
-    setIsRecording(false);
-    setHasProcessedResult(false);
-    // Stop recording if active
-    if (isRecording) {
-      ExpoSpeechRecognitionModule.stop().catch(() => {});
-    }
     onClose();
   };
 
@@ -478,51 +394,11 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                   </Text>
                 </View>
 
-                {/* Dettatura / Inserimento rapido */}
+                {/* Inserimento rapido */}
                 <View style={styles.quickAddSection}>
-                  <View style={styles.quickAddHeader}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                      {t('analysis.food.fridge.quickAdd')}
-                    </Text>
-                    {/* Voice Record Button */}
-                    <TouchableOpacity
-                      onPress={isRecording ? handleStopRecording : handleStartRecording}
-                      style={[
-                        styles.recordButton,
-                        isRecording && { backgroundColor: colors.error + '20', borderColor: colors.error },
-                        { backgroundColor: colors.surfaceElevated, borderColor: colors.border }
-                      ]}
-                      disabled={parsingTranscript}
-                    >
-                      {parsingTranscript ? (
-                        <ActivityIndicator size="small" color={colors.primary} />
-                      ) : (
-                        <>
-                          <MaterialCommunityIcons
-                            name={isRecording ? 'stop-circle' : 'microphone'}
-                            size={18}
-                            color={isRecording ? colors.error : colors.primary}
-                          />
-                          <Text style={[
-                            styles.recordButtonText,
-                            { color: isRecording ? colors.error : colors.primary }
-                          ]}>
-                            {isRecording ? t('analysis.food.fridge.stopRecording') : t('analysis.food.fridge.startRecording')}
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                  
-                  {/* Transcript in tempo reale */}
-                  {transcript && (
-                    <View style={[styles.transcriptContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                      <Text style={[styles.transcriptLabel, { color: colors.textSecondary }]}>
-                        {t('analysis.food.fridge.transcript')}:
-                      </Text>
-                      <Text style={[styles.transcriptText, { color: colors.text }]}>{transcript}</Text>
-                    </View>
-                  )}
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                    {t('analysis.food.fridge.quickAdd')}
+                  </Text>
                   
                   {/* Chips confermabili */}
                   {parsedChips.length > 0 && (
@@ -885,12 +761,6 @@ const styles = StyleSheet.create({
   quickAddSection: {
     marginBottom: 20,
   },
-  quickAddHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
   micButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -903,34 +773,6 @@ const styles = StyleSheet.create({
   micButtonText: {
     fontSize: 12,
     fontWeight: '600',
-  },
-  recordButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 2,
-  },
-  recordButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  transcriptContainer: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  transcriptLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  transcriptText: {
-    fontSize: 14,
-    lineHeight: 20,
   },
   chipsSection: {
     marginTop: 16,
@@ -1234,3 +1076,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+

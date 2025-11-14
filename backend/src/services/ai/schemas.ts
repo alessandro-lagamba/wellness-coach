@@ -7,12 +7,14 @@ export const analyzeImageSchema = {
   name: "meal_draft",
   schema: {
     type: "object",
+    additionalProperties: false,
     properties: {
       mealType: { type: "string", enum: ["breakfast", "lunch", "dinner", "snack"] },
       items: {
         type: "array",
         items: {
           type: "object",
+          additionalProperties: false,
           properties: {
             name: { type: "string" },
             quantity: { type: "number" },
@@ -25,6 +27,7 @@ export const analyzeImageSchema = {
       },
       macrosEstimate: {
         type: "object",
+        additionalProperties: false,
         properties: {
           protein: { type: "number" },
           carbs: { type: "number" },
@@ -47,11 +50,13 @@ export const suggestMealSchema = {
   name: "meal_suggestions",
   schema: {
     type: "object",
+    additionalProperties: false,
     properties: {
       suggestions: {
         type: "array",
         items: {
           type: "object",
+          additionalProperties: false,
           properties: {
             title: { type: "string" },
             type: { type: "string", enum: ["snack", "meal"] },
@@ -60,6 +65,7 @@ export const suggestMealSchema = {
             calories: { type: "number" },
             macros: {
               type: "object",
+              additionalProperties: false,
               properties: {
                 protein: { type: "number" },
                 carbs: { type: "number" },
@@ -73,6 +79,7 @@ export const suggestMealSchema = {
               type: "array",
               items: {
                 type: "object",
+                additionalProperties: false,
                 properties: {
                   name: { type: "string" },
                   quantity: { type: "number" },
@@ -96,6 +103,7 @@ export const generateRecipeSchema = {
   name: "generated_recipe",
   schema: {
     type: "object",
+    additionalProperties: false,
     properties: {
       title: { type: "string" },
       servings: { type: "number" },
@@ -104,6 +112,7 @@ export const generateRecipeSchema = {
         type: "array",
         items: {
           type: "object",
+          additionalProperties: false,
           properties: {
             name: { type: "string" },
             quantity: { type: "number" },
@@ -117,6 +126,7 @@ export const generateRecipeSchema = {
       tips: { type: "array", items: { type: "string" } },
       macrosPerServing: {
         type: "object",
+        additionalProperties: false,
         properties: {
           protein: { type: "number" },
           carbs: { type: "number" },
@@ -146,6 +156,7 @@ export const coachSchema = {
   name: "coach_suggestion",
   schema: {
     type: "object",
+    additionalProperties: false,
     properties: {
       title: { type: "string" },
       message: { type: "string" },
@@ -156,6 +167,7 @@ export const coachSchema = {
       },
       cta: {
         type: "object",
+        additionalProperties: false,
         properties: {
           label: { type: "string" },
           action: {
@@ -183,11 +195,13 @@ export const parseIngredientsSchema = {
   name: "parsed_ingredients",
   schema: {
     type: "object",
+    additionalProperties: false,
     properties: {
       ingredients: {
         type: "array",
         items: {
           type: "object",
+          additionalProperties: false,
           properties: {
             name: { type: "string" },
             quantity: { type: "number" },
@@ -203,6 +217,7 @@ export const parseIngredientsSchema = {
         type: "array",
         items: {
           type: "object",
+          additionalProperties: false,
           properties: {
             type: {
               type: "string",
@@ -219,6 +234,7 @@ export const parseIngredientsSchema = {
         type: "array",
         items: {
           type: "object",
+          additionalProperties: false,
           properties: {
             text: { type: "string" },
             suggestions: { type: "array", items: { type: "string" } },

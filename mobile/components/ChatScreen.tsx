@@ -41,7 +41,6 @@ import { UnifiedTTSService } from '../services/unified-tts.service';
 import LoadingCloud from './LoadingCloud';
 import AnimatedOrbVoiceChat from './AnimatedOrbVoiceChat';
 import { ModernVoiceChat } from './ModernVoiceChat';
-import { useSpeechRecognitionEvent, ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 import MessageLoadingDots from './MessageLoadingDots';
 import { DailyJournalService } from '../services/daily-journal.service';
 import { DailyJournalDBService } from '../services/daily-journal-db.service';
@@ -215,9 +214,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   // 🔥 FIX: Inizializza sempre con la data odierna corrente
   const [selectedDayKey, setSelectedDayKey] = useState(() => DailyJournalService.todayKey());
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiScore, setAiScore] = useState<number | null>(null);
-  const [aiLabel, setAiLabel] = useState<string | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
   const [monthDays, setMonthDays] = useState<string[]>([]);
@@ -334,9 +331,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       try {
         const existing = await DailyJournalDBService.getEntryByDate(currentUser.id, selectedDayKey);
         // 🆕 Rimossi log per performance
-        setAiSummary(existing?.ai_summary ?? null);
         setAiScore((existing as any)?.ai_score ?? null);
-        setAiLabel((existing as any)?.ai_label ?? null);
         setAiAnalysis((existing as any)?.ai_analysis ?? null);
       } catch (e) {
         // 🆕 Rimosso log per performance
@@ -497,10 +492,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [showVoiceInterface, setShowVoiceInterface] = useState(false);
   
-  // 🆕 Journal dictation state (simile a FridgeIngredientsModal)
-  const [isJournalDictating, setIsJournalDictating] = useState(false);
-  const [journalTranscript, setJournalTranscript] = useState('');
-  const [hasProcessedJournalResult, setHasProcessedJournalResult] = useState(false);
   const [showLoadingCloud, setShowLoadingCloud] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -1430,9 +1421,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 await DailyJournalDBService.deleteEntry(currentUser.id, selectedDayKey);
                 setJournalText('');
                 setJournalPrompt('');
-                setAiSummary(null);
                 setAiScore(null);
-                setAiLabel(null);
                 setAiAnalysis(null);
                 await DailyJournalService.saveLocalEntry(selectedDayKey, '', '');
                 setMonthJournalMap(prev => {
@@ -1499,9 +1488,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       const entry = {
         date: selectedDayKey,
         content: journalText,
-        aiSummary: aiSummary || undefined,
         aiScore: aiScore || undefined,
-        aiLabel: aiLabel || undefined,
+        aiAnalysis: aiAnalysis || undefined,
       };
       if (format === 'txt') {
         await ExportService.exportJournalToTXT(entry);
@@ -1645,89 +1633,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
   // scrollContentStyle non più necessario per FlatList; il paddingBottom viene messo direttamente in contentContainerStyle della FlatList
 
-  // 🆕 Journal dictation handlers (simile a FridgeIngredientsModal)
-  const handleStartJournalDictation = useCallback(async () => {
-    try {
-      setIsJournalDictating(true);
-      setJournalTranscript('');
-      setHasProcessedJournalResult(false);
-      // 🔥 FIX: Usa la lingua dell'utente invece di 'it-IT' hardcoded
-      const { getUserLanguage } = await import('../services/language.service');
-      const userLanguage = await getUserLanguage();
-      const speechLang = userLanguage === 'it' ? 'it-IT' : 'en-US';
-      await ExpoSpeechRecognitionModule.start({
-        lang: speechLang,
-        interimResults: true,
-        continuous: false,
-        maxAlternatives: 1,
-        requiresOnDeviceRecognition: false,
-      });
-    } catch (error) {
-      console.error('Error starting journal dictation:', error);
-      Alert.alert(t('common.error') || 'Errore', t('journal.dictationError') || 'Errore durante la dettatura');
-      setIsJournalDictating(false);
-    }
-  }, [t]);
-
-  const handleStopJournalDictation = useCallback(async () => {
-    try {
-      await ExpoSpeechRecognitionModule.stop();
-      setIsJournalDictating(false);
-    } catch (error) {
-      console.error('Error stopping journal dictation:', error);
-      setIsJournalDictating(false);
-    }
-  }, []);
-
-  // 🆕 Cleanup: ferma la dettatura quando si cambia modalità
-  useEffect(() => {
-    if (mode !== 'journal' && isJournalDictating) {
-      handleStopJournalDictation();
-      setJournalTranscript('');
-      setHasProcessedJournalResult(false);
-    }
-  }, [mode, isJournalDictating, handleStopJournalDictation]);
-
-  // 🆕 Speech recognition events per Journal dictation
-  useSpeechRecognitionEvent('result', (event) => {
-    if (mode !== 'journal' || !isJournalDictating) return;
-    
-    if (event.results && event.results.length > 0) {
-      const result = event.results[0];
-      const text = result.transcript || '';
-      const isFinal = event.isFinal || false;
-
-      setJournalTranscript(text);
-
-      if (isFinal && text.trim().length > 2 && !hasProcessedJournalResult) {
-        setHasProcessedJournalResult(true);
-        handleStopJournalDictation();
-        // Aggiungi il testo dettato al journal
-        setJournalText(prev => (prev ? `${prev}\n${text.trim()}` : text.trim()));
-        setJournalTranscript('');
-      }
-    }
-  });
-
-  useSpeechRecognitionEvent('start', () => {
-    if (mode === 'journal') {
-      setIsJournalDictating(true);
-    }
-  });
-
-  useSpeechRecognitionEvent('end', () => {
-    if (mode === 'journal') {
-      setIsJournalDictating(false);
-    }
-  });
-
-  useSpeechRecognitionEvent('error', (event) => {
-    if (mode === 'journal') {
-      console.warn('Journal dictation error:', event?.error);
-      setIsJournalDictating(false);
-      Alert.alert(t('common.error') || 'Errore', t('journal.dictationError') || 'Errore durante la dettatura');
-    }
-  });
 
   // 🆕 Funzione helper per salvare l'entry del journal
   const saveJournalEntry = useCallback(async (dayKey: string) => {
@@ -1737,10 +1642,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     
     try {
       // Check if we need to generate AI judgment (only if content changed and no existing score)
-      let aiScore = null, aiLabel = null, aiSummary = null, aiAnalysis = null;
+      let aiScore = null, aiAnalysis = null;
       
       // Check if we already have AI judgment for this entry
-      const hasExistingAI = aiScore || aiSummary;
+      const hasExistingAI = aiScore || aiAnalysis;
       
       if (journalText.trim().length > 10 && !hasExistingAI) {
         // 🆕 Rimossi log per performance
@@ -1776,19 +1681,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         
         if (aiJudgment) {
           aiScore = aiJudgment.ai_score;
-          aiLabel = aiJudgment.ai_label;
-          aiSummary = aiJudgment.ai_summary;
           aiAnalysis = aiJudgment.ai_analysis;
           
           // Update local state
           setAiScore(aiScore);
-          setAiLabel(aiLabel);
-          setAiSummary(aiSummary);
           setAiAnalysis(aiAnalysis);
         }
       }
 
-      await DailyJournalService.syncToRemote(currentUser.id, dayKey, journalText, journalPrompt, aiSummary, aiScore, aiLabel, aiAnalysis);
+      await DailyJournalService.syncToRemote(currentUser.id, dayKey, journalText, journalPrompt, aiScore, aiAnalysis);
       const recent = await DailyJournalDBService.listRecent(currentUser.id, 10);
       setJournalHistory(recent);
       
@@ -1816,7 +1717,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     // ✅ REAL VOICE INPUT - No more simulation!
     // 🆕 Rimosso log per performance
     
-    // Journal dictation è gestita separatamente con handleStartJournalDictation
     if (mode === 'journal') {
       return;
     }
@@ -2432,23 +2332,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   value={journalText}
                   onChangeText={setJournalText}
                 />
-                {/* Transcript in tempo reale durante la dettatura */}
-                {isJournalDictating && journalTranscript && (
-                  <View style={[styles.journalTranscriptContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                    <Text style={[styles.journalTranscriptText, { color: colors.text }]}>{journalTranscript}</Text>
-                  </View>
-                )}
                 <View style={styles.journalActions}>
-                  <TouchableOpacity 
-                    style={[styles.journalMic, isJournalDictating && styles.journalMicRecording]} 
-                    onPress={isJournalDictating ? handleStopJournalDictation : handleStartJournalDictation}
-                  >
-                    <FontAwesome 
-                      name={isJournalDictating ? "stop-circle" : "microphone"} 
-                      size={16} 
-                      color="#fff" 
-                    />
-                  </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.journalSave}
                     onPress={async () => {
@@ -2488,42 +2372,26 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 )}
               </View>
 
-              {/* AI Journal Insight */}
-              {(() => {
-        // 🆕 Rimosso log per performance
-        return (aiSummary || aiScore);
-              })() && (
+              {/* Uno sguardo sul tuo Diario */}
+              {aiAnalysis && (
                 <View style={[styles.aiInsightCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <View style={styles.aiInsightHeader}>
                     <View style={styles.aiInsightTitleRow}>
                       <View style={styles.aiInsightIcon}>
                         <Text style={styles.aiInsightIconText}>🤖</Text>
                       </View>
-                      <Text style={[styles.aiInsightTitle, { color: colors.text }]}>{t('journal.aiInsight')}</Text>
+                      <Text style={[styles.aiInsightTitle, { color: colors.text }]}>{t('journal.diaryInsight')}</Text>
                     </View>
-                    {typeof aiScore === 'number' && (
-                      <View style={[styles.aiInsightScore, { backgroundColor: DailyJournalService.colorForScore(aiScore) }]}>
-                        <Text style={styles.aiInsightScoreText}>{aiScore}/3</Text>
-                      </View>
-                    )}
                   </View>
                   
                   <View style={styles.aiInsightContent}>
                     <View style={styles.aiInsightLabelRow}>
-                      <View style={[styles.aiInsightDot, { backgroundColor: DailyJournalService.colorForScore(aiScore ?? undefined) }]} />
-                      <Text style={[styles.aiInsightLabel, { color: colors.text }]}>{aiLabel || t('journal.aiAnalysis')}</Text>
+                      <Text style={styles.aiInsightEmoji}>
+                        {aiScore === 3 ? '😊' : aiScore === 2 ? '😐' : aiScore === 1 ? '😢' : '😐'}
+                      </Text>
                     </View>
                     
-                    {!!aiSummary && (
-                      <Text style={[styles.aiInsightSummary, { color: colors.textSecondary }]}>{aiSummary}</Text>
-                    )}
-                    
-                    {!!aiAnalysis && (
-                      <TouchableOpacity onPress={() => setShowFullAnalysis(true)} style={styles.aiInsightButton}>
-                        <Text style={styles.aiInsightButtonText}>{t('journal.seeFullAnalysis')}</Text>
-                        <Text style={styles.aiInsightButtonIcon}>→</Text>
-                      </TouchableOpacity>
-                    )}
+                    <Text style={[styles.aiInsightSummary, { color: colors.textSecondary }]}>{aiAnalysis}</Text>
                   </View>
                 </View>
               )}
@@ -2560,7 +2428,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalBody}>
-                {!!aiAnalysis && (
+                {aiAnalysis && (
                   <Text style={[styles.modalText, { color: colors.text }]}>{aiAnalysis}</Text>
                 )}
               </ScrollView>
@@ -3316,26 +3184,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  journalMic: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: '#6366f1',
-    borderRadius: 12,
-  },
-  journalMicRecording: {
-    backgroundColor: '#ef4444',
-  },
-  journalTranscriptContainer: {
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    maxHeight: 100,
-  },
-  journalTranscriptText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
   journalSave: {
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -3393,18 +3241,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.2,
   },
-  aiInsightScore: { 
-    paddingHorizontal: 12, 
-    paddingVertical: 6, 
-    borderRadius: 12,
-    minWidth: 44,
-    alignItems: 'center',
-  },
-  aiInsightScoreText: { 
-    fontSize: 13, 
-    fontWeight: '800', 
-    color: '#fff',
-  },
   aiInsightContent: { 
     paddingHorizontal: 16, 
     paddingBottom: 16, 
@@ -3413,13 +3249,11 @@ const styles = StyleSheet.create({
   aiInsightLabelRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    gap: 8, 
+    gap: 10, 
     marginBottom: 12,
   },
-  aiInsightDot: { 
-    width: 8, 
-    height: 8, 
-    borderRadius: 4,
+  aiInsightEmoji: {
+    fontSize: 20,
   },
   aiInsightLabel: { 
     fontSize: 14, 

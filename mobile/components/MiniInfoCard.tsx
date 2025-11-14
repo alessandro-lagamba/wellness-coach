@@ -73,19 +73,6 @@ const MiniInfoCard: React.FC<Props> = ({
     <LinearGradient colors={[colors.surface, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.innerGradient}>
       <View style={styles.smallHeader}>
         <Text style={[styles.smallLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
-        {showStatus ? (
-          <View style={[styles.smallStatusBadge, { backgroundColor: st.bg, borderColor: st.border }]}>
-            <MaterialCommunityIcons name={st.icon as any} size={11} color={st.text} />
-          </View>
-        ) : trendValue ? (
-          <View style={[styles.smallTrendBadge, { backgroundColor: `${getTrendColor()}14`, borderColor: `${getTrendColor()}28` }]}>
-            <MaterialCommunityIcons
-              name={trendValue.includes("+") ? "trending-up" : trendValue.includes("-") ? "trending-down" : "minus"}
-              size={11}
-              color={getTrendColor()}
-            />
-          </View>
-        ) : null}
       </View>
 
       <View style={styles.smallContent}>
@@ -126,23 +113,6 @@ const MiniInfoCard: React.FC<Props> = ({
             {label}
           </Text>
         </View>
-
-        {showStatus ? (
-          <View style={[styles.miStatusBadge, { backgroundColor: st.bg, borderColor: st.border }]}>
-            <MaterialCommunityIcons name={st.icon as any} size={13} color={st.text} />
-          </View>
-        ) : trendValue ? (
-          <View style={[styles.miTrendBadge, { backgroundColor: `${getTrendColor()}14`, borderColor: `${getTrendColor()}30` }]}>
-            <MaterialCommunityIcons
-              name={trendValue.includes("+") ? "trending-up" : trendValue.includes("-") ? "trending-down" : "minus"}
-              size={12}
-              color={getTrendColor()}
-            />
-            <Text style={[styles.miTrendText, { color: getTrendColor() }]} numberOfLines={1}>
-              {trendValue}
-            </Text>
-          </View>
-        ) : null}
       </View>
 
       <View style={[styles.miBodyRow, styles.miBodyWithRightPadding]}>
@@ -157,11 +127,6 @@ const MiniInfoCard: React.FC<Props> = ({
           )}
         </View>
 
-        {showStatus && (
-          <View style={[styles.miStatusPill, { backgroundColor: st.bg, borderColor: st.border }]}>
-            <Text style={[styles.miStatusPillText, { color: st.text }]}>{status === "completed" ? "✓" : status === "warning" ? "!" : "…"}</Text>
-          </View>
-        )}
       </View>
 
       {detailChips?.length ? (
@@ -199,21 +164,6 @@ const MiniInfoCard: React.FC<Props> = ({
             </Text>
           </View>
         </View>
-
-        {showStatus ? (
-          <View style={[styles.largeStatusBadge, { backgroundColor: st.bg, borderColor: st.border }]}>
-            <MaterialCommunityIcons name={st.icon as any} size={15} color={st.text} />
-          </View>
-        ) : trendValue ? (
-          <View style={[styles.largeTrendBadge, { backgroundColor: `${getTrendColor()}16`, borderColor: `${getTrendColor()}32` }]}>
-            <MaterialCommunityIcons
-              name={trendValue.includes("+") ? "trending-up" : trendValue.includes("-") ? "trending-down" : "minus"}
-              size={13}
-              color={getTrendColor()}
-            />
-            <Text style={[styles.largeTrendText, { color: getTrendColor() }]}>{trendValue}</Text>
-          </View>
-        ) : null}
       </View>
 
       <View style={styles.largeBody}>
@@ -228,11 +178,6 @@ const MiniInfoCard: React.FC<Props> = ({
           )}
         </View>
 
-        {showStatus && (
-          <View style={[styles.largeStatusPill, { backgroundColor: st.bg, borderColor: st.border }]}>
-            <Text style={[styles.largeStatusText, { color: st.text }]}>{status === "completed" ? "✓" : status === "warning" ? "!" : "…"}</Text>
-          </View>
-        )}
       </View>
 
       {!!detailChips?.length && (
@@ -281,8 +226,6 @@ const styles = StyleSheet.create({
   /* ========== SMALL (immutato) ========== */
   smallHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, paddingTop: 2 },
   smallLabel: { fontSize: 14, fontWeight: "700", color: "#111827", letterSpacing: -0.1, flex: 1 },
-  smallStatusBadge: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: -8, marginRight: -8 },
-  smallTrendBadge: { width: 20, height: 20, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: -8, marginRight: -8 },
   smallContent: { flex: 1, justifyContent: "center" },
   smallValueRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 },
   smallPrimaryValue: { fontSize: 26, lineHeight: 28, fontWeight: "800", letterSpacing: -0.2 },
@@ -297,17 +240,11 @@ const styles = StyleSheet.create({
   miIconChip: { height: 28, width: 28, borderRadius: 14, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   miIcon: { fontSize: 16, fontWeight: "800" },
   miTitle: { flexShrink: 1, fontSize: 15, fontWeight: "800", color: "#0f172a" },
-  miTrendBadge: { height: 26, paddingHorizontal: 8, borderRadius: 13, borderWidth: 1, flexDirection: "row", alignItems: "center", gap: 4 },
-  miTrendText: { fontSize: 11, fontWeight: "800" },
-  miStatusBadge: { minWidth: 28, height: 26, borderRadius: 13, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
 
   miBodyRow: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
   miBodyWithRightPadding: { paddingRight: 96 },
   miValue: { fontSize: 20, lineHeight: 24, fontWeight: "900", color: "#0f172a" },
   miSubtitle: { marginTop: 4, fontSize: 12, color: "#475569", fontWeight: "700" },
-
-  miStatusPill: { minWidth: 36, height: 32, borderRadius: 16, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 10, alignSelf: "flex-start" },
-  miStatusPillText: { fontSize: 14, fontWeight: "900" },
 
   // chip flottante in basso a destra
   miDetailChipFloat: {
@@ -337,19 +274,11 @@ const styles = StyleSheet.create({
   largeIcon: { fontSize: 18 },
   largeLabel: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
 
-  largeTrendBadge: { height: 28, paddingHorizontal: 10, borderRadius: 14, borderWidth: 1.2, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, flexShrink: 0 },
-  largeTrendText: { fontSize: 11.5, fontWeight: "700" },
-  largeStatusBadge: { width: 30, height: 30, borderRadius: 15, borderWidth: 1.2, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-
   // ⬆️ alzo il contenuto visivo per dare più respiro ai valori
   largeBody: { flexDirection: "row", alignItems: "center", flex: 1, gap: 12, marginTop: -2 },
   largeValueBox: { flex: 1, minWidth: 0 },
   largeValue: { fontSize: 26, fontWeight: "800", letterSpacing: -0.2, lineHeight: 28 },
   largeSubtitle: { marginTop: 4, fontSize: 12.5, color: "#374151", fontWeight: "600", lineHeight: 16 },
-
-  // ✅ stili aggiunti che mancavano (evitano errori)
-  largeStatusPill: { width: 36, height: 36, borderRadius: 18, borderWidth: 1.5, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  largeStatusText: { fontSize: 15, fontWeight: "800" },
 
   largeChipsRow: { marginTop: 10, flexDirection: "row", flexWrap: "wrap", gap: 7 },
   largeDetailChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, gap: 8, flex: 1, minWidth: 90, maxWidth: "48%" },

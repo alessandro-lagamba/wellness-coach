@@ -30,12 +30,10 @@ export class DailyJournalDBService {
     content: string;
     voiceUrl?: string;
     aiPrompt?: string;
-    aiSummary?: string;
     aiScore?: number;
-    aiLabel?: string;
     aiAnalysis?: string;
   }) {
-    const { userId, isoDate, content, voiceUrl, aiPrompt, aiSummary, aiScore, aiLabel, aiAnalysis } = params;
+    const { userId, isoDate, content, voiceUrl, aiPrompt, aiScore, aiAnalysis } = params;
     const { data, error } = await supabase
       .from('daily_journal_entries')
       .upsert({
@@ -44,10 +42,11 @@ export class DailyJournalDBService {
         content,
         voice_url: voiceUrl ?? null,
         ai_prompt: aiPrompt ?? null,
-        ai_summary: aiSummary ?? null,
         ai_score: aiScore ?? null,
-        ai_label: aiLabel ?? null,
         ai_analysis: aiAnalysis ?? null,
+        // Manteniamo ai_summary e ai_label come null per retrocompatibilità
+        ai_summary: null,
+        ai_label: null,
       }, { onConflict: 'user_id,entry_date' })
       .select('*')
       .maybeSingle();

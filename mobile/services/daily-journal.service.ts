@@ -29,15 +29,13 @@ export class DailyJournalService {
     ]);
   }
 
-  static async syncToRemote(userId: string, dayKey: string, content: string, aiPrompt?: string, aiSummary?: string, aiScore?: number, aiLabel?: string, aiAnalysis?: string) {
+  static async syncToRemote(userId: string, dayKey: string, content: string, aiPrompt?: string, aiScore?: number, aiAnalysis?: string) {
     return await DailyJournalDBService.upsertEntry({
       userId,
       isoDate: dayKey,
       content,
       aiPrompt,
-      aiSummary,
       aiScore,
-      aiLabel,
       aiAnalysis,
     });
   }
@@ -54,16 +52,98 @@ export class DailyJournalService {
     return '#ef4444'; // < 1 -> rosso
   }
 
-  static buildAIJudgmentPrompt(content: string, moodNote?: string, sleepNote?: string) {
-    return `Sei un coach del benessere. Analizza questa entry giornaliera e restituisci JSON con i campi: ai_score (1-3, dove 1=rosso/basso, 2=giallo/medio, 3=verde/buono), ai_label (string), ai_summary (max 3 frasi), ai_analysis (testo completo).\nEntry:\n${content}\nNote mood:${moodNote||''}\nNote sleep:${sleepNote||''}`;
+  static async buildAIJudgmentPrompt(content: string, moodNote?: string, sleepNote?: string): Promise<string> {
+    const { getUserLanguage, getLanguageInstruction } = await import('./language.service');
+    const userLanguage = await getUserLanguage();
+    const languageInstruction = getLanguageInstruction(userLanguage);
+    
+    if (userLanguage === 'en') {
+      return `You are a supportive and empathetic wellness coach.
+
+${languageInstruction}
+
+Analyze the user's daily journal entry and produce a JSON response in the exact format requested, with no additional text.
+
+Objectives:
+- understand the user's emotional state
+- identify signs of stress, fatigue, tension, or low mood
+- highlight positive elements or progress
+- offer practical, realistic, and personalized suggestions
+- use a gentle, non-judgmental, and encouraging tone
+
+Return a JSON object with the following fields:
+
+- ai_score (1–3):
+    1 = Low / Needs attention
+    2 = Medium / Monitor
+    3 = Good / Positive
+
+- ai_analysis (text):
+    A personalized analysis based on the journal entry.
+    Include:
+      - emotional interpretation
+      - key elements the user mentioned
+      - one or two reflections to help increase self-awareness
+      - one practical suggestion for today
+
+Additional context to consider:
+- Mood note: ${moodNote || 'None'}
+- Sleep note: ${sleepNote || 'None'}
+
+JOURNAL ENTRY:
+
+${content}
+
+Respond ONLY with a valid JSON object.`;
+    } else {
+      return `Sei un coach del benessere supportivo ed empatico.
+
+${languageInstruction}
+
+Analizza l'entry giornaliera dell'utente e produci una risposta JSON nel formato esatto richiesto, senza testo aggiuntivo.
+
+Obiettivi:
+- comprendere lo stato emotivo dell'utente
+- identificare segni di stress, stanchezza, tensione o umore basso
+- evidenziare elementi positivi o progressi
+- offrire suggerimenti pratici, realistici e personalizzati
+- usare un tono gentile, non giudicante e incoraggiante
+
+Restituisci un oggetto JSON con i seguenti campi:
+
+- ai_score (1–3):
+    1 = Basso / Richiede attenzione
+    2 = Medio / Monitorare
+    3 = Buono / Positivo
+
+- ai_analysis (testo):
+    Un'analisi personalizzata basata sull'entry del diario.
+    Includi:
+      - interpretazione emotiva
+      - elementi chiave menzionati dall'utente
+      - una o due riflessioni per aiutare ad aumentare l'autoconsapevolezza
+      - un suggerimento pratico per oggi
+
+Contesto aggiuntivo da considerare:
+- Nota umore: ${moodNote || 'Nessuna'}
+- Nota sonno: ${sleepNote || 'Nessuna'}
+
+ENTRY DEL DIARIO:
+
+${content}
+
+Rispondi SOLO con un oggetto JSON valido.`;
+    }
   }
 
-  static async generateAIJudgment(userId: string, content: string, moodNote?: string, sleepNote?: string): Promise<{ ai_score: number; ai_label: string; ai_summary: string; ai_analysis: string } | null> {
+  static async generateAIJudgment(userId: string, content: string, moodNote?: string, sleepNote?: string): Promise<{ ai_score: number; ai_analysis: string } | null> {
     try {
       const { getBackendURL } = await import('../constants/env');
       const { getUserLanguage } = await import('./language.service');
       const backendURL = await getBackendURL();
-      const userLanguage = await getUserLanguage(); // 🔥 FIX: Ottieni la lingua dell'utente
+      const userLanguage = await getUserLanguage();
+      
+      const prompt = await this.buildAIJudgmentPrompt(content, moodNote, sleepNote);
       
       const response = await fetch(`${backendURL}/api/chat/respond`, {
         method: 'POST',
@@ -71,11 +151,11 @@ export class DailyJournalService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: this.buildAIJudgmentPrompt(content, moodNote, sleepNote),
+          message: prompt,
           userId,
           context: 'journal_analysis',
           userContext: {
-            language: userLanguage // 🔥 FIX: Includi la lingua per il backend
+            language: userLanguage
           },
         }),
       });
@@ -96,28 +176,24 @@ export class DailyJournalService {
           // Normalizza lo score a 1-3
           let normalizedScore = parsed.ai_score || 2;
           if (normalizedScore > 3) {
-            // Se arriva un valore legacy (4-5), convertilo a 3
             normalizedScore = 3;
           } else if (normalizedScore < 1) {
             normalizedScore = 1;
           }
+          
           return {
             ai_score: Math.max(1, Math.min(3, Math.round(normalizedScore))),
-            ai_label: parsed.ai_label || 'Neutrale',
-            ai_summary: parsed.ai_summary || 'Analisi non disponibile',
-            ai_analysis: parsed.ai_analysis || aiResponse,
+            ai_analysis: parsed.ai_analysis || (userLanguage === 'en' ? 'Analysis not available' : 'Analisi non disponibile'),
           };
         }
       } catch (parseError) {
         console.warn('Failed to parse AI JSON response:', parseError);
       }
 
-      // Fallback: create a basic judgment from the response (default: 2 = giallo/medio)
+      // Fallback: create a basic judgment from the response (default: 2 = medio)
       return {
         ai_score: 2,
-        ai_label: 'Analizzato',
-        ai_summary: aiResponse.slice(0, 200) + (aiResponse.length > 200 ? '...' : ''),
-        ai_analysis: aiResponse,
+        ai_analysis: aiResponse || (userLanguage === 'en' ? 'Analysis not available' : 'Analisi non disponibile'),
       };
     } catch (error) {
       console.error('Error calling AI Judgment:', error);

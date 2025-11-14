@@ -19,9 +19,8 @@ export interface ChatMessage {
 export interface JournalEntry {
   date: string;
   content: string;
-  aiSummary?: string;
   aiScore?: number;
-  aiLabel?: string;
+  aiAnalysis?: string;
 }
 
 export class ExportService {
@@ -95,16 +94,12 @@ export class ExportService {
       let content = `Entry Journal - ${entry.date}\n${'='.repeat(50)}\n\n`;
       content += `## Contenuto\n\n${entry.content}\n\n`;
 
-      if (entry.aiSummary) {
-        content += `## Analisi AI\n\n${entry.aiSummary}\n\n`;
-      }
-
       if (entry.aiScore !== undefined) {
-        content += `## Score: ${entry.aiScore}/5\n\n`;
+        content += `## Score: ${entry.aiScore}/3\n\n`;
       }
 
-      if (entry.aiLabel) {
-        content += `## Label: ${entry.aiLabel}\n\n`;
+      if (entry.aiAnalysis) {
+        content += `## Analisi AI\n\n${entry.aiAnalysis}\n\n`;
       }
 
       const file = new File(Paths.document, filename ?? `journal_${entry.date}.txt`);
@@ -131,16 +126,12 @@ export class ExportService {
       let content = `# Entry Journal - ${entry.date}\n\n`;
       content += `## Contenuto\n\n${entry.content}\n\n`;
 
-      if (entry.aiSummary) {
-        content += `## Analisi AI\n\n${entry.aiSummary}\n\n`;
-      }
-
       if (entry.aiScore !== undefined) {
-        content += `## Score: ${entry.aiScore}/5\n\n`;
+        content += `## Score: ${entry.aiScore}/3\n\n`;
       }
 
-      if (entry.aiLabel) {
-        content += `## Label: ${entry.aiLabel}\n\n`;
+      if (entry.aiAnalysis) {
+        content += `## Analisi AI\n\n${entry.aiAnalysis}\n\n`;
       }
 
       const file = new File(Paths.document, filename ?? `journal_${entry.date}.md`);
@@ -159,4 +150,5 @@ export class ExportService {
     }
   }
 }
+
 

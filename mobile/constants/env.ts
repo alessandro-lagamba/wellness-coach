@@ -25,7 +25,7 @@ export const getBackendURL = async (): Promise<string> => {
   }
 
   // 🛠️ SVILUPPO: Ritorna l'URL da .env (può essere localhost o IP locale)
-  return PRODUCTION_BACKEND_URL;
+      return PRODUCTION_BACKEND_URL;
 };
 
 /**

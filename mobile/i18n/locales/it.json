@@ -103,6 +103,7 @@
     "open": "Apri",
     "characters": "{{count}}/2000",
     "aiInsight": "AI Journal Insight",
+    "diaryInsight": "Uno sguardo sul tuo Diario",
     "seeFullAnalysis": "Vedi analisi completa",
     "completeAnalysis": "Analisi Completa",
     "aiAnalysis": "Analisi AI",
@@ -389,6 +390,17 @@
         "valenceDescription": "Valence misura quanto positive o negative sono le tue emozioni. Valori alti indicano felicità e soddisfazione, mentre valori bassi indicano tristezza o preoccupazione. Questo metrico ti aiuta a capire il tuo stato emotivo generale.",
         "arousalDescription": "Arousal misura l'intensità delle tue emozioni, indipendentemente dal fatto che siano positive o negative. Valori alti indicano eccitazione o stress, mentre valori bassi indicano calma o rilassamento. Ti aiuta a capire il tuo livello di attivazione emotiva.",
         "sessionsDescription": "Il numero di sessioni di analisi emotiva che hai completato questo mese. Tracciare regolarmente le tue emozioni ti aiuta a comprendere meglio i tuoi pattern emotivi e il tuo benessere generale."
+      },
+      "names": {
+        "joy": "Gioia",
+        "happy": "Felice",
+        "sadness": "Tristezza",
+        "sad": "Triste",
+        "anger": "Rabbia",
+        "fear": "Paura",
+        "surprise": "Sorpresa",
+        "disgust": "Disgusto",
+        "neutral": "Neutrale"
       },
       "camera": {
         "instructionText": "Allinea il tuo viso nel frame della fotocamera per iniziare il rilevamento delle emozioni"

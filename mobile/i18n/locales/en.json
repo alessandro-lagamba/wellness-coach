@@ -101,6 +101,7 @@
     "open": "Open",
     "characters": "{{count}}/2000",
     "aiInsight": "AI Journal Insight",
+    "diaryInsight": "A Look at Your Diary",
     "seeFullAnalysis": "See full analysis",
     "completeAnalysis": "Complete Analysis",
     "aiAnalysis": "AI Analysis",
@@ -374,6 +375,17 @@
         "valenceDescription": "Valence measures how positive or negative your emotions are. High values indicate happiness and satisfaction, while low values indicate sadness or worry. This metric helps you understand your overall emotional state.",
         "arousalDescription": "Arousal measures the intensity of your emotions, regardless of whether they are positive or negative. High values indicate excitement or stress, while low values indicate calm or relaxation. It helps you understand your level of emotional activation.",
         "sessionsDescription": "The number of emotion analysis sessions you have completed this month. Regularly tracking your emotions helps you better understand your emotional patterns and overall well-being."
+      },
+      "names": {
+        "joy": "Joy",
+        "happy": "Happy",
+        "sadness": "Sadness",
+        "sad": "Sad",
+        "anger": "Anger",
+        "fear": "Fear",
+        "surprise": "Surprise",
+        "disgust": "Disgust",
+        "neutral": "Neutral"
       },
       "camera": {
         "instructionText": "Align your face within the camera frame to begin emotion detection"
