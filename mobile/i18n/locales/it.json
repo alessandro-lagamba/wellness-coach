@@ -930,7 +930,9 @@
         "newRecipe": "Nuova Ricetta",
         "saveIngredients": "Salva Ingredienti",
         "ingredientsSaved": "Ingredienti salvati con successo!",
-        "saveError": "Errore durante il salvataggio degli ingredienti"
+        "saveError": "Errore durante il salvataggio degli ingredienti",
+        "savedIngredients": "Ingredienti Salvati",
+        "removeError": "Errore durante la rimozione dell'ingrediente"
       },
       "goals": {
         "title": "Obiettivi Nutrizionali",
@@ -965,6 +967,7 @@
         "sourceManual": "Manuale",
         "sourceAI": "Suggerito da AI",
         "sourceNutritionist": "Nutrizionista",
+        "kcalPerDay": "kcal/giorno",
         "dietGoal": "Obiettivo Dieta",
         "dietGoalDesc": "Scegli il tuo obiettivo principale per personalizzare calorie e macronutrienti",
         "dietGoals": {

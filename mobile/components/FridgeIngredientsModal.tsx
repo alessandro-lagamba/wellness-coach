@@ -52,6 +52,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   const { t } = useTranslation();
   const { colors } = useTheme();
   const [ingredients, setIngredients] = useState<IngredientRow[]>([{ name: '' }]);
+  const [savedIngredients, setSavedIngredients] = useState<Array<{ id: string; name: string; expiry_date?: string; quantity?: number; unit?: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [generatedRecipe, setGeneratedRecipe] = useState<any>(null);
   const [bulkText, setBulkText] = useState('');
@@ -220,7 +221,8 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
     }
     
     setParsedChips([]);
-    setTranscript('');
+    // Ricarica ingredienti salvati dopo la conferma
+    await loadSavedIngredients();
   };
 
   // Salva ingredienti senza generare ricetta (scadenza opzionale)
@@ -254,10 +256,11 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
         t('common.success'),
         t('analysis.food.fridge.ingredientsSaved')
       );
-      // Reset form
+      // Ricarica ingredienti salvati invece di resettare il form
+      await loadSavedIngredients();
+      // Reset solo i campi di input nuovi (non quelli salvati)
       setIngredients([{ name: '' }]);
       setBulkText('');
-      setTranscript('');
       setParsedChips([]);
     } catch (error) {
       console.error('Error saving ingredients:', error);
@@ -275,19 +278,65 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
     setParsedChips(prev => prev.filter(chip => chip.id !== chipId));
   };
 
+  // Carica ingredienti salvati dal database
+  const loadSavedIngredients = useCallback(async () => {
+    try {
+      const items = await fridgeItemsService.getFridgeItems();
+      setSavedIngredients(items.map(item => ({
+        id: item.id || '',
+        name: item.name,
+        expiry_date: item.expiry_date,
+        quantity: item.quantity,
+        unit: item.unit,
+      })));
+    } catch (error) {
+      console.error('Error loading saved ingredients:', error);
+    }
+  }, []);
+
+  // Elimina ingrediente salvato
+  const removeSavedIngredient = async (itemId: string) => {
+    try {
+      await fridgeItemsService.removeFridgeItem(itemId);
+      await loadSavedIngredients(); // Ricarica la lista
+    } catch (error) {
+      console.error('Error removing ingredient:', error);
+      Alert.alert(t('common.error'), t('analysis.food.fridge.removeError') || 'Errore durante la rimozione dell\'ingrediente');
+    }
+  };
+
+  // Carica ingredienti quando il modal si apre
+  useEffect(() => {
+    if (visible) {
+      loadSavedIngredients();
+    }
+  }, [visible, loadSavedIngredients]);
+
 
   const handleGenerateRecipe = async () => {
-    // Valida: nome non vuoto, data in formato YYYY-MM-DD se presente
-    const validIngredients = ingredients
+    // Combina ingredienti nuovi e salvati
+    const newIngredients = ingredients
       .map(ing => ({ name: ing.name.trim(), expiry: (ing.expiry || '').trim() }))
       .filter(ing => ing.name.length > 0);
     
-    if (validIngredients.length === 0) {
+    const allIngredients = [
+      ...savedIngredients.map(item => item.name),
+      ...newIngredients.map(ing => ing.name),
+    ];
+
+    // Rimuovi duplicati (case-insensitive)
+    const uniqueIngredients = Array.from(new Set(allIngredients.map(name => name.toLowerCase())))
+      .map(lowerName => {
+        const original = allIngredients.find(ing => ing.toLowerCase() === lowerName);
+        return original || lowerName;
+      });
+
+    if (uniqueIngredients.length === 0) {
       Alert.alert(t('common.error'), t('analysis.food.fridge.noIngredients'));
       return;
     }
 
-    if (validIngredients.length < MIN_INGREDIENTS_FOR_GENERATION) {
+    if (uniqueIngredients.length < MIN_INGREDIENTS_FOR_GENERATION) {
       Alert.alert(
         t('common.error'),
         t('analysis.food.fridge.needMoreIngredients', { count: MIN_INGREDIENTS_FOR_GENERATION })
@@ -295,36 +344,39 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
       return;
     }
 
-    // Salva ingredienti su Supabase prima di generare ricetta
-    try {
-      await fridgeItemsService.addFridgeItems(
-        validIngredients.map(ing => ({
-          name: ing.name,
-          expiry_date: ing.expiry || undefined,
-        }))
-      );
-    } catch (error) {
-      console.error('Error saving ingredients to fridge:', error);
-      // Continua comunque con la generazione ricetta
+    // Salva ingredienti nuovi su Supabase prima di generare ricetta
+    if (newIngredients.length > 0) {
+      try {
+        await fridgeItemsService.addFridgeItems(
+          newIngredients.map(ing => ({
+            name: ing.name,
+            expiry_date: ing.expiry || undefined,
+          }))
+        );
+        await loadSavedIngredients(); // Ricarica dopo il salvataggio
+      } catch (error) {
+        console.error('Error saving ingredients to fridge:', error);
+        // Continua comunque con la generazione ricetta
+      }
     }
 
-    // Ordina per scadenza (se presente) → priorità agli ingredienti che scadono prima
-    const sorted = [...validIngredients].sort((a, b) => {
-      if (!a.expiry && !b.expiry) return 0;
-      if (!a.expiry) return 1;
-      if (!b.expiry) return -1;
-      return a.expiry.localeCompare(b.expiry);
+    // Ordina ingredienti salvati per scadenza (se presente) → priorità agli ingredienti che scadono prima
+    const sortedSaved = [...savedIngredients].sort((a, b) => {
+      if (!a.expiry_date && !b.expiry_date) return 0;
+      if (!a.expiry_date) return 1;
+      if (!b.expiry_date) return -1;
+      return a.expiry_date.localeCompare(b.expiry_date);
     });
 
     try {
       setLoading(true);
       const result = await NutritionService.generateRecipe({
-        // Passiamo solo i nomi come richiesto dal backend, ma includiamo un hint per la priorità
-        ingredients: sorted.map(i => i.name),
-        cuisineHint: sorted
-          .filter(i => i.expiry)
+        // Passiamo tutti gli ingredienti (salvati + nuovi)
+        ingredients: uniqueIngredients,
+        cuisineHint: sortedSaved
+          .filter(i => i.expiry_date)
           .slice(0, 3)
-          .map(i => `${i.name} exp:${i.expiry}`)
+          .map(i => `${i.name} exp:${i.expiry_date}`)
           .join(', ')
           || undefined,
         servings: 2,
@@ -353,6 +405,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
     setGeneratedRecipe(null);
     setBulkText('');
     setParsedChips([]);
+    setSavedIngredients([]);
     onClose();
   };
 
@@ -463,6 +516,38 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                     {t('analysis.food.fridge.dictationHint')}
                   </Text>
                 </View>
+
+                {/* Ingredienti salvati */}
+                {savedIngredients.length > 0 && (
+                  <View style={styles.savedIngredientsSection}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                      {t('analysis.food.fridge.savedIngredients') || 'Ingredienti Salvati'}
+                    </Text>
+                    {savedIngredients.map((item) => (
+                      <View key={item.id} style={[styles.savedIngredientRow, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                        <View style={styles.savedIngredientInfo}>
+                          <Text style={[styles.savedIngredientName, { color: colors.text }]}>{item.name}</Text>
+                          {item.expiry_date && (
+                            <Text style={[styles.savedIngredientExpiry, { color: colors.textSecondary }]}>
+                              {t('analysis.food.fridge.expires')}: {item.expiry_date}
+                            </Text>
+                          )}
+                          {item.quantity && (
+                            <Text style={[styles.savedIngredientQuantity, { color: colors.textSecondary }]}>
+                              {item.quantity} {item.unit || ''}
+                            </Text>
+                          )}
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => removeSavedIngredient(item.id)}
+                          style={[styles.removeSavedButton, { backgroundColor: colors.error + '20' }]}
+                        >
+                          <FontAwesome name="trash" size={14} color={colors.error} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
 
                 <View style={styles.ingredientsSection}>
                   <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -1074,6 +1159,42 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  savedIngredientsSection: {
+    marginBottom: 24,
+  },
+  savedIngredientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  savedIngredientInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  savedIngredientName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  savedIngredientExpiry: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  savedIngredientQuantity: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  removeSavedButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

@@ -1719,7 +1719,7 @@ export const FoodAnalysisScreen: React.FC = () => {
               </Text>
               {nutritionalGoals && (
                 <Text style={[styles.goalsSubtitle, { color: colors.textSecondary }]}>
-                  {nutritionalGoals.daily_calories} kcal/die • {nutritionalGoals.carbs_percentage}% • {nutritionalGoals.proteins_percentage}% • {nutritionalGoals.fats_percentage}%
+                  {nutritionalGoals.daily_calories} {t('analysis.food.goals.kcalPerDay')} • {nutritionalGoals.carbs_percentage}% • {nutritionalGoals.proteins_percentage}% • {nutritionalGoals.fats_percentage}%
                 </Text>
               )}
               {nutritionalGoals?.source && (

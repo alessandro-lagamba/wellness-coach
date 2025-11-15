@@ -928,7 +928,9 @@
         "newRecipe": "New Recipe",
         "saveIngredients": "Save Ingredients",
         "ingredientsSaved": "Ingredients saved successfully!",
-        "saveError": "Error saving ingredients"
+        "saveError": "Error saving ingredients",
+        "savedIngredients": "Saved Ingredients",
+        "removeError": "Error removing ingredient"
       },
       "goals": {
         "title": "Nutritional Goals",
@@ -963,6 +965,7 @@
         "sourceManual": "Manual",
         "sourceAI": "AI Suggested",
         "sourceNutritionist": "Nutritionist",
+        "kcalPerDay": "kcal/day",
         "dietGoal": "Diet Goal",
         "dietGoalDesc": "Choose your main goal to personalize calories and macronutrients",
         "dietGoals": {
