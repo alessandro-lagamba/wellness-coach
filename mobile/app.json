@@ -125,7 +125,11 @@
           "NSHealthUpdateUsageDescription": "This app writes wellness data to Apple Health for comprehensive health tracking."
         }
       ],
-      "react-native-health-connect"
+      "react-native-health-connect",
+      "expo-asset",
+      "expo-audio",
+      "expo-sqlite",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

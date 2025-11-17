@@ -52,7 +52,7 @@ export class AuthPersistenceService {
         await AsyncStorage.setItem(this.STORAGE_KEYS.REMEMBER_ME, 'false');
       }
 
-      console.log('✅ Auth data saved successfully');
+      // ✅ FIX: Rimossi log eccessivi - i dati vengono salvati correttamente
     } catch (error) {
       console.error('Error saving auth data:', error);
       throw error;
@@ -112,7 +112,19 @@ export class AuthPersistenceService {
       });
 
       if (error || !data.session) {
-        console.log('❌ Session refresh failed:', error);
+        // ✅ FIX: Errori di refresh token (già usato, scaduto, etc.) sono normali e gestiti
+        const isNormalError = error?.message?.includes('Invalid Refresh Token') || 
+                              error?.message?.includes('Already Used') ||
+                              error?.message?.includes('expired');
+        
+        if (isNormalError) {
+          // Log silenzioso per errori normali (token scaduto/già usato)
+          // L'utente dovrà semplicemente fare login di nuovo
+        } else {
+          // Solo loggare errori inaspettati
+          console.warn('⚠️ Session refresh failed:', error?.message || 'Unknown error');
+        }
+        
         await this.clearAuthData();
         return null;
       }
@@ -128,7 +140,7 @@ export class AuthPersistenceService {
         biometricEnabled: false,
       };
     } catch (error) {
-      console.error('Error refreshing session:', error);
+      // ✅ FIX: Errori di refresh sono normali, non loggare come errori critici
       await this.clearAuthData();
       return null;
     }
@@ -146,7 +158,7 @@ export class AuthPersistenceService {
         AsyncStorage.removeItem(this.STORAGE_KEYS.BIOMETRIC_ENABLED),
         AsyncStorage.removeItem(this.STORAGE_KEYS.REMEMBER_ME),
       ]);
-      console.log('🧹 Auth data cleared successfully');
+      // ✅ FIX: Rimossi log eccessivi - i dati vengono puliti correttamente
     } catch (error) {
       console.error('Error clearing auth data:', error);
     }

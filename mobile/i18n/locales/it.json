@@ -336,7 +336,21 @@
     },
     "dailyCopilot": {
       "title": "Cosa fare oggi",
-      "subtitle": "Il tuo spunto del giorno, pensato per te."
+      "subtitle": "Il tuo spunto del giorno, pensato per te.",
+      "scoreModal": {
+        "title": "Come viene calcolato il punteggio?",
+        "description": "Il punteggio complessivo (0-100) è calcolato combinando diversi fattori del tuo benessere quotidiano. Ogni fattore contribuisce con un peso specifico al punteggio finale.",
+        "mood": "Umore",
+        "moodDesc": "Basato sul tuo check-in giornaliero dell'umore (scala 1-5). Contribuisce al 20% del punteggio totale.",
+        "sleep": "Sonno",
+        "sleepDesc": "Combinazione di ore di sonno (70%) e qualità del sonno (30%). Contribuisce al 30% del punteggio totale.",
+        "steps": "Passi",
+        "stepsDesc": "Basato sul numero di passi giornalieri rispetto all'obiettivo di 10.000 passi. Contribuisce al 20% del punteggio totale.",
+        "hrv": "HRV (Variabilità Frequenza Cardiaca)",
+        "hrvDesc": "Misura la variabilità della frequenza cardiaca, indicatore di recupero e stress. Contribuisce al 15% del punteggio totale.",
+        "hydration": "Idratazione",
+        "hydrationDesc": "Basato sul numero di bicchieri d'acqua consumati rispetto all'obiettivo di 8 bicchieri. Contribuisce al 15% del punteggio totale."
+      }
     }
   },
   "analysis": {

@@ -21,11 +21,19 @@ export class AuthService {
       const { data: { user }, error } = await supabase.auth.getUser();
       
       if (error) {
-        // 🔥 FIX: Solo errori critici in console
-        console.error('❌ Error getting user:', error.message);
+        // ✅ FIX: Distingui tra errori normali (session missing) e errori critici
+        const isNormalError = error.message?.includes('Auth session missing') ||
+                             error.message?.includes('Invalid Refresh Token') ||
+                             error.message?.includes('Already Used');
+        
+        if (!isNormalError) {
+          // Solo loggare errori inaspettati
+          console.warn('⚠️ Error getting user:', error.message);
+        }
+        
         // Se fallisce, controlla la persistenza locale
         const authState = await AuthPersistenceService.loadAuthData();
-        if (authState?.user) {
+        if (authState?.user && authState?.session) {
           // Tenta di ripristinare la sessione
           try {
             const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
@@ -36,8 +44,23 @@ export class AuthService {
             if (!sessionError && sessionData.session?.user) {
               return sessionData.session.user;
             }
-          } catch (restoreError) {
-            console.error('❌ Error restoring session:', restoreError);
+            
+            // ✅ FIX: Se setSession fallisce con errori normali, non loggare come errore
+            if (sessionError) {
+              const isNormalSessionError = sessionError.message?.includes('Invalid Refresh Token') ||
+                                          sessionError.message?.includes('Already Used') ||
+                                          sessionError.message?.includes('expired');
+              if (!isNormalSessionError) {
+                console.warn('⚠️ Error restoring session:', sessionError.message);
+              }
+            }
+          } catch (restoreError: any) {
+            // ✅ FIX: Errori di restore sono gestiti, non loggare come critici
+            const isNormalRestoreError = restoreError?.message?.includes('Invalid Refresh Token') ||
+                                        restoreError?.message?.includes('Already Used');
+            if (!isNormalRestoreError) {
+              console.warn('⚠️ Error restoring session:', restoreError?.message || restoreError);
+            }
           }
         }
         return null;
@@ -370,8 +393,17 @@ export class AuthService {
           });
           
           if (error) {
-            // 🔥 FIX: Solo errori critici in console
-            console.error('❌ Failed to restore session from persisted data:', error.message);
+            // ✅ FIX: Distingui tra errori normali e critici
+            const isNormalError = error.message?.includes('Invalid Refresh Token') ||
+                                 error.message?.includes('Already Used') ||
+                                 error.message?.includes('expired') ||
+                                 error.message?.includes('Auth session missing');
+            
+            if (!isNormalError) {
+              // Solo loggare errori inaspettati
+              console.warn('⚠️ Failed to restore session from persisted data:', error.message);
+            }
+            
             // Tenta di rinnovare la sessione se necessario
             const refreshedState = await AuthPersistenceService.refreshSession(authState.session);
             return refreshedState?.isAuthenticated || false;
@@ -382,8 +414,15 @@ export class AuthService {
             await AuthPersistenceService.saveAuthData(data.session.user, data.session, true);
             return true;
           }
-        } catch (restoreError) {
-          console.error('❌ Error restoring session:', restoreError);
+        } catch (restoreError: any) {
+          // ✅ FIX: Errori di restore sono gestiti, non loggare come critici
+          const isNormalRestoreError = restoreError?.message?.includes('Invalid Refresh Token') ||
+                                      restoreError?.message?.includes('Already Used') ||
+                                      restoreError?.message?.includes('expired');
+          if (!isNormalRestoreError) {
+            console.warn('⚠️ Error restoring session:', restoreError?.message || restoreError);
+          }
+          
           // Tenta di rinnovare la sessione se necessario
           const refreshedState = await AuthPersistenceService.refreshSession(authState.session);
           return refreshedState?.isAuthenticated || false;

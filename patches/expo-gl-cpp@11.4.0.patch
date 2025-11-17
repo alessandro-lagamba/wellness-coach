@@ -1,0 +1,17 @@
+diff --git a/android/build.gradle b/android/build.gradle
+index 025d491c7b17c8a674391e2d8e1d28a32a0be2e3..7fd3c55a196cbbc1b3c4668cc48a70666be2f361 100644
+--- a/android/build.gradle
++++ b/android/build.gradle
+@@ -50,7 +50,11 @@ buildscript {
+ 
+ // Creating sources with comments
+ task androidSourcesJar(type: Jar) {
+-  classifier = 'sources'
++  if (hasProperty("archiveClassifier")) {
++    archiveClassifier.set('sources')
++  } else {
++    classifier = 'sources'
++  }
+   from android.sourceSets.main.java.srcDirs
+ }
+ 

@@ -4,11 +4,18 @@ const path = require('path');
 const config = getDefaultConfig(__dirname);
 
 // Fix module resolution for workspace setup
-config.resolver.nodeModulesPaths = [
-  path.resolve(__dirname, 'node_modules'),
-  path.resolve(__dirname, '../node_modules'),
-  path.resolve(__dirname, '../../node_modules'),
-];
+const projectRoot = __dirname;
+const workspaceRoot = path.resolve(projectRoot, '../');
+
+// ✅ CRITICAL: Force all React/React Native resolution to mobile/node_modules
+config.resolver.extraNodeModules = {
+  'react': path.resolve(projectRoot, 'node_modules/react'),
+  'react-dom': path.resolve(projectRoot, 'node_modules/react-dom'),
+  'react-native': path.resolve(projectRoot, 'node_modules/react-native'),
+  '@react-native': path.resolve(projectRoot, 'node_modules/@react-native'),
+  '@react-native-community': path.resolve(projectRoot, 'node_modules/@react-native-community'),
+  'expo-linear-gradient': path.resolve(projectRoot, 'node_modules/expo-linear-gradient'),
+};
 
 // Ensure proper platform resolution
 config.resolver.platforms = ['ios', 'android', 'native', 'web'];
@@ -22,6 +29,7 @@ config.resolver = {
     [
       'web-advanced/node_modules/.*',
       'web/node_modules/.*',
+      'backend/node_modules/.*', // ✅ CRITICAL: Block backend node_modules
     ].join('|')
   ),
 };
@@ -29,7 +37,7 @@ config.resolver = {
 // Fix watchman configuration for workspace
 config.watchFolders = [
   // Mantieni la root del monorepo per risoluzioni, ma evita node_modules non rilevanti con blockList
-  path.resolve(__dirname, '../'),
+  workspaceRoot,
 ];
 
 module.exports = config;

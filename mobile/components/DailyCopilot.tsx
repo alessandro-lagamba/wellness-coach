@@ -1,20 +1,23 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   StyleSheet,
   Dimensions,
   ActivityIndicator,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
   withTiming,
-  withSpring,
   useSharedValue,
+  FadeInUp,
+  FadeOutDown,
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useDailyCopilot } from '../hooks/useDailyCopilot';
@@ -39,6 +42,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
   const { copilotData, loading, error } = useDailyCopilot();
   const { colors: themeColors } = useTheme();
   const { t } = useTranslation();
+  const [showScoreModal, setShowScoreModal] = useState(false);
 
   // 🔥 DEBUG: Log per capire perché non mostra i dati
   useEffect(() => {
@@ -58,17 +62,10 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
   }, [copilotData, loading, error]);
 
   // Animation values
-  const progressValue = useSharedValue(0);
   const fadeInValue = useSharedValue(0);
 
   useEffect(() => {
     if (copilotData) {
-      // Anima il progresso
-      progressValue.value = withSpring(copilotData.overallScore / 100, {
-        damping: 15,
-        stiffness: 150,
-      });
-      
       // Anima il fade in
       fadeInValue.value = withTiming(1, { duration: 600 });
     }
@@ -128,10 +125,6 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
   };
 
   // Animation styles
-  const progressStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: progressValue.value }],
-  }));
-
   const fadeInStyle = useAnimatedStyle(() => ({
     opacity: fadeInValue.value,
     transform: [{ translateY: (1 - fadeInValue.value) * 20 }],
@@ -309,43 +302,53 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
             </View>
           </View>
           
-          {/* Right: Score Circle - Più visibile */}
-          <Animated.View style={[styles.scoreContainer, progressStyle]}>
-            <Svg width={120} height={120}>
-              <Defs>
-                <SvgLinearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <Stop offset="0%" stopColor={scoreColors[0]} />
-                  <Stop offset="100%" stopColor={scoreColors[1]} />
-                </SvgLinearGradient>
-              </Defs>
-              <Circle
-                cx="60"
-                cy="60"
-                r="52"
-                stroke={themeColors.borderLight}
-                strokeWidth="7"
-                fill="none"
-              />
-              <Circle
-                cx="60"
-                cy="60"
-                r="52"
-                stroke="url(#scoreGradient)"
-                strokeWidth="7"
-                fill="none"
-                strokeDasharray={`${2 * Math.PI * 52}`}
-                strokeDashoffset={`${2 * Math.PI * 52 * (1 - copilotData.overallScore / 100)}`}
-                strokeLinecap="round"
-                transform="rotate(-90 60 60)"
-              />
-            </Svg>
-            <View style={styles.scoreTextContainer}>
-              <Text style={[styles.scoreValue, { color: scoreColors[0] }]}>
-                {copilotData.overallScore}
-              </Text>
-              <Text style={[styles.scoreLabel, { color: themeColors.textSecondary }]}>/100</Text>
+          {/* Right: Score Circle - Più visibile e cliccabile */}
+          <TouchableOpacity 
+            onPress={() => {
+              console.log('Score circle pressed');
+              setShowScoreModal(true);
+            }}
+            activeOpacity={0.7}
+            style={styles.scoreTouchable}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <View style={styles.scoreContainer} pointerEvents="box-none">
+              <Svg width={95} height={95} pointerEvents="none">
+                <Defs>
+                  <SvgLinearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <Stop offset="0%" stopColor={scoreColors[0]} />
+                    <Stop offset="100%" stopColor={scoreColors[1]} />
+                  </SvgLinearGradient>
+                </Defs>
+                <Circle
+                  cx="47.5"
+                  cy="47.5"
+                  r="42"
+                  stroke={themeColors.borderLight}
+                  strokeWidth="5"
+                  fill="none"
+                />
+                <Circle
+                  cx="47.5"
+                  cy="47.5"
+                  r="42"
+                  stroke="url(#scoreGradient)"
+                  strokeWidth="5"
+                  fill="none"
+                  strokeDasharray={`${2 * Math.PI * 42}`}
+                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - copilotData.overallScore / 100)}`}
+                  strokeLinecap="round"
+                  transform="rotate(-90 47.5 47.5)"
+                />
+              </Svg>
+              <View style={styles.scoreTextContainer} pointerEvents="none">
+                <Text style={[styles.scoreValue, { color: scoreColors[0] }]}>
+                  {copilotData.overallScore}
+                </Text>
+                <Text style={[styles.scoreLabel, { color: themeColors.textSecondary }]}>/100</Text>
+              </View>
             </View>
-          </Animated.View>
+          </TouchableOpacity>
         </View>
 
         {/* Recommendations - Simplified */}
@@ -423,6 +426,148 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
         </View>
 
       </LinearGradient>
+
+      {/* Score Explanation Modal */}
+      <Modal
+        visible={showScoreModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowScoreModal(false)}
+        statusBarTranslucent
+      >
+        <View style={styles.modalOverlay} pointerEvents="box-none">
+          <TouchableWithoutFeedback onPress={() => setShowScoreModal(false)}>
+            <View style={StyleSheet.absoluteFill} />
+          </TouchableWithoutFeedback>
+          <Animated.View
+            entering={FadeInUp.duration(250)}
+            exiting={FadeOutDown.duration(200)}
+            style={[styles.modalContent, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+          >
+            <LinearGradient
+              colors={[themeColors.surface, themeColors.surfaceElevated]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.modalGradient}
+            >
+              <View style={[styles.modalHeader, { borderBottomColor: themeColors.border }]}>
+                <View style={styles.modalTitleContainer}>
+                  <View style={[styles.modalTitleIcon, { backgroundColor: scoreColors[0] + '20' }]}>
+                    <MaterialCommunityIcons name="information" size={24} color={scoreColors[0]} />
+                  </View>
+                  <Text style={[styles.modalTitle, { color: themeColors.text }]}>
+                    {t('home.dailyCopilot.scoreModal.title')}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setShowScoreModal(false)}
+                  style={[styles.modalCloseButton, { backgroundColor: themeColors.surfaceElevated }]}
+                >
+                  <MaterialCommunityIcons name="close" size={20} color={themeColors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView 
+                style={styles.modalScroll} 
+                contentContainerStyle={styles.modalScrollContent}
+                showsVerticalScrollIndicator={true}
+                nestedScrollEnabled={true}
+              >
+                <Text style={[styles.modalDescription, { color: themeColors.textSecondary }]}>
+                  {t('home.dailyCopilot.scoreModal.description')}
+                </Text>
+                
+                <View style={styles.scoreBreakdown}>
+                  <View style={styles.scoreBreakdownRow}>
+                    <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#8b5cf6' + '20' }]}>
+                      <MaterialCommunityIcons name="emoticon-happy" size={22} color="#8b5cf6" />
+                    </View>
+                    <View style={styles.scoreBreakdownTextContainer}>
+                      <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
+                        {t('home.dailyCopilot.scoreModal.mood')}
+                      </Text>
+                      <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
+                        {t('home.dailyCopilot.scoreModal.moodDesc')}
+                      </Text>
+                    </View>
+                    <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#8b5cf6' + '15' }]}>
+                      <Text style={[styles.scoreBreakdownPercentage, { color: '#8b5cf6' }]}>20%</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.scoreBreakdownRow}>
+                    <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#3b82f6' + '20' }]}>
+                      <MaterialCommunityIcons name="bed" size={22} color="#3b82f6" />
+                    </View>
+                    <View style={styles.scoreBreakdownTextContainer}>
+                      <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
+                        {t('home.dailyCopilot.scoreModal.sleep')}
+                      </Text>
+                      <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
+                        {t('home.dailyCopilot.scoreModal.sleepDesc')}
+                      </Text>
+                    </View>
+                    <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#3b82f6' + '15' }]}>
+                      <Text style={[styles.scoreBreakdownPercentage, { color: '#3b82f6' }]}>30%</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.scoreBreakdownRow}>
+                    <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#10b981' + '20' }]}>
+                      <MaterialCommunityIcons name="walk" size={22} color="#10b981" />
+                    </View>
+                    <View style={styles.scoreBreakdownTextContainer}>
+                      <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
+                        {t('home.dailyCopilot.scoreModal.steps')}
+                      </Text>
+                      <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
+                        {t('home.dailyCopilot.scoreModal.stepsDesc')}
+                      </Text>
+                    </View>
+                    <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#10b981' + '15' }]}>
+                      <Text style={[styles.scoreBreakdownPercentage, { color: '#10b981' }]}>20%</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.scoreBreakdownRow}>
+                    <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#ef4444' + '20' }]}>
+                      <MaterialCommunityIcons name="heart-pulse" size={22} color="#ef4444" />
+                    </View>
+                    <View style={styles.scoreBreakdownTextContainer}>
+                      <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
+                        {t('home.dailyCopilot.scoreModal.hrv')}
+                      </Text>
+                      <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
+                        {t('home.dailyCopilot.scoreModal.hrvDesc')}
+                      </Text>
+                    </View>
+                    <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#ef4444' + '15' }]}>
+                      <Text style={[styles.scoreBreakdownPercentage, { color: '#ef4444' }]}>15%</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.scoreBreakdownRow, styles.scoreBreakdownRowLast]}>
+                    <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#06b6d4' + '20' }]}>
+                      <MaterialCommunityIcons name="water" size={22} color="#06b6d4" />
+                    </View>
+                    <View style={styles.scoreBreakdownTextContainer}>
+                      <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
+                        {t('home.dailyCopilot.scoreModal.hydration')}
+                      </Text>
+                      <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
+                        {t('home.dailyCopilot.scoreModal.hydrationDesc')}
+                      </Text>
+                    </View>
+                    <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#06b6d4' + '15' }]}>
+                      <Text style={[styles.scoreBreakdownPercentage, { color: '#06b6d4' }]}>15%</Text>
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+            </LinearGradient>
+          </Animated.View>
+        </View>
+      </Modal>
     </Animated.View>
   );
 };
@@ -511,12 +656,20 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontWeight: '500',
   },
+  scoreTouchable: {
+    flexShrink: 0,
+    width: 95,
+    height: 95,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 42,
+  },
   scoreContainer: {
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 120,
-    height: 120,
+    width: 95,
+    height: 95,
     flexShrink: 0,
   },
   scoreTextContainer: {
@@ -529,14 +682,134 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   scoreValue: {
-    fontSize: 32,
-    fontWeight: '900',
-    lineHeight: 36,
+    fontSize: 26,
+    fontWeight: '800',
+    lineHeight: 30,
   },
   scoreLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6b7280',
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '92%',
+    maxWidth: 420,
+    maxHeight: '80%',
+    borderRadius: 28,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.3,
+    shadowRadius: 30,
+    elevation: 20,
+  },
+  modalGradient: {
+    paddingHorizontal: 24,
+    paddingBottom: 28,
+    paddingTop: 4,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 24,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+  },
+  modalTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  modalTitleIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    flex: 1,
+  },
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalScroll: {
+    maxHeight: 380,
+  },
+  modalScrollContent: {
+    paddingBottom: 24,
+  },
+  modalDescription: {
+    fontSize: 15,
+    lineHeight: 22,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 20,
+    color: '#6b7280',
+  },
+  scoreBreakdown: {
+    paddingHorizontal: 8,
+    marginTop: 12,
+  },
+  scoreBreakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: '#e2e8f0',
+  },
+  scoreBreakdownRowLast: {
+    borderBottomWidth: 0,
+  },
+  scoreBreakdownIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  scoreBreakdownTextContainer: {
+    flex: 1,
+    marginRight: 12,
+  },
+  scoreBreakdownLabel: {
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 6,
+    color: '#0f172a',
+  },
+  scoreBreakdownDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#64748b',
+  },
+  scoreBreakdownBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    flexShrink: 0,
+  },
+  scoreBreakdownPercentage: {
+    fontSize: 15,
+    fontWeight: '800',
   },
   focusText: {
     fontSize: 15,

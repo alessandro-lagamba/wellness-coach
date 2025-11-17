@@ -1,5 +1,5 @@
 packages:
-  - 'mobile'
-  - 'web-advanced'
-  - 'backend'
-  - 'shared'
+  - mobile
+  - web-advanced
+  - backend
+  - shared

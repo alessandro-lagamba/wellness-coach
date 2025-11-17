@@ -1,0 +1,69 @@
+diff --git a/android/build.gradle b/android/build.gradle
+index 025d491c7b17c8a674391e2d8e1d28a32a0be2e3..516ed8b278ac87f89bcd7001472c39422317bc04 100644
+--- a/android/build.gradle
++++ b/android/build.gradle
+@@ -50,10 +50,15 @@ buildscript {
+ 
+ // Creating sources with comments
+ task androidSourcesJar(type: Jar) {
+-  classifier = 'sources'
+   from android.sourceSets.main.java.srcDirs
+ }
+ 
++if (androidSourcesJar.hasProperty("archiveClassifier")) {
++  androidSourcesJar.archiveClassifier.set('sources')
++} else {
++  androidSourcesJar.classifier = 'sources'
++}
++
+ afterEvaluate {
+   publishing {
+     publications {
+@@ -138,6 +143,10 @@ def extractReactNativeAAR = { buildType ->
+   def suffix = buildType == 'Debug' ? '-debug' : '-release'
+   def rnAARs = fileTree(RN_AAR_DIR).matching { include "**/react-native/**/*${suffix}.aar" }
+   if (rnAARs.isEmpty()) {
+     rnAARs = fileTree(RN_AAR_DIR).matching { include "**/react-native/**/*.aar" }
+   }
++  if (rnAARs.isEmpty()) {
++    logger.warn("expo-gl-cpp: No React Native AARs found under ${RN_AAR_DIR}. Skipping extraction for ${buildType}.")
++    return
++  }
+   if (rnAARs.any()) {
+     // node_modules/react-native has a .aar, extract headers
+     if (rnAARs.size() > 1) {
+diff --git a/android/build.gradle b/android/build.gradle
+index 025d491c7b17c8a674391e2d8e1d28a32a0be2e3..516ed8b278ac87f89bcd7001472c39422317bc04 100644
+--- a/android/build.gradle
++++ b/android/build.gradle
+@@ -50,10 +50,15 @@ buildscript {
+ 
+ // Creating sources with comments
+ task androidSourcesJar(type: Jar) {
+-  classifier = 'sources'
+   from android.sourceSets.main.java.srcDirs
+ }
+ 
++if (androidSourcesJar.hasProperty('archiveClassifier')) {
++  androidSourcesJar.archiveClassifier.set('sources')
++} else {
++  androidSourcesJar.classifier = 'sources'
++}
++
+ afterEvaluate {
+   publishing {
+     publications {
+@@ -138,6 +143,10 @@ def extractReactNativeAAR = { buildType ->
+   def suffix = buildType == 'Debug' ? '-debug' : '-release'
+   def rnAARs = fileTree(RN_AAR_DIR).matching { include "**/react-native/**/*${suffix}.aar" }
+   if (rnAARs.isEmpty()) {
+     rnAARs = fileTree(RN_AAR_DIR).matching { include "**/react-native/**/*.aar" }
+   }
++  if (rnAARs.isEmpty()) {
++    logger.warn("expo-gl-cpp: No React Native AARs found under ${RN_AAR_DIR}. Skipping extraction for ${buildType}.")
++    return
++  }
+   if (rnAARs.any()) {
+     // node_modules/react-native has a .aar, extract headers
+     if (rnAARs.size() > 1) {
+

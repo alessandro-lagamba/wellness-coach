@@ -111,7 +111,9 @@ export const VoiceChatModal: React.FC<VoiceChatModalProps> = ({
             },
             {
               language: 'it-IT',
-              silenceTimeout: 3000, // 3 seconds of silence before processing
+              interimResults: true,
+              continuous: false,
+              maxAlternatives: 1,
             }
           );
         } catch (error) {
