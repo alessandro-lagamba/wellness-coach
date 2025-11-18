@@ -340,6 +340,7 @@ export const FoodAnalysisScreen: React.FC = () => {
 
   // 🔥 FIX: Spostato hook useAnalysisStore prima dei return condizionali per rispettare le regole degli hook
   const foodHistory = useAnalysisStore((state) => state.getSafeFoodHistory());
+  const latestFoodSession = useAnalysisStore((state) => state.latestFoodSession);
 
   const startDisabled = permissionChecking || analyzing || !analysisReady || !!analysisError;
   const captureDisabled = !cameraController.ready || cameraController.detecting || permissionChecking || analyzing || cameraSwitching;
@@ -1642,12 +1643,7 @@ export const FoodAnalysisScreen: React.FC = () => {
          
          {(() => {
            try {
-             const store = useAnalysisStore.getState();
-             const latestSession = store.latestFoodSession;
-             const foodHistory = store.foodHistory;
-             
-             // 🔥 FIX: Rimuoviamo console.log eccessivi
-             
+             // ✅ FIX: Usa la variabile reattiva latestFoodSession invece di getState()
              // Always show the card, with fallback data if no session exists
              const fallbackSession = {
                id: 'fallback',
@@ -1665,7 +1661,7 @@ export const FoodAnalysisScreen: React.FC = () => {
              
              return (
                <FoodCaptureCard
-                 session={latestSession || fallbackSession}
+                 session={latestFoodSession || fallbackSession}
                />
              );
            } catch (error) {
