@@ -1170,21 +1170,22 @@ export const FoodAnalysisScreen: React.FC = () => {
                 UserFeedbackService.showSaveSuccess('analisi');
               }
               
-              // Sincronizza i dati con lo store locale per i grafici
+              // ✅ FIX: Sincronizza i dati con lo store locale per i grafici
+              // Usa i dati dall'analisi risultato (result.data) invece di savedAnalysis per garantire valori corretti
               const foodSession = {
                 id: savedAnalysis.id,
                 timestamp: new Date(savedAnalysis.created_at),
                 macronutrients: {
-                  carbohydrates: savedAnalysis.carbohydrates || 0,
-                  proteins: savedAnalysis.proteins || 0,
-                  fats: savedAnalysis.fats || 0,
-                  fiber: savedAnalysis.fiber || 0,
-                  calories: savedAnalysis.calories || 0,
+                  carbohydrates: result.data.macronutrients?.carbohydrates || savedAnalysis.carbohydrates || 0,
+                  proteins: result.data.macronutrients?.proteins || savedAnalysis.proteins || 0,
+                  fats: result.data.macronutrients?.fats || savedAnalysis.fats || 0,
+                  fiber: result.data.macronutrients?.fiber || savedAnalysis.fiber || 0,
+                  calories: result.data.macronutrients?.calories || savedAnalysis.calories || 0, // ✅ Usa result.data per valori corretti
                 },
-                meal_type: savedAnalysis.meal_type || 'other',
-                health_score: savedAnalysis.health_score || 70,
-                confidence: savedAnalysis.confidence || 0.8,
-                identified_foods: savedAnalysis.identified_foods || [],
+                meal_type: result.data.meal_type || savedAnalysis.meal_type || 'other',
+                health_score: result.data.health_score || savedAnalysis.health_score || 70,
+                confidence: result.data.confidence || savedAnalysis.confidence || 0.8,
+                identified_foods: result.data.identified_foods || savedAnalysis.identified_foods || [],
               };
               
               const store = useAnalysisStore.getState();
