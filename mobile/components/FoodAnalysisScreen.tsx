@@ -652,14 +652,21 @@ export const FoodAnalysisScreen: React.FC = () => {
       }
 
       // Pick image from gallery
-      // 🔥 FIX: Rimuoviamo console.log eccessivi
-      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      // ✅ FIX: Crop libero (senza proporzioni fisse) e migliorata visibilità pulsanti
+      const pickerOptions: ImagePicker.ImagePickerOptions = {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
+        // ✅ Rimossa aspect ratio fissa per permettere crop libero
+        quality: 0.9, // ✅ Aumentata qualità per migliore analisi
         base64: true,
-      });
+      };
+      
+      // ✅ Full screen solo su iOS per migliore visibilità pulsanti
+      if (Platform.OS === 'ios') {
+        pickerOptions.presentationStyle = ImagePicker.UIImagePickerPresentationStyle.FULL_SCREEN;
+      }
+      
+      const pickerResult = await ImagePicker.launchImageLibraryAsync(pickerOptions);
 
       // 🔥 FIX: Rimuoviamo console.log eccessivi
 
@@ -1682,7 +1689,7 @@ export const FoodAnalysisScreen: React.FC = () => {
            }
          })()}
 
-        {/* Detailed Analysis Button */}
+        {/* Meal Improvement Suggestions Button */}
         <TouchableOpacity
           style={styles.detailedAnalysisButton}
           onPress={() => setShowDetailedAnalysis(true)}
@@ -1694,9 +1701,9 @@ export const FoodAnalysisScreen: React.FC = () => {
             end={{ x: 1, y: 1 }}
             style={styles.detailedAnalysisButtonGradient}
           >
-            <MaterialCommunityIcons name="food-apple" size={20} color="#ffffff" />
+            <MaterialCommunityIcons name="lightbulb-on" size={20} color="#ffffff" />
             <Text style={[styles.detailedAnalysisButtonText, { color: '#ffffff' }]}>
-              {t('analysis.food.detailedAnalysis.title')}
+              {t('analysis.food.mealImprovement.title') || 'Suggerimenti per migliorare questo pasto'}
             </Text>
             <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
           </LinearGradient>

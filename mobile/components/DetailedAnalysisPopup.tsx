@@ -114,9 +114,11 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
     }
 
     try {
-      // 🔥 FIX: Rimossi log eccessivi
+      // ✅ FIX: Messaggi specifici per tipo di analisi
       const userMessage = analysisType === 'emotion' 
         ? 'Fammi un\'analisi dettagliata SOLAMENTE della mia ultima analisi delle emozioni, non di tutte le analisi precedenti'
+        : analysisType === 'food'
+        ? 'Basandoti SOLAMENTE su questa analisi nutrizionale, dammi suggerimenti pratici e concreti per migliorare questo pasto. Suggerisci: 1) Come bilanciare meglio i macronutrienti, 2) Alternative più salutari per alcuni ingredienti, 3) Come completare il pasto per raggiungere i tuoi obiettivi nutrizionali, 4) Consigli per pasti futuri simili. Sii specifico e pratico.'
         : 'Fammi un\'analisi dettagliata SOLAMENTE della mia ultima analisi della pelle, non di tutte le analisi precedenti';
 
       const currentUser = await AuthService.getCurrentUser();
@@ -235,6 +237,8 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
       return t('popups.detailedAnalysis.emotionTitle');
     } else if (analysisType === 'skin') {
       return t('popups.detailedAnalysis.skinTitle');
+    } else if (analysisType === 'food') {
+      return t('analysis.food.mealImprovement.title') || 'Suggerimenti per migliorare questo pasto';
     } else {
       return t('popups.detailedAnalysis.foodTitle') || 'Analisi Nutrizionale Avanzata';
     }
@@ -245,6 +249,8 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
       return 'emoticon-happy';
     } else if (analysisType === 'skin') {
       return 'face-woman-shimmer';
+    } else if (analysisType === 'food') {
+      return 'lightbulb-on'; // ✅ Icona coerente con "Suggerimenti per migliorare"
     } else {
       return 'food-apple';
     }

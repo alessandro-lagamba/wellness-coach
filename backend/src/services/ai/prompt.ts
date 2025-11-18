@@ -30,13 +30,24 @@ export const analyzeImageUserPrompt = (params: {
   allergies?: string[];
   locale?: string;
 }): string => `
-Foto di un pasto. Estrai PIATTI/INGREDIENTI VISIBILI con stima porzioni.
+Foto di un pasto. Estrai PIATTI/INGREDIENTI VISIBILI con stima porzioni e calcola i valori nutrizionali.
+
+IMPORTANTE: Per ogni ingrediente identificato, devi:
+1. Stimare la quantità (in grammi, millilitri o porzioni)
+2. Calcolare i macronutrienti (proteine, carboidrati, grassi, fibre, zuccheri) per quella quantità
+3. Calcolare le calorie totali del pasto
 
 - Tipo pasto: ${params.mealType ?? "unknown"}
 
 - Preferenze: ${params.prefs?.join(", ") || "none"}
 
 - Allergie: ${params.allergies?.join(", ") || "none"}
+
+Calcola e includi nel JSON:
+- macrosEstimate: macronutrienti totali del pasto (proteine, carboidrati, grassi, fibre, zuccheri in grammi)
+- caloriesEstimate: calorie totali del pasto
+
+Usa valori nutrizionali standard per alimenti comuni. Se incerto sulla quantità, abbassa la confidence.
 
 ${styleHints}
 

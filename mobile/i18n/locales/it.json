@@ -842,6 +842,10 @@
       "detailedAnalysis": {
         "title": "Ricevi ulteriori dettagli della tua analisi nutrizionale"
       },
+      "mealImprovement": {
+        "title": "Suggerimenti per migliorare questo pasto",
+        "subtitle": "Consigli personalizzati per ottimizzare la tua nutrizione"
+      },
       "results": {
         "title": "Analisi Cibo Completata",
         "subtitle": "Valutazione nutrizionale completa con AI",
@@ -946,7 +950,9 @@
         "ingredientsSaved": "Ingredienti salvati con successo!",
         "saveError": "Errore durante il salvataggio degli ingredienti",
         "savedIngredients": "Ingredienti Salvati",
-        "removeError": "Errore durante la rimozione dell'ingrediente"
+        "removeError": "Errore durante la rimozione dell'ingrediente",
+        "takePhoto": "Foto",
+        "newIngredients": "Nuovi Ingredienti"
       },
       "goals": {
         "title": "Obiettivi Nutrizionali",

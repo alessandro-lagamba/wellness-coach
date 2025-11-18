@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from '../hooks/useTranslation';
 import { useTheme } from '../contexts/ThemeContext';
 import { NutritionService } from '../services/nutrition.service';
@@ -60,6 +61,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   
   const [parsingTranscript, setParsingTranscript] = useState(false);
   const [parsedChips, setParsedChips] = useState<ParsedIngredientChip[]>([]);
+  const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
 
   const addIngredient = () => {
     setIngredients([...ingredients, { name: '' }]);
@@ -312,6 +314,102 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
     }
   }, [visible, loadSavedIngredients]);
 
+  // Analizza foto per estrarre ingredienti
+  const handlePhotoAnalysis = async () => {
+    try {
+      // Richiedi permessi
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('common.error'), t('analysis.food.errors.mediaLibraryPermission') || 'Permesso galleria negato');
+        return;
+      }
+
+      // Seleziona/scatta foto
+      // ✅ FIX: Crop libero per foto frigo
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        // ✅ Rimossa aspect ratio fissa per permettere crop libero
+        quality: 0.9,
+        base64: true,
+      });
+
+      if (pickerResult.canceled || !pickerResult.assets || pickerResult.assets.length === 0) {
+        return;
+      }
+
+      const asset = pickerResult.assets[0];
+      if (!asset.base64) {
+        Alert.alert(t('common.error'), 'Impossibile leggere la foto');
+        return;
+      }
+
+      setAnalyzingPhoto(true);
+
+      // Converti in base64 data URL
+      const imageBase64 = asset.base64.startsWith('data:') 
+        ? asset.base64 
+        : `data:image/jpeg;base64,${asset.base64}`;
+
+      // Chiama API analyze-image
+      const { getBackendURL } = await import('../constants/env');
+      const backendURL = await getBackendURL();
+
+      const response = await fetch(`${backendURL}/api/nutrition/analyze-image`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: imageBase64,
+          locale: 'it-IT',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Errore durante l\'analisi della foto');
+      }
+
+      const data = await response.json();
+
+      if (!data.success || !data.data || !data.data.items) {
+        throw new Error('Nessun ingrediente trovato nella foto');
+      }
+
+      // Converti items in ingredienti per il frigo
+      const extractedIngredients: ParsedIngredientChip[] = data.data.items.map((item: any, idx: number) => ({
+        id: `photo-${Date.now()}-${idx}`,
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        confidence: item.confidence || 0.7,
+      }));
+
+      if (extractedIngredients.length === 0) {
+        Alert.alert(t('common.info'), 'Nessun ingrediente identificato nella foto');
+        return;
+      }
+
+      // Mostra i chips estratti per conferma
+      setParsedChips(prev => [...prev, ...extractedIngredients]);
+      
+      Alert.alert(
+        t('common.success'),
+        `${extractedIngredients.length} ingrediente/i identificato/i. Conferma per aggiungerli al frigo.`
+      );
+
+    } catch (error) {
+      console.error('Error analyzing photo:', error);
+      Alert.alert(
+        t('common.error'),
+        error instanceof Error ? error.message : 'Errore durante l\'analisi della foto'
+      );
+    } finally {
+      setAnalyzingPhoto(false);
+    }
+  };
+
 
   const handleGenerateRecipe = async () => {
     // Combina ingredienti nuovi e salvati
@@ -449,9 +547,25 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
 
                 {/* Inserimento rapido */}
                 <View style={styles.quickAddSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                    {t('analysis.food.fridge.quickAdd')}
-                  </Text>
+                  <View style={styles.quickAddHeader}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                      {t('analysis.food.fridge.quickAdd')}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={handlePhotoAnalysis}
+                      disabled={analyzingPhoto}
+                      style={[styles.photoButton, { backgroundColor: colors.accent + '20', borderColor: colors.accent }]}
+                    >
+                      {analyzingPhoto ? (
+                        <ActivityIndicator size="small" color={colors.accent} />
+                      ) : (
+                        <MaterialCommunityIcons name="camera" size={18} color={colors.accent} />
+                      )}
+                      <Text style={[styles.photoButtonText, { color: colors.accent }]}>
+                        {analyzingPhoto ? t('common.loading') : t('analysis.food.fridge.takePhoto') || 'Foto'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   
                   {/* Chips confermabili */}
                   {parsedChips.length > 0 && (
@@ -549,12 +663,14 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                   </View>
                 )}
 
-                <View style={styles.ingredientsSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                    {t('analysis.food.fridge.ingredientsList')}
-                  </Text>
-                  
-                  {ingredients.map((ingredient, index) => (
+                {/* Mostra solo ingredienti non ancora salvati */}
+                {ingredients.some(ing => ing.name.trim().length > 0) && (
+                  <View style={styles.ingredientsSection}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                      {t('analysis.food.fridge.newIngredients') || 'Nuovi Ingredienti'}
+                    </Text>
+                    
+                    {ingredients.map((ingredient, index) => (
                     <View key={index} style={styles.ingredientRow}>
                       <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                         <TextInput
@@ -597,7 +713,8 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                       {t('analysis.food.fridge.addMore')}
                     </Text>
                   </TouchableOpacity>
-                </View>
+                  </View>
+                )}
               </>
             ) : (
               <View style={styles.recipeSection}>
@@ -845,6 +962,25 @@ const styles = StyleSheet.create({
   },
   quickAddSection: {
     marginBottom: 20,
+  },
+  quickAddHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  photoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  photoButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   micButton: {
     flexDirection: 'row',

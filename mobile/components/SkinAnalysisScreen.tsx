@@ -586,8 +586,8 @@ const SkinAnalysisScreen: React.FC = () => {
       const pickerResult = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
+        // ✅ Rimossa aspect ratio fissa per permettere crop libero
+        quality: 0.9,
         base64: true,
       });
 
