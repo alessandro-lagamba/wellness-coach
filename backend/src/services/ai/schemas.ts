@@ -137,7 +137,8 @@ export const generateRecipeSchema = {
           fiber: { type: "number" },
           sugar: { type: "number" },
         },
-        required: ["protein", "carbs", "fat"],
+        // ✅ FIX: Aggiunto fiber e sugar a required per compatibilità con additionalProperties: false
+        required: ["protein", "carbs", "fat", "fiber", "sugar"],
       },
       caloriesPerServing: { type: "number" },
       shoppingGaps: { type: "array", items: { type: "string" } },
