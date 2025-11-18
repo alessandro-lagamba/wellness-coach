@@ -7,7 +7,7 @@ export const analyzeImageSchema = {
   name: "meal_draft",
   schema: {
     type: "object",
-    additionalProperties: false,
+    additionalProperties: false, // ✅ Ripristinato: necessario con strict: true
     properties: {
       mealType: { type: "string", enum: ["breakfast", "lunch", "dinner", "snack"] },
       items: {
@@ -41,9 +41,12 @@ export const analyzeImageSchema = {
       confidence: { type: "number", minimum: 0, maximum: 1 },
       suggestions: { type: "array", items: { type: "string" } },
     },
+    // ✅ Solo proprietà obbligatorie in required
+    // mealType, caloriesEstimate, qualityTags, suggestions sono opzionali
     required: ["items", "confidence"],
   },
-  strict: true,
+  // ✅ Rimosso strict per permettere proprietà opzionali con additionalProperties: false
+  // Il codice gestisce già le proprietà opzionali (vedi nutrition.service.ts)
 } as const;
 
 export const suggestMealSchema = {
