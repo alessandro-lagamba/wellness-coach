@@ -34,6 +34,7 @@ export const analyzeImageSchema = {
           fiber: { type: "number" },
           sugar: { type: "number" },
         },
+        required: ["protein", "carbs", "fat", "fiber", "sugar"],
       },
       caloriesEstimate: { type: "number" },
       qualityTags: { type: "array", items: { type: "string" } },
