@@ -219,10 +219,18 @@ async def entrypoint(ctx: JobContext):
 
     # Use OpenAI Realtime API with gpt-realtime-mini for cost efficiency
     # Configure turn detection for lower latency (shorter silence duration = faster response)
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise ValueError(
+            "OPENAI_API_KEY is not set. "
+            "Set it in the environment (or add it to .env.local) before starting the LiveKit agent."
+        )
+
     session = AgentSession(
         llm=openai.realtime.RealtimeModel(
             model="gpt-realtime-mini",
             voice="marin",
+            api_key=openai_api_key,
             turn_detection=TurnDetection(
                 type="server_vad",
                 threshold=0.5,

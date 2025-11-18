@@ -79,18 +79,21 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
         return;
       }
 
-      // Prima controlla se esiste già un'analisi per oggi
-      const existingAnalysis = await detailedAnalysisDB.getTodaysDetailedAnalysis(
-        currentUser.id,
-        analysisType
-      );
+      // Prima controlla se esiste già un'analisi per oggi (solo per emotion/skin)
+      if (analysisType !== 'food') {
+        const dbAnalysisType: 'emotion' | 'skin' = analysisType;
+        const existingAnalysis = await detailedAnalysisDB.getTodaysDetailedAnalysis(
+          currentUser.id,
+          dbAnalysisType
+        );
 
-      if (existingAnalysis.success && existingAnalysis.data) {
-        console.log('📋 Using cached detailed analysis from database');
-        clearTimeout(timeoutId);
-        setAnalysis(existingAnalysis.data.ai_response);
-        setLoading(false);
-        return;
+        if (existingAnalysis.success && existingAnalysis.data) {
+          console.log('📋 Using cached detailed analysis from database');
+          clearTimeout(timeoutId);
+          setAnalysis(existingAnalysis.data.ai_response);
+          setLoading(false);
+          return;
+        }
       }
 
       // Se non esiste, genera una nuova analisi
@@ -204,21 +207,24 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
         console.log('✅ Analysis text received, length:', analysisText.length);
         setAnalysis(analysisText);
 
-        // Salva l'analisi nel database
-        try {
-          const currentUser = await AuthService.getCurrentUser();
-          if (currentUser) {
-            await detailedAnalysisDB.saveDetailedAnalysis(
-              currentUser.id,
-              analysisType,
-              analysisData,
-              analysisText
-            );
-            console.log('✅ Detailed analysis saved to database');
+        // Salva l'analisi nel database (solo emotion/skin, il DB non supporta food)
+        if (analysisType !== 'food') {
+          try {
+            const currentUser = await AuthService.getCurrentUser();
+            if (currentUser) {
+              const dbAnalysisType: 'emotion' | 'skin' = analysisType;
+              await detailedAnalysisDB.saveDetailedAnalysis(
+                currentUser.id,
+                dbAnalysisType,
+                analysisData,
+                analysisText
+              );
+              console.log('✅ Detailed analysis saved to database');
+            }
+          } catch (dbError) {
+            console.warn('Failed to save detailed analysis to database:', dbError);
+            // Non bloccare l'operazione se il salvataggio fallisce
           }
-        } catch (dbError) {
-          console.warn('Failed to save detailed analysis to database:', dbError);
-          // Non bloccare l'operazione se il salvataggio fallisce
         }
       } else {
         setError(t('popups.detailedAnalysis.generationFailed'));
