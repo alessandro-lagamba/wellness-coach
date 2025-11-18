@@ -559,11 +559,13 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                       {analyzingPhoto ? (
                         <ActivityIndicator size="small" color={colors.accent} />
                       ) : (
-                        <MaterialCommunityIcons name="camera" size={18} color={colors.accent} />
+                        <>
+                          <MaterialCommunityIcons name="camera" size={18} color={colors.accent} />
+                          <Text style={[styles.photoButtonText, { color: colors.accent }]}>
+                            {t('analysis.food.fridge.takePhoto') || 'Foto'}
+                          </Text>
+                        </>
                       )}
-                      <Text style={[styles.photoButtonText, { color: colors.accent }]}>
-                        {analyzingPhoto ? t('common.loading') : t('analysis.food.fridge.takePhoto') || 'Foto'}
-                      </Text>
                     </TouchableOpacity>
                   </View>
                   

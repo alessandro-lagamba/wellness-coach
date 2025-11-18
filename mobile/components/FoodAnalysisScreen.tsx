@@ -1189,6 +1189,16 @@ export const FoodAnalysisScreen: React.FC = () => {
               
               const store = useAnalysisStore.getState();
               store.addFoodSession(foodSession);
+              
+              // ✅ FIX: Ricarica dailyIntake dal database per aggiornare i totali giornalieri
+              try {
+                const intake = await FoodAnalysisService.getDailyIntake(currentUser.id);
+                if (isMountedRef.current) {
+                  setDailyIntake(intake);
+                }
+              } catch (error) {
+                console.warn('Failed to refresh daily intake:', error);
+              }
             } else {
               // 🆕 Nessun errore lanciato ma savedAnalysis è null
               if (isMountedRef.current) {
@@ -1757,20 +1767,29 @@ export const FoodAnalysisScreen: React.FC = () => {
         
         {/* Daily Progress: Calories Bar + Macro Gauges */}
         {(() => {
-          // 🔥 FIX: Hook spostato all'inizio del componente - usa la variabile già definita
-          // Calculate today's totals from food history
+          // ✅ FIX: Usa dailyIntake dal database invece di calcolare da foodHistory per evitare duplicati
+          // Il database ha già i totali corretti per oggi, evitando problemi di doppio conteggio
+          const todayTotals = {
+            calories: dailyIntake.calories,
+            carbohydrates: dailyIntake.carbohydrates,
+            proteins: dailyIntake.proteins,
+            fats: dailyIntake.fats,
+          };
+          
+          // Calcola todayHistory solo per i trend dei grafici (senza duplicati)
+          const seenIds = new Set<string>();
           const todayHistory = foodHistory.filter(session => {
+            // Rimuovi duplicati per ID
+            if (seenIds.has(session.id)) {
+              return false;
+            }
+            seenIds.add(session.id);
+            
+            // Filtra solo per oggi
             const sessionDate = new Date(session.timestamp);
             const today = new Date();
             return sessionDate.toDateString() === today.toDateString();
           });
-          
-          const todayTotals = todayHistory.reduce((acc, session) => ({
-            calories: acc.calories + (session.macronutrients?.calories || 0),
-            carbohydrates: acc.carbohydrates + (session.macronutrients?.carbohydrates || 0),
-            proteins: acc.proteins + (session.macronutrients?.proteins || 0),
-            fats: acc.fats + (session.macronutrients?.fats || 0),
-          }), { calories: 0, carbohydrates: 0, proteins: 0, fats: 0 });
 
           return (
             <>
