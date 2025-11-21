@@ -33,7 +33,7 @@ interface Props {
 
 const CARD_HEIGHT = 140
 
-const GAUGE_SIZES: Record<WidgetSize, number> = { small: 52, medium: 70, large: 60 }
+const GAUGE_SIZES: Record<WidgetSize, number> = { small: 52, medium: 70, large: 52 }
 
 const MiniGaugeChart: React.FC<Props> = memo(({
   value,

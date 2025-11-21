@@ -17,8 +17,8 @@ export interface JournalTemplateConfig {
 export const JOURNAL_TEMPLATES: Record<JournalTemplate, JournalTemplateConfig> = {
   free: {
     id: 'free',
-    name: 'Libero',
-    description: 'Scrivi liberamente senza struttura predefinita',
+    name: 'Riflesso quotidiano',
+    description: 'Uno spunto basato sul tuo umore, sonno e trend recenti',
     prompt: 'Scrivi due righe su come ti senti oggi e su cosa è successo.',
   },
   gratitude: {

@@ -60,6 +60,9 @@ import AvatarCommunityModal from './AvatarCommunityModal';
 import { ChartDetailModal } from './ChartDetailModal';
 
 const { width } = Dimensions.get('window');
+// 🔥 FIX: Calcola larghezza dinamica per il grafico.
+// Aumentiamo la larghezza sottraendo meno spazio (150 invece di 180) per avvicinarci al look Android
+const CHART_WIDTH = Math.min(400, width - 150);
 
 const PLACEHOLDER_TREND_DATA = {
   steps: [6200, 6800, 7000, 7300, 7100, 7600, 7800],
@@ -114,8 +117,8 @@ interface HomeScreenProps {
   onLogout?: () => void;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ 
-  user, 
+export const HomeScreen: React.FC<HomeScreenProps> = ({
+  user,
   onLogout
 }) => {
   const { t, language } = useTranslation(); // 🆕 i18n hook
@@ -166,7 +169,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   // 🆕 Attività caricate dal database
   const [wellnessActivities, setWellnessActivities] = useState<DailyActivity[]>([]);
-  
+
   // 🆕 Combina attività default con quelle dal database
   const todaysActivities = useMemo<DailyActivity[]>(() => {
     // Mappa le attività wellness dal database a DailyActivity
@@ -229,7 +232,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       max: 40,
     },
   }), []);
-  
+
   // 🔥 Rimuoviamo stato duplicato - usiamo direttamente todaysActivities
   // const [activities, setActivities] = useState<DailyActivity[]>(() => todaysActivities);
   const [syncService] = useState(() => WellnessSyncService.getInstance());
@@ -267,7 +270,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   ], []);
   const [selectedPill, setSelectedPill] = useState<'streak' | 'momentum' | 'next-session' | null>(null);
   const [todayGlanceWidgets, setTodayGlanceWidgets] = useState<WidgetData[]>([]);
-  
+
   // Carica l'avatar al mount e quando la schermata torna in focus
   const loadAvatar = useCallback(async () => {
     try {
@@ -282,12 +285,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           return;
         }
       }
-      
+
       // Fallback: recupera da AsyncStorage (per retrocompatibilità)
       const savedAvatar = await AsyncStorage.getItem('user:avatarUri');
       if (savedAvatar) {
         setAvatarUri(savedAvatar);
-        
+
         // 🔄 MIGRAZIONE: Se l'avatar esiste in AsyncStorage ma non nel DB, migralo al DB
         // Questo assicura che gli avatar esistenti vengano sincronizzati nel database
         if (currentUser?.id && savedAvatar.startsWith('http')) {
@@ -326,18 +329,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   );
 
   // Widget configuration
-  const { 
-    config: widgetConfig, 
-    loading: configLoading, 
+  const {
+    config: widgetConfig,
+    loading: configLoading,
     toggleWidget, changeSize,
     addWidget,                // useremo questo al punto (B)
   } = useWidgetConfig();
   const [widgetData, setWidgetData] = useState<WidgetData[]>([]);
   const [dragTargetPosition, setDragTargetPosition] = useState<number | null>(null);
   const [editMode, setEditMode] = useState<boolean>(false);
-  const [goalModal, setGoalModal] = useState<{visible: boolean; widgetId: 'steps'|'hydration'|'meditation'|'sleep'|null}>({visible:false, widgetId:null});
+  const [goalModal, setGoalModal] = useState<{ visible: boolean; widgetId: 'steps' | 'hydration' | 'meditation' | 'sleep' | null }>({ visible: false, widgetId: null });
   const [healthPermissionsModal, setHealthPermissionsModal] = useState<boolean>(false);
-  const [recommendationModal, setRecommendationModal] = useState<{visible: boolean; recommendation: any}>({visible: false, recommendation: null});
+  const [recommendationModal, setRecommendationModal] = useState<{ visible: boolean; recommendation: any }>({ visible: false, recommendation: null });
   const [showHistory, setShowHistory] = useState<boolean>(false);
   const [widgetSelectionModal, setWidgetSelectionModal] = useState<{ visible: boolean; position: number }>({ visible: false, position: 0 });
   const [weeklyTrendData, setWeeklyTrendData] = useState<{
@@ -356,19 +359,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     currentValue: undefined,
     color: '#10b981',
   });
-  
+
   // Chart configuration
   const { enabledCharts, toggleChart, config: chartConfig, enableChart, getAvailableCharts } = useChartConfig();
   const disabledCharts = chartConfig.filter(c => !c.enabled);
   const [availableChartsList, setAvailableChartsList] = useState<ChartType[]>([]);
-  
+
   // Carica i grafici disponibili quando entra in modalità edit
   useEffect(() => {
     if (chartEditMode) {
       getAvailableCharts().then(setAvailableChartsList);
     }
   }, [chartEditMode, getAvailableCharts]);
-  
+
   // Health data hook
   const { permissions: healthPermissions, hasData: hasHealthData, isInitialized, healthData, syncData, status: healthStatus } = useHealthData();
   const hasAnyHealthPermission =
@@ -433,29 +436,41 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       : (hd.steps || 0) * 0.04;
 
     return [
-      { id: 'steps', title: t('widgets.steps'), icon: '🚶', color: '#10b981', backgroundColor: '#f0fdf4', category: 'health',
+      {
+        id: 'steps', title: t('widgets.steps'), icon: '🚶', color: '#10b981', backgroundColor: '#f0fdf4', category: 'health',
         steps: {
           current: Math.max(0, hd.steps || 0),
           goal: stepsGoal,
           km: resolvedDistanceKm,
           calories: Math.round(estimatedCalories),
-        } },
-      { id: 'meditation', title: t('widgets.meditation'), icon: '🧘', color: '#8b5cf6', backgroundColor: '#f3f4f6', category: 'wellness',
-        meditation: { minutes: Math.max(0, hd.mindfulnessMinutes || 0), goal: meditationGoal, sessions: 0, streak: 0, favoriteType: 'Breathing' } },
-      { id: 'hydration', title: t('widgets.hydration'), icon: '💧', color: '#3b82f6', backgroundColor: '#eff6ff', category: 'health',
-        hydration: { glasses: Math.round((hd.hydration || 0) / 250), goal: hydrationGoal, ml: Math.max(0, hd.hydration || 0), lastDrink: '' } },
-      { id: 'sleep', title: t('widgets.sleep'), icon: '🌙', color: '#6366f1', backgroundColor: '#eef2ff', category: 'health',
-        sleep: { hours: Math.round((hd.sleepHours || 0) * 10) / 10, quality: Math.max(0, hd.sleepQuality || 0), goal: sleepGoal, deepSleep: hd.deepSleepMinutes ? `${Math.floor(hd.deepSleepMinutes/60)}h ${Math.round(hd.deepSleepMinutes%60)}m` : '—', remSleep: hd.remSleepMinutes ? `${Math.floor(hd.remSleepMinutes/60)}h ${Math.round(hd.remSleepMinutes%60)}m` : '—', bedtime: '', wakeTime: '' } },
-      { id: 'hrv', title: t('widgets.hrv'), icon: '🫀', color: '#ef4444', backgroundColor: '#fef2f2', category: 'health',
+        }
+      },
+      {
+        id: 'meditation', title: t('widgets.meditation'), icon: '🧘', color: '#8b5cf6', backgroundColor: '#f3f4f6', category: 'wellness',
+        meditation: { minutes: Math.max(0, hd.mindfulnessMinutes || 0), goal: meditationGoal, sessions: 0, streak: 0, favoriteType: 'Breathing' }
+      },
+      {
+        id: 'hydration', title: t('widgets.hydration'), icon: '💧', color: '#3b82f6', backgroundColor: '#eff6ff', category: 'health',
+        hydration: { glasses: Math.round((hd.hydration || 0) / 250), goal: hydrationGoal, ml: Math.max(0, hd.hydration || 0), lastDrink: '' }
+      },
+      {
+        id: 'sleep', title: t('widgets.sleep'), icon: '🌙', color: '#6366f1', backgroundColor: '#eef2ff', category: 'health',
+        sleep: { hours: Math.round((hd.sleepHours || 0) * 10) / 10, quality: Math.max(0, hd.sleepQuality || 0), goal: sleepGoal, deepSleep: hd.deepSleepMinutes ? `${Math.floor(hd.deepSleepMinutes / 60)}h ${Math.round(hd.deepSleepMinutes % 60)}m` : '—', remSleep: hd.remSleepMinutes ? `${Math.floor(hd.remSleepMinutes / 60)}h ${Math.round(hd.remSleepMinutes % 60)}m` : '—', bedtime: '', wakeTime: '' }
+      },
+      {
+        id: 'hrv', title: t('widgets.hrv'), icon: '🫀', color: '#ef4444', backgroundColor: '#fef2f2', category: 'health',
         hrv: {
           value: normalizedHrv,
           avgHRV: normalizedHrv,
           currentHR: normalizedCurrentHR,
           restingHR: normalizedResting,
           recovery: 'Good',
-        } },
-      { id: 'analyses', title: t('widgets.analyses'), icon: '📊', color: '#10b981', backgroundColor: '#f0fdf4', category: 'analysis',
-        analyses: { completed: true, emotionAnalysis: true, skinAnalysis: true, lastCheckIn: t('home.analyses.today'), streak: 0 } },
+        }
+      },
+      {
+        id: 'analyses', title: t('widgets.analyses'), icon: '📊', color: '#10b981', backgroundColor: '#f0fdf4', category: 'analysis',
+        analyses: { completed: true, emotionAnalysis: true, skinAnalysis: true, lastCheckIn: t('home.analyses.today'), streak: 0 }
+      },
     ];
   };
 
@@ -551,20 +566,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   // 🔥 FIX: Usiamo useRef per tracciare l'ultimo healthData processato per evitare loop infiniti
   const lastProcessedHealthDataRef = useRef<string | null>(null);
-  
+
   // Aggiorna i widget quando i dati di salute cambiano
   // 🔥 FIX: Rimuoviamo dipendenze ridondanti - se healthData cambia, anche healthData?.steps cambia
   useEffect(() => {
     // 🔥 FIX: Crea una chiave univoca per healthData per evitare processamenti duplicati
-    const healthDataKey = healthData 
+    const healthDataKey = healthData
       ? `${healthData.steps}-${healthData.heartRate}-${healthData.sleepHours}-${healthData.hrv}`
       : 'null';
-    
+
     // 🔥 FIX: Evita processamento se i dati non sono cambiati
     if (healthDataKey === lastProcessedHealthDataRef.current) {
       return;
     }
-    
+
     (async () => {
       if (healthStatus !== 'ready') {
         try {
@@ -634,7 +649,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     translateWidgetTitle, // 🔥 FIX: Aggiungiamo la funzione memoizzata
     loadTodayGlanceData, // 🔥 FIX: Aggiungiamo la funzione memoizzata
   ]);
-  
+
   // Intelligent insights are now handled by DailyCopilot component
 
   // --- Self check (Mood & Sleep)
@@ -643,7 +658,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // NEW
   const [moodNote, setMoodNote] = useState('');
   const [sleepNote, setSleepNote] = useState('');
-  const [restLevel, setRestLevel] = useState<1|2|3|4|5>(3);
+  const [restLevel, setRestLevel] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [hasExistingMoodCheckin, setHasExistingMoodCheckin] = useState(false); // 🆕 Traccia se esiste già un check-in mood
   const [hasExistingSleepCheckin, setHasExistingSleepCheckin] = useState(false); // 🆕 Traccia se esiste già un check-in sleep
 
@@ -708,9 +723,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       case 'hrv': {
         const currentHr = Number(info.hrv?.currentHR ?? info.hrv?.restingHR ?? 0);
         const hasCurrent = Number.isFinite(currentHr) && currentHr > 0;
-        return `${t('home.hrv.currentHR')} • ${
-          hasCurrent ? `${Math.round(currentHr)} ${t('home.bpm')}` : '—'
-        }`;
+        return `${t('home.hrv.currentHR')} • ${hasCurrent ? `${Math.round(currentHr)} ${t('home.bpm')}` : '—'
+          }`;
       }
       case 'analyses':
         return info.analyses?.lastCheckIn ?? t('home.analyses.today');
@@ -788,7 +802,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const displayedSleepQuality = sleepStats?.quality ?? sleepQuality;
 
   // chiavi giornaliere
-  const dayKey = () => new Date().toISOString().slice(0,10);
+  const dayKey = () => new Date().toISOString().slice(0, 10);
   const STORAGE_KEYS = {
     mood: (d: string) => `checkin:mood:${d}`,
     sleep: (d: string) => `checkin:sleep:${d}`,
@@ -827,7 +841,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           HealthPermissionsService.getGrantedPermissions(),
           HealthPermissionsService.isSetupCompleted(),
         ]);
-        
+
         // Verifica se tutti i permessi richiesti sono concessi
         const requiredPermissions = ['steps', 'heart_rate', 'sleep'];
         const allRequiredGranted = requiredPermissions.every(perm => grantedPermissions.includes(perm));
@@ -839,7 +853,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           }, 1200);
           return () => clearTimeout(timer);
         }
-      } catch {}
+      } catch { }
     })();
   }, [isInitialized, hasHealthData, healthPermissionsModal, healthPermissions.steps, healthPermissions.heartRate, healthPermissions.sleep]);
 
@@ -848,7 +862,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     (async () => {
       try {
         const dk = dayKey();
-        
+
         // 🆕 Verifica PRIMA se esistono check-in nel database per oggi (priorità al database)
         const currentUser = await AuthService.getCurrentUser();
         if (currentUser?.id) {
@@ -859,32 +873,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             .eq('user_id', currentUser.id)
             .eq('date', dk)
             .maybeSingle();
-          
+
           if (existingCheckin) {
             // 🔥 FIX: Carica i valori dal database se esiste un check-in
             if (existingCheckin.mood !== null && existingCheckin.mood !== undefined) {
-              setMoodValue(existingCheckin.mood as 1|2|3|4|5);
+              setMoodValue(existingCheckin.mood as 1 | 2 | 3 | 4 | 5);
               setHasExistingMoodCheckin(true);
             } else {
               setHasExistingMoodCheckin(false);
             }
-            
+
             if (existingCheckin.mood_note) {
               setMoodNote(existingCheckin.mood_note);
             }
-            
+
             if (existingCheckin.sleep_quality !== null && existingCheckin.sleep_quality !== undefined && existingCheckin.sleep_quality > 0) {
               setSleepQuality(existingCheckin.sleep_quality);
               setHasExistingSleepCheckin(true);
-              
+
               // 🔥 FIX: Calcola restLevel da sleep_quality (0-100 -> 1-5)
               // sleep_quality: 0-20 -> 1, 21-40 -> 2, 41-60 -> 3, 61-80 -> 4, 81-100 -> 5
-              const calculatedRestLevel = Math.min(5, Math.max(1, Math.ceil((existingCheckin.sleep_quality / 100) * 5))) as 1|2|3|4|5;
+              const calculatedRestLevel = Math.min(5, Math.max(1, Math.ceil((existingCheckin.sleep_quality / 100) * 5))) as 1 | 2 | 3 | 4 | 5;
               setRestLevel(calculatedRestLevel);
             } else {
               setHasExistingSleepCheckin(false);
             }
-            
+
             if (existingCheckin.sleep_note) {
               setSleepNote(existingCheckin.sleep_note);
             }
@@ -895,13 +909,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             const savedMoodNote = await AsyncStorage.getItem(STORAGE_KEYS.moodNote(dk));
             const savedSleepNote = await AsyncStorage.getItem(STORAGE_KEYS.sleepNote(dk));
             const savedRestLevel = await AsyncStorage.getItem(STORAGE_KEYS.restLevel(dk));
-            
+
             if (savedMood) setMoodValue(parseInt(savedMood, 10));
             if (savedSleep) setSleepQuality(parseInt(savedSleep, 10));
             if (savedMoodNote) setMoodNote(savedMoodNote);
             if (savedSleepNote) setSleepNote(savedSleepNote);
-            if (savedRestLevel) setRestLevel(parseInt(savedRestLevel, 10) as 1|2|3|4|5);
-            
+            if (savedRestLevel) setRestLevel(parseInt(savedRestLevel, 10) as 1 | 2 | 3 | 4 | 5);
+
             // 🔥 FIX: Se non esiste un check-in nel database, imposta esplicitamente a false
             setHasExistingMoodCheckin(false);
             setHasExistingSleepCheckin(false);
@@ -913,56 +927,56 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           const savedMoodNote = await AsyncStorage.getItem(STORAGE_KEYS.moodNote(dk));
           const savedSleepNote = await AsyncStorage.getItem(STORAGE_KEYS.sleepNote(dk));
           const savedRestLevel = await AsyncStorage.getItem(STORAGE_KEYS.restLevel(dk));
-          
+
           if (savedMood) setMoodValue(parseInt(savedMood, 10));
           if (savedSleep) setSleepQuality(parseInt(savedSleep, 10));
           if (savedMoodNote) setMoodNote(savedMoodNote);
           if (savedSleepNote) setSleepNote(savedSleepNote);
-          if (savedRestLevel) setRestLevel(parseInt(savedRestLevel, 10) as 1|2|3|4|5);
-          
+          if (savedRestLevel) setRestLevel(parseInt(savedRestLevel, 10) as 1 | 2 | 3 | 4 | 5);
+
           // 🔥 FIX: Se non c'è un utente, imposta esplicitamente a false
           setHasExistingMoodCheckin(false);
           setHasExistingSleepCheckin(false);
         }
-      } catch {}
+      } catch { }
     })();
   }, []);
 
   // salva rapidi
   const saveMood = async (val: number) => {
     setMoodValue(val);
-    try { await AsyncStorage.setItem(STORAGE_KEYS.mood(dayKey()), String(val)); } catch {}
+    try { await AsyncStorage.setItem(STORAGE_KEYS.mood(dayKey()), String(val)); } catch { }
   };
 
   const saveSleep = async (val: number) => {
     setSleepQuality(val);
-    try { await AsyncStorage.setItem(STORAGE_KEYS.sleep(dayKey()), String(val)); } catch {}
+    try { await AsyncStorage.setItem(STORAGE_KEYS.sleep(dayKey()), String(val)); } catch { }
   };
 
   // nuove funzioni di salvataggio con note
   async function saveMoodCheckin(value: number, note: string) {
     const dk = dayKey();
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    
+
     // 🔥 FIX: Verifica che la data sia quella di oggi (non permettere salvataggi per giorni passati/futuri)
     if (dk !== today) {
       UserFeedbackService.showError('Puoi salvare il check-in solo per oggi. La data non corrisponde.');
       return;
     }
-    
+
     // 🆕 Validazione dati prima del salvataggio
     const validation = DataValidationService.validateMoodCheckin({ value, note });
     if (!validation.valid) {
       UserFeedbackService.showError(`Dati non validi: ${validation.errors.join(', ')}`);
       return;
     }
-    
+
     // Salva in AsyncStorage locale
     await AsyncStorage.multiSet([
       [STORAGE_KEYS.mood(dk), String(value)],
       [STORAGE_KEYS.moodNote(dk), note],
     ]);
-    
+
     // 🆕 Salva nel database Supabase con enhanced error handling
     try {
       const currentUser = await AuthService.getCurrentUser();
@@ -980,10 +994,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           await RetryService.withRetry(
             async () => {
               const { supabase } = await import('../lib/supabase');
-              
+
               // 🔥 FIX: Usa UPSERT invece di check-then-insert/update per evitare race conditions
               // Il constraint UNIQUE(user_id, date) gestisce automaticamente i duplicati
-              
+
               // Controlla se esiste già un record per preservare i valori esistenti e mostrare warning
               const { data: existing } = await supabase
                 .from('daily_copilot_analyses')
@@ -991,20 +1005,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 .eq('user_id', currentUser.id)
                 .eq('date', dk)
                 .maybeSingle();
-              
+
               // 🔥 FIX: Warning se si sta aggiornando un check-in già esistente
               if (existing && existing.mood !== null && existing.mood !== undefined) {
                 // Calcola il tempo trascorso dal primo salvataggio
                 const createdAt = new Date(existing.created_at);
                 const now = new Date();
                 const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-                
+
                 // Mostra warning se è passato più di 1 ora (permette correzioni immediate)
                 if (hoursSinceCreation > 1) {
                   UserFeedbackService.showWarning(`Stai aggiornando un check-in salvato ${Math.round(hoursSinceCreation)} ore fa.`);
                 }
               }
-              
+
               const upsertData = {
                 user_id: currentUser.id,
                 date: dk,
@@ -1033,15 +1047,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
               const { error: upsertError } = await supabase
                 .from('daily_copilot_analyses')
-                .upsert(upsertData, { 
+                .upsert(upsertData, {
                   onConflict: 'user_id,date',
-                  ignoreDuplicates: false 
+                  ignoreDuplicates: false
                 });
 
               if (upsertError) {
                 throw new Error(`Error upserting mood check-in: ${upsertError.message}`);
               }
-              
+
               // 🆕 Verifica post-salvataggio che i dati siano nel database
               const verification = await DatabaseVerificationService.verifyMoodCheckin(currentUser.id, dk);
               if (!verification.found) {
@@ -1062,7 +1076,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           );
         }
       );
-    } catch(e) {
+    } catch (e) {
       // 🆕 Errore durante il salvataggio - mostra feedback all'utente
       const error = e instanceof Error ? e : new Error('Unknown error');
       UserFeedbackService.showSaveError('check-in', async () => {
@@ -1079,13 +1093,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   async function saveSleepCheckin(quality: number, note: string, restLevel: number) {
     const dk = dayKey();
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    
+
     // 🔥 FIX: Verifica che la data sia quella di oggi (non permettere salvataggi per giorni passati/futuri)
     if (dk !== today) {
       UserFeedbackService.showError('Puoi salvare il check-in solo per oggi. La data non corrisponde.');
       return;
     }
-    
+
     // 🆕 Validazione dati prima del salvataggio
     const sleepWidget = widgetData.find(w => w.id === 'sleep');
     const sleepHours = sleepWidget?.sleep?.hours ?? 0;
@@ -1094,14 +1108,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       UserFeedbackService.showError(`Dati non validi: ${validation.errors.join(', ')}`);
       return;
     }
-    
+
     // Salva in AsyncStorage locale
     await AsyncStorage.multiSet([
       [STORAGE_KEYS.sleep(dk), String(quality)],
       [STORAGE_KEYS.sleepNote(dk), note],
       [STORAGE_KEYS.restLevel(dk), String(restLevel)],
     ]);
-    
+
     // 🆕 Salva nel database Supabase con enhanced error handling
     try {
       const currentUser = await AuthService.getCurrentUser();
@@ -1119,10 +1133,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           await RetryService.withRetry(
             async () => {
               const { supabase } = await import('../lib/supabase');
-              
+
               // 🔥 FIX: Usa UPSERT invece di check-then-insert/update per evitare race conditions
               // Il constraint UNIQUE(user_id, date) gestisce automaticamente i duplicati
-              
+
               // Controlla se esiste già un record per preservare i valori esistenti e mostrare warning
               const { data: existing } = await supabase
                 .from('daily_copilot_analyses')
@@ -1130,20 +1144,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 .eq('user_id', currentUser.id)
                 .eq('date', dk)
                 .maybeSingle();
-              
+
               // 🔥 FIX: Warning se si sta aggiornando un check-in già esistente
               if (existing && existing.sleep_quality !== null && existing.sleep_quality !== undefined && existing.sleep_quality > 0) {
                 // Calcola il tempo trascorso dal primo salvataggio
                 const createdAt = new Date(existing.created_at);
                 const now = new Date();
                 const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-                
+
                 // Mostra warning se è passato più di 1 ora (permette correzioni immediate)
                 if (hoursSinceCreation > 1) {
                   UserFeedbackService.showWarning(`Stai aggiornando un check-in salvato ${Math.round(hoursSinceCreation)} ore fa.`);
                 }
               }
-              
+
               const upsertData = {
                 user_id: currentUser.id,
                 date: dk,
@@ -1171,15 +1185,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
               const { error: upsertError } = await supabase
                 .from('daily_copilot_analyses')
-                .upsert(upsertData, { 
+                .upsert(upsertData, {
                   onConflict: 'user_id,date',
-                  ignoreDuplicates: false 
+                  ignoreDuplicates: false
                 });
 
               if (upsertError) {
                 throw new Error(`Error upserting sleep check-in: ${upsertError.message}`);
               }
-              
+
               // 🆕 Verifica post-salvataggio che i dati siano nel database
               const verification = await DatabaseVerificationService.verifySleepCheckin(currentUser.id, dk);
               if (!verification.found) {
@@ -1200,7 +1214,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           );
         }
       );
-    } catch(e) {
+    } catch (e) {
       // 🆕 Errore durante il salvataggio - mostra feedback all'utente
       const error = e instanceof Error ? e : new Error('Unknown error');
       UserFeedbackService.showSaveError('check-in', async () => {
@@ -1297,12 +1311,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const createEmptySlots = (rowStart: number, rowEnd: number) => {
     const rowIndex = rowStart === 0 ? 0 : 1;
     if (rowHasLarge(rowIndex)) return [];
-  
+
     const slots = [];
     for (let pos = rowStart; pos < rowEnd; pos++) {
       // Se il pos è coperto da un widget (medium/large) → skip
       if (isPositionCovered(pos)) continue;
-  
+
       const hasWidgetStartingHere = widgetConfig.some(
         w => w.enabled && w.position === pos
       );
@@ -1311,8 +1325,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <TouchableOpacity
             key={`empty-${pos}`}
             style={[
-              styles.emptySlot, 
-              { 
+              styles.emptySlot,
+              {
                 width: getWidgetWidth('small'),
                 backgroundColor: themeColors.surfaceMuted,
                 borderColor: themeColors.border,
@@ -1332,10 +1346,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   // Generate stats dynamically based on momentum data
   const getStats = () => {
-    const momentumValue = momentumData 
+    const momentumValue = momentumData
       ? MomentumService.formatMomentumValue(momentumData)
       : t('home.stats.loading');
-    
+
     return [
       { id: 'streak', icon: 'fire', label: t('home.stats.streak'), value: t('home.stats.days', { count: 12 }) },
       { id: 'momentum', icon: 'line-chart', label: t('home.stats.momentum'), value: momentumValue },
@@ -1355,7 +1369,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // 🔥 FIX: Usiamo useRef per tracciare se i dati utente sono già stati caricati per evitare loop infiniti
   const userDataLoadedRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
-  
+
   // Load user data and momentum (solo una volta al mount o quando cambia l'utente)
   useEffect(() => {
     const loadUserData = async () => {
@@ -1363,16 +1377,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         // Get current user
         const currentUser = await AuthService.getCurrentUser();
         if (!currentUser?.id) return;
-        
+
         // 🔥 FIX: Evita ricaricamento se l'utente è lo stesso e i dati sono già stati caricati
         if (userDataLoadedRef.current && lastUserIdRef.current === currentUser.id) {
           return;
         }
-        
+
         // 🔥 FIX: Segna che stiamo caricando i dati per questo utente
         lastUserIdRef.current = currentUser.id;
         userDataLoadedRef.current = true;
-        
+
         // Load user profile for first name
         const userProfile = await AuthService.getUserProfile(currentUser.id);
         if (userProfile?.first_name) {
@@ -1408,7 +1422,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           }));
           setTodayGlanceWidgets(translatedWidgets);
         }
-        
+
         // 🔥 FIX: Widget data viene gestito dal useEffect separato che dipende da healthData
         // Non lo carichiamo qui per evitare loop
       } catch (error) {
@@ -1502,7 +1516,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // Auto-sync health data more frequently towards end of day
   // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
   const isMountedRef = useRef(true);
-  
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -1516,7 +1530,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     const getSyncInterval = (): number => {
       const now = new Date();
       const hour = now.getHours();
-      
+
       // Dopo le 18:00, sincronizza ogni 30 minuti
       // Dopo le 20:00, sincronizza ogni 15 minuti
       // Dopo le 22:00, sincronizza ogni 10 minuti
@@ -1530,21 +1544,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     const syncAndUpdateTrends = async () => {
       // 🔥 FIX: Verifica se il componente è ancora montato prima di aggiornare lo stato
       if (!isMountedRef.current) return;
-      
+
       try {
         const currentUser = await AuthService.getCurrentUser();
         if (!currentUser?.id || !isMountedRef.current) return;
 
         // Sincronizza i dati di salute
         await syncData();
-        
+
         // 🔥 FIX: Verifica di nuovo prima di aggiornare lo stato
         if (!isMountedRef.current) return;
-        
+
         // Aggiorna i dati storici per i grafici
         const syncService = HealthDataSyncService.getInstance();
         const trendData = await syncService.getWeeklyTrendData(currentUser.id);
-        
+
         // 🔥 FIX: Verifica finale prima di setState
         if (isMountedRef.current) {
           setWeeklyTrendData(trendData);
@@ -1569,10 +1583,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         clearInterval(currentInterval);
         currentInterval = null;
       }
-      
+
       // 🔥 FIX: Verifica se il componente è ancora montato prima di creare nuovo intervallo
       if (!isMountedRef.current) return;
-      
+
       currentInterval = setInterval(() => {
         if (isMountedRef.current) {
           syncAndUpdateTrends();
@@ -1631,11 +1645,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       );
 
       const result = await syncService.addWellnessActivity(wellnessActivity);
-      
+
       if (result.success) {
         // 🔥 FIX: Non aggiorniamo più lo stato activities (rimosso) - le attività sono read-only
         // Le attività vengono da todaysActivities che è memoizzato e non cambia durante l'esecuzione
-        
+
         Alert.alert(
           t('home.calendar.synced'),
           t('home.calendar.addedMessage', { title: activity.title }),
@@ -1661,7 +1675,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const requestPermissions = async () => {
     const result = await syncService.requestPermissions();
     setPermissions(result);
-    
+
     if (!result.calendar && !result.notifications) {
       Alert.alert(
         t('home.permissions.required'),
@@ -1732,19 +1746,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <View style={styles.activityContent}>
             <View style={styles.activityLeft}>
               <View style={[styles.activityIcon, { backgroundColor: activity.completed ? '#10b981' : `${colors[0]}20` }]}>
-                <FontAwesome 
-                  name={activity.completed ? 'check' : activity.icon as any} 
-                  size={16} 
-                  color={activity.completed ? '#ffffff' : colors[0]} 
+                <FontAwesome
+                  name={activity.completed ? 'check' : activity.icon as any}
+                  size={16}
+                  color={activity.completed ? '#ffffff' : colors[0]}
                 />
               </View>
-            <View style={styles.activityText}>
-              <Text style={[styles.activityTitle, { color: themeColors.text }, activity.completed && styles.activityCompleted]}>
-                {activity.title}
-              </Text>
-              <Text style={[styles.activityDescription, { color: themeColors.textSecondary }]}>{activity.description}</Text>
-              <Text style={[styles.activityTime, { color: themeColors.textTertiary }]}>{activity.time}</Text>
-            </View>
+              <View style={styles.activityText}>
+                <Text style={[styles.activityTitle, { color: themeColors.text }, activity.completed && styles.activityCompleted]}>
+                  {activity.title}
+                </Text>
+                <Text style={[styles.activityDescription, { color: themeColors.textSecondary }]}>{activity.description}</Text>
+                <Text style={[styles.activityTime, { color: themeColors.textTertiary }]}>{activity.time}</Text>
+              </View>
             </View>
             <View style={styles.activityRight}>
               <View style={styles.statusContainer}>
@@ -1765,7 +1779,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   </View>
                 )}
               </View>
-              
+
               {/* Sync buttons */}
               <View style={styles.syncButtons}>
                 {!activity.syncedToCalendar && permissions.calendar && (
@@ -1808,22 +1822,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   // True se nella riga (0..1) c'è un widget large che parte in colonna 0
-const rowHasLarge = (rowIndex: 0 | 1) =>
-  widgetConfig.some(w =>
-    w.enabled &&
-    w.size === 'large' &&
-    Math.floor(w.position / 3) === rowIndex &&
-    (w.position % 3) === 0
-  );
+  const rowHasLarge = (rowIndex: 0 | 1) =>
+    widgetConfig.some(w =>
+      w.enabled &&
+      w.size === 'large' &&
+      Math.floor(w.position / 3) === rowIndex &&
+      (w.position % 3) === 0
+    );
 
   const isPositionCovered = (pos: number) => {
     const row = Math.floor(pos / 3);
-  
+
     return widgetConfig.some(w => {
       if (!w.enabled) return false;
       const wRow = Math.floor(w.position / 3);
       if (wRow !== row) return false;
-  
+
       if (w.size === 'small') {
         return pos === w.position;
       }
@@ -1882,28 +1896,28 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 const isMomentum = item.id === 'momentum';
                 const isStreak = item.id === 'streak';
                 const isNextSession = item.id === 'next-session';
-                
+
                 // Determine pill type for popup
                 let pillType: 'streak' | 'momentum' | 'next-session' | null = null;
                 if (item.id === 'streak') pillType = 'streak';
                 else if (item.id === 'momentum') pillType = 'momentum';
                 else if (item.id === 'next-session') pillType = 'next-session';
-                
+
                 return (
-                  <TouchableOpacity 
-                    key={item.label} 
+                  <TouchableOpacity
+                    key={item.label}
                     style={styles.heroChip}
                     onPress={() => pillType && handlePillPress(pillType)}
                     activeOpacity={0.7}
                   >
-                  <View style={[styles.heroChipIcon, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
+                    <View style={[styles.heroChipIcon, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
                       <FontAwesome name={item.icon as any} size={12} color="#ffffff" />
-                  </View>
-                  <View style={styles.heroChipTextContainer}>
-                    <Text style={styles.heroChipLabel} numberOfLines={1} ellipsizeMode="tail">{item.label}</Text>
+                    </View>
+                    <View style={styles.heroChipTextContainer}>
+                      <Text style={styles.heroChipLabel} numberOfLines={1} ellipsizeMode="tail">{item.label}</Text>
                       {/* Forza bianco perché è su gradiente viola */}
                       <Text style={[styles.heroChipValue, { color: '#ffffff' }]} numberOfLines={2} ellipsizeMode="tail">{item.value}</Text>
-                  </View>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
@@ -1916,12 +1930,12 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
             <View>
               <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.todayAtGlance')}</Text>
               <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.todaySubtitle')}</Text>
-        </View>
+            </View>
             <View style={styles.headerActions}>
               {editMode ? (
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => {
-                      // 🆕 Rimosso log per performance
+                    // 🆕 Rimosso log per performance
                     setEditMode(false);
                   }}
                   style={styles.exitEditButton}
@@ -1931,9 +1945,9 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               ) : (
                 <View style={styles.headerButtons}>
 
-              {/* DEBUG: Biometric Test Button */}
-                  
-                  <TouchableOpacity 
+                  {/* DEBUG: Biometric Test Button */}
+
+                  <TouchableOpacity
                     onPress={() => {
                       // 🆕 Rimosso log per performance
                       setEditMode(true);
@@ -2034,8 +2048,8 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                           onLongPress={() => handleWidgetLongPress(widget.id)}
                           onEnterEditMode={() => setEditMode(true)}
                           onDragTargetChange={setDragTargetPosition}
-                          onResize={async (newSize) => { try { await changeSize(widget.id, newSize); } catch {} }}
-                          onRemove={async () => { try { await toggleWidget(widget.id); } catch {} }}
+                          onResize={async (newSize) => { try { await changeSize(widget.id, newSize); } catch { } }}
+                          onRemove={async () => { try { await toggleWidget(widget.id); } catch { } }}
                           editMode={editMode}
                         >
                           {WidgetComponent === MiniGaugeChart ? (
@@ -2053,10 +2067,10 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                                 widgetInfo.steps
                                   ? { steps: widgetInfo.steps }
                                   : widgetInfo.hydration
-                                  ? { hydration: widgetInfo.hydration }
-                                  : widgetInfo.meditation
-                                  ? { meditation: widgetInfo.meditation }
-                                  : undefined
+                                    ? { hydration: widgetInfo.hydration }
+                                    : widgetInfo.meditation
+                                      ? { meditation: widgetInfo.meditation }
+                                      : undefined
                               }
                             />
                           ) : (
@@ -2083,92 +2097,92 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
 
               {/* Riga 2: Posizioni 3, 4, 5 */}
               <View style={styles.widgetRow}>
-              {(rowHasLarge(1)
-                ? widgetConfig.filter(w => w.enabled && w.position === 3 && w.size === 'large')
-                : widgetConfig.filter(w => w.enabled && w.position >= 3)
-              )
-                .sort((a, b) => a.position - b.position)
-                .map((widget) => {
-                  const widgetInfo = widgetData.find(w => w.id === widget.id);
-                  if (!widgetInfo) return null;
+                {(rowHasLarge(1)
+                  ? widgetConfig.filter(w => w.enabled && w.position === 3 && w.size === 'large')
+                  : widgetConfig.filter(w => w.enabled && w.position >= 3)
+                )
+                  .sort((a, b) => a.position - b.position)
+                  .map((widget) => {
+                    const widgetInfo = widgetData.find(w => w.id === widget.id);
+                    if (!widgetInfo) return null;
 
-                  const WidgetComponent =
-                    widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'analyses'
-                      ? MiniInfoCard
-                      : MiniGaugeChart;
+                    const WidgetComponent =
+                      widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'analyses'
+                        ? MiniInfoCard
+                        : MiniGaugeChart;
 
-                  const gaugeProgress = computeGaugeProgress(widgetInfo);
-                  const gaugeSubtitle = computeGaugeSubtitle(widgetInfo);
-                  const gaugeTrend = computeGaugeTrend(gaugeProgress);
-                  const infoValue = getInfoCardValue(widget.id, widgetInfo);
-                  const infoSubtitle = getInfoCardSubtitle(widget.id, widgetInfo);
-                  const infoTrend = getInfoCardTrend(widget.id, widgetInfo);
-                  const infoDetails = getInfoCardDetails(widget.id, widgetInfo);
+                    const gaugeProgress = computeGaugeProgress(widgetInfo);
+                    const gaugeSubtitle = computeGaugeSubtitle(widgetInfo);
+                    const gaugeTrend = computeGaugeTrend(gaugeProgress);
+                    const infoValue = getInfoCardValue(widget.id, widgetInfo);
+                    const infoSubtitle = getInfoCardSubtitle(widget.id, widgetInfo);
+                    const infoTrend = getInfoCardTrend(widget.id, widgetInfo);
+                    const infoDetails = getInfoCardDetails(widget.id, widgetInfo);
 
-                  return (
-                    <View key={widget.id} style={{ width: getWidgetWidth(widget.size) }}>
-                      {dragTargetPosition === widget.position && (
-                        <View style={styles.dropIndicator}>
-                          <View style={styles.dropIndicatorInner} />
-                        </View>
-                      )}
-                      <EditableWidget
-                        widgetId={widget.id}
-                        widgetTitle={widgetInfo.title}
-                        onPress={() => handleWidgetPress(widget.id)}
-                        onLongPress={() => handleWidgetLongPress(widget.id)}
-                        onEnterEditMode={() => setEditMode(true)}
-                        onDragTargetChange={setDragTargetPosition}
-                        onResize={async (newSize) => { try { await changeSize(widget.id, newSize); } catch {} }}
-                        onRemove={async () => { try { await toggleWidget(widget.id); } catch {} }}
-                        editMode={editMode}
-                      >
-                        {WidgetComponent === MiniGaugeChart ? (
-                          <MiniGaugeChart
-                            value={gaugeProgress}
-                            maxValue={100}
-                            label={widgetInfo.title}
-                            color={widgetInfo.color}
-                            subtitle={gaugeSubtitle}
-                            backgroundColor={widgetInfo.backgroundColor}
-                            trendValue={gaugeTrend}
-                            icon={widgetInfo.icon}
-                            size={getWidgetSize(widget.size)}
-                            additionalData={
-                              widgetInfo.steps
-                                ? { steps: widgetInfo.steps }
-                                : widgetInfo.hydration
-                                ? { hydration: widgetInfo.hydration }
-                                : widgetInfo.meditation
-                                ? { meditation: widgetInfo.meditation }
-                                : undefined
-                            }
-                          />
-                        ) : (
-                          <MiniInfoCard
-                            label={widgetInfo.title}
-                            value={infoValue}
-                            subtitle={infoSubtitle}
-                            icon={widgetInfo.icon}
-                            color={widgetInfo.color}
-                            backgroundColor={widgetInfo.backgroundColor}
-                            trendValue={infoTrend}
-                            size={getWidgetSize(widget.size)}
-                            showStatus={widget.id === 'analyses'}
-                            status={widgetInfo.analyses?.completed ? 'completed' : 'pending'}
-                            detailChips={infoDetails}
-                          />
+                    return (
+                      <View key={widget.id} style={{ width: getWidgetWidth(widget.size) }}>
+                        {dragTargetPosition === widget.position && (
+                          <View style={styles.dropIndicator}>
+                            <View style={styles.dropIndicatorInner} />
+                          </View>
                         )}
-                      </EditableWidget>
-                    </View>
-                  );
-                })}
-              {!rowHasLarge(1) && createEmptySlots(3, 6)}
-            </View>
-          </>
-        )}
-      </View>
-      
+                        <EditableWidget
+                          widgetId={widget.id}
+                          widgetTitle={widgetInfo.title}
+                          onPress={() => handleWidgetPress(widget.id)}
+                          onLongPress={() => handleWidgetLongPress(widget.id)}
+                          onEnterEditMode={() => setEditMode(true)}
+                          onDragTargetChange={setDragTargetPosition}
+                          onResize={async (newSize) => { try { await changeSize(widget.id, newSize); } catch { } }}
+                          onRemove={async () => { try { await toggleWidget(widget.id); } catch { } }}
+                          editMode={editMode}
+                        >
+                          {WidgetComponent === MiniGaugeChart ? (
+                            <MiniGaugeChart
+                              value={gaugeProgress}
+                              maxValue={100}
+                              label={widgetInfo.title}
+                              color={widgetInfo.color}
+                              subtitle={gaugeSubtitle}
+                              backgroundColor={widgetInfo.backgroundColor}
+                              trendValue={gaugeTrend}
+                              icon={widgetInfo.icon}
+                              size={getWidgetSize(widget.size)}
+                              additionalData={
+                                widgetInfo.steps
+                                  ? { steps: widgetInfo.steps }
+                                  : widgetInfo.hydration
+                                    ? { hydration: widgetInfo.hydration }
+                                    : widgetInfo.meditation
+                                      ? { meditation: widgetInfo.meditation }
+                                      : undefined
+                              }
+                            />
+                          ) : (
+                            <MiniInfoCard
+                              label={widgetInfo.title}
+                              value={infoValue}
+                              subtitle={infoSubtitle}
+                              icon={widgetInfo.icon}
+                              color={widgetInfo.color}
+                              backgroundColor={widgetInfo.backgroundColor}
+                              trendValue={infoTrend}
+                              size={getWidgetSize(widget.size)}
+                              showStatus={widget.id === 'analyses'}
+                              status={widgetInfo.analyses?.completed ? 'completed' : 'pending'}
+                              detailChips={infoDetails}
+                            />
+                          )}
+                        </EditableWidget>
+                      </View>
+                    );
+                  })}
+                {!rowHasLarge(1) && createEmptySlots(3, 6)}
+              </View>
+            </>
+          )}
+        </View>
+
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCheckIn.title')}</Text>
@@ -2179,11 +2193,11 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
         <View style={styles.focusGrid}>
           <View style={{ flex: 1 }}>
             <MoodCheckinCard
-              value={moodValue as 1|2|3|4|5}
+              value={moodValue as 1 | 2 | 3 | 4 | 5}
               note={moodNote}
               hasExistingCheckin={hasExistingMoodCheckin}
               onChange={(v) => { setMoodValue(v); }}
-              onSave={async ({value, note}) => { setMoodValue(value); setMoodNote(note); await saveMoodCheckin(value, note); }}
+              onSave={async ({ value, note }) => { setMoodValue(value); setMoodNote(note); await saveMoodCheckin(value, note); }}
             />
           </View>
 
@@ -2197,7 +2211,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               restLevel={restLevel}
               hasExistingCheckin={hasExistingSleepCheckin}
               onChangeRestLevel={(level) => { setRestLevel(level); }}
-              onSave={async ({quality, note}) => { setSleepQuality(quality); setSleepNote(note); await saveSleepCheckin(quality, note, restLevel); }}
+              onSave={async ({ quality, note }) => { setSleepQuality(quality); setSleepNote(note); await saveSleepCheckin(quality, note, restLevel); }}
             />
           </View>
         </View>
@@ -2205,9 +2219,9 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.activities.title')}</Text>
           <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
-            {t('home.calendar.ofCompleted', { 
-              completed: todaysActivities.filter(a => a.completed).length, 
-              total: todaysActivities.length 
+            {t('home.calendar.ofCompleted', {
+              completed: todaysActivities.filter(a => a.completed).length,
+              total: todaysActivities.length
             })}
           </Text>
         </View>
@@ -2231,7 +2245,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCopilot.subtitle')}</Text>
             </View>
             {showHistory !== undefined && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setShowHistory(true)}
                 style={styles.historyButtonHeader}
                 activeOpacity={0.7}
@@ -2241,7 +2255,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
             )}
           </View>
         </View>
-        
+
         <DailyCopilot
           compact={false}
           onRecommendationPress={(recommendation) => {
@@ -2264,7 +2278,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               {chartEditMode ? (
                 <>
                   {availableChartsList.length > 0 && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={() => setChartSelectionModal(true)}
                       style={[styles.addChartButton, { backgroundColor: themeColors.primary, borderColor: themeColors.primaryDark }]}
                     >
@@ -2272,7 +2286,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                       <Text style={styles.addChartButtonText}>{t('home.addChart')}</Text>
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setChartEditMode(false)}
                     style={styles.exitEditButton}
                   >
@@ -2280,7 +2294,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                   </TouchableOpacity>
                 </>
               ) : (
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setChartEditMode(true)}
                   style={[
                     styles.editModeButton,
@@ -2296,7 +2310,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
             </View>
           </View>
         </View>
-        
+
         <View style={styles.weeklyProgressContainer}>
           {enabledCharts.length === 0 && !chartEditMode ? (
             <View style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
@@ -2306,15 +2320,15 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
             </View>
           ) : (
             <>
-            {enabledCharts.map((chartConfig) => {
-              // Steps Progress
-              const shouldRenderSteps =
-                chartConfig.id === 'steps' &&
-                (isHealthDataReady ? healthData?.steps !== undefined : true);
-              if (shouldRenderSteps) {
-                const stepsValue = isHealthDataReady ? (healthData?.steps || 0) : placeholderChartSamples.steps.value;
-                const stepsTrendData = isHealthDataReady
-                  ? (() => {
+              {enabledCharts.map((chartConfig) => {
+                // Steps Progress
+                const shouldRenderSteps =
+                  chartConfig.id === 'steps' &&
+                  (isHealthDataReady ? healthData?.steps !== undefined : true);
+                if (shouldRenderSteps) {
+                  const stepsValue = isHealthDataReady ? (healthData?.steps || 0) : placeholderChartSamples.steps.value;
+                  const stepsTrendData = isHealthDataReady
+                    ? (() => {
                       const todayValue = healthData?.steps || 0;
                       const chartData = [...weeklyTrendData.steps];
                       if (chartData.length > 0) {
@@ -2327,73 +2341,74 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                       }
                       return chartData.slice(-7);
                     })()
-                  : placeholderChartSamples.steps.trend;
-                const stepsMaxValue = isHealthDataReady
-                  ? (() => {
+                    : placeholderChartSamples.steps.trend;
+                  const stepsMaxValue = isHealthDataReady
+                    ? (() => {
                       const todayValue = healthData?.steps || 0;
                       const allValues = [...weeklyTrendData.steps, todayValue].filter(v => v > 0);
                       if (allValues.length === 0) return 10000;
                       const max = Math.max(...allValues);
                       return Math.ceil(max / 5000) * 5000 || 10000;
                     })()
-                  : placeholderChartSamples.steps.max;
-                return (
-            <TouchableOpacity
-              key="steps"
-              style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-              onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'steps', currentValue: healthData?.steps || 0, color: '#10b981' })}
-              activeOpacity={chartEditMode ? 1 : 0.7}
-              disabled={chartEditMode || !isHealthDataReady}
-            >
-              <View style={styles.progressCardHeader}>
-                <MaterialCommunityIcons name="walk" size={24} color="#10b981" />
-                <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
-                  {t('widgets.steps')}
-                </Text>
-                {chartEditMode && (
-                  <TouchableOpacity
-                    onPress={() => toggleChart('steps')}
-                    style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
-                  >
-                    <FontAwesome name="times" size={14} color={themeColors.error} />
-                  </TouchableOpacity>
-                )}
-              </View>
-              <View style={styles.progressCardContent}>
-                <View style={styles.progressCardLeft}>
-                  <View style={styles.valueContainer}>
-                    <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                      {stepsValue.toLocaleString()}
-                    </Text>
-                    <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
-                      {t('home.weeklyProgress.steps') || 'passi'}
-                    </Text>
-                  </View>
-                  <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]}>
-                    {t('home.weeklyProgress.today')}
-                  </Text>
-                </View>
-                <View style={styles.progressCardRight}>
-                  <MiniTrendChart
-                    data={stepsTrendData}
-                    color="#10b981"
-                    maxValue={stepsMaxValue}
-                    formatValue={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toString()}
-                  />
-                </View>
-              </View>
-            </TouchableOpacity>
-                );
-              }
-              
-              // Sleep Progress
-              const shouldRenderSleep =
-                chartConfig.id === 'sleepHours' &&
-                (isHealthDataReady ? healthData?.sleepHours !== undefined : true);
-              if (shouldRenderSleep) {
-                const sleepValue = isHealthDataReady ? (healthData?.sleepHours || 0) : placeholderChartSamples.sleepHours.value;
-                const sleepTrendData = isHealthDataReady
-                  ? (() => {
+                    : placeholderChartSamples.steps.max;
+                  return (
+                    <TouchableOpacity
+                      key="steps"
+                      style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+                      onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'steps', currentValue: healthData?.steps || 0, color: '#10b981' })}
+                      activeOpacity={chartEditMode ? 1 : 0.7}
+                      disabled={chartEditMode || !isHealthDataReady}
+                    >
+                      <View style={styles.progressCardHeader}>
+                        <MaterialCommunityIcons name="walk" size={24} color="#10b981" />
+                        <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
+                          {t('widgets.steps')}
+                        </Text>
+                        {chartEditMode && (
+                          <TouchableOpacity
+                            onPress={() => toggleChart('steps')}
+                            style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
+                          >
+                            <FontAwesome name="times" size={14} color={themeColors.error} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      <View style={styles.progressCardContent}>
+                        <View style={styles.progressCardLeft}>
+                          <View style={styles.valueContainer}>
+                            <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
+                              {stepsValue.toLocaleString()}
+                            </Text>
+                            <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
+                              {t('home.weeklyProgress.steps') || 'passi'}
+                            </Text>
+                          </View>
+                          <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]}>
+                            {t('home.weeklyProgress.today')}
+                          </Text>
+                        </View>
+                        <View style={styles.progressCardRight}>
+                          <MiniTrendChart
+                            data={stepsTrendData}
+                            color="#10b981"
+                            maxValue={stepsMaxValue}
+                            formatValue={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toString()}
+                            width={CHART_WIDTH}
+                          />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }
+
+                // Sleep Progress
+                const shouldRenderSleep =
+                  chartConfig.id === 'sleepHours' &&
+                  (isHealthDataReady ? healthData?.sleepHours !== undefined : true);
+                if (shouldRenderSleep) {
+                  const sleepValue = isHealthDataReady ? (healthData?.sleepHours || 0) : placeholderChartSamples.sleepHours.value;
+                  const sleepTrendData = isHealthDataReady
+                    ? (() => {
                       const todayValue = healthData?.sleepHours || 0;
                       const chartData = [...weeklyTrendData.sleepHours];
                       if (chartData.length > 0) {
@@ -2406,75 +2421,76 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                       }
                       return chartData.slice(-7);
                     })()
-                  : placeholderChartSamples.sleepHours.trend;
-                const sleepMaxValue = isHealthDataReady
-                  ? (() => {
+                    : placeholderChartSamples.sleepHours.trend;
+                  const sleepMaxValue = isHealthDataReady
+                    ? (() => {
                       const todayValue = healthData?.sleepHours || 0;
                       const allValues = [...weeklyTrendData.sleepHours, todayValue].filter(v => v > 0);
                       if (allValues.length === 0) return 10;
                       const max = Math.max(...allValues);
                       return Math.ceil(max / 2) * 2 || 10;
                     })()
-                  : placeholderChartSamples.sleepHours.max;
-                return (
-            <TouchableOpacity
-              key="sleepHours"
-              style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-              onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'sleepHours', currentValue: healthData?.sleepHours || 0, color: '#6366f1' })}
-              activeOpacity={chartEditMode ? 1 : 0.7}
-              disabled={chartEditMode || !isHealthDataReady}
-            >
-              <View style={styles.progressCardHeader}>
-                <MaterialCommunityIcons name="sleep" size={24} color="#6366f1" />
-                <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
-                  {t('widgets.sleep')}
-                </Text>
-                {chartEditMode && (
-                  <TouchableOpacity
-                    onPress={() => toggleChart('sleepHours')}
-                    style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
-                  >
-                    <FontAwesome name="times" size={14} color={themeColors.error} />
-                  </TouchableOpacity>
-                )}
-              </View>
-              <View style={styles.progressCardContent}>
-                <View style={styles.progressCardLeft}>
-                  <View style={styles.valueContainer}>
-                    <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                      {sleepValue ? `${Math.round(sleepValue * 10) / 10}` : '—'}
-                    </Text>
-                    <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
-                      {sleepValue ? 'h' : ''}
-                    </Text>
-                  </View>
-                  <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
-                    {healthData?.sleepQuality
-                      ? `${Math.round(healthData.sleepQuality)}% ${t('home.weeklyProgress.quality')}`
-                      : t('home.weeklyProgress.today')}
-                  </Text>
-                </View>
-                <View style={styles.progressCardRight}>
-                  <MiniTrendChart
-                    data={sleepTrendData}
-                    color="#6366f1"
-                    maxValue={sleepMaxValue}
-                    formatValue={(v) => `${v.toFixed(1)}h`}
-                  />
-                </View>
-              </View>
-            </TouchableOpacity>
-                );
-              }
-              
-              // HRV Progress
-              const shouldRenderHrv =
-                chartConfig.id === 'hrv' &&
-                (isHealthDataReady ? (healthData?.hrv ?? 0) > 0 : true);
-              if (shouldRenderHrv) {
-                const hrvValue = isHealthDataReady ? (healthData?.hrv || 0) : placeholderChartSamples.hrv.value;
-                const hrvTrendData = isHealthDataReady
-                  ? (() => {
+                    : placeholderChartSamples.sleepHours.max;
+                  return (
+                    <TouchableOpacity
+                      key="sleepHours"
+                      style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+                      onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'sleepHours', currentValue: healthData?.sleepHours || 0, color: '#6366f1' })}
+                      activeOpacity={chartEditMode ? 1 : 0.7}
+                      disabled={chartEditMode || !isHealthDataReady}
+                    >
+                      <View style={styles.progressCardHeader}>
+                        <MaterialCommunityIcons name="sleep" size={24} color="#6366f1" />
+                        <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
+                          {t('widgets.sleep')}
+                        </Text>
+                        {chartEditMode && (
+                          <TouchableOpacity
+                            onPress={() => toggleChart('sleepHours')}
+                            style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
+                          >
+                            <FontAwesome name="times" size={14} color={themeColors.error} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      <View style={styles.progressCardContent}>
+                        <View style={styles.progressCardLeft}>
+                          <View style={styles.valueContainer}>
+                            <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
+                              {sleepValue ? `${Math.round(sleepValue * 10) / 10}` : '—'}
+                            </Text>
+                            <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
+                              {sleepValue ? 'h' : ''}
+                            </Text>
+                          </View>
+                          <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
+                            {healthData?.sleepQuality
+                              ? `${Math.round(healthData.sleepQuality)}% ${t('home.weeklyProgress.quality')}`
+                              : t('home.weeklyProgress.today')}
+                          </Text>
+                        </View>
+                        <View style={styles.progressCardRight}>
+                          <MiniTrendChart
+                            data={sleepTrendData}
+                            color="#6366f1"
+                            maxValue={sleepMaxValue}
+                            formatValue={(v) => `${v.toFixed(1)}h`}
+                            width={CHART_WIDTH}
+                          />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }
+
+                // HRV Progress
+                const shouldRenderHrv =
+                  chartConfig.id === 'hrv' &&
+                  (isHealthDataReady ? (healthData?.hrv ?? 0) > 0 : true);
+                if (shouldRenderHrv) {
+                  const hrvValue = isHealthDataReady ? (healthData?.hrv || 0) : placeholderChartSamples.hrv.value;
+                  const hrvTrendData = isHealthDataReady
+                    ? (() => {
                       const todayValue = healthData?.hrv || 0;
                       const chartData = [...weeklyTrendData.hrv];
                       if (chartData.length > 0) {
@@ -2487,73 +2503,74 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                       }
                       return chartData.slice(-7);
                     })()
-                  : placeholderChartSamples.hrv.trend;
-                const hrvMaxValue = isHealthDataReady
-                  ? (() => {
+                    : placeholderChartSamples.hrv.trend;
+                  const hrvMaxValue = isHealthDataReady
+                    ? (() => {
                       const todayValue = healthData?.hrv || 0;
                       const allValues = [...weeklyTrendData.hrv, todayValue].filter(v => v > 0);
                       if (allValues.length === 0) return 100;
                       const max = Math.max(...allValues);
                       return Math.ceil(max / 25) * 25 || 100;
                     })()
-                  : placeholderChartSamples.hrv.max;
-                return (
-            <TouchableOpacity
-              key="hrv"
-              style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-              onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'hrv', currentValue: healthData?.hrv || 0, color: '#ef4444' })}
-              activeOpacity={chartEditMode ? 1 : 0.7}
-              disabled={chartEditMode || !isHealthDataReady}
-            >
-              <View style={styles.progressCardHeader}>
-                <MaterialCommunityIcons name="heart-pulse" size={24} color="#ef4444" />
-                <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
-                  {t('widgets.hrv')}
-                </Text>
-                {chartEditMode && (
-                  <TouchableOpacity
-                    onPress={() => toggleChart('hrv')}
-                    style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
-                  >
-                    <FontAwesome name="times" size={14} color={themeColors.error} />
-                  </TouchableOpacity>
-                )}
-              </View>
-              <View style={styles.progressCardContent}>
-                <View style={styles.progressCardLeft}>
-                  <View style={styles.valueContainer}>
-                    <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                      {hrvValue >= 100 ? Math.round(hrvValue) : (Math.round(hrvValue * 10) / 10)}
-                    </Text>
-                    <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
-                      ms
-                    </Text>
-                  </View>
-                  <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={1}>
-                    {t('home.weeklyProgress.current')}
-                  </Text>
-                </View>
-                <View style={styles.progressCardRight}>
-                  <MiniTrendChart
-                    data={hrvTrendData}
-                    color="#ef4444"
-                    maxValue={hrvMaxValue}
-                    formatValue={(v) => v >= 100 ? Math.round(v).toString() : v.toFixed(1)}
-                  />
-                </View>
-              </View>
-            </TouchableOpacity>
-                );
-              }
-              
-              // Heart Rate Progress
-              const shouldRenderHeartRate =
-                chartConfig.id === 'heartRate' &&
-                (isHealthDataReady ? (healthData?.heartRate ?? 0) > 0 : true);
-              if (shouldRenderHeartRate) {
-                const heartRateValue = isHealthDataReady ? (healthData?.heartRate || 0) : placeholderChartSamples.heartRate.value;
-                const heartRateTrendData = isHealthDataReady
-                  ? (() => {
+                    : placeholderChartSamples.hrv.max;
+                  return (
+                    <TouchableOpacity
+                      key="hrv"
+                      style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+                      onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'hrv', currentValue: healthData?.hrv || 0, color: '#ef4444' })}
+                      activeOpacity={chartEditMode ? 1 : 0.7}
+                      disabled={chartEditMode || !isHealthDataReady}
+                    >
+                      <View style={styles.progressCardHeader}>
+                        <MaterialCommunityIcons name="heart-pulse" size={24} color="#ef4444" />
+                        <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
+                          {t('widgets.hrv')}
+                        </Text>
+                        {chartEditMode && (
+                          <TouchableOpacity
+                            onPress={() => toggleChart('hrv')}
+                            style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
+                          >
+                            <FontAwesome name="times" size={14} color={themeColors.error} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      <View style={styles.progressCardContent}>
+                        <View style={styles.progressCardLeft}>
+                          <View style={styles.valueContainer}>
+                            <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
+                              {hrvValue >= 100 ? Math.round(hrvValue) : (Math.round(hrvValue * 10) / 10)}
+                            </Text>
+                            <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
+                              ms
+                            </Text>
+                          </View>
+                          <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={1}>
+                            {t('home.weeklyProgress.current')}
+                          </Text>
+                        </View>
+                        <View style={styles.progressCardRight}>
+                          <MiniTrendChart
+                            data={hrvTrendData}
+                            color="#ef4444"
+                            maxValue={hrvMaxValue}
+                            formatValue={(v) => v >= 100 ? Math.round(v).toString() : v.toFixed(1)}
+                            width={CHART_WIDTH}
+                          />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }
+
+                // Heart Rate Progress
+                const shouldRenderHeartRate =
+                  chartConfig.id === 'heartRate' &&
+                  (isHealthDataReady ? (healthData?.heartRate ?? 0) > 0 : true);
+                if (shouldRenderHeartRate) {
+                  const heartRateValue = isHealthDataReady ? (healthData?.heartRate || 0) : placeholderChartSamples.heartRate.value;
+                  const heartRateTrendData = isHealthDataReady
+                    ? (() => {
                       const todayValue = healthData?.heartRate || 0;
                       const chartData = [...weeklyTrendData.heartRate];
                       if (chartData.length > 0) {
@@ -2566,72 +2583,73 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                       }
                       return chartData.slice(-7);
                     })()
-                  : placeholderChartSamples.heartRate.trend;
-                const heartRateMaxValue = isHealthDataReady
-                  ? (() => {
+                    : placeholderChartSamples.heartRate.trend;
+                  const heartRateMaxValue = isHealthDataReady
+                    ? (() => {
                       const todayValue = healthData?.heartRate || 0;
                       const allValues = [...weeklyTrendData.heartRate, todayValue].filter(v => v > 0);
                       if (allValues.length === 0) return 100;
                       const max = Math.max(...allValues);
                       return Math.ceil(max / 25) * 25 || 100;
                     })()
-                  : placeholderChartSamples.heartRate.max;
-                return (
-            <TouchableOpacity
-              key="heartRate"
-              style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-              onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'heartRate', currentValue: heartRateValue, color: '#ef4444' })}
-              activeOpacity={chartEditMode ? 1 : 0.7}
-              disabled={chartEditMode || !isHealthDataReady}
-            >
-              <View style={styles.progressCardHeader}>
-                <MaterialCommunityIcons name="heart" size={24} color="#ef4444" />
-                <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
-                  {t('home.weeklyProgress.heartRate')}
-                </Text>
-                {chartEditMode && (
-                  <TouchableOpacity
-                    onPress={() => toggleChart('heartRate')}
-                    style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
-                  >
-                    <FontAwesome name="times" size={14} color={themeColors.error} />
-                  </TouchableOpacity>
-                )}
-              </View>
-              <View style={styles.progressCardContent}>
-                <View style={styles.progressCardLeft}>
-                  <View style={styles.valueContainer}>
-                    <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                      {Math.round(heartRateValue)}
-                    </Text>
-                    <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
-                      {t('home.bpm')}
-                    </Text>
-                  </View>
-                  <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
-                    {healthData?.restingHeartRate
-                      ? `${t('home.hrv.restingHR')}: ${Math.round(healthData.restingHeartRate)} ${t('home.bpm')}`
-                      : t('home.weeklyProgress.current')}
-                  </Text>
-                </View>
-                <View style={styles.progressCardRight}>
-                  <MiniTrendChart
-                    data={heartRateTrendData}
-                    color="#ef4444"
-                    maxValue={heartRateMaxValue}
-                    formatValue={(v) => `${Math.round(v)}`}
-                  />
-                </View>
-              </View>
-            </TouchableOpacity>
-                );
-              }
-              
-              // Hydration Progress
-              if (chartConfig.id === 'hydration') {
-                const hydrationValue = isHealthDataReady ? Math.round((healthData?.hydration || 0) / 250) : placeholderChartSamples.hydration.value;
-                const hydrationTrendData = isHealthDataReady
-                  ? (() => {
+                    : placeholderChartSamples.heartRate.max;
+                  return (
+                    <TouchableOpacity
+                      key="heartRate"
+                      style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+                      onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'heartRate', currentValue: heartRateValue, color: '#ef4444' })}
+                      activeOpacity={chartEditMode ? 1 : 0.7}
+                      disabled={chartEditMode || !isHealthDataReady}
+                    >
+                      <View style={styles.progressCardHeader}>
+                        <MaterialCommunityIcons name="heart" size={24} color="#ef4444" />
+                        <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
+                          {t('home.weeklyProgress.heartRate')}
+                        </Text>
+                        {chartEditMode && (
+                          <TouchableOpacity
+                            onPress={() => toggleChart('heartRate')}
+                            style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
+                          >
+                            <FontAwesome name="times" size={14} color={themeColors.error} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      <View style={styles.progressCardContent}>
+                        <View style={styles.progressCardLeft}>
+                          <View style={styles.valueContainer}>
+                            <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
+                              {Math.round(heartRateValue)}
+                            </Text>
+                            <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
+                              {t('home.bpm')}
+                            </Text>
+                          </View>
+                          <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
+                            {healthData?.restingHeartRate
+                              ? `${t('home.hrv.restingHR')}: ${Math.round(healthData.restingHeartRate)} ${t('home.bpm')}`
+                              : t('home.weeklyProgress.current')}
+                          </Text>
+                        </View>
+                        <View style={styles.progressCardRight}>
+                          <MiniTrendChart
+                            data={heartRateTrendData}
+                            color="#ef4444"
+                            maxValue={heartRateMaxValue}
+                            formatValue={(v) => `${Math.round(v)}`}
+                            width={CHART_WIDTH}
+                          />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }
+
+                // Hydration Progress
+                if (chartConfig.id === 'hydration') {
+                  const hydrationValue = isHealthDataReady ? Math.round((healthData?.hydration || 0) / 250) : placeholderChartSamples.hydration.value;
+                  const hydrationTrendData = isHealthDataReady
+                    ? (() => {
                       const todayValue = Math.round((healthData?.hydration || 0) / 250);
                       const chartData = weeklyTrendData.hydration.map(v => Math.round(v / 250));
                       if (chartData.length > 0) {
@@ -2644,70 +2662,71 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                       }
                       return chartData.slice(-7);
                     })()
-                  : placeholderChartSamples.hydration.trend;
-                const hydrationMaxValue = isHealthDataReady
-                  ? (() => {
+                    : placeholderChartSamples.hydration.trend;
+                  const hydrationMaxValue = isHealthDataReady
+                    ? (() => {
                       const todayValue = Math.round((healthData?.hydration || 0) / 250);
                       const allValues = [...weeklyTrendData.hydration.map(v => Math.round(v / 250)), todayValue].filter(v => v > 0);
                       if (allValues.length === 0) return 8;
                       const max = Math.max(...allValues);
                       return Math.ceil(max / 2) * 2 || 8;
                     })()
-                  : placeholderChartSamples.hydration.max;
-                return (
-            <TouchableOpacity
-              key="hydration"
-              style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-              onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'hydration', currentValue: healthData?.hydration || 0, color: '#3b82f6' })}
-              activeOpacity={chartEditMode ? 1 : 0.7}
-              disabled={chartEditMode || !isHealthDataReady}
-            >
-              <View style={styles.progressCardHeader}>
-                <MaterialCommunityIcons name="cup-water" size={24} color="#3b82f6" />
-                <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
-                  {t('widgets.hydration')}
-                </Text>
-                {chartEditMode && (
-                  <TouchableOpacity
-                    onPress={() => toggleChart('hydration')}
-                    style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
-                  >
-                    <FontAwesome name="times" size={14} color={themeColors.error} />
-                  </TouchableOpacity>
-                )}
-              </View>
-              <View style={styles.progressCardContent}>
-                <View style={styles.progressCardLeft}>
-                  <View style={styles.valueContainer}>
-                    <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                      {hydrationValue}
-                    </Text>
-                    <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
-                      {t('home.glasses')}
-                    </Text>
-                  </View>
-                  <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
-                    {healthData?.hydration ? `${(healthData.hydration / 1000).toFixed(1)} L` : t('home.weeklyProgress.today')}
-                  </Text>
-                </View>
-                <View style={styles.progressCardRight}>
-                  <MiniTrendChart
-                    data={hydrationTrendData}
-                    color="#3b82f6"
-                    maxValue={hydrationMaxValue}
-                    formatValue={(v) => `${Math.round(v)}`}
-                  />
-                </View>
-              </View>
-            </TouchableOpacity>
-                );
-              }
-              
-              // Meditation Progress
-              if (chartConfig.id === 'meditation') {
-                const meditationValue = isHealthDataReady ? Math.round(healthData?.mindfulnessMinutes || 0) : placeholderChartSamples.meditation.value;
-                const meditationTrendData = isHealthDataReady
-                  ? (() => {
+                    : placeholderChartSamples.hydration.max;
+                  return (
+                    <TouchableOpacity
+                      key="hydration"
+                      style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+                      onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'hydration', currentValue: healthData?.hydration || 0, color: '#3b82f6' })}
+                      activeOpacity={chartEditMode ? 1 : 0.7}
+                      disabled={chartEditMode || !isHealthDataReady}
+                    >
+                      <View style={styles.progressCardHeader}>
+                        <MaterialCommunityIcons name="cup-water" size={24} color="#3b82f6" />
+                        <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
+                          {t('widgets.hydration')}
+                        </Text>
+                        {chartEditMode && (
+                          <TouchableOpacity
+                            onPress={() => toggleChart('hydration')}
+                            style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
+                          >
+                            <FontAwesome name="times" size={14} color={themeColors.error} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      <View style={styles.progressCardContent}>
+                        <View style={styles.progressCardLeft}>
+                          <View style={styles.valueContainer}>
+                            <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
+                              {hydrationValue}
+                            </Text>
+                            <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
+                              {t('home.glasses')}
+                            </Text>
+                          </View>
+                          <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
+                            {healthData?.hydration ? `${(healthData.hydration / 1000).toFixed(1)} L` : t('home.weeklyProgress.today')}
+                          </Text>
+                        </View>
+                        <View style={styles.progressCardRight}>
+                          <MiniTrendChart
+                            data={hydrationTrendData}
+                            color="#3b82f6"
+                            maxValue={hydrationMaxValue}
+                            formatValue={(v) => `${Math.round(v)}`}
+                            width={CHART_WIDTH}
+                          />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }
+
+                // Meditation Progress
+                if (chartConfig.id === 'meditation') {
+                  const meditationValue = isHealthDataReady ? Math.round(healthData?.mindfulnessMinutes || 0) : placeholderChartSamples.meditation.value;
+                  const meditationTrendData = isHealthDataReady
+                    ? (() => {
                       const todayValue = healthData?.mindfulnessMinutes || 0;
                       const chartData = [...weeklyTrendData.meditation];
                       if (chartData.length > 0) {
@@ -2720,104 +2739,105 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                       }
                       return chartData.slice(-7);
                     })()
-                  : placeholderChartSamples.meditation.trend;
-                const meditationMaxValue = isHealthDataReady
-                  ? (() => {
+                    : placeholderChartSamples.meditation.trend;
+                  const meditationMaxValue = isHealthDataReady
+                    ? (() => {
                       const todayValue = healthData?.mindfulnessMinutes || 0;
                       const allValues = [...weeklyTrendData.meditation, todayValue].filter(v => v > 0);
                       if (allValues.length === 0) return 30;
                       const max = Math.max(...allValues);
                       return Math.ceil(max / 15) * 15 || 30;
                     })()
-                  : placeholderChartSamples.meditation.max;
-                return (
-            <TouchableOpacity
-              key="meditation"
-              style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-              onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'meditation', currentValue: healthData?.mindfulnessMinutes || 0, color: '#8b5cf6' })}
-              activeOpacity={chartEditMode ? 1 : 0.7}
-              disabled={chartEditMode || !isHealthDataReady}
-            >
-              <View style={styles.progressCardHeader}>
-                <MaterialCommunityIcons name="meditation" size={24} color="#8b5cf6" />
-                <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
-                  {t('widgets.meditation')}
-                </Text>
-                {chartEditMode && (
-                  <TouchableOpacity
-                    onPress={() => toggleChart('meditation')}
-                    style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
-                  >
-                    <FontAwesome name="times" size={14} color={themeColors.error} />
-                  </TouchableOpacity>
-                )}
-              </View>
-              <View style={styles.progressCardContent}>
-                <View style={styles.progressCardLeft}>
-                  <View style={styles.valueContainer}>
-                    <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                      {meditationValue}
-                    </Text>
-                    <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
-                      {t('home.minutes')}
-                    </Text>
-                  </View>
-                  <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
-                    {t('home.weeklyProgress.today')}
-                  </Text>
-                </View>
-                <View style={styles.progressCardRight}>
-                  <MiniTrendChart
-                    data={meditationTrendData}
-                    color="#8b5cf6"
-                    maxValue={meditationMaxValue}
-                    formatValue={(v) => `${Math.round(v)}`}
-                  />
-                </View>
-              </View>
-            </TouchableOpacity>
-                );
-              }
-              
-              return null;
-            })}
-          
-          {/* Mostra i grafici disabilitati in modalità edit per permettere di riabilitarli */}
-          {chartEditMode && disabledCharts.length > 0 && (
-            <View style={styles.disabledChartsContainer}>
-              <Text style={[styles.disabledChartsTitle, { color: themeColors.textSecondary }]}>
-                {t('home.weeklyProgress.disabledCharts') || 'Grafici disabilitati'}
-              </Text>
-              {disabledCharts.map((chart) => {
-                const chartLabels: Record<ChartType, { icon: string; label: string; color: string }> = {
-                  steps: { icon: 'walk', label: t('widgets.steps'), color: '#10b981' },
-                  sleepHours: { icon: 'sleep', label: t('widgets.sleep'), color: '#6366f1' },
-                  hrv: { icon: 'heart-pulse', label: t('widgets.hrv'), color: '#ef4444' },
-                  heartRate: { icon: 'heart', label: t('home.weeklyProgress.heartRate'), color: '#ef4444' },
-                  hydration: { icon: 'cup-water', label: t('widgets.hydration'), color: '#3b82f6' },
-                  meditation: { icon: 'meditation', label: t('widgets.meditation'), color: '#8b5cf6' },
-                };
-                const chartInfo = chartLabels[chart.id];
-                
-                return (
-                  <TouchableOpacity
-                    key={chart.id}
-                    onPress={() => enableChart(chart.id)}
-                    style={[styles.disabledChartCard, { backgroundColor: themeColors.surfaceMuted, borderColor: themeColors.border }]}
-                  >
-                    <MaterialCommunityIcons name={chartInfo.icon as any} size={20} color={chartInfo.color} />
-                    <Text style={[styles.disabledChartLabel, { color: themeColors.text }]}>{chartInfo.label}</Text>
-                    <FontAwesome name="plus-circle" size={18} color={themeColors.primary} />
-                  </TouchableOpacity>
-                );
+                    : placeholderChartSamples.meditation.max;
+                  return (
+                    <TouchableOpacity
+                      key="meditation"
+                      style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+                      onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'meditation', currentValue: healthData?.mindfulnessMinutes || 0, color: '#8b5cf6' })}
+                      activeOpacity={chartEditMode ? 1 : 0.7}
+                      disabled={chartEditMode || !isHealthDataReady}
+                    >
+                      <View style={styles.progressCardHeader}>
+                        <MaterialCommunityIcons name="meditation" size={24} color="#8b5cf6" />
+                        <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
+                          {t('widgets.meditation')}
+                        </Text>
+                        {chartEditMode && (
+                          <TouchableOpacity
+                            onPress={() => toggleChart('meditation')}
+                            style={[styles.chartEditButton, { backgroundColor: themeColors.error + '20' }]}
+                          >
+                            <FontAwesome name="times" size={14} color={themeColors.error} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      <View style={styles.progressCardContent}>
+                        <View style={styles.progressCardLeft}>
+                          <View style={styles.valueContainer}>
+                            <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
+                              {meditationValue}
+                            </Text>
+                            <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
+                              {t('home.minutes')}
+                            </Text>
+                          </View>
+                          <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
+                            {t('home.weeklyProgress.today')}
+                          </Text>
+                        </View>
+                        <View style={styles.progressCardRight}>
+                          <MiniTrendChart
+                            data={meditationTrendData}
+                            color="#8b5cf6"
+                            maxValue={meditationMaxValue}
+                            formatValue={(v) => `${Math.round(v)}`}
+                            width={CHART_WIDTH}
+                          />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }
+
+                return null;
               })}
-            </View>
-          )}
-          </>
+
+              {/* Mostra i grafici disabilitati in modalità edit per permettere di riabilitarli */}
+              {chartEditMode && disabledCharts.length > 0 && (
+                <View style={styles.disabledChartsContainer}>
+                  <Text style={[styles.disabledChartsTitle, { color: themeColors.textSecondary }]}>
+                    {t('home.weeklyProgress.disabledCharts') || 'Grafici disabilitati'}
+                  </Text>
+                  {disabledCharts.map((chart) => {
+                    const chartLabels: Record<ChartType, { icon: string; label: string; color: string }> = {
+                      steps: { icon: 'walk', label: t('widgets.steps'), color: '#10b981' },
+                      sleepHours: { icon: 'sleep', label: t('widgets.sleep'), color: '#6366f1' },
+                      hrv: { icon: 'heart-pulse', label: t('widgets.hrv'), color: '#ef4444' },
+                      heartRate: { icon: 'heart', label: t('home.weeklyProgress.heartRate'), color: '#ef4444' },
+                      hydration: { icon: 'cup-water', label: t('widgets.hydration'), color: '#3b82f6' },
+                      meditation: { icon: 'meditation', label: t('widgets.meditation'), color: '#8b5cf6' },
+                    };
+                    const chartInfo = chartLabels[chart.id];
+
+                    return (
+                      <TouchableOpacity
+                        key={chart.id}
+                        onPress={() => enableChart(chart.id)}
+                        style={[styles.disabledChartCard, { backgroundColor: themeColors.surfaceMuted, borderColor: themeColors.border }]}
+                      >
+                        <MaterialCommunityIcons name={chartInfo.icon as any} size={20} color={chartInfo.color} />
+                        <Text style={[styles.disabledChartLabel, { color: themeColors.text }]}>{chartInfo.label}</Text>
+                        <FontAwesome name="plus-circle" size={18} color={themeColors.primary} />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </>
           )}
         </View>
       </ScrollView>
-      
+
       {/* Pill Detail Popup */}
       <PillDetailPopup
         visible={selectedPill !== null}
@@ -2868,7 +2888,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           // 🔥 Chiudi il modal PRIMA di fare sync per evitare loop
           setHealthPermissionsModal(false);
-          
+
           // 🔥 Forza sync dei dati e aggiornamento widget
           try {
             const syncResult = await syncData();
@@ -2925,7 +2945,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
         onAvatarPress={(avatar) => {
           Alert.alert(
             avatar.displayName,
-            avatar.streak 
+            avatar.streak
               ? `🔥 Streak: ${avatar.streak} giorni\n${avatar.hasAvatar || avatar.imageUrl ? '✓ Ha un avatar personalizzato' : 'Non ha ancora creato un avatar'}`
               : `Nuovo membro\n${avatar.hasAvatar || avatar.imageUrl ? '✓ Ha un avatar personalizzato' : 'Non ha ancora creato un avatar'}`,
             [{ text: 'OK', style: 'default' }]
@@ -2970,19 +2990,19 @@ const MoodFocusCard: React.FC<{
 }> = ({ moodLabel, deltaPct = 0, onPress, onLongPress }) => {
   const { t } = useTranslation(); // 🆕 i18n
   const isPositive = moodLabel === 'Positive';
-  const isNeutral  = moodLabel === 'Neutral';
-  const gradient   = isPositive
+  const isNeutral = moodLabel === 'Neutral';
+  const gradient = isPositive
     ? ['#A7F3D0', '#6EE7B7'] as const
     : isNeutral
-    ? ['#FDE68A', '#FCD34D'] as const
-    : ['#FECACA', '#FCA5A5'] as const;
+      ? ['#FDE68A', '#FCD34D'] as const
+      : ['#FECACA', '#FCA5A5'] as const;
 
   const emoji = isPositive ? '🙂' : isNeutral ? '😐' : '☹️';
   const trendIcon = deltaPct >= 0 ? 'arrow-up' : 'arrow-down';
 
   return (
     <Pressable onPress={onPress} onLongPress={onLongPress} style={{ flex: 1 }}>
-      <LinearGradient colors={gradient} start={{x:0,y:0}} end={{x:1,y:1}} style={styles.focusCard}>
+      <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.focusCard}>
         <View style={styles.focusCardHeader}>
           <Text style={styles.focusEmoji}>{emoji}</Text>
           <View style={styles.focusBadge}>
@@ -3017,7 +3037,7 @@ const SleepFocusCard: React.FC<{
   const { t } = useTranslation(); // 🆕 i18n
   return (
     <Pressable onPress={onPress} onLongPress={onLongPress} style={{ flex: 1 }}>
-      <LinearGradient colors={['#BFDBFE', '#93C5FD'] as const} start={{x:0,y:0}} end={{x:1,y:1}} style={styles.focusCard}>
+      <LinearGradient colors={['#BFDBFE', '#93C5FD'] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.focusCard}>
         <View style={styles.focusCardHeader}>
           <MaterialCommunityIcons name="moon-waning-crescent" size={22} color="#0C4A6E" />
           {typeof quality === 'number' && quality > 0 && (
@@ -3065,10 +3085,10 @@ const ActivityItem: React.FC<{
   const colors = (() => {
     switch (activity.category) {
       case 'mindfulness': return ['#8b5cf6', '#a78bfa'] as const;
-      case 'movement':    return ['#10b981', '#34d399'] as const;
-      case 'nutrition':   return ['#f59e0b', '#fbbf24'] as const;
-      case 'recovery':    return ['#3b82f6', '#60a5fa'] as const;
-      default:            return ['#6b7280', '#9ca3af'] as const;
+      case 'movement': return ['#10b981', '#34d399'] as const;
+      case 'nutrition': return ['#f59e0b', '#fbbf24'] as const;
+      case 'recovery': return ['#3b82f6', '#60a5fa'] as const;
+      default: return ['#6b7280', '#9ca3af'] as const;
     }
   })();
 
@@ -3661,7 +3681,7 @@ const styles = StyleSheet.create({
   focusEmoji: {
     fontSize: 26,
   },
-  
+
   // Icon containers con glow effect
   moodIconContainer: {
     position: 'relative',
@@ -3962,7 +3982,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  
+
   // Nuovi stili per Sleep Card migliorata
   sleepScoreContainer: {
     flexDirection: 'row',
@@ -4050,7 +4070,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1e40af',
   },
-  
+
   // Stili per slider migliorati
   sliderContainer: {
     marginVertical: 8,
@@ -4197,12 +4217,12 @@ const styles = StyleSheet.create({
   },
   progressCardLeft: {
     flexShrink: 1,
-    marginRight: 12,
-    maxWidth: 100, // Ridotto per dare più spazio ai grafici
+    marginRight: 8, // Ridotto da 12 a 8 per dare più spazio al grafico
+    maxWidth: 90, // Ridotto da 100 a 90
   },
   progressCardRight: {
-    width: 320, // Aumentato da 300 a 320
-    height: 150, // Aumentato da 130 a 150
+    width: CHART_WIDTH,
+    height: 150,
     flexShrink: 0,
   },
   valueContainer: {

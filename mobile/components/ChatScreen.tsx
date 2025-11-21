@@ -547,16 +547,38 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     (targetDay?: string) => {
       if (targetDay) {
         setSelectedDayKey(targetDay);
+        // 🆕 Aggiorna il mese del calendario se l'entry è di un mese diverso
+        try {
+          const [year, month, day] = targetDay.split('-').map(Number);
+          const targetDate = new Date(year, month - 1, day);
+          const currentMonthDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+          const targetMonthDate = new Date(year, month - 1, 1);
+          
+          // Aggiorna solo se il mese è diverso
+          if (currentMonthDate.getTime() !== targetMonthDate.getTime()) {
+            setCurrentMonth(targetMonthDate);
+          }
+        } catch (error) {
+          console.error('Error parsing targetDay date:', error);
+        }
       } else {
         const todayKey = DailyJournalService.todayKey();
         if (selectedDayKey !== todayKey) {
           setSelectedDayKey(todayKey);
         }
+        // 🆕 Se non c'è un targetDay, torna al mese corrente
+        const today = new Date();
+        const currentMonthDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+        const todayMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        if (currentMonthDate.getTime() !== todayMonthDate.getTime()) {
+          setCurrentMonth(todayMonthDate);
+        }
       }
       setMode('journal');
       scrollJournalToTop();
     },
-    [selectedDayKey, scrollJournalToTop],
+    [selectedDayKey, scrollJournalToTop, currentMonth],
   );
 
   const handleRegeneratePrompt = useCallback(async () => {
@@ -675,7 +697,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [showVoiceInterface, setShowVoiceInterface] = useState(false);
+  const [voiceModeDismissed, setVoiceModeDismissed] = useState(false);
   
+  useEffect(() => {
+    if (voiceMode === 'true') {
+      setVoiceModeDismissed(false);
+    }
+  }, [voiceMode]);
+
   const [showLoadingCloud, setShowLoadingCloud] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -1079,30 +1108,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     }
   }, [messages.length, mode]);
 
-  // Auto-start voice mode when coming from Avatar mic button
   useEffect(() => {
-    // 🆕 Rimosso log per performance
-    if (voiceMode === 'true') {
-      const timer = setTimeout(() => {
-        setShowVoiceInterface(true);
-        voiceInterfaceOpacity.value = withTiming(1, { duration: 300 });
-      }, 500);
-
-      return () => clearTimeout(timer);
+    if (voiceMode === 'true' && !voiceModeDismissed) {
+      setShowVoiceInterface(true);
+      voiceInterfaceOpacity.value = withTiming(1, { duration: 300 });
     }
-  }, [voiceMode]);
-
-  // Also check voiceMode on component mount/focus
-  useEffect(() => {
-    // 🆕 Rimosso log per performance
-    if (voiceMode === 'true' && !showVoiceInterface) {
-      const timer = setTimeout(() => {
-        setShowVoiceInterface(true);
-        voiceInterfaceOpacity.value = withTiming(1, { duration: 300 });
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [voiceMode, showVoiceInterface]);
+  }, [voiceMode, voiceModeDismissed, voiceInterfaceOpacity]);
 
   // Listen for app state changes to handle navigation
   useEffect(() => {
@@ -1111,7 +1122,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     
     const handleAppStateChange = (nextAppState: string) => {
       // 🆕 Rimosso log per performance
-      if (nextAppState === 'active' && voiceMode === 'true' && !showVoiceInterface) {
+      if (nextAppState === 'active' && voiceMode === 'true' && !showVoiceInterface && !voiceModeDismissed) {
         // 🔥 FIX: Memory leak - salviamo il timeout per cleanup
         const timer = setTimeout(() => {
           setShowVoiceInterface(true);
@@ -1127,7 +1138,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       // 🔥 FIX: Memory leak - puliamo tutti i timeout
       timeoutRefs.forEach(timer => clearTimeout(timer));
     };
-  }, [voiceMode, showVoiceInterface]);
+  }, [voiceMode, showVoiceInterface, voiceModeDismissed, voiceInterfaceOpacity]);
 
   // Keyboard management via AvoidSoftInput events
   useEffect(() => {
@@ -1823,11 +1834,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   };
 
 
-  const closeVoiceInterface = () => {
+  const closeVoiceInterface = useCallback(() => {
+    setVoiceModeDismissed(true);
+    if (voiceMode === 'true') {
+      router.replace('/(tabs)/coach');
+    }
     voiceInterfaceOpacity.value = withTiming(0, { duration: 300 }, () => {
       runOnJS(setShowVoiceInterface)(false);
     });
-  };
+  }, [voiceMode, router, voiceInterfaceOpacity]);
 
   const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -1840,15 +1855,39 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     transform: [{ scale: pulseScale.value }],
   }));
 
-  const voiceInterfaceStyle = useAnimatedStyle(() => ({
-    opacity: voiceInterfaceOpacity.value,
-  }));
-
   const dynamicStyles = useMemo(() => ({
     container: {
       backgroundColor: colors.background,
     },
   }), [colors.background]);
+
+  const isHomeVoiceLaunch = voiceMode === 'true' && !voiceModeDismissed;
+
+  const renderModernVoiceChat = (forceVisible = false) => (
+    <ModernVoiceChat
+      visible={forceVisible || showVoiceInterface}
+      onClose={closeVoiceInterface}
+      onVoiceInput={handleVoiceInput}
+      isListening={isListening}
+      isSpeaking={isSpeaking}
+      isProcessing={isProcessing}
+      transcript={transcript}
+      userContext={aiContext ? {
+        emotionHistory: aiContext.emotionHistory || [],
+        skinHistory: aiContext.skinHistory || [],
+        emotionTrend: aiContext.emotionTrend || null,
+        skinTrend: aiContext.skinTrend || null,
+        insights: aiContext.insights || [],
+        temporalPatterns: aiContext.temporalPatterns || null,
+        behavioralInsights: aiContext.behavioralInsights || null,
+        contextualFactors: aiContext.contextualFactors || null,
+      } : undefined}
+      aiContext={aiContext}
+      currentUser={currentUser}
+      currentUserProfile={currentUserProfile}
+      onAddWellnessActivity={handleAddWellnessActivity}
+    />
+  );
 
   // scrollContentStyle non più necessario per FlatList; il paddingBottom viene messo direttamente in contentContainerStyle della FlatList
 
@@ -2087,29 +2126,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         )}
 
         {/* Modern Voice Chat in full-screen modal */}
-        <ModernVoiceChat
-          visible={showVoiceInterface}
-          onClose={() => setShowVoiceInterface(false)}
-          onVoiceInput={handleVoiceInput}
-          isListening={isListening}
-          isSpeaking={isSpeaking}
-          isProcessing={isProcessing}
-          transcript={transcript}
-          userContext={aiContext ? {
-            emotionHistory: aiContext.emotionHistory || [],
-            skinHistory: aiContext.skinHistory || [],
-            emotionTrend: aiContext.emotionTrend || null,
-            skinTrend: aiContext.skinTrend || null,
-            insights: aiContext.insights || [],
-            temporalPatterns: aiContext.temporalPatterns || null,
-            behavioralInsights: aiContext.behavioralInsights || null,
-            contextualFactors: aiContext.contextualFactors || null,
-          } : undefined}
-          aiContext={aiContext}
-          currentUser={currentUser}
-          currentUserProfile={currentUserProfile}
-          onAddWellnessActivity={handleAddWellnessActivity}
-        />
+        {renderModernVoiceChat()}
 
         {/* Chat/Journal Content */}
         <View style={styles.scrollArea}>
@@ -2616,7 +2633,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               {journalHistory?.length ? (
                 <View style={styles.journalHistory}>
                   <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('journal.latestNotes')}</Text>
-                  {journalHistory.map((it) => (
+                  {journalHistory.slice(0, 7).map((it) => (
                     <View key={it.id} style={[styles.historyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                         <View style={styles.historyHeader}>
                         <View style={styles.dateChipSm}><Text style={styles.dateChipSmText}>{it.entry_date}</Text></View>
@@ -3013,7 +3030,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   style={[
                     styles.templateOption,
                     { borderColor: colors.border },
-                    selectedTemplate === template.id && { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
+                    template.id === 'free' && selectedTemplate === template.id && { borderColor: '#f5c643', backgroundColor: '#fffbea' },
+                    selectedTemplate === template.id && template.id !== 'free' && { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
                   ]}
                   onPress={async () => {
                     setSelectedTemplate(template.id);
@@ -3027,9 +3045,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   }}
                 >
                   <View style={styles.templateOptionContent}>
-                    <Text style={[styles.templateOptionName, { color: colors.text }, selectedTemplate === template.id && { color: colors.primary, fontWeight: '700' }]}>
-                      {template.name}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {template.id === 'free' && <Text style={{ fontSize: 16 }}>✨</Text>}
+                      <Text style={[styles.templateOptionName, { color: colors.text }, selectedTemplate === template.id && { color: colors.primary, fontWeight: '700' }]}>
+                        {template.name}
+                      </Text>
+                    </View>
                     <Text style={[styles.templateOptionDescription, { color: colors.textSecondary }]}>
                       {template.description}
                     </Text>

@@ -103,14 +103,14 @@ function TabNavigator() {
                 ? 'rgba(88,28,135,0.45)'
                 : 'rgba(129,140,248,0.18)'
               : 'transparent',
-            marginBottom: 3, // Add some spacing between icon and text
+            marginBottom: 0, // Removed spacing since no label
           }}
         >
           <View
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
+              width: 44, // Increased from 32
+              height: 44, // Increased from 32
+              borderRadius: 22, // Increased from 16
               justifyContent: 'center',
               alignItems: 'center',
             }}
@@ -165,21 +165,11 @@ function TabNavigator() {
     <View style={{
       alignItems: 'center',
       justifyContent: 'center',
-      top: 14, // Lower the entire content
-      height: '100%', // Ensure it takes full height to center properly relative to this container if needed, but 'top' does the shift
+      top: 14, // Added to push icons down to center
+      height: '100%',
     }}>
       <TabIcon focused={focused}>{icon}</TabIcon>
-      <Text
-        numberOfLines={1}
-        style={{
-          marginTop: 0, // Reduced margin since we added marginBottom to icon
-          fontSize: 10,
-          fontWeight: focused ? '700' : '500',
-          color: focused ? primaryColor : inactiveTintColor,
-        }}
-      >
-        {label}
-      </Text>
+      {/* Label removed */}
     </View>
   );
 
@@ -206,20 +196,20 @@ function TabNavigator() {
           >
             {isDark ? (
               <BlurView
-                intensity={40}
+                intensity={80} // Increased from 40
                 tint="dark"
                 style={{
                   flex: 1,
-                  backgroundColor: 'rgba(30,30,45,0.65)', // Semi-transparent dark overlay
+                  backgroundColor: 'rgba(30,30,45,0.9)', // Increased opacity from 0.65
                 }}
               />
             ) : (
               <BlurView
-                intensity={35}
+                intensity={80} // Increased from 35
                 tint="light"
                 style={{
                   flex: 1,
-                  backgroundColor: 'rgba(255,255,255,0.9)',
+                  backgroundColor: 'rgba(255,255,255,0.96)', // Increased opacity from 0.9
                 }}
               />
             )}
@@ -247,7 +237,7 @@ function TabNavigator() {
               focused,
               <FontAwesome
                 name="home"
-                size={20}
+                size={30} // Increased from 20
                 color={focused ? primaryColor : color}
               />,
             )
@@ -265,7 +255,7 @@ function TabNavigator() {
               focused,
               <MaterialIcons
                 name="emoji-emotions"
-                size={20}
+                size={30} // Increased from 20
                 color={focused ? primaryColor : color}
               />,
             )
@@ -283,7 +273,7 @@ function TabNavigator() {
               focused,
               <MaterialIcons
                 name="face"
-                size={20}
+                size={30} // Increased from 20
                 color={focused ? primaryColor : color}
               />,
             )
@@ -301,7 +291,7 @@ function TabNavigator() {
               focused,
               <MaterialIcons
                 name="restaurant"
-                size={20}
+                size={30} // Increased from 20
                 color={focused ? primaryColor : color}
               />,
             )
@@ -319,7 +309,7 @@ function TabNavigator() {
               focused,
               <FontAwesome
                 name="heart-o"
-                size={20}
+                size={30} // Increased from 20
                 color={focused ? primaryColor : color}
               />,
             )
@@ -337,7 +327,7 @@ function TabNavigator() {
               focused,
               <MaterialIcons
                 name="chat"
-                size={20}
+                size={30} // Increased from 20
                 color={focused ? primaryColor : color}
               />,
             )
@@ -355,7 +345,7 @@ function TabNavigator() {
               focused,
               <MaterialIcons
                 name="settings"
-                size={20}
+                size={30} // Increased from 20
                 color={focused ? primaryColor : color}
               />,
             )

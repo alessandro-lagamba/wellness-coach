@@ -39,11 +39,13 @@ export const AudioOrbVisual: React.FC<AudioOrbVisualProps> = ({
     treble: 0,
   },
 }) => {
-  const rendererRef = useRef<Renderer>();
-  const sceneRef = useRef<THREE.Scene>();
-  const sphereRef = useRef<THREE.Mesh>();
-  const cameraRef = useRef<THREE.PerspectiveCamera>();
-  const animationRef = useRef<number>();
+  const rendererRef = useRef<Renderer | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const sphereRef = useRef<
+    THREE.Mesh<THREE.IcosahedronGeometry, THREE.MeshStandardMaterial> | null
+  >(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const animationRef = useRef<number | undefined>(undefined);
   
   // Animazioni React Native
   const orbScale = useSharedValue(1);

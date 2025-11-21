@@ -3,21 +3,18 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Path, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useTheme } from '../contexts/ThemeContext';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CHART_WIDTH = 320; // Aumentato da 300 a 320
-const CHART_HEIGHT = 150; // Aumentato da 130 a 150
 const PADDING_TOP = 8;
 const PADDING_BOTTOM = 24; // Spazio per le etichette dei giorni
 const PADDING_LEFT = 32; // Spazio per i valori verticali
 const PADDING_RIGHT = 8;
-const CHART_AREA_WIDTH = CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT;
-const CHART_AREA_HEIGHT = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
 
 interface MiniTrendChartProps {
   data: number[];
   color?: string;
   maxValue?: number;
   formatValue?: (value: number) => string;
+  width?: number;
+  height?: number;
 }
 
 export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
@@ -25,9 +22,16 @@ export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
   color = '#10b981',
   maxValue,
   formatValue = (v) => v.toLocaleString(),
+  width = 320,
+  height = 150,
 }) => {
   const { colors } = useTheme();
-  
+
+  const CHART_WIDTH = width;
+  const CHART_HEIGHT = height;
+  const CHART_AREA_WIDTH = CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT;
+  const CHART_AREA_HEIGHT = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
+
   // Genera le etichette dei giorni (ultimi 7 giorni)
   const getDayLabels = (): string[] => {
     const labels: string[] = [];
@@ -42,12 +46,12 @@ export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
   };
 
   const dayLabels = getDayLabels();
-  
+
   if (!data || data.length === 0) {
     return (
-      <View style={styles.container}>
-        <View style={[styles.emptyChart, { backgroundColor: colors.surfaceMuted }]}>
-          <View style={[styles.emptyLine, { backgroundColor: colors.border }]} />
+      <View style={{ width: CHART_WIDTH, height: CHART_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+        <View style={[styles.emptyChart, { width: CHART_WIDTH, height: CHART_HEIGHT, backgroundColor: colors.surfaceMuted }]}>
+          <View style={[styles.emptyLine, { width: CHART_WIDTH - 16, backgroundColor: colors.border }]} />
         </View>
       </View>
     );
@@ -107,14 +111,14 @@ export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
   const lastPoint = points[points.length - 1];
 
   return (
-    <View style={styles.container}>
+    <View style={{ width: CHART_WIDTH, height: CHART_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
       <Svg width={CHART_WIDTH} height={CHART_HEIGHT} style={styles.chart}>
         {/* Linee di griglia orizzontali */}
         {scaleValues.map((value, index) => {
           // 🔥 FIX: Normalizza le etichette rispetto al max reale per posizionamento corretto
           // Se value > maxForNormalization, posiziona al top (1.0)
-          const normalizedValue = value <= maxForNormalization 
-            ? (value / maxForNormalization) 
+          const normalizedValue = value <= maxForNormalization
+            ? (value / maxForNormalization)
             : 1.0;
           const clampedValue = Math.max(0, Math.min(1, normalizedValue));
           const y = PADDING_TOP + CHART_AREA_HEIGHT * (1 - clampedValue);
@@ -137,8 +141,8 @@ export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
         {scaleValues.map((value, index) => {
           // 🔥 FIX: Normalizza le etichette rispetto al max reale per posizionamento corretto
           // Se value > maxForNormalization, posiziona al top (1.0)
-          const normalizedValue = value <= maxForNormalization 
-            ? (value / maxForNormalization) 
+          const normalizedValue = value <= maxForNormalization
+            ? (value / maxForNormalization)
             : 1.0;
           const clampedValue = Math.max(0, Math.min(1, normalizedValue));
           const y = PADDING_TOP + CHART_AREA_HEIGHT * (1 - clampedValue);
@@ -166,7 +170,7 @@ export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
           strokeWidth={1}
           opacity={0.3}
         />
-        
+
         {/* Linea del trend */}
         {points.length > 1 && pathData && (
           <Path
@@ -178,7 +182,7 @@ export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
             strokeLinejoin="round"
           />
         )}
-        
+
         {/* Cerchio sul primo punto */}
         {firstPoint && (
           <Circle
@@ -189,7 +193,7 @@ export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
             opacity={0.7}
           />
         )}
-        
+
         {/* Cerchio sull'ultimo punto */}
         {lastPoint && (
           <Circle
@@ -222,24 +226,15 @@ export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    width: CHART_WIDTH,
-    height: CHART_HEIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   chart: {
     flex: 1,
   },
   emptyChart: {
-    width: CHART_WIDTH,
-    height: CHART_HEIGHT,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   emptyLine: {
-    width: CHART_WIDTH - 16,
     height: 2,
     borderRadius: 1,
   },
