@@ -566,7 +566,7 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
               {/* 🆕 Toggle button elegante per fermare */}
               <View style={styles.fastChatToggleContainerMinimal}>
                 <LinearGradient
-                  colors={[colors.surface, colors.surfaceSecondary]}
+                  colors={[colors.surface, colors.surfaceMuted || colors.surface]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={[styles.fastChatToggle, styles.fastChatToggleMinimal]}

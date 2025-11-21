@@ -56,6 +56,8 @@ export interface HealthDataSyncResult {
   lastSyncDate?: Date;
 }
 
+export type HealthDataStatus = 'loading' | 'waiting-permission' | 'empty' | 'ready' | 'error';
+
 export interface HealthDataServiceConfig {
   enableHealthKit: boolean;
   enableHealthConnect: boolean;

@@ -323,6 +323,13 @@
       "required": "Permessi Necessari",
       "requiredMessage": "Per sincronizzare le attività con il calendario e i promemoria, abilita i permessi nelle Impostazioni."
     },
+    "placeholders": {
+      "waitingPermission": "Qui sotto vedrai i widget con i tuoi dati di salute non appena concedi i permessi ad Apple Health o Google Fit.",
+      "empty": "Ancora nessun dato registrato qui. Continua a usare la tua routine e i progressi appariranno presto.",
+      "loading": "Stiamo sincronizzando i tuoi dati...",
+      "error": "Impossibile aggiornare i dati. Riprova tra qualche minuto.",
+      "previewBadge": "Anteprima"
+    },
     "calendar": {
       "synced": "Sincronizzato con Calendario",
       "addedMessage": "{{title}} è stato aggiunto al tuo calendario!",
@@ -370,7 +377,8 @@
         "valenceWhyItMatters": "Misura la positività/negatività del tuo stato emotivo.",
         "valenceHowItWorks": "Stima basata su segnali facciali (bocca/occhi/sopracciglia).",
         "arousalWhyItMatters": "Indica quanta attivazione/energia emotiva c'è in questo momento.",
-        "arousalHowItWorks": "Valutazione dell'intensità dei segnali espressivi."
+        "arousalHowItWorks": "Valutazione dell'intensità dei segnali espressivi.",
+        "tapToExpand": "Tocca per espandere"
       },
       "hero": {
         "title": "Rilevamento Emotivo in tempo reale",

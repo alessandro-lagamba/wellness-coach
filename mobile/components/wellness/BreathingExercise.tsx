@@ -23,7 +23,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -57,8 +57,9 @@ const phaseColor = (p: Phase, colors: any) =>
 const phaseIcon = (p: Phase) =>
   p === 'inhale' ? 'arrow-up' : p === 'hold' ? 'pause' : p === 'exhale' ? 'arrow-down' : 'circle-outline';
 
-export const Breathing478: React.FC<Props> = ({ onComplete, enableMusic = true }) => {
+export const Breathing478: React.FC<Props> = ({ onComplete, onClose, enableMusic = true }) => {
   const { colors } = useTheme(); // 🆕 Theme hook
+  const router = useRouter();
   
   // UI state
   const [active, setActive] = useState(false);
@@ -301,6 +302,15 @@ export const Breathing478: React.FC<Props> = ({ onComplete, enableMusic = true }
     await stopAllAudio();
   };
 
+  const handleBackPress = async () => {
+    await stop();
+    if (onClose) {
+      onClose();
+    } else {
+      router.push('/(tabs)/suggestions');
+    }
+  };
+
   const finishExercise = async () => {
     setActive(false);
     activeRef.current = false;
@@ -357,7 +367,19 @@ export const Breathing478: React.FC<Props> = ({ onComplete, enableMusic = true }
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient colors={[colors.background, colors.surfaceMuted]} style={styles.gradient}>
-        {/* HEADER interno rimosso: la pagina mostrerà solo la freccia del nav */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={handleBackPress}
+            activeOpacity={0.8}
+            style={[
+              styles.backButton,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <MaterialCommunityIcons name="chevron-left" size={22} color={colors.text} />
+            <Text style={[styles.backButtonText, { color: colors.text }]}>Indietro</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.center}>
           {/* Cerchio (alzato: più distanza dai testi sotto) */}
@@ -463,6 +485,25 @@ const CIRCLE_SIZE = Math.min(260, Math.round(width * 0.74));
 const styles = StyleSheet.create({
   container: { flex: 1 },
   gradient: { flex: 1 },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 22,
+    paddingBottom: 8,
+    alignItems: 'flex-start',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  backButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
 
   // area centrale
   center: {
@@ -470,7 +511,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingTop: 80, // Aumentiamo il padding top per abbassare il contenuto
+    paddingTop: 100, // Aumentiamo il padding top per abbassare il contenuto
     paddingBottom: 60, // Aggiungiamo padding bottom per dare spazio al footer
   },
 
@@ -481,7 +522,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 16,
-    marginBottom: 56, // ↑ più spazio sotto
+    marginBottom: 48, // ↑ più spazio sotto
   },
   halo: {
     position: 'absolute',
@@ -504,7 +545,7 @@ const styles = StyleSheet.create({
 
   instructions: { alignItems: 'center', marginBottom: 16 },
   instruction: { fontSize: 30, fontWeight: '800', letterSpacing: 0.3 },
-  sub: { marginTop: 6, fontSize: 16 },
+  sub: { marginTop: 2, fontSize: 16 },
   countdownBox: {
     marginTop: 14,
     width: 68,
@@ -518,9 +559,9 @@ const styles = StyleSheet.create({
 
   // pill “Ciclo X / Y”
   cyclePill: {
-    marginTop: 10,
+    marginTop: 4,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 4,
     borderRadius: 999,
   },
   cyclePillText: {
@@ -531,8 +572,8 @@ const styles = StyleSheet.create({
   // footer con bottone in basso e più grande
   footer: {
     paddingHorizontal: 24,
-    paddingTop: 20, // Aggiungiamo padding top per alzare il pulsante
-    paddingBottom: 40, // Riduciamo il padding bottom
+    paddingTop: 28, // Aggiungiamo padding extra per abbassare il pulsante
+    paddingBottom: 48, // Più spazio dal bordo inferiore
     alignItems: 'center',
   },
   cta: {
@@ -562,7 +603,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 20,
+    marginTop: 42,
+    marginBottom: 1,
     paddingHorizontal: 20,
   },
   controlButton: {

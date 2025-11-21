@@ -18,8 +18,20 @@ import {
   GeneratedRecipe,
   ParseIngredientsResult,
 } from "../types/nutrition.types";
-import { systemGuardrails, analyzeImageUserPrompt, suggestMealUserPrompt, recipeFromIngredientsPrompt, parseIngredientsUserPrompt } from "./ai/prompt";
-import { analyzeImageSchema, suggestMealSchema, generateRecipeSchema, parseIngredientsSchema } from "./ai/schemas";
+import {
+  systemGuardrails,
+  analyzeImageUserPrompt,
+  suggestMealUserPrompt,
+  recipeFromIngredientsPrompt,
+  parseIngredientsUserPrompt,
+} from "./ai/prompt";
+import { analyzeImageSchema, suggestMealSchema, generateRecipeSchema } from "./ai/schemas";
+
+// TS2305 workaround: in alcuni ambienti (ts-node + nodemon) la cache dei tipi non vede ancora parseIngredientsSchema.
+// Lo carichiamo dinamicamente per evitare il crash del backend durante il watch mode.
+const { parseIngredientsSchema } = (require("./ai/schemas") as {
+  parseIngredientsSchema: typeof analyzeImageSchema;
+});
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,

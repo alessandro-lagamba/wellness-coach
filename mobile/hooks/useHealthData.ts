@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { HealthDataService } from '../services/health-data.service';
 import { 
   HealthData, 
   HealthPermissions, 
-  HealthDataSyncResult 
+  HealthDataSyncResult,
+  HealthDataStatus,
 } from '../types/health.types';
 
 export interface UseHealthDataReturn {
@@ -14,6 +15,7 @@ export interface UseHealthDataReturn {
   isInitialized: boolean;
   lastSyncDate: Date | null;
   error: string | null;
+  status: HealthDataStatus;
 
   // Actions
   requestPermissions: () => Promise<HealthPermissions>;
@@ -187,6 +189,30 @@ export function useHealthData(): UseHealthDataReturn {
   const hasData = healthData !== null;
   const hasAnyPermission = Object.values(permissions).some(Boolean);
 
+  const status: HealthDataStatus = useMemo(() => {
+    if (!isInitialized || (isLoading && !hasAnyPermission && !healthData)) {
+      return 'loading';
+    }
+
+    if (!hasAnyPermission) {
+      return 'waiting-permission';
+    }
+
+    if (hasMeaningfulData(healthData)) {
+      return 'ready';
+    }
+
+    if (error && !healthData) {
+      return 'error';
+    }
+
+    if (isLoading && !healthData) {
+      return 'loading';
+    }
+
+    return 'empty';
+  }, [isInitialized, isLoading, hasAnyPermission, healthData, error]);
+
   // Schedule periodic background sync based on service configuration
   useEffect(() => {
     if (!isInitialized || !hasAnyPermission) {
@@ -221,6 +247,7 @@ export function useHealthData(): UseHealthDataReturn {
     isInitialized,
     lastSyncDate,
     error,
+    status,
 
     // Actions
     requestPermissions,

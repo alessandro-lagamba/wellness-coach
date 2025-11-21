@@ -54,8 +54,15 @@ export class HealthDataSyncService {
     source: 'healthkit' | 'health_connect' | 'manual' | 'mock' = 'mock'
   ): Promise<HealthDataSyncResult> {
     try {
-      // 🔥 FIX: Rimuoviamo console.log eccessivi
-      
+      const roundInt = (value?: number | null) => {
+        if (typeof value !== 'number' || Number.isNaN(value)) return 0;
+        return Math.round(value);
+      };
+      const toDecimal = (value?: number | null, precision = 2) => {
+        if (typeof value !== 'number' || Number.isNaN(value)) return 0;
+        return parseFloat(value.toFixed(precision));
+      };
+
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       
       // 🔥 FIX: Usa UPSERT invece di check + insert/update per evitare race conditions
@@ -63,24 +70,24 @@ export class HealthDataSyncService {
       const healthRecord: Partial<HealthDataRecord> = {
         user_id: userId,
         date: today,
-        steps: healthData.steps,
-        distance: healthData.distance,
-        calories: healthData.calories,
-        active_minutes: healthData.activeMinutes,
-        heart_rate: healthData.heartRate,
-        resting_heart_rate: healthData.restingHeartRate,
-        hrv: healthData.hrv,
-        sleep_hours: healthData.sleepHours,
-        sleep_quality: healthData.sleepQuality,
-        deep_sleep_minutes: healthData.deepSleepMinutes,
-        rem_sleep_minutes: healthData.remSleepMinutes,
-        light_sleep_minutes: healthData.lightSleepMinutes,
-        blood_pressure_systolic: healthData.bloodPressure?.systolic,
-        blood_pressure_diastolic: healthData.bloodPressure?.diastolic,
-        weight: healthData.weight,
-        body_fat: healthData.bodyFat,
-        hydration: healthData.hydration,
-        mindfulness_minutes: healthData.mindfulnessMinutes,
+        steps: roundInt(healthData.steps),
+        distance: toDecimal(healthData.distance ?? 0),
+        calories: roundInt(healthData.calories),
+        active_minutes: roundInt(healthData.activeMinutes),
+        heart_rate: roundInt(healthData.heartRate),
+        resting_heart_rate: roundInt(healthData.restingHeartRate),
+        hrv: roundInt(healthData.hrv),
+        sleep_hours: toDecimal(healthData.sleepHours ?? 0),
+        sleep_quality: roundInt(healthData.sleepQuality),
+        deep_sleep_minutes: roundInt(healthData.deepSleepMinutes),
+        rem_sleep_minutes: roundInt(healthData.remSleepMinutes),
+        light_sleep_minutes: roundInt(healthData.lightSleepMinutes),
+        blood_pressure_systolic: healthData.bloodPressure?.systolic ? roundInt(healthData.bloodPressure.systolic) : null,
+        blood_pressure_diastolic: healthData.bloodPressure?.diastolic ? roundInt(healthData.bloodPressure.diastolic) : null,
+        weight: typeof healthData.weight === 'number' ? parseFloat(healthData.weight.toFixed(2)) : null,
+        body_fat: typeof healthData.bodyFat === 'number' ? parseFloat(healthData.bodyFat.toFixed(2)) : null,
+        hydration: roundInt(healthData.hydration),
+        mindfulness_minutes: roundInt(healthData.mindfulnessMinutes),
         source,
         updated_at: new Date().toISOString(),
       };

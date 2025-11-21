@@ -3,7 +3,6 @@
 import React, { memo, useMemo } from "react"
 import { View, Text, StyleSheet, Platform } from "react-native"
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg"
-import { LinearGradient } from "expo-linear-gradient"
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons"
 import { useTheme } from "../contexts/ThemeContext"
 
@@ -34,7 +33,7 @@ interface Props {
 
 const CARD_HEIGHT = 140
 
-const GAUGE_SIZES: Record<WidgetSize, number> = { small: 52, medium: 70, large: 82 }
+const GAUGE_SIZES: Record<WidgetSize, number> = { small: 52, medium: 70, large: 60 }
 
 const MiniGaugeChart: React.FC<Props> = memo(({
   value,
@@ -42,7 +41,7 @@ const MiniGaugeChart: React.FC<Props> = memo(({
   label,
   subtitle,
   color,
-  backgroundColor = "#ffffff",
+  backgroundColor: _unusedBackgroundColor = "#ffffff",
   trendValue,
   icon,
   size = "small",
@@ -91,9 +90,11 @@ const MiniGaugeChart: React.FC<Props> = memo(({
     return []
   }, [additionalData, size])
 
+  const baseBackground = colors.surface
+
   /** ========== SMALL (immutata) ========== */
   const renderSmall = () => (
-    <LinearGradient colors={[colors.surface, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.innerGradient}>
+    <View style={[styles.innerContainer, { backgroundColor: baseBackground }]}>
       <View style={styles.smallHeader}>
         <Text style={[styles.smallLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
       </View>
@@ -119,12 +120,12 @@ const MiniGaugeChart: React.FC<Props> = memo(({
           </View>
         </View>
       </View>
-    </LinearGradient>
+    </View>
   )
 
   /** ========== MEDIUM (immutata) ========== */
   const renderMedium = () => (
-    <LinearGradient colors={[colors.surface, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.innerGradient}>
+    <View style={[styles.innerContainer, { backgroundColor: baseBackground }]}>
       <View style={styles.mHeaderRow}>
         <View style={styles.mTitleWrap}>
           <View style={[styles.mIconChip, { backgroundColor: `${color}15`, borderColor: `${color}32` }]}>
@@ -154,36 +155,38 @@ const MiniGaugeChart: React.FC<Props> = memo(({
         <View style={styles.mKpiCol}>
           {subtitle ? (<><Text style={[styles.mKpiTitle, { color: colors.textSecondary }]} numberOfLines={1}>{subtitle}</Text><View style={styles.mSpacer4} /></>) : null}
           {detailChips.length > 0 && (
-            <View style={[styles.mDetailChip, { borderColor: `${color}22`, backgroundColor: colors.surfaceMuted }]}>
+            <View style={[styles.mDetailChip, { borderColor: `${color}20`, backgroundColor: `${color}08` }]}>
               <MaterialCommunityIcons name={detailChips[0].icon as any} size={14} color={color} />
               <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[styles.mChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>{detailChips[0].label}</Text>
+                <Text style={[styles.mChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>{detailChips[0].label}</Text>
                 <Text style={[styles.mChipValue, { color }]} numberOfLines={1}>{detailChips[0].value}</Text>
               </View>
             </View>
           )}
         </View>
       </View>
-    </LinearGradient>
+    </View>
   )
 
   /** ========== LARGE (toccata qui: gauge in alto a destra) ========== */
   const renderLarge = () => (
-    <LinearGradient
-      colors={[`${color}14`, colors.surface, `${color}06`]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      // padding destro extra per non sovrapporre il gauge al testo
-      style={[styles.innerGradient, styles.lPadRight]}
+    <View
+      style={[
+        styles.innerContainer,
+        { backgroundColor: baseBackground, borderWidth: 1, borderColor: `${color}1F` },
+      ]}
     >
       {/* Header con titolo */}
-      <View style={styles.largeHeader}>
+      <View style={[styles.largeHeader, styles.lPadRight]}>
         <View style={styles.largeHeaderLeft}>
           <View style={[styles.largeIconChip, { backgroundColor: `${color}18`, borderColor: `${color}35` }]}>
             <Text style={styles.largeIconEmoji}>{icon ?? "📊"}</Text>
           </View>
           <View style={styles.largeHeaderText}>
             <Text style={[styles.largeLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
+            {subtitle && (
+              <Text style={styles.largeSubtitle} numberOfLines={1}>{subtitle}</Text>
+            )}
           </View>
         </View>
       </View>
@@ -205,30 +208,32 @@ const MiniGaugeChart: React.FC<Props> = memo(({
         </View>
       </View>
 
-      {/* Corpo solo testuale (guadagna spazio in alto) */}
-      <View style={[styles.largeBody, { marginBottom: 2 }]}>
-        {subtitle && (
-          <View style={styles.largeSubtitleBox}>
-            <Text style={styles.largeSubtitle} numberOfLines={2}>{subtitle}</Text>
-          </View>
-        )}
-      </View>
 
-      {/* Pillole info un pelo più in alto */}
+      {/* Pillole info */}
       {detailChips.length > 0 && (
-        <View style={styles.largeChipsRowTighter}>
+        <View style={styles.metricsRow}>
           {detailChips.map((chip) => (
-            <View key={chip.label} style={[styles.largeDetailChip, { borderColor: `${color}25`, backgroundColor: colors.surfaceMuted }]}>
+            <View
+              key={chip.label}
+              style={[
+                styles.metricItem,
+                { borderColor: `${color}20`, backgroundColor: `${color}08` },
+              ]}
+            >
               <MaterialCommunityIcons name={chip.icon as any} size={15} color={color} />
-              <View style={styles.largeChipTextContainer}>
-                <Text style={[styles.largeChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>{chip.label}</Text>
-                <Text style={[styles.largeChipValue, { color }]} numberOfLines={1}>{chip.value}</Text>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.metricLabel, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {chip.label}
+                </Text>
+                <Text style={[styles.metricValue, { color }]} numberOfLines={1}>
+                  {chip.value}
+                </Text>
               </View>
             </View>
           ))}
         </View>
       )}
-    </LinearGradient>
+    </View>
   )
 
   // TouchableOpacity rimosso - gestito da EditableWidget
@@ -245,9 +250,8 @@ const styles = StyleSheet.create({
     height: CARD_HEIGHT,
     borderWidth: 1,
     borderColor: "rgba(99, 102, 241, 0.06)",
-    ...Platform.select({ ios: { shadowColor: "#000", shadowOpacity: 0.07, shadowOffset: { width: 0, height: 6 }, shadowRadius: 14 }, android: { elevation: 3 } }),
   },
-  innerGradient: { flex: 1, borderRadius: 18, padding: 13 },
+  innerContainer: { flex: 1, borderRadius: 18, padding: 13 },
 
   /* SMALL */
   smallHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, paddingTop: 2 },
@@ -276,8 +280,8 @@ const styles = StyleSheet.create({
   mSpacer4: { height: 4 },
 
   /* LARGE (gauge top-right + chips più in alto) */
-  lPadRight: { paddingRight: 118 },               // spazio per il gauge in alto a destra
-  lGaugeTopRight: { position: "absolute", top: 10, right: 10, alignItems: "center", justifyContent: "center" },
+  lPadRight: { paddingRight: 75 },               // spazio per il gauge in alto a destra
+  lGaugeTopRight: { position: "absolute", top: 12, right: 12, alignItems: "center", justifyContent: "center" },
 
   largeHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6, gap: 8 },
   largeHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 },
@@ -285,18 +289,31 @@ const styles = StyleSheet.create({
   largeIconChip: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   largeIconEmoji: { fontSize: 19 },
   largeLabel: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
+  largeSubtitle: { marginTop: 2, fontSize: 12, color: "#6b7280", fontWeight: "600" },
 
   largeBody: { flexDirection: "row", alignItems: "center", flex: 1, gap: 12 },
   gaugeCenterLarge: { position: "absolute", alignItems: "center", justifyContent: "center" },
 
-  largeSubtitleBox: { flex: 1, minWidth: 0 },
-  largeSubtitle: { fontSize: 12.5, color: "#374151", fontWeight: "600", lineHeight: 16 },
-
-  largeChipsRowTighter: { marginTop: 6, flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  largeDetailChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, gap: 8, flex: 1, minWidth: 90, maxWidth: "48%" },
-  largeChipTextContainer: { flex: 1, minWidth: 0 },
-  largeChipLabel: { fontSize: 10, color: "#64748b", fontWeight: "600" },
-  largeChipValue: { fontSize: 12, fontWeight: "700", letterSpacing: -0.2 },
+  metricsRow: {
+    marginTop: "auto",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+  metricItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+    flex: 1,
+    minWidth: 90,
+    maxWidth: "32%",
+  },
+  metricLabel: { fontSize: 10, fontWeight: "600", color: "#64748b" },
+  metricValue: { fontSize: 12, fontWeight: "700", letterSpacing: -0.2 },
 })
 
 export default MiniGaugeChart

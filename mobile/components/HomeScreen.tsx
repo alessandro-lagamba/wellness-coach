@@ -46,6 +46,7 @@ import MoodCheckinCard from './MoodCheckinCard';
 import SleepCheckinCard from './SleepCheckinCard';
 import PrimaryCTA from './PrimaryCTA';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
+import { HealthDataStatus } from '../types/health.types';
 import { WidgetSelectionModal } from './WidgetSelectionModal';
 import { MiniTrendChart } from './MiniTrendChart';
 import { HealthDataSyncService } from '../services/health-data-sync.service';
@@ -59,6 +60,22 @@ import AvatarCommunityModal from './AvatarCommunityModal';
 import { ChartDetailModal } from './ChartDetailModal';
 
 const { width } = Dimensions.get('window');
+
+const PLACEHOLDER_TREND_DATA = {
+  steps: [6200, 6800, 7000, 7300, 7100, 7600, 7800],
+  sleepHours: [7.2, 7.5, 7.1, 7.8, 7.4, 7.6, 7.3],
+  hrv: [35, 38, 36, 40, 39, 41, 38],
+  heartRate: [66, 65, 67, 64, 66, 65, 63],
+  hydration: [750, 900, 1100, 1000, 1200, 1300, 1400],
+  meditation: [8, 10, 12, 9, 14, 11, 13],
+};
+
+const PLACEHOLDER_WIDGET_SNAPSHOT = {
+  steps: 6777,
+  hydrationMl: 1250,
+  hydrationGlasses: 5,
+  meditationMinutes: 18,
+};
 
 // Removed QuickLink interface - replaced with Today at a glance widgets
 
@@ -168,6 +185,50 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     // Combina: prima le default, poi quelle dal database
     return [...defaultActivities, ...mappedWellnessActivities];
   }, [defaultActivities, wellnessActivities]);
+
+  const placeholderMessages = useMemo(
+    () => ({
+      loading: t('home.placeholders.loading'),
+      'waiting-permission': t('home.placeholders.waitingPermission'),
+      empty: t('home.placeholders.empty'),
+      error: t('home.placeholders.error'),
+      ready: '',
+    }),
+    [t]
+  );
+
+  const placeholderChartSamples = useMemo(() => ({
+    steps: {
+      value: 7800,
+      trend: [3200, 4800, 5600, 6800, 7200, 7600, 7800],
+      max: 10000,
+    },
+    sleepHours: {
+      value: 7.5,
+      trend: [6.2, 6.8, 7.1, 7.6, 7.4, 7.9, 8.0],
+      max: 10,
+    },
+    hrv: {
+      value: 38,
+      trend: [28, 30, 35, 34, 36, 37, 38],
+      max: 60,
+    },
+    heartRate: {
+      value: 72,
+      trend: [72, 70, 68, 73, 74, 71, 72],
+      max: 120,
+    },
+    hydration: {
+      value: 6,
+      trend: [3, 4, 5, 6, 5, 7, 6],
+      max: 10,
+    },
+    meditation: {
+      value: 18,
+      trend: [5, 8, 10, 12, 14, 16, 18],
+      max: 40,
+    },
+  }), []);
   
   // 🔥 Rimuoviamo stato duplicato - usiamo direttamente todaysActivities
   // const [activities, setActivities] = useState<DailyActivity[]>(() => todaysActivities);
@@ -309,7 +370,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   }, [chartEditMode, getAvailableCharts]);
   
   // Health data hook
-  const { permissions: healthPermissions, hasData: hasHealthData, isInitialized, healthData, syncData } = useHealthData();
+  const { permissions: healthPermissions, hasData: hasHealthData, isInitialized, healthData, syncData, status: healthStatus } = useHealthData();
   const hasAnyHealthPermission =
     healthPermissions.steps ||
     healthPermissions.heartRate ||
@@ -398,6 +459,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     ];
   };
 
+  // 🔥 FIX: Helper function per tradurre widget title (evita duplicazione)
+  const translateWidgetTitle = useCallback((widgetId: string): string => {
+    switch (widgetId) {
+      case 'steps': return t('widgets.steps');
+      case 'meditation': return t('widgets.meditation');
+      case 'hydration': return t('widgets.hydration');
+      case 'sleep': return t('widgets.sleep');
+      case 'hrv': return t('widgets.hrv');
+      case 'analyses': return t('widgets.analyses');
+      default: return widgetId;
+    }
+  }, [t]);
+
   // Costruisce i dati dei widget partendo dai dati reali di salute + goals
   // 🔥 FIX: Memoizziamo per evitare ricreazioni ad ogni render
   const buildWidgetDataFromHealth = useCallback(async (): Promise<WidgetData[]> => {
@@ -406,6 +480,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     const hydrationGoal = goals?.hydration ?? 8;
     const meditationGoal = goals?.meditation ?? 30;
     const sleepGoal = goals?.sleep ?? 8;
+
+    if (healthStatus !== 'ready') {
+      const placeholderData = WidgetDataService.generateWidgetData({
+        steps: stepsGoal,
+        hydration: hydrationGoal,
+        meditation: meditationGoal,
+        sleep: sleepGoal,
+      }).map((widget) => ({
+        ...widget,
+        title: translateWidgetTitle(widget.id),
+        placeholder: {
+          status: healthStatus,
+          message: placeholderMessages[healthStatus],
+        },
+      }));
+      return placeholderData;
+    }
 
     // 🔥 Gestisci null/undefined healthData
     if (!healthData) {
@@ -430,20 +521,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
     const hd = healthData;
     return buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoal, meditationGoal, sleepGoal);
-  }, [healthData]); // 🔥 FIX: translateWidgetTitle non è usato in questa funzione
-  
-  // 🔥 FIX: Helper function per tradurre widget title (evita duplicazione)
-  const translateWidgetTitle = useCallback((widgetId: string): string => {
-    switch (widgetId) {
-      case 'steps': return t('widgets.steps');
-      case 'meditation': return t('widgets.meditation');
-      case 'hydration': return t('widgets.hydration');
-      case 'sleep': return t('widgets.sleep');
-      case 'hrv': return t('widgets.hrv');
-      case 'analyses': return t('widgets.analyses');
-      default: return widgetId;
-    }
-  }, [t]);
+  }, [healthData, healthStatus, placeholderMessages, translateWidgetTitle]);
 
   // Load today glance data
   // 🔥 FIX: Memoizziamo la funzione con useCallback per evitare ricreazioni ad ogni render
@@ -488,6 +566,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     }
     
     (async () => {
+      if (healthStatus !== 'ready') {
+        try {
+          const placeholderData = await buildWidgetDataFromHealth();
+          lastProcessedHealthDataRef.current = `placeholder-${healthStatus}`;
+          setWidgetData(placeholderData);
+        } catch (error) {
+          console.error('❌ Error building placeholder widget data:', error);
+        }
+        return;
+      }
+
       // 🔥 Aggiorna sempre i widget se abbiamo dati di salute reali (anche se sono 0)
       // Verifica se healthData è disponibile (non null/undefined) e se ci sono permessi
       if (healthData !== null && healthData !== undefined && hasAnyHealthPermission) {
@@ -540,6 +629,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     healthData, // 🔥 FIX: Solo healthData - le proprietà nested cambiano automaticamente
     isInitialized,
     hasAnyHealthPermission,
+    healthStatus,
     buildWidgetDataFromHealth, // 🔥 FIX: Aggiungiamo la funzione memoizzata
     translateWidgetTitle, // 🔥 FIX: Aggiungiamo la funzione memoizzata
     loadTodayGlanceData, // 🔥 FIX: Aggiungiamo la funzione memoizzata
@@ -586,6 +676,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     if (progress >= 40) return `+${Math.max(1, Math.round((progress - 40) / 2))}%`;
     return '!';
   };
+
+  const isHealthDataReady = healthStatus === 'ready';
 
   const getInfoCardValue = (id: string, info: any) => {
     switch (id) {
@@ -1133,6 +1225,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   // Handle widget interactions
   const handleWidgetPress = (widgetId: string) => {
+    if (healthStatus !== 'ready') {
+      if (healthStatus === 'waiting-permission') {
+        setHealthPermissionsModal(true);
+      }
+      return;
+    }
     // 🆕 Rimosso log per performance
     switch (widgetId) {
       case 'steps':
@@ -1855,6 +1953,39 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
             </View>
           </View>
         </View>
+        {healthStatus !== 'ready' && (
+          <View
+            style={[
+              styles.placeholderBanner,
+              { backgroundColor: themeColors.surfaceMuted, borderColor: themeColors.border },
+            ]}
+          >
+            <View style={styles.placeholderBannerIcon}>
+              <MaterialCommunityIcons name="information" size={18} color={themeColors.text} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.placeholderBannerTitle, { color: themeColors.text }]}>
+                {t('home.placeholders.previewBadge')}
+              </Text>
+              <Text style={[styles.placeholderBannerText, { color: themeColors.textSecondary }]}>
+                {placeholderMessages[healthStatus as keyof typeof placeholderMessages]}
+              </Text>
+            </View>
+            {healthStatus === 'waiting-permission' && (
+              <TouchableOpacity
+                style={[
+                  styles.placeholderActionButton,
+                  { borderColor: themeColors.primary, backgroundColor: themeColors.primary + '15' },
+                ]}
+                onPress={() => setHealthPermissionsModal(true)}
+              >
+                <Text style={[styles.placeholderActionText, { color: themeColors.primary }]}>
+                  {t('home.permissions.required')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
         <View style={styles.widgetGrid}>
           {/* Protezione per evitare crash se widgetData è vuoto */}
           {widgetData.length === 0 || configLoading ? (
@@ -2177,14 +2308,42 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
             <>
             {enabledCharts.map((chartConfig) => {
               // Steps Progress
-              if (chartConfig.id === 'steps' && healthData?.steps !== undefined) {
+              const shouldRenderSteps =
+                chartConfig.id === 'steps' &&
+                (isHealthDataReady ? healthData?.steps !== undefined : true);
+              if (shouldRenderSteps) {
+                const stepsValue = isHealthDataReady ? (healthData?.steps || 0) : placeholderChartSamples.steps.value;
+                const stepsTrendData = isHealthDataReady
+                  ? (() => {
+                      const todayValue = healthData?.steps || 0;
+                      const chartData = [...weeklyTrendData.steps];
+                      if (chartData.length > 0) {
+                        chartData[chartData.length - 1] = todayValue;
+                      } else {
+                        chartData.push(todayValue);
+                      }
+                      while (chartData.length < 7) {
+                        chartData.unshift(0);
+                      }
+                      return chartData.slice(-7);
+                    })()
+                  : placeholderChartSamples.steps.trend;
+                const stepsMaxValue = isHealthDataReady
+                  ? (() => {
+                      const todayValue = healthData?.steps || 0;
+                      const allValues = [...weeklyTrendData.steps, todayValue].filter(v => v > 0);
+                      if (allValues.length === 0) return 10000;
+                      const max = Math.max(...allValues);
+                      return Math.ceil(max / 5000) * 5000 || 10000;
+                    })()
+                  : placeholderChartSamples.steps.max;
                 return (
             <TouchableOpacity
               key="steps"
               style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-              onPress={() => !chartEditMode && setChartDetailModal({ visible: true, chartType: 'steps', currentValue: healthData.steps, color: '#10b981' })}
+              onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'steps', currentValue: healthData?.steps || 0, color: '#10b981' })}
               activeOpacity={chartEditMode ? 1 : 0.7}
-              disabled={chartEditMode}
+              disabled={chartEditMode || !isHealthDataReady}
             >
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="walk" size={24} color="#10b981" />
@@ -2204,7 +2363,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 <View style={styles.progressCardLeft}>
                   <View style={styles.valueContainer}>
                     <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                      {healthData.steps?.toLocaleString() || 0}
+                      {stepsValue.toLocaleString()}
                     </Text>
                     <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
                       {t('home.weeklyProgress.steps') || 'passi'}
@@ -2216,32 +2375,9 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 </View>
                 <View style={styles.progressCardRight}>
                   <MiniTrendChart
-                    data={(() => {
-                      // Includi sempre il valore corrente per oggi come ultimo elemento
-                      const todayValue = healthData.steps || 0;
-                      const chartData = [...weeklyTrendData.steps];
-                      // Se l'ultimo valore non corrisponde a quello di oggi, sostituiscilo
-                      if (chartData.length > 0) {
-                        chartData[chartData.length - 1] = todayValue;
-                      } else {
-                        // Se non ci sono dati, crea un array con il valore di oggi
-                        chartData.push(todayValue);
-                      }
-                      // Assicurati che ci siano sempre 7 valori
-                      while (chartData.length < 7) {
-                        chartData.unshift(0);
-                      }
-                      return chartData.slice(-7);
-                    })()}
+                    data={stepsTrendData}
                     color="#10b981"
-                    maxValue={(() => {
-                      const todayValue = healthData.steps || 0;
-                      const allValues = [...weeklyTrendData.steps, todayValue].filter(v => v > 0);
-                      if (allValues.length === 0) return 10000;
-                      const max = Math.max(...allValues);
-                      // Arrotonda a un valore "pulito" per la scala (es. 10000, 15000, 20000)
-                      return Math.ceil(max / 5000) * 5000 || 10000;
-                    })()}
+                    maxValue={stepsMaxValue}
                     formatValue={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toString()}
                   />
                 </View>
@@ -2251,14 +2387,42 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               }
               
               // Sleep Progress
-              if (chartConfig.id === 'sleepHours' && healthData?.sleepHours !== undefined) {
+              const shouldRenderSleep =
+                chartConfig.id === 'sleepHours' &&
+                (isHealthDataReady ? healthData?.sleepHours !== undefined : true);
+              if (shouldRenderSleep) {
+                const sleepValue = isHealthDataReady ? (healthData?.sleepHours || 0) : placeholderChartSamples.sleepHours.value;
+                const sleepTrendData = isHealthDataReady
+                  ? (() => {
+                      const todayValue = healthData?.sleepHours || 0;
+                      const chartData = [...weeklyTrendData.sleepHours];
+                      if (chartData.length > 0) {
+                        chartData[chartData.length - 1] = todayValue;
+                      } else {
+                        chartData.push(todayValue);
+                      }
+                      while (chartData.length < 7) {
+                        chartData.unshift(0);
+                      }
+                      return chartData.slice(-7);
+                    })()
+                  : placeholderChartSamples.sleepHours.trend;
+                const sleepMaxValue = isHealthDataReady
+                  ? (() => {
+                      const todayValue = healthData?.sleepHours || 0;
+                      const allValues = [...weeklyTrendData.sleepHours, todayValue].filter(v => v > 0);
+                      if (allValues.length === 0) return 10;
+                      const max = Math.max(...allValues);
+                      return Math.ceil(max / 2) * 2 || 10;
+                    })()
+                  : placeholderChartSamples.sleepHours.max;
                 return (
             <TouchableOpacity
               key="sleepHours"
               style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-              onPress={() => !chartEditMode && setChartDetailModal({ visible: true, chartType: 'sleepHours', currentValue: healthData.sleepHours, color: '#6366f1' })}
+              onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'sleepHours', currentValue: healthData?.sleepHours || 0, color: '#6366f1' })}
               activeOpacity={chartEditMode ? 1 : 0.7}
-              disabled={chartEditMode}
+              disabled={chartEditMode || !isHealthDataReady}
             >
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="sleep" size={24} color="#6366f1" />
@@ -2278,44 +2442,23 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 <View style={styles.progressCardLeft}>
                   <View style={styles.valueContainer}>
                     <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                      {healthData.sleepHours ? `${Math.round(healthData.sleepHours * 10) / 10}` : '—'}
+                      {sleepValue ? `${Math.round(sleepValue * 10) / 10}` : '—'}
                     </Text>
                     <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
-                      {healthData.sleepHours ? 'h' : ''}
+                      {sleepValue ? 'h' : ''}
                     </Text>
                   </View>
                   <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
-                    {healthData.sleepQuality ? `${Math.round(healthData.sleepQuality)}% ${t('home.weeklyProgress.quality')}` : t('home.weeklyProgress.today')}
+                    {healthData?.sleepQuality
+                      ? `${Math.round(healthData.sleepQuality)}% ${t('home.weeklyProgress.quality')}`
+                      : t('home.weeklyProgress.today')}
                   </Text>
                 </View>
                 <View style={styles.progressCardRight}>
                   <MiniTrendChart
-                    data={(() => {
-                      // Includi sempre il valore corrente per oggi come ultimo elemento
-                      const todayValue = healthData.sleepHours || 0;
-                      const chartData = [...weeklyTrendData.sleepHours];
-                      // Se l'ultimo valore non corrisponde a quello di oggi, sostituiscilo
-                      if (chartData.length > 0) {
-                        chartData[chartData.length - 1] = todayValue;
-                      } else {
-                        // Se non ci sono dati, crea un array con il valore di oggi
-                        chartData.push(todayValue);
-                      }
-                      // Assicurati che ci siano sempre 7 valori
-                      while (chartData.length < 7) {
-                        chartData.unshift(0);
-                      }
-                      return chartData.slice(-7);
-                    })()}
+                    data={sleepTrendData}
                     color="#6366f1"
-                    maxValue={(() => {
-                      const todayValue = healthData.sleepHours || 0;
-                      const allValues = [...weeklyTrendData.sleepHours, todayValue].filter(v => v > 0);
-                      if (allValues.length === 0) return 10;
-                      const max = Math.max(...allValues);
-                      // Arrotonda a un valore "pulito" per la scala (es. 8, 10, 12)
-                      return Math.ceil(max / 2) * 2 || 10;
-                    })()}
+                    maxValue={sleepMaxValue}
                     formatValue={(v) => `${v.toFixed(1)}h`}
                   />
                 </View>
@@ -2325,14 +2468,42 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               }
               
               // HRV Progress
-              if (chartConfig.id === 'hrv' && healthData?.hrv !== undefined && healthData.hrv > 0) {
+              const shouldRenderHrv =
+                chartConfig.id === 'hrv' &&
+                (isHealthDataReady ? (healthData?.hrv ?? 0) > 0 : true);
+              if (shouldRenderHrv) {
+                const hrvValue = isHealthDataReady ? (healthData?.hrv || 0) : placeholderChartSamples.hrv.value;
+                const hrvTrendData = isHealthDataReady
+                  ? (() => {
+                      const todayValue = healthData?.hrv || 0;
+                      const chartData = [...weeklyTrendData.hrv];
+                      if (chartData.length > 0) {
+                        chartData[chartData.length - 1] = todayValue;
+                      } else {
+                        chartData.push(todayValue);
+                      }
+                      while (chartData.length < 7) {
+                        chartData.unshift(0);
+                      }
+                      return chartData.slice(-7);
+                    })()
+                  : placeholderChartSamples.hrv.trend;
+                const hrvMaxValue = isHealthDataReady
+                  ? (() => {
+                      const todayValue = healthData?.hrv || 0;
+                      const allValues = [...weeklyTrendData.hrv, todayValue].filter(v => v > 0);
+                      if (allValues.length === 0) return 100;
+                      const max = Math.max(...allValues);
+                      return Math.ceil(max / 25) * 25 || 100;
+                    })()
+                  : placeholderChartSamples.hrv.max;
                 return (
             <TouchableOpacity
               key="hrv"
               style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-              onPress={() => !chartEditMode && setChartDetailModal({ visible: true, chartType: 'hrv', currentValue: healthData.hrv, color: '#ef4444' })}
+              onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'hrv', currentValue: healthData?.hrv || 0, color: '#ef4444' })}
               activeOpacity={chartEditMode ? 1 : 0.7}
-              disabled={chartEditMode}
+              disabled={chartEditMode || !isHealthDataReady}
             >
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="heart-pulse" size={24} color="#ef4444" />
@@ -2352,7 +2523,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 <View style={styles.progressCardLeft}>
                   <View style={styles.valueContainer}>
                     <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                      {healthData.hrv >= 100 ? Math.round(healthData.hrv) : (Math.round(healthData.hrv * 10) / 10)}
+                      {hrvValue >= 100 ? Math.round(hrvValue) : (Math.round(hrvValue * 10) / 10)}
                     </Text>
                     <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
                       ms
@@ -2364,32 +2535,9 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 </View>
                 <View style={styles.progressCardRight}>
                   <MiniTrendChart
-                    data={(() => {
-                      // Includi sempre il valore corrente per oggi come ultimo elemento
-                      const todayValue = healthData.hrv || 0;
-                      const chartData = [...weeklyTrendData.hrv];
-                      // Se l'ultimo valore non corrisponde a quello di oggi, sostituiscilo
-                      if (chartData.length > 0) {
-                        chartData[chartData.length - 1] = todayValue;
-                      } else {
-                        // Se non ci sono dati, crea un array con il valore di oggi
-                        chartData.push(todayValue);
-                      }
-                      // Assicurati che ci siano sempre 7 valori
-                      while (chartData.length < 7) {
-                        chartData.unshift(0);
-                      }
-                      return chartData.slice(-7);
-                    })()}
+                    data={hrvTrendData}
                     color="#ef4444"
-                    maxValue={(() => {
-                      const todayValue = healthData.hrv || 0;
-                      const allValues = [...weeklyTrendData.hrv, todayValue].filter(v => v > 0);
-                      if (allValues.length === 0) return 100;
-                      const max = Math.max(...allValues);
-                      // Arrotonda a un valore "pulito" per la scala (es. 50, 100, 150)
-                      return Math.ceil(max / 25) * 25 || 100;
-                    })()}
+                    maxValue={hrvMaxValue}
                     formatValue={(v) => v >= 100 ? Math.round(v).toString() : v.toFixed(1)}
                   />
                 </View>
@@ -2399,14 +2547,42 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               }
               
               // Heart Rate Progress
-              if (chartConfig.id === 'heartRate' && healthData?.heartRate !== undefined && healthData.heartRate > 0) {
+              const shouldRenderHeartRate =
+                chartConfig.id === 'heartRate' &&
+                (isHealthDataReady ? (healthData?.heartRate ?? 0) > 0 : true);
+              if (shouldRenderHeartRate) {
+                const heartRateValue = isHealthDataReady ? (healthData?.heartRate || 0) : placeholderChartSamples.heartRate.value;
+                const heartRateTrendData = isHealthDataReady
+                  ? (() => {
+                      const todayValue = healthData?.heartRate || 0;
+                      const chartData = [...weeklyTrendData.heartRate];
+                      if (chartData.length > 0) {
+                        chartData[chartData.length - 1] = todayValue;
+                      } else {
+                        chartData.push(todayValue);
+                      }
+                      while (chartData.length < 7) {
+                        chartData.unshift(0);
+                      }
+                      return chartData.slice(-7);
+                    })()
+                  : placeholderChartSamples.heartRate.trend;
+                const heartRateMaxValue = isHealthDataReady
+                  ? (() => {
+                      const todayValue = healthData?.heartRate || 0;
+                      const allValues = [...weeklyTrendData.heartRate, todayValue].filter(v => v > 0);
+                      if (allValues.length === 0) return 100;
+                      const max = Math.max(...allValues);
+                      return Math.ceil(max / 25) * 25 || 100;
+                    })()
+                  : placeholderChartSamples.heartRate.max;
                 return (
             <TouchableOpacity
               key="heartRate"
               style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-              onPress={() => !chartEditMode && setChartDetailModal({ visible: true, chartType: 'heartRate', currentValue: healthData.heartRate, color: '#ef4444' })}
+              onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'heartRate', currentValue: heartRateValue, color: '#ef4444' })}
               activeOpacity={chartEditMode ? 1 : 0.7}
-              disabled={chartEditMode}
+              disabled={chartEditMode || !isHealthDataReady}
             >
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="heart" size={24} color="#ef4444" />
@@ -2426,44 +2602,23 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 <View style={styles.progressCardLeft}>
                   <View style={styles.valueContainer}>
                     <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                      {Math.round(healthData.heartRate)}
+                      {Math.round(heartRateValue)}
                     </Text>
                     <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
                       {t('home.bpm')}
                     </Text>
                   </View>
                   <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
-                    {healthData.restingHeartRate ? `${t('home.hrv.restingHR')}: ${Math.round(healthData.restingHeartRate)} ${t('home.bpm')}` : t('home.weeklyProgress.current')}
+                    {healthData?.restingHeartRate
+                      ? `${t('home.hrv.restingHR')}: ${Math.round(healthData.restingHeartRate)} ${t('home.bpm')}`
+                      : t('home.weeklyProgress.current')}
                   </Text>
                 </View>
                 <View style={styles.progressCardRight}>
                   <MiniTrendChart
-                    data={(() => {
-                      // Includi sempre il valore corrente per oggi come ultimo elemento
-                      const todayValue = healthData.heartRate || 0;
-                      const chartData = [...weeklyTrendData.heartRate];
-                      // Se l'ultimo valore non corrisponde a quello di oggi, sostituiscilo
-                      if (chartData.length > 0) {
-                        chartData[chartData.length - 1] = todayValue;
-                      } else {
-                        // Se non ci sono dati, crea un array con il valore di oggi
-                        chartData.push(todayValue);
-                      }
-                      // Assicurati che ci siano sempre 7 valori
-                      while (chartData.length < 7) {
-                        chartData.unshift(0);
-                      }
-                      return chartData.slice(-7);
-                    })()}
+                    data={heartRateTrendData}
                     color="#ef4444"
-                    maxValue={(() => {
-                      const todayValue = healthData.heartRate || 0;
-                      const allValues = [...weeklyTrendData.heartRate, todayValue].filter(v => v > 0);
-                      if (allValues.length === 0) return 100;
-                      const max = Math.max(...allValues);
-                      // Arrotonda a un valore "pulito" per la scala (es. 50, 100, 150)
-                      return Math.ceil(max / 25) * 25 || 100;
-                    })()}
+                    maxValue={heartRateMaxValue}
                     formatValue={(v) => `${Math.round(v)}`}
                   />
                 </View>
@@ -2474,13 +2629,38 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               
               // Hydration Progress
               if (chartConfig.id === 'hydration') {
+                const hydrationValue = isHealthDataReady ? Math.round((healthData?.hydration || 0) / 250) : placeholderChartSamples.hydration.value;
+                const hydrationTrendData = isHealthDataReady
+                  ? (() => {
+                      const todayValue = Math.round((healthData?.hydration || 0) / 250);
+                      const chartData = weeklyTrendData.hydration.map(v => Math.round(v / 250));
+                      if (chartData.length > 0) {
+                        chartData[chartData.length - 1] = todayValue;
+                      } else {
+                        chartData.push(todayValue);
+                      }
+                      while (chartData.length < 7) {
+                        chartData.unshift(0);
+                      }
+                      return chartData.slice(-7);
+                    })()
+                  : placeholderChartSamples.hydration.trend;
+                const hydrationMaxValue = isHealthDataReady
+                  ? (() => {
+                      const todayValue = Math.round((healthData?.hydration || 0) / 250);
+                      const allValues = [...weeklyTrendData.hydration.map(v => Math.round(v / 250)), todayValue].filter(v => v > 0);
+                      if (allValues.length === 0) return 8;
+                      const max = Math.max(...allValues);
+                      return Math.ceil(max / 2) * 2 || 8;
+                    })()
+                  : placeholderChartSamples.hydration.max;
                 return (
             <TouchableOpacity
               key="hydration"
               style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-              onPress={() => !chartEditMode && setChartDetailModal({ visible: true, chartType: 'hydration', currentValue: healthData.hydration || 0, color: '#3b82f6' })}
+              onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'hydration', currentValue: healthData?.hydration || 0, color: '#3b82f6' })}
               activeOpacity={chartEditMode ? 1 : 0.7}
-              disabled={chartEditMode}
+              disabled={chartEditMode || !isHealthDataReady}
             >
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="cup-water" size={24} color="#3b82f6" />
@@ -2500,44 +2680,21 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 <View style={styles.progressCardLeft}>
                   <View style={styles.valueContainer}>
                     <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                      {Math.round((healthData.hydration || 0) / 250)}
+                      {hydrationValue}
                     </Text>
                     <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
                       {t('home.glasses')}
                     </Text>
                   </View>
                   <Text style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]} numberOfLines={2}>
-                    {healthData.hydration ? `${(healthData.hydration / 1000).toFixed(1)} L` : t('home.weeklyProgress.today')}
+                    {healthData?.hydration ? `${(healthData.hydration / 1000).toFixed(1)} L` : t('home.weeklyProgress.today')}
                   </Text>
                 </View>
                 <View style={styles.progressCardRight}>
                   <MiniTrendChart
-                    data={(() => {
-                      // Includi sempre il valore corrente per oggi come ultimo elemento (convertito in bicchieri)
-                      const todayValue = Math.round((healthData.hydration || 0) / 250);
-                      const chartData = weeklyTrendData.hydration.map(v => Math.round(v / 250));
-                      // Se l'ultimo valore non corrisponde a quello di oggi, sostituiscilo
-                      if (chartData.length > 0) {
-                        chartData[chartData.length - 1] = todayValue;
-                      } else {
-                        // Se non ci sono dati, crea un array con il valore di oggi
-                        chartData.push(todayValue);
-                      }
-                      // Assicurati che ci siano sempre 7 valori
-                      while (chartData.length < 7) {
-                        chartData.unshift(0);
-                      }
-                      return chartData.slice(-7);
-                    })()}
+                    data={hydrationTrendData}
                     color="#3b82f6"
-                    maxValue={(() => {
-                      const todayValue = Math.round((healthData.hydration || 0) / 250);
-                      const allValues = [...weeklyTrendData.hydration.map(v => Math.round(v / 250)), todayValue].filter(v => v > 0);
-                      if (allValues.length === 0) return 8;
-                      const max = Math.max(...allValues);
-                      // Arrotonda a un valore "pulito" per la scala (es. 8, 10, 12)
-                      return Math.ceil(max / 2) * 2 || 8;
-                    })()}
+                    maxValue={hydrationMaxValue}
                     formatValue={(v) => `${Math.round(v)}`}
                   />
                 </View>
@@ -2548,13 +2705,38 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
               
               // Meditation Progress
               if (chartConfig.id === 'meditation') {
+                const meditationValue = isHealthDataReady ? Math.round(healthData?.mindfulnessMinutes || 0) : placeholderChartSamples.meditation.value;
+                const meditationTrendData = isHealthDataReady
+                  ? (() => {
+                      const todayValue = healthData?.mindfulnessMinutes || 0;
+                      const chartData = [...weeklyTrendData.meditation];
+                      if (chartData.length > 0) {
+                        chartData[chartData.length - 1] = todayValue;
+                      } else {
+                        chartData.push(todayValue);
+                      }
+                      while (chartData.length < 7) {
+                        chartData.unshift(0);
+                      }
+                      return chartData.slice(-7);
+                    })()
+                  : placeholderChartSamples.meditation.trend;
+                const meditationMaxValue = isHealthDataReady
+                  ? (() => {
+                      const todayValue = healthData?.mindfulnessMinutes || 0;
+                      const allValues = [...weeklyTrendData.meditation, todayValue].filter(v => v > 0);
+                      if (allValues.length === 0) return 30;
+                      const max = Math.max(...allValues);
+                      return Math.ceil(max / 15) * 15 || 30;
+                    })()
+                  : placeholderChartSamples.meditation.max;
                 return (
             <TouchableOpacity
               key="meditation"
               style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-              onPress={() => !chartEditMode && setChartDetailModal({ visible: true, chartType: 'meditation', currentValue: healthData.mindfulnessMinutes || 0, color: '#8b5cf6' })}
+              onPress={() => !chartEditMode && isHealthDataReady && setChartDetailModal({ visible: true, chartType: 'meditation', currentValue: healthData?.mindfulnessMinutes || 0, color: '#8b5cf6' })}
               activeOpacity={chartEditMode ? 1 : 0.7}
-              disabled={chartEditMode}
+              disabled={chartEditMode || !isHealthDataReady}
             >
               <View style={styles.progressCardHeader}>
                 <MaterialCommunityIcons name="meditation" size={24} color="#8b5cf6" />
@@ -2574,7 +2756,7 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 <View style={styles.progressCardLeft}>
                   <View style={styles.valueContainer}>
                     <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                      {Math.round(healthData.mindfulnessMinutes || 0)}
+                      {meditationValue}
                     </Text>
                     <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
                       {t('home.minutes')}
@@ -2586,32 +2768,9 @@ const rowHasLarge = (rowIndex: 0 | 1) =>
                 </View>
                 <View style={styles.progressCardRight}>
                   <MiniTrendChart
-                    data={(() => {
-                      // Includi sempre il valore corrente per oggi come ultimo elemento
-                      const todayValue = healthData.mindfulnessMinutes || 0;
-                      const chartData = [...weeklyTrendData.meditation];
-                      // Se l'ultimo valore non corrisponde a quello di oggi, sostituiscilo
-                      if (chartData.length > 0) {
-                        chartData[chartData.length - 1] = todayValue;
-                      } else {
-                        // Se non ci sono dati, crea un array con il valore di oggi
-                        chartData.push(todayValue);
-                      }
-                      // Assicurati che ci siano sempre 7 valori
-                      while (chartData.length < 7) {
-                        chartData.unshift(0);
-                      }
-                      return chartData.slice(-7);
-                    })()}
+                    data={meditationTrendData}
                     color="#8b5cf6"
-                    maxValue={(() => {
-                      const todayValue = healthData.mindfulnessMinutes || 0;
-                      const allValues = [...weeklyTrendData.meditation, todayValue].filter(v => v > 0);
-                      if (allValues.length === 0) return 30;
-                      const max = Math.max(...allValues);
-                      // Arrotonda a un valore "pulito" per la scala (es. 30, 60, 90)
-                      return Math.ceil(max / 15) * 15 || 30;
-                    })()}
+                    maxValue={meditationMaxValue}
                     formatValue={(v) => `${Math.round(v)}`}
                   />
                 </View>
@@ -3169,6 +3328,45 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
     fontWeight: '500',
+  },
+  placeholderBanner: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  placeholderBannerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  placeholderBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  placeholderBannerText: {
+    fontSize: 13,
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  placeholderActionButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+  placeholderActionText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   // Removed quickCard styles - replaced with Today at a glance widgets
   highlightRow: {

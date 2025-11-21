@@ -11,7 +11,7 @@ export const BreathingExerciseScreen: React.FC = () => {
   };
 
   const handleClose = () => {
-    router.back();
+    router.push('/(tabs)/suggestions');
   };
 
   return (

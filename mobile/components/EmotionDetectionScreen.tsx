@@ -28,6 +28,7 @@ import CameraCapture from './CameraCapture';
 import { useCameraController } from '../hooks/useCameraController';
 import SimpleCameraTest from './SimpleCameraTest';
 import MinimalCameraTest from './MinimalCameraTest';
+import AnalysisCaptureLayout from './shared/AnalysisCaptureLayout';
 
 import { useRouter } from 'expo-router';
 import { UnifiedAnalysisService } from '../services/unified-analysis.service';
@@ -56,6 +57,7 @@ import { IntelligentInsightsSection } from './IntelligentInsightsSection';
 import { VideoHero } from './VideoHero';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
+import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 
 // Removed Colors import - using theme colors instead
 
@@ -93,16 +95,26 @@ const INITIAL_EMOTION_SCORES: Record<Emotion, number> = {
 // Video URI per Emotion Detection - usando require per file locali
 const heroVideoUri = require('../assets/videos/emotion-detection-video.mp4');
 
+const withAlpha = (color: string | undefined, alpha: string) => {
+  if (typeof color === 'string' && color.startsWith('#') && color.length === 7) {
+    return `${color}${alpha}`;
+  }
+  return color || undefined;
+};
+
 export const EmotionDetectionScreen: React.FC = () => {
   const { t } = useTranslation(); // 🆕 i18n hook
   const { colors: themeColors } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
   const router = useRouter();
-  
+  const { hideTabBar, showTabBar } = useTabBarVisibility();
+
   const [detecting, setDetecting] = useState(false);
   // Removed capturing state - no more capture overlay
   const [currentEmotion, setCurrentEmotion] = useState<Emotion | null>(null);
   const [showingResults, setShowingResults] = useState(false);
+  const [cameraType, setCameraType] = useState<'front' | 'back'>('front');
+  const [cameraSwitching, setCameraSwitching] = useState(false);
   const [confidence, setConfidence] = useState<number>(0);
   const [fullAnalysisResult, setFullAnalysisResult] = useState<any>(null);
   const [emotionHistory, setEmotionHistory] = useState<EmotionData[]>([]);
@@ -112,20 +124,20 @@ export const EmotionDetectionScreen: React.FC = () => {
   const [permissionChecking, setPermissionChecking] = useState(false);
   const [analysisReady, setAnalysisReady] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-  
+
   // Enhanced components states
   const [nextBestActions, setNextBestActions] = useState<any[]>([]);
   const [insights, setInsights] = useState<any[]>([]);
   const [qualityInfo, setQualityInfo] = useState<any>(null);
-  
+
   // Intelligent insights are now handled by IntelligentInsightsSection component
-  
+
   // State to force re-render when data is loaded
   const [dataLoaded, setDataLoaded] = useState(false);
-  
+
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
-  
+
 
   const analysisServiceRef = useRef(UnifiedAnalysisService.getInstance());
   const isMountedRef = useRef(true);
@@ -143,6 +155,15 @@ export const EmotionDetectionScreen: React.FC = () => {
 
   const startDisabled = permissionChecking || detecting || !analysisReady || !!analysisError;
   const captureDisabled = !cameraController.ready || permissionChecking || detecting;
+  const handleExitCapture = React.useCallback(() => {
+    cameraController.stopCamera();
+    if (isMountedRef.current) {
+      setDetecting(false);
+      setCurrentEmotion(null);
+      setShowingResults(false);
+    }
+    showTabBar();
+  }, [cameraController, showTabBar]);
 
   const ensureCameraPermission = useCallback(async () => {
     try {
@@ -197,14 +218,14 @@ export const EmotionDetectionScreen: React.FC = () => {
     // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
     let isMounted = true;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
-    
+
     const loadChartData = async () => {
       try {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         await ChartDataService.loadEmotionDataForCharts();
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         // Force re-render after data is loaded
         if (isMounted) {
           setDataLoaded(true);
@@ -222,7 +243,7 @@ export const EmotionDetectionScreen: React.FC = () => {
         }
       }
     };
-    
+
     // Delay loading to ensure component is fully mounted
     // 🔥 FIX: Memory leak - salviamo il timeout per cleanup
     const timer = setTimeout(() => {
@@ -230,7 +251,7 @@ export const EmotionDetectionScreen: React.FC = () => {
         loadChartData();
       }
     }, 100);
-    
+
     return () => {
       isMounted = false;
       clearTimeout(timer);
@@ -244,7 +265,7 @@ export const EmotionDetectionScreen: React.FC = () => {
   useEffect(() => {
     // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
     let isMounted = true;
-    
+
     const calculateEnhancedData = async () => {
       try {
         const store = useAnalysisStore.getState();
@@ -289,7 +310,7 @@ export const EmotionDetectionScreen: React.FC = () => {
     };
 
     calculateEnhancedData();
-    
+
     return () => {
       isMounted = false;
     };
@@ -297,41 +318,29 @@ export const EmotionDetectionScreen: React.FC = () => {
 
   // Start camera automatically when screen loads
   // 🔥 FIX: Rimuoviamo cameraController dalle dipendenze per evitare loop infinito
-  const cameraInitializedRef = useRef(false);
+  // Show/hide tab bar based on camera state
   useEffect(() => {
-    // 🔥 FIX: Evita di inizializzare la camera più volte
-    if (cameraInitializedRef.current) {
-      return;
-    }
-    
-    // 🔥 FIX: Evita di avviare la camera se è già attiva
     if (cameraController.active) {
-      cameraInitializedRef.current = true;
-      return;
+      hideTabBar();
+      return () => {
+        showTabBar();
+      };
     }
-    
-    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
-    let isMounted = true;
-    
-    const initializeCamera = async () => {
-      if (isMounted && !cameraController.active) {
-        await cameraController.startCamera();
-        if (isMounted) {
-          cameraInitializedRef.current = true;
-        }
-      }
-    };
-    
-    // Delay initialization to avoid conflicts
-    const timer = setTimeout(() => {
-      initializeCamera();
-    }, 300);
-    
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
-  }, []); // 🔥 FIX: Array vuoto per eseguire solo al mount
+    showTabBar();
+  }, [cameraController.active, hideTabBar, showTabBar]);
+
+
+  const switchCamera = useCallback(() => {
+    if (cameraSwitching) return;
+
+    setCameraSwitching(true);
+    setCameraType(prev => prev === 'front' ? 'back' : 'front');
+
+    // Small delay to allow camera to switch
+    setTimeout(() => {
+      setCameraSwitching(false);
+    }, 1000);
+  }, [cameraSwitching]);
 
 
   // No background camera initialization - privacy first!
@@ -364,7 +373,7 @@ export const EmotionDetectionScreen: React.FC = () => {
       setDetecting(false);
       setShowingResults(false);
     }
-    
+
     // Use camera controller to start camera
     await cameraController.startCamera();
   };
@@ -372,7 +381,7 @@ export const EmotionDetectionScreen: React.FC = () => {
   // 🔧 FALLBACK: Image Picker for Testing (100% Reliable)
   const analyzeFromGallery = async () => {
     // 🔥 FIX: Rimuoviamo console.log eccessivi
-    
+
     try {
       const ready = await ensureAnalysisReady();
       if (!ready) {
@@ -408,7 +417,7 @@ export const EmotionDetectionScreen: React.FC = () => {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
 
         // Convert to data URL for analysis
-        const dataUrl = asset.base64 
+        const dataUrl = asset.base64
           ? `data:image/jpeg;base64,${asset.base64}`
           : asset.uri;
 
@@ -420,7 +429,7 @@ export const EmotionDetectionScreen: React.FC = () => {
         }
 
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         if (isMountedRef.current) {
           setDetecting(true);
         }
@@ -428,10 +437,10 @@ export const EmotionDetectionScreen: React.FC = () => {
         // Analyze the selected image
         // 🔥 FIX: Rimuoviamo console.log eccessivi
         const analysisResult = await analysisServiceRef.current.analyzeEmotion(dataUrl);
-        
+
         if (analysisResult.success && analysisResult.data) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
-          
+
           // Process results (same logic as camera capture)
           const { scores, dominantEmotion, confidence } = analysisResult.data;
           const newConfidences = Math.round(confidence * 100);
@@ -443,7 +452,7 @@ export const EmotionDetectionScreen: React.FC = () => {
             const percentage = Math.min(100, Math.max(0, Math.round(score * 100)));
             updatedScores[emotion] = percentage;
           });
-          
+
           if (isMountedRef.current) {
             setEmotionScores(updatedScores);
             setDetecting(false);
@@ -457,7 +466,7 @@ export const EmotionDetectionScreen: React.FC = () => {
               setConfidence(newConfidences);
             }
           });
-          
+
         } else {
           console.error('❌ Gallery emotion analysis failed:', analysisResult.error);
           if (isMountedRef.current) {
@@ -478,10 +487,10 @@ export const EmotionDetectionScreen: React.FC = () => {
 
   const captureAndAnalyze = async () => {
     // 🔥 FIX: Rimuoviamo console.log eccessivi
-    
+
     // Store cameraController methods in local variables to prevent scope issues
     const { ref, ready, detecting, error, isCameraReady, setDetecting } = cameraController;
-    
+
     // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     if (!isCameraReady()) {
@@ -512,39 +521,39 @@ export const EmotionDetectionScreen: React.FC = () => {
         setDetecting(true); // Set component detecting state
       }
       // 🔥 FIX: Rimuoviamo console.log eccessivi
-      
+
       // 🔥 FIX: Rimuoviamo console.log eccessivi
       // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       // Aggressive ref recovery before capture
       if (!ref.current) {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         // Try to restore from global storage first
         const globalRef = (globalThis as any).globalCameraRef;
         if (globalRef) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           ref.current = globalRef;
         }
-        
+
         // Try multiple recovery attempts
         for (let attempt = 1; attempt <= 3; attempt++) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           await new Promise(resolve => setTimeout(resolve, 200 * attempt));
-          
+
           // Force a re-render by updating state
           if (isMountedRef.current) {
             setDetecting(false);
             await new Promise(resolve => setTimeout(resolve, 50));
             setDetecting(true);
           }
-          
+
           if (ref.current) {
             // 🔥 FIX: Rimuoviamo console.log eccessivi
             break;
           }
         }
-        
+
         if (!ref.current) {
           throw new Error('Camera ref is null - camera may have been unmounted. Please restart the camera.');
         }
@@ -588,7 +597,7 @@ export const EmotionDetectionScreen: React.FC = () => {
       for (let i = 0; i < captureStrategies.length; i++) {
         const strategy = captureStrategies[i];
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         try {
           const capturePromise = ref.current.takePictureAsync(strategy.options);
           const timeoutPromise = new Promise((_, reject) => {
@@ -600,7 +609,7 @@ export const EmotionDetectionScreen: React.FC = () => {
           break;
         } catch (strategyError) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
-          
+
           // If this is the first strategy and it fails, try to restart the camera
           if (i === 0 && strategyError.message.includes('ERR_IMAGE_CAPTURE_FAILED')) {
             // 🔥 FIX: Rimuoviamo console.log eccessivi
@@ -614,7 +623,7 @@ export const EmotionDetectionScreen: React.FC = () => {
               // 🔥 FIX: Rimuoviamo console.log eccessivi
             }
           }
-          
+
           if (i === captureStrategies.length - 1) {
             throw strategyError; // Re-throw the last error if all strategies fail
           }
@@ -687,7 +696,7 @@ export const EmotionDetectionScreen: React.FC = () => {
               },
               sessionDuration: Date.now() - (analysisResult.timestamp?.getTime() || Date.now()),
             });
-            
+
             if (savedAnalysis) {
               // 🆕 Verifica post-salvataggio che i dati siano nel database
               const { DatabaseVerificationService } = await import('../services/database-verification.service');
@@ -698,7 +707,7 @@ export const EmotionDetectionScreen: React.FC = () => {
               } else {
                 UserFeedbackService.showSaveSuccess('analisi');
               }
-              
+
               // Sincronizza i dati con lo store locale per i grafici
               const emotionSession = {
                 id: savedAnalysis.id,
@@ -709,7 +718,7 @@ export const EmotionDetectionScreen: React.FC = () => {
                 confidence: savedAnalysis.confidence,
                 duration: savedAnalysis.session_duration || 0,
               };
-              
+
               const store = useAnalysisStore.getState();
               store.addEmotionSession(emotionSession);
             } else {
@@ -810,7 +819,7 @@ export const EmotionDetectionScreen: React.FC = () => {
       });
     } catch (error: any) {
       console.error('❌ Capture error:', error?.message || error);
-      
+
       let errorMessage = t('analysis.emotion.errors.captureFailed');
       if (error?.message) {
         if (error.message.includes('timeout')) {
@@ -823,7 +832,7 @@ export const EmotionDetectionScreen: React.FC = () => {
           errorMessage = t('analysis.emotion.errors.captureFailed');
         }
       }
-      
+
       if (isMountedRef.current) {
         alert(errorMessage);
         setDetecting(false);
@@ -1082,23 +1091,23 @@ export const EmotionDetectionScreen: React.FC = () => {
         {/* Outer expanding circles */}
         <Animated.View style={[styles.outerPulse, outerPulse2]} />
         <Animated.View style={[styles.outerPulse, outerPulse1]} />
-        
+
         {/* Main loading elements */}
         <Animated.View style={[styles.loadingRing, ringRotation]} />
         <Animated.View style={[styles.loadingOrb, pulseAnimation]} />
-        
+
         {/* Floating particles */}
         <Animated.View style={[styles.particle, styles.particle1, particle1]} />
         <Animated.View style={[styles.particle, styles.particle2, particle2]} />
         <Animated.View style={[styles.particle, styles.particle3, particle3]} />
-        
+
         {/* Text content */}
         <View style={styles.loadingTextContainer}>
           <Text style={styles.detectingTitle}>{t('analysis.emotion.analyzingExpressions')}</Text>
           <Text style={styles.detectingSubtitle}>
             {t('analysis.emotion.processingSubtitle')}
           </Text>
-          
+
           <View style={styles.loadingDots}>
             <Animated.View style={[styles.loadingDot, styles.dot1, dotsAnimation]} />
             <Animated.View style={[styles.loadingDot, styles.dot2, dotsAnimation]} />
@@ -1152,7 +1161,7 @@ export const EmotionDetectionScreen: React.FC = () => {
           <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}>
             <CameraFrame />
           </View>
-          
+
           <View style={{ flex: 1, justifyContent: 'center' }}>
             <EmotionLoadingScreen onCancel={() => {
               if (isMountedRef.current) {
@@ -1189,40 +1198,32 @@ export const EmotionDetectionScreen: React.FC = () => {
     );
   }
 
-  // Priority 3: Show camera when active
-  if (cameraController.active) {
+  // Priority 3: Camera capture (active when camera is on)
+  if (cameraController.active && !showingResults) {
+    const CameraFrame = () => (
+      <CameraCapture
+        isScreenFocused={true}
+        controller={cameraController}
+        facing={cameraType}
+        switching={cameraSwitching}
+        instructionText={t('analysis.emotion.camera.instructionText')}
+      />
+    );
+
     return (
-      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={["bottom"]}>
-          <View style={styles.captureLayout}>
-            <CameraFrame />
-            
-            
-            <View style={styles.cameraControls}>
-              <TouchableOpacity style={styles.ghostButton} onPress={() => cameraController.stopCamera()}>
-                <FontAwesome name="times" size={16} color="#4338ca" />
-                <Text style={styles.ghostButtonText}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                activeOpacity={0.7} 
-                onPress={captureAndAnalyze}
-                disabled={captureDisabled}
-                style={captureDisabled ? { opacity: 0.5 } : {}}
-              >
-                <LinearGradient
-                  colors={['#6366f1', '#8b5cf6']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.primaryButton}
-                >
-                  <FontAwesome name="camera" size={18} color="#ffffff" />
-                  <Text style={styles.primaryButtonText}>{t('common.capture')}</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </SafeAreaView>
-      </View>
+      <AnalysisCaptureLayout
+        renderCamera={<CameraFrame />}
+        onBack={handleExitCapture}
+        onCancel={() => cameraController.stopCamera()}
+        onCapture={captureAndAnalyze}
+        captureDisabled={captureDisabled || cameraSwitching}
+        showSwitch
+        switchDisabled={cameraSwitching}
+        switchLabel={cameraType === 'front' ? 'Back' : 'Front'}
+        onSwitch={switchCamera}
+        cancelLabel={t('common.cancel')}
+        captureLabel={t('common.capture')}
+      />
     );
   }
 
@@ -1240,364 +1241,364 @@ export const EmotionDetectionScreen: React.FC = () => {
         backgroundColor: themeColors.background,
         zIndex: 0,
       }} />
-      <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={["bottom"]}>
-        <ScrollView 
-          style={styles.scroll} 
-          contentContainerStyle={styles.overviewContent} 
+      <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={["top", "bottom"]}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.overviewContent}
           showsVerticalScrollIndicator={false}
           overScrollMode="never"
           bounces={false}
         >
-        <LinearGradient colors={['#6366f1', '#7c3aed']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
-          <View style={styles.heroHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.heroTitle}>{t('analysis.emotion.hero.title')}</Text>
-              <Text style={styles.heroSubtitle}>{t('analysis.emotion.hero.subtitle')}</Text>
+          <LinearGradient colors={['#6366f1', '#7c3aed']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
+            <View style={styles.heroHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.heroTitle}>{t('analysis.emotion.hero.title')}</Text>
+                <Text style={styles.heroSubtitle}>{t('analysis.emotion.hero.subtitle')}</Text>
+              </View>
             </View>
-          </View>
-          <VideoHero
-            videoUri={heroVideoUri}
-            title={t('analysis.emotion.hero.title')}
-            subtitle={t('analysis.emotion.hero.subtitle')}
-            onPlayPress={handleStartDetection}
-            showPlayButton={false}
-            autoPlay={true}
-            loop={true}
-            muted={true}
-            style={styles.heroVideo}
-            fallbackImageUri="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80"
-          />
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={handleStartDetection}
-            disabled={startDisabled}
-            style={startDisabled ? { opacity: 0.6 } : undefined}
-          >
-            <LinearGradient
-              colors={['#f0abfc', '#c084fc']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.primaryButton, styles.heroButton]}
-            >
-              <FontAwesome name="camera" size={16} color="#312e81" />
-              <Text style={[styles.primaryButtonText, styles.heroButtonText]}>{t('analysis.emotion.startDetection')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* 🔧 FALLBACK BUTTON - Gallery Picker (100% Reliable) */}
-          <TouchableOpacity
-            onPress={analyzeFromGallery}
-            style={{ marginTop: 12 }}
-          >
-            <LinearGradient
-              colors={['#e0f2fe', '#bae6fd']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.primaryButton, styles.heroButton]}
-            >
-              <FontAwesome name="image" size={16} color="#0ea5e9" />
-              <Text style={[styles.primaryButtonText, { color: '#0ea5e9' }]}>{t('common.pickFromGallery')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {permissionChecking && (
-            <Text style={styles.permissionBanner}>{t('analysis.common.requestingPermission')}</Text>
-          )}
-          {analysisError && !permissionChecking && (
-            <Text style={styles.permissionBanner}>{analysisError}</Text>
-          )}
-          
-        </LinearGradient>
-
-
-        {/* Recent Session Section - Always visible */}
-        <View style={styles.sectionHeader}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View>
-              <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.recent.title')}</Text>
-              <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.recent.subtitle')}</Text>
-            </View>
+            <VideoHero
+              videoUri={heroVideoUri}
+              title={t('analysis.emotion.hero.title')}
+              subtitle={t('analysis.emotion.hero.subtitle')}
+              onPlayPress={handleStartDetection}
+              showPlayButton={false}
+              autoPlay={true}
+              loop={true}
+              muted={true}
+              style={styles.heroVideo}
+              fallbackImageUri="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80"
+            />
             <TouchableOpacity
-              onPress={async () => {
-                // 🔥 FIX: Rimuoviamo console.log eccessivi
-                try {
-                  await ChartDataService.loadEmotionDataForCharts();
-                  if (isMountedRef.current) {
-                    setDataLoaded(prev => !prev); // Toggle to force re-render
-                  }
-                  // 🔥 FIX: Rimuoviamo console.log eccessivi
-                } catch (error) {
-                  console.error('❌ Manual reload failed:', error);
-                }
-              }}
-              style={{
-                padding: 8,
-                backgroundColor: themeColors.surfaceMuted,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: themeColors.border
-              }}
+              activeOpacity={0.9}
+              onPress={handleStartDetection}
+              disabled={startDisabled}
+              style={startDisabled ? { opacity: 0.6 } : undefined}
             >
-              <FontAwesome name="refresh" size={16} color={themeColors.textSecondary} />
+              <LinearGradient
+                colors={['#f0abfc', '#c084fc']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.primaryButton, styles.heroButton]}
+              >
+                <FontAwesome name="camera" size={16} color="#312e81" />
+                <Text style={[styles.primaryButtonText, styles.heroButtonText]}>{t('analysis.emotion.startDetection')}</Text>
+              </LinearGradient>
             </TouchableOpacity>
-          </View>
-        </View>
-        
-        {(() => {
-          try {
-            const store = useAnalysisStore.getState();
-            const latestSession = store.latestEmotionSession;
-            const emotionHistory = store.emotionHistory;
-            
-            // 🔥 FIX: Rimuoviamo console.log eccessivi
-            
-            // Always show the card, with fallback data if no session exists
-            const fallbackSession = {
-              id: 'fallback',
-              timestamp: new Date(),
-              dominant: 'neutral',
-              avg_valence: 0,
-              avg_arousal: 0.5,
-              confidence: 0.5,
-              duration: 0,
-            };
-            
-            return (
-              <EmotionSessionCard
-                session={latestSession || fallbackSession}
-              />
-            );
-          } catch (error) {
-            // 🔥 FIX: Solo errori critici in console
-            console.error('❌ Failed to load latest emotion session:', error);
-            // Fallback session in case of error
-            const fallbackSession = {
-              id: 'error-fallback',
-              timestamp: new Date(),
-              dominant: 'neutral',
-              avg_valence: 0,
-              avg_arousal: 0.5,
-              confidence: 0.5,
-              duration: 0,
-            };
-            return <EmotionSessionCard session={fallbackSession} />;
-          }
-        })()}
 
-        {/* Detailed Analysis Button */}
-        <TouchableOpacity
-          style={styles.detailedAnalysisButton}
-          onPress={() => setShowDetailedAnalysis(true)}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={['#8b5cf6', '#a855f7']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.detailedAnalysisButtonGradient}
-          >
-            <MaterialCommunityIcons name="brain" size={20} color="#ffffff" />
-            <Text style={styles.detailedAnalysisButtonText}>
-              {t('analysis.emotion.detailedAnalysis.buttonText')}
-            </Text>
-            <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
+            {/* 🔧 FALLBACK BUTTON - Gallery Picker (100% Reliable) */}
+            <TouchableOpacity
+              onPress={analyzeFromGallery}
+              style={{ marginTop: 12 }}
+            >
+              <LinearGradient
+                colors={['#e0f2fe', '#bae6fd']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.primaryButton, styles.heroButton]}
+              >
+                <FontAwesome name="image" size={16} color="#0ea5e9" />
+                <Text style={[styles.primaryButtonText, { color: '#0ea5e9' }]}>{t('common.pickFromGallery')}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {permissionChecking && (
+              <Text style={styles.permissionBanner}>{t('analysis.common.requestingPermission')}</Text>
+            )}
+            {analysisError && !permissionChecking && (
+              <Text style={styles.permissionBanner}>{analysisError}</Text>
+            )}
+
           </LinearGradient>
-        </TouchableOpacity>
 
-        {/* Quick Stats Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.quickStats.title')}</Text>
-          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.quickStats.subtitle')}</Text>
-        </View>
 
-        {/* Gauge Charts Row */}
-        <View style={styles.gaugeRow}>
+          {/* Recent Session Section - Always visible */}
+          <View style={styles.sectionHeader}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View>
+                <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.recent.title')}</Text>
+                <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.recent.subtitle')}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={async () => {
+                  // 🔥 FIX: Rimuoviamo console.log eccessivi
+                  try {
+                    await ChartDataService.loadEmotionDataForCharts();
+                    if (isMountedRef.current) {
+                      setDataLoaded(prev => !prev); // Toggle to force re-render
+                    }
+                    // 🔥 FIX: Rimuoviamo console.log eccessivi
+                  } catch (error) {
+                    console.error('❌ Manual reload failed:', error);
+                  }
+                }}
+                style={{
+                  padding: 8,
+                  backgroundColor: themeColors.surfaceMuted,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: themeColors.border
+                }}
+              >
+                <FontAwesome name="refresh" size={16} color={themeColors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {(() => {
+            try {
+              const store = useAnalysisStore.getState();
+              const latestSession = store.latestEmotionSession;
+              const emotionHistory = store.emotionHistory;
+
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
+
+              // Always show the card, with fallback data if no session exists
+              const fallbackSession = {
+                id: 'fallback',
+                timestamp: new Date(),
+                dominant: 'neutral',
+                avg_valence: 0,
+                avg_arousal: 0.5,
+                confidence: 0.5,
+                duration: 0,
+              };
+
+              return (
+                <EmotionSessionCard
+                  session={latestSession || fallbackSession}
+                />
+              );
+            } catch (error) {
+              // 🔥 FIX: Solo errori critici in console
+              console.error('❌ Failed to load latest emotion session:', error);
+              // Fallback session in case of error
+              const fallbackSession = {
+                id: 'error-fallback',
+                timestamp: new Date(),
+                dominant: 'neutral',
+                avg_valence: 0,
+                avg_arousal: 0.5,
+                confidence: 0.5,
+                duration: 0,
+              };
+              return <EmotionSessionCard session={fallbackSession} />;
+            }
+          })()}
+
+          {/* Detailed Analysis Button */}
+          <TouchableOpacity
+            style={styles.detailedAnalysisButton}
+            onPress={() => setShowDetailedAnalysis(true)}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#8b5cf6', '#a855f7']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.detailedAnalysisButtonGradient}
+            >
+              <MaterialCommunityIcons name="brain" size={20} color="#ffffff" />
+              <Text style={styles.detailedAnalysisButtonText}>
+                {t('analysis.emotion.detailedAnalysis.buttonText')}
+              </Text>
+              <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Quick Stats Section */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.quickStats.title')}</Text>
+            <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.quickStats.subtitle')}</Text>
+          </View>
+
+          {/* Gauge Charts Row */}
+          <View style={styles.gaugeRow}>
+            {(() => {
+              try {
+                const store = useAnalysisStore.getState();
+                const emotionHistory = store.getSafeEmotionHistory();
+
+                // Calculate average valence (normalize from -1..1 to 0..100)
+                const avgValence = emotionHistory.length > 0
+                  ? emotionHistory.reduce((sum, session) => sum + (session.avg_valence || 0), 0) / emotionHistory.length
+                  : 0;
+                const normalizedValence = Math.round(((avgValence + 1) / 2) * 100);
+
+                // Calculate average arousal (normalize from 0..1 to 0..100)
+                const avgArousal = emotionHistory.length > 0
+                  ? emotionHistory.reduce((sum, session) => sum + (session.avg_arousal || 0), 0) / emotionHistory.length
+                  : 0.5;
+                const normalizedArousal = Math.round(avgArousal * 100);
+
+                // Format dates for historical data (use actual timestamps)
+                const formatDate = (timestamp: Date) => {
+                  const date = new Date(timestamp);
+                  return `${date.getDate()}/${date.getMonth() + 1}`;
+                };
+
+                return (
+                  <>
+                    <GaugeChart
+                      value={normalizedValence || 50}
+                      maxValue={100}
+                      label={t('analysis.emotion.metrics.valence')}
+                      color="#10b981"
+                      subtitle={t('analysis.emotion.metrics.positivity')}
+                      trend={2}
+                      description={t('analysis.emotion.metrics.valenceDescription')}
+                      historicalData={emotionHistory.map((session) => ({
+                        date: formatDate(session.timestamp),
+                        value: Math.round(((session.avg_valence || 0) + 1) / 2 * 100),
+                      }))}
+                      metric="valence"
+                      icon="emoticon-happy"
+                    />
+
+                    <GaugeChart
+                      value={normalizedArousal || 50}
+                      maxValue={100}
+                      label={t('analysis.emotion.metrics.arousal')}
+                      color="#ef4444"
+                      subtitle={t('analysis.emotion.metrics.intensity')}
+                      trend={-1}
+                      description={t('analysis.emotion.metrics.arousalDescription')}
+                      historicalData={emotionHistory.map((session) => ({
+                        date: formatDate(session.timestamp),
+                        value: Math.round((session.avg_arousal || 0) * 100),
+                      }))}
+                      metric="arousal"
+                      icon="trending-up"
+                    />
+
+                    <GaugeChart
+                      value={emotionHistory.length}
+                      maxValue={30}
+                      label={t('analysis.emotion.metrics.sessions')}
+                      color="#6366f1"
+                      subtitle={t('analysis.emotion.metrics.thisMonth')}
+                      trend={1}
+                      description={t('analysis.emotion.metrics.sessionsDescription')}
+                      historicalData={emotionHistory.map((session, index) => ({
+                        date: formatDate(session.timestamp),
+                        value: index + 1,
+                      }))}
+                    />
+                  </>
+                );
+              } catch (error) {
+                // 🔥 FIX: Solo errori critici in console
+                console.error('❌ Failed to load emotion history for charts:', error);
+                return (
+                  <>
+                    <GaugeChart
+                      value={50}
+                      maxValue={100}
+                      label={t('analysis.emotion.metrics.valence')}
+                      color="#10b981"
+                      subtitle={t('analysis.emotion.metrics.positivity')}
+                      trend={0}
+                      description={t('analysis.emotion.metrics.valenceDescription')}
+                      historicalData={[]}
+                      metric="valence"
+                      icon="emoticon-happy"
+                    />
+                    <GaugeChart
+                      value={50}
+                      maxValue={100}
+                      label={t('analysis.emotion.metrics.arousal')}
+                      color="#ef4444"
+                      subtitle={t('analysis.emotion.metrics.intensity')}
+                      trend={0}
+                      description={t('analysis.emotion.metrics.arousalDescription')}
+                      historicalData={[]}
+                      metric="arousal"
+                      icon="trending-up"
+                    />
+                    <GaugeChart value={0} maxValue={30} label={t('analysis.emotion.metrics.sessions')} color="#6366f1" subtitle={t('analysis.emotion.metrics.thisMonth')} trend={0} description={t('analysis.emotion.metrics.sessionsDescription')} historicalData={[]} />
+                  </>
+                );
+              }
+            })()}
+          </View>
+
+          {/* Quality Badge - Removed per richiesta utente */}
+
+
+          {/* Emotion Trend Chart */}
           {(() => {
             try {
               const store = useAnalysisStore.getState();
               const emotionHistory = store.getSafeEmotionHistory();
-              
-              // Calculate average valence (normalize from -1..1 to 0..100)
-              const avgValence = emotionHistory.length > 0
-                ? emotionHistory.reduce((sum, session) => sum + (session.avg_valence || 0), 0) / emotionHistory.length
-                : 0;
-              const normalizedValence = Math.round(((avgValence + 1) / 2) * 100);
-              
-              // Calculate average arousal (normalize from 0..1 to 0..100)
-              const avgArousal = emotionHistory.length > 0
-                ? emotionHistory.reduce((sum, session) => sum + (session.avg_arousal || 0), 0) / emotionHistory.length
-                : 0.5;
-              const normalizedArousal = Math.round(avgArousal * 100);
-              
-              // Format dates for historical data (use actual timestamps)
-              const formatDate = (timestamp: Date) => {
-                const date = new Date(timestamp);
-                return `${date.getDate()}/${date.getMonth() + 1}`;
-              };
-              
               return (
-                <>
-                  <GaugeChart
-                    value={normalizedValence || 50}
-                    maxValue={100}
-                    label={t('analysis.emotion.metrics.valence')}
-                    color="#10b981"
-                    subtitle={t('analysis.emotion.metrics.positivity')}
-                    trend={2}
-                    description={t('analysis.emotion.metrics.valenceDescription')}
-                    historicalData={emotionHistory.map((session) => ({
-                      date: formatDate(session.timestamp),
-                      value: Math.round(((session.avg_valence || 0) + 1) / 2 * 100),
-                    }))}
-                    metric="valence"
-                    icon="emoticon-happy"
-                  />
-
-                  <GaugeChart
-                    value={normalizedArousal || 50}
-                    maxValue={100}
-                    label={t('analysis.emotion.metrics.arousal')}
-                    color="#ef4444"
-                    subtitle={t('analysis.emotion.metrics.intensity')}
-                    trend={-1}
-                    description={t('analysis.emotion.metrics.arousalDescription')}
-                    historicalData={emotionHistory.map((session) => ({
-                      date: formatDate(session.timestamp),
-                      value: Math.round((session.avg_arousal || 0) * 100),
-                    }))}
-                    metric="arousal"
-                    icon="trending-up"
-                  />
-
-                  <GaugeChart
-                    value={emotionHistory.length}
-                    maxValue={30}
-                    label={t('analysis.emotion.metrics.sessions')}
-                    color="#6366f1"
-                    subtitle={t('analysis.emotion.metrics.thisMonth')}
-                    trend={1}
-                    description={t('analysis.emotion.metrics.sessionsDescription')}
-                    historicalData={emotionHistory.map((session, index) => ({
-                      date: formatDate(session.timestamp),
-                      value: index + 1,
-                    }))}
-                  />
-                </>
+                <EmotionTrendChart
+                  data={emotionHistory.map((session, index) => ({
+                    date: `${index + 1}`,
+                    valence: session.avg_valence || 0,
+                    arousal: session.avg_arousal || 0,
+                    emotion: session.dominant || 'neutral',
+                  }))}
+                  title={t('analysis.emotion.trends.title')}
+                  subtitle={t('analysis.emotion.trends.subtitle')}
+                />
               );
             } catch (error) {
               // 🔥 FIX: Solo errori critici in console
-              console.error('❌ Failed to load emotion history for charts:', error);
+              console.error('❌ Failed to load emotion history for trend chart:', error);
               return (
-                <>
-                  <GaugeChart 
-                    value={50} 
-                    maxValue={100} 
-                    label={t('analysis.emotion.metrics.valence')} 
-                    color="#10b981" 
-                    subtitle={t('analysis.emotion.metrics.positivity')} 
-                    trend={0} 
-                    description={t('analysis.emotion.metrics.valenceDescription')} 
-                    historicalData={[]} 
-                    metric="valence"
-                    icon="emoticon-happy"
-                  />
-                  <GaugeChart 
-                    value={50} 
-                    maxValue={100} 
-                    label={t('analysis.emotion.metrics.arousal')} 
-                    color="#ef4444" 
-                    subtitle={t('analysis.emotion.metrics.intensity')} 
-                    trend={0} 
-                    description={t('analysis.emotion.metrics.arousalDescription')} 
-                    historicalData={[]} 
-                    metric="arousal"
-                    icon="trending-up"
-                  />
-                  <GaugeChart value={0} maxValue={30} label={t('analysis.emotion.metrics.sessions')} color="#6366f1" subtitle={t('analysis.emotion.metrics.thisMonth')} trend={0} description={t('analysis.emotion.metrics.sessionsDescription')} historicalData={[]} />
-                </>
+                <EmotionTrendChart
+                  data={[]}
+                  title={t('analysis.emotion.trends.title')}
+                  subtitle={t('analysis.emotion.trends.subtitle')}
+                />
               );
             }
           })()}
-        </View>
 
-        {/* Quality Badge - Removed per richiesta utente */}
+          {/* Intelligent Insights Section - Emotion Only */}
+          <IntelligentInsightsSection
+            category="emotion"
+            data={(() => {
+              try {
+                const store = useAnalysisStore.getState();
+                return {
+                  latestSession: store.latestEmotionSession,
+                  emotionHistory: store.emotionHistory || [],
+                  trend: store.emotionTrend,
+                  insights: store.insights || []
+                };
+              } catch (error) {
+                return null;
+              }
+            })()}
+            maxInsights={3}
+            showTitle={true}
+            compact={false}
+            onInsightPress={(insight) => {
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
+              // Handle insight press - could navigate to detailed view
+            }}
+            onActionPress={(insight, action) => {
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
+              // Handle action press - could start activity, set reminder, etc.
+            }}
+          />
 
+        </ScrollView>
 
-        {/* Emotion Trend Chart */}
-        {(() => {
-          try {
-            const store = useAnalysisStore.getState();
-            const emotionHistory = store.getSafeEmotionHistory();
-            return (
-              <EmotionTrendChart
-                data={emotionHistory.map((session, index) => ({
-                  date: `${index + 1}`,
-                  valence: session.avg_valence || 0,
-                  arousal: session.avg_arousal || 0,
-                  emotion: session.dominant || 'neutral',
-                }))}
-                title={t('analysis.emotion.trends.title')}
-                subtitle={t('analysis.emotion.trends.subtitle')}
-              />
-            );
-          } catch (error) {
-            // 🔥 FIX: Solo errori critici in console
-            console.error('❌ Failed to load emotion history for trend chart:', error);
-            return (
-              <EmotionTrendChart
-                data={[]}
-                title={t('analysis.emotion.trends.title')}
-                subtitle={t('analysis.emotion.trends.subtitle')}
-              />
-            );
-          }
-        })()}
-
-        {/* Intelligent Insights Section - Emotion Only */}
-        <IntelligentInsightsSection
-          category="emotion"
-          data={(() => {
+        {/* Detailed Analysis Popup */}
+        <DetailedAnalysisPopup
+          visible={showDetailedAnalysis}
+          onClose={() => setShowDetailedAnalysis(false)}
+          analysisType="emotion"
+          analysisData={(() => {
             try {
               const store = useAnalysisStore.getState();
-              return {
-                latestSession: store.latestEmotionSession,
-                emotionHistory: store.emotionHistory || [],
-                trend: store.emotionTrend,
-                insights: store.insights || []
-              };
+              return store.latestEmotionSession;
             } catch (error) {
               return null;
             }
           })()}
-          maxInsights={3}
-          showTitle={true}
-          compact={false}
-          onInsightPress={(insight) => {
-            // 🔥 FIX: Rimuoviamo console.log eccessivi
-            // Handle insight press - could navigate to detailed view
-          }}
-          onActionPress={(insight, action) => {
-            // 🔥 FIX: Rimuoviamo console.log eccessivi
-            // Handle action press - could start activity, set reminder, etc.
-          }}
         />
-
-      </ScrollView>
-
-      {/* Detailed Analysis Popup */}
-      <DetailedAnalysisPopup
-        visible={showDetailedAnalysis}
-        onClose={() => setShowDetailedAnalysis(false)}
-        analysisType="emotion"
-        analysisData={(() => {
-          try {
-            const store = useAnalysisStore.getState();
-            return store.latestEmotionSession;
-          } catch (error) {
-            return null;
-          }
-        })()}
-      />
       </SafeAreaView>
     </View>
   );
@@ -1638,8 +1639,8 @@ const styles = StyleSheet.create({
   heroSubtitle: { marginTop: 8, fontSize: 13, lineHeight: 20, color: 'rgba(255, 255, 255, 0.85)' },
   heroMedia: { position: 'relative', borderRadius: 24, overflow: 'hidden' },
   heroImage: { width: '100%', height: 240 },
-  heroVideo: { 
-    width: '100%', 
+  heroVideo: {
+    width: '100%',
     height: 240,
     borderRadius: 24,
     overflow: 'hidden',
@@ -1734,8 +1735,28 @@ const styles = StyleSheet.create({
   captureLayout: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingTop: 16,
-    paddingBottom: 100,
+    paddingTop: 1,
+    paddingBottom: 90,
+  },
+  captureHeader: {
+    width: '100%',
+    paddingHorizontal: 24,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  captureBackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  captureBackButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   cameraPreview: {
     flex: 1,
@@ -1839,6 +1860,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  ghostButtonPlaceholder: {
+    opacity: 0,
+  },
   ghostButtonText: { color: '#4338ca', fontWeight: '600' },
 
   // Detecting card
@@ -1859,7 +1883,7 @@ const styles = StyleSheet.create({
   detectingTitle: { fontSize: 20, fontWeight: '600', color: '#1e293b' },
   detectingSubtitle: { fontSize: 14, color: '#475569', textAlign: 'center', lineHeight: 20 },
 
-	
+
   // Loading
   progressTrack: {
     width: '100%',

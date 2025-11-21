@@ -24,6 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import CameraCapture from './CameraCapture';
+import AnalysisCaptureLayout from './shared/AnalysisCaptureLayout';
 import { useCameraController } from '../hooks/useCameraController';
 import { Platform } from 'react-native';
 
@@ -55,6 +56,7 @@ import { IntelligentInsightsSection } from './IntelligentInsightsSection';
 import { VideoHero } from './VideoHero';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
+import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 // Removed useInsights - now using IntelligentInsightsSection directly
 
 const { width } = Dimensions.get('window');
@@ -297,13 +299,13 @@ const insightCards: InsightCard[] = [
 ];
 
 // ✅ ADD: Image component with fallback
-const ImageWithFallback: React.FC<{ uri: string; style: any; fallbackColor?: string }> = ({ 
-  uri, 
-  style, 
-  fallbackColor = '#e5e7eb' 
+const ImageWithFallback: React.FC<{ uri: string; style: any; fallbackColor?: string }> = ({
+  uri,
+  style,
+  fallbackColor = '#e5e7eb'
 }) => {
   const [imageError, setImageError] = useState(false);
-  
+
   if (imageError) {
     return (
       <View style={[style, { backgroundColor: fallbackColor, justifyContent: 'center', alignItems: 'center' }]}>
@@ -311,10 +313,10 @@ const ImageWithFallback: React.FC<{ uri: string; style: any; fallbackColor?: str
       </View>
     );
   }
-  
+
   return (
-    <Image 
-      source={{ uri }} 
+    <Image
+      source={{ uri }}
       style={style}
       onError={() => setImageError(true)}
       resizeMode="cover"
@@ -326,8 +328,9 @@ const SkinAnalysisScreen: React.FC = () => {
   const { t } = useTranslation(); // 🆕 i18n hook
   const { colors } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
+  const { hideTabBar, showTabBar } = useTabBarVisibility();
   const [currentImageUri, setCurrentImageUri] = useState(heroImageUri);
-  
+
   const [analyzing, setAnalyzing] = useState(false);
   // Removed capturing state - no more capture overlay
   const [results, setResults] = useState<SkinAnalysisResults | null>(null);
@@ -338,15 +341,15 @@ const SkinAnalysisScreen: React.FC = () => {
   const [permissionChecking, setPermissionChecking] = useState(false);
   const [analysisReady, setAnalysisReady] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-  
+
   // Enhanced components states
   const [nextBestActions, setNextBestActions] = useState<any[]>([]);
   const [insights, setInsights] = useState<any[]>([]);
   const [qualityInfo, setQualityInfo] = useState<any>(null);
-  
+
   // ✅ ADD: Modal state for skincare guides
   const [selectedGuide, setSelectedGuide] = useState<string | null>(null);
-  
+
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
 
@@ -354,15 +357,22 @@ const SkinAnalysisScreen: React.FC = () => {
 
   const analysisServiceRef = useRef(UnifiedAnalysisService.getInstance());
   const isMountedRef = useRef(true);
-  
+
   const { addSkinCapture } = useAnalysisStore();
-  
+
   // Use proper selectors for reactive updates
   const latestSkinCapture = useAnalysisStore(s => s.latestSkinCapture);
   const skinHistory = useAnalysisStore(s => s.skinHistory);
 
   const startDisabled = permissionChecking || analyzing || !analysisReady || !!analysisError;
   const captureDisabled = !cameraController.ready || cameraController.detecting || permissionChecking || analyzing || cameraSwitching;
+  const handleExitCapture = useCallback(() => {
+    cameraController.stopCamera();
+    setAnalyzing(false);
+    setResults(null);
+    setFullAnalysisResult(null);
+    showTabBar();
+  }, [cameraController, showTabBar]);
 
   const ensureCameraPermission = useCallback(async () => {
     try {
@@ -416,7 +426,7 @@ const SkinAnalysisScreen: React.FC = () => {
   useEffect(() => {
     // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
     let isMounted = true;
-    
+
     const loadChartData = async () => {
       try {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
@@ -427,7 +437,7 @@ const SkinAnalysisScreen: React.FC = () => {
         console.error('❌ Failed to load skin chart data:', error);
       }
     };
-    
+
     // Delay loading to ensure component is fully mounted
     // 🔥 FIX: Memory leak - salviamo il timeout per cleanup
     const timer = setTimeout(() => {
@@ -435,7 +445,7 @@ const SkinAnalysisScreen: React.FC = () => {
         loadChartData();
       }
     }, 100);
-    
+
     return () => {
       isMounted = false;
       clearTimeout(timer);
@@ -492,41 +502,16 @@ const SkinAnalysisScreen: React.FC = () => {
 
   // Start camera automatically when screen loads
   // 🔥 FIX: Rimuoviamo cameraController dalle dipendenze per evitare loop infinito
-  const cameraInitializedRef = useRef(false);
+  // Show/hide tab bar based on camera state
   useEffect(() => {
-    // 🔥 FIX: Evita di inizializzare la camera più volte
-    if (cameraInitializedRef.current) {
-      return;
-    }
-    
-    // 🔥 FIX: Evita di avviare la camera se è già attiva
     if (cameraController.active) {
-      cameraInitializedRef.current = true;
-      return;
+      hideTabBar();
+      return () => {
+        showTabBar();
+      };
     }
-    
-    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
-    let isMounted = true;
-    
-    const initializeCamera = async () => {
-      if (isMounted && !cameraController.active) {
-        await cameraController.startCamera();
-        if (isMounted) {
-          cameraInitializedRef.current = true;
-        }
-      }
-    };
-    
-    // Delay initialization to avoid conflicts
-    const timer = setTimeout(() => {
-      initializeCamera();
-    }, 300);
-    
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
-  }, []); // 🔥 FIX: Array vuoto per eseguire solo al mount
+    showTabBar();
+  }, [cameraController.active, hideTabBar, showTabBar]);
 
 
   const handleStartAnalysis = async () => {
@@ -566,7 +551,7 @@ const SkinAnalysisScreen: React.FC = () => {
   // 🔧 FALLBACK: Image Picker for Testing (100% Reliable)
   const analyzeFromGallery = async () => {
     // 🔥 FIX: Rimuoviamo console.log eccessivi
-    
+
     try {
       const ready = await ensureAnalysisReady();
       if (!ready) {
@@ -598,7 +583,7 @@ const SkinAnalysisScreen: React.FC = () => {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
 
         // Convert to data URL for analysis
-        const dataUrl = asset.base64 
+        const dataUrl = asset.base64
           ? `data:image/jpeg;base64,${asset.base64}`
           : asset.uri;
 
@@ -608,7 +593,7 @@ const SkinAnalysisScreen: React.FC = () => {
         }
 
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         if (isMountedRef.current) {
           setAnalyzing(true);
         }
@@ -616,7 +601,7 @@ const SkinAnalysisScreen: React.FC = () => {
         // Analyze the selected image
         // 🔥 FIX: Rimuoviamo console.log eccessivi
         const analysisResult = await analysisServiceRef.current.analyzeSkin(dataUrl);
-        
+
         if (analysisResult.success && analysisResult.data) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
 
@@ -630,7 +615,7 @@ const SkinAnalysisScreen: React.FC = () => {
             pigmentation: galleryScores.texture,
             recommendations: galleryRecommendations,
           };
-          
+
           if (isMountedRef.current) {
             setResults(skinResults);
             setAnalyzing(false);
@@ -660,7 +645,7 @@ const SkinAnalysisScreen: React.FC = () => {
                   },
                   imageUrl: asset.uri,
                 });
-                
+
                 if (savedAnalysis) {
                   // 🆕 Verifica post-salvataggio che i dati siano nel database
                   const verification = await DatabaseVerificationService.verifySkinAnalysis(currentUser.id, savedAnalysis.id);
@@ -669,7 +654,7 @@ const SkinAnalysisScreen: React.FC = () => {
                   } else {
                     UserFeedbackService.showSaveSuccess('analisi');
                   }
-                  
+
                   // Sincronizza i dati con lo store locale per i grafici
                   const skinCapture = {
                     id: savedAnalysis.id,
@@ -689,7 +674,7 @@ const SkinAnalysisScreen: React.FC = () => {
                     },
                     photoUri: savedAnalysis.image_url || '',
                   };
-                  
+
                   const store = useAnalysisStore.getState();
                   store.addSkinCapture(skinCapture);
                 } else {
@@ -789,7 +774,7 @@ const SkinAnalysisScreen: React.FC = () => {
               addSkinCapture(capture);
             }
           });
-          
+
         } else {
           console.error('❌ Gallery skin analysis failed:', analysisResult.error);
           if (isMountedRef.current) {
@@ -822,16 +807,16 @@ const SkinAnalysisScreen: React.FC = () => {
     if (isMountedRef.current) {
       setCameraType(nextType);
     }
-    
+
     // Set switching state AFTER the camera type change to prevent ref loss
     // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare i timeout
     const timeoutRefs: ReturnType<typeof setTimeout>[] = [];
-    
+
     const timer1 = setTimeout(() => {
       if (isMountedRef.current) {
         setCameraSwitching(true);
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         // Reset switching state after a short delay
         const timer2 = setTimeout(() => {
           if (isMountedRef.current) {
@@ -843,19 +828,19 @@ const SkinAnalysisScreen: React.FC = () => {
       }
     }, 100);
     timeoutRefs.push(timer1);
-    
+
     // 🔥 FIX: Memory leak - cleanup dei timeout (non possiamo farlo qui perché è in useCallback)
     // I timeout verranno puliti quando il componente viene smontato
     // Per ora, usiamo isMountedRef per prevenire setState su componenti smontati
-    
+
   }, [cameraType, cameraSwitching]);
 
   const captureAndAnalyze = async () => {
     // 🔥 FIX: Rimuoviamo console.log eccessivi
-    
+
     // Store cameraController methods in local variables to prevent scope issues
     const { ref, ready, detecting, error, isCameraReady, setDetecting } = cameraController;
-    
+
     // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     if (!isCameraReady()) {
@@ -898,32 +883,32 @@ const SkinAnalysisScreen: React.FC = () => {
       // Aggressive ref recovery before capture (same as EmotionDetectionScreen)
       if (!ref.current) {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         // Try to restore from global storage first
         const globalRef = (globalThis as any).globalCameraRef;
         if (globalRef) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           ref.current = globalRef;
         }
-        
+
         // Try multiple recovery attempts
         for (let attempt = 1; attempt <= 3; attempt++) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           await new Promise(resolve => setTimeout(resolve, 200 * attempt));
-          
+
           // Force a re-render by updating state
           if (isMountedRef.current) {
             setDetecting(false);
             await new Promise(resolve => setTimeout(resolve, 50));
             setDetecting(true);
           }
-          
+
           if (ref.current) {
             // 🔥 FIX: Rimuoviamo console.log eccessivi
             break;
           }
         }
-        
+
         if (!ref.current) {
           throw new Error('Camera ref is null - camera may have been unmounted. Please restart the camera.');
         }
@@ -969,12 +954,12 @@ const SkinAnalysisScreen: React.FC = () => {
       for (let i = 0; i < captureStrategies.length; i++) {
         const strategy = captureStrategies[i];
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         try {
           // Double-check camera ref is still valid right before capture
           if (!ref.current) {
             // 🔥 FIX: Rimuoviamo console.log eccessivi
-            
+
             // Try to recover ref from global storage
             const globalRef = (globalThis as any).globalCameraRef;
             if (globalRef) {
@@ -984,19 +969,19 @@ const SkinAnalysisScreen: React.FC = () => {
               throw new Error('Camera ref is null and cannot be recovered');
             }
           }
-          
+
           // Additional safety check - ensure the ref has the takePictureAsync method
           if (typeof ref.current.takePictureAsync !== 'function') {
             // 🔥 FIX: Rimuoviamo console.log eccessivi
             throw new Error('Camera ref does not have takePictureAsync method');
           }
-          
+
           // Extra validation for camera switching scenarios
           if (cameraSwitching) {
             // 🔥 FIX: Rimuoviamo console.log eccessivi
             throw new Error('Camera is still switching');
           }
-          
+
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           const capturePromise = ref.current.takePictureAsync(strategy.options);
           const timeoutPromise = new Promise((_, reject) => {
@@ -1008,7 +993,7 @@ const SkinAnalysisScreen: React.FC = () => {
           break;
         } catch (strategyError) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
-          
+
           // If this is the first strategy and it fails, try to restart the camera
           if (i === 0 && strategyError.message.includes('ERR_IMAGE_CAPTURE_FAILED')) {
             // 🔥 FIX: Rimuoviamo console.log eccessivi
@@ -1022,7 +1007,7 @@ const SkinAnalysisScreen: React.FC = () => {
               // 🔥 FIX: Rimuoviamo console.log eccessivi
             }
           }
-          
+
           if (i === captureStrategies.length - 1) {
             throw strategyError; // Re-throw the last error if all strategies fail
           }
@@ -1099,7 +1084,7 @@ const SkinAnalysisScreen: React.FC = () => {
               },
               imageUrl: photo.uri,
             });
-            
+
             if (savedAnalysis) {
               // 🆕 Verifica post-salvataggio che i dati siano nel database
               const verification = await DatabaseVerificationService.verifySkinAnalysis(currentUser.id, savedAnalysis.id);
@@ -1108,7 +1093,7 @@ const SkinAnalysisScreen: React.FC = () => {
               } else {
                 UserFeedbackService.showSaveSuccess('analisi');
               }
-              
+
               // Sincronizza i dati con lo store locale per i grafici
               const skinCapture = {
                 id: savedAnalysis.id,
@@ -1128,7 +1113,7 @@ const SkinAnalysisScreen: React.FC = () => {
                 },
                 photoUri: savedAnalysis.image_url || '',
               };
-              
+
               const store = useAnalysisStore.getState();
               store.addSkinCapture(skinCapture);
             } else {
@@ -1242,7 +1227,7 @@ const SkinAnalysisScreen: React.FC = () => {
       }
     } catch (error: any) {
       console.error('❌ Skin capture error:', error?.message || error);
-      
+
       let errorMessage = t('analysis.skin.errors.captureFailed');
       if (error?.message) {
         if (error.message.includes('timeout')) {
@@ -1255,7 +1240,7 @@ const SkinAnalysisScreen: React.FC = () => {
           errorMessage = t('analysis.skin.errors.captureFailed');
         }
       }
-      
+
       if (isMountedRef.current) {
         alert(errorMessage);
         setAnalyzing(false);
@@ -1313,21 +1298,21 @@ const SkinAnalysisScreen: React.FC = () => {
     // Mappa le chiavi delle sezioni ai titoli tradotti
     const titleMap: Record<string, string> = {
       products: t('analysis.skin.guideSections.products.title'),
-      nutrition: guideId === 'redness' 
+      nutrition: guideId === 'redness'
         ? t('analysis.skin.guideSections.nutrition.antiInflammatory')
         : guideId === 'oiliness'
-        ? t('analysis.skin.guideSections.nutrition.dietAdjustments')
-        : t('analysis.skin.guideSections.nutrition.title'),
+          ? t('analysis.skin.guideSections.nutrition.dietAdjustments')
+          : t('analysis.skin.guideSections.nutrition.title'),
       routine: guideId === 'redness'
         ? t('analysis.skin.guideSections.routine.soothing')
         : guideId === 'oiliness'
-        ? t('analysis.skin.guideSections.routine.oilControl')
-        : t('analysis.skin.guideSections.routine.title'),
+          ? t('analysis.skin.guideSections.routine.oilControl')
+          : t('analysis.skin.guideSections.routine.title'),
       timing: guideId === 'redness'
         ? t('analysis.skin.guideSections.timing.whenToApply')
         : guideId === 'confidence'
-        ? t('analysis.skin.guideSections.timing.optimal')
-        : t('analysis.skin.guideSections.timing.title'),
+          ? t('analysis.skin.guideSections.timing.optimal')
+          : t('analysis.skin.guideSections.timing.title'),
       photoQuality: t('analysis.skin.guideSections.photoQuality.title'),
       skinPreparation: t('analysis.skin.guideSections.skinPreparation.title'),
       bestPractices: t('analysis.skin.guideSections.bestPractices.title'),
@@ -1447,7 +1432,7 @@ const SkinAnalysisScreen: React.FC = () => {
           <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}>
             <CameraFrame />
           </View>
-          
+
           <View style={{ flex: 1, justifyContent: 'center' }}>
             <SkinLoadingScreen onCancel={() => {
               if (isMountedRef.current) {
@@ -1463,50 +1448,19 @@ const SkinAnalysisScreen: React.FC = () => {
 
   if (cameraController.active && !analyzing) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["bottom"]}>
-          <View style={styles.captureLayout}>
-            <CameraFrame />
-            
-            
-            <View style={styles.cameraControls}>
-              <TouchableOpacity style={styles.ghostButton} onPress={() => cameraController.stopCamera()}>
-                <FontAwesome name="times" size={16} color="#4338ca" />
-                <Text style={styles.ghostButtonText}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
-              
-              {/* Camera Switch Button */}
-              <TouchableOpacity 
-                style={[styles.ghostButton, cameraSwitching && { opacity: 0.5 }]} 
-                onPress={switchCamera}
-                disabled={cameraSwitching}
-              >
-                <FontAwesome name="refresh" size={16} color="#4338ca" />
-                <Text style={styles.ghostButtonText}>
-                  {cameraType === 'front' ? 'Back' : 'Front'}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                activeOpacity={0.7} 
-                onPress={captureAndAnalyze}
-                disabled={captureDisabled}
-                style={captureDisabled ? { opacity: 0.5 } : {}}
-              >
-                <LinearGradient
-                  colors={['#6366f1', '#8b5cf6']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.primaryButton}
-                >
-                  <FontAwesome name="camera" size={16} color="#ffffff" />
-                  <Text style={styles.primaryButtonText}>{t('common.capture')}</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </SafeAreaView>
-      </View>
+      <AnalysisCaptureLayout
+        renderCamera={<CameraFrame />}
+        onBack={handleExitCapture}
+        onCancel={handleExitCapture}
+        onCapture={captureAndAnalyze}
+        captureDisabled={captureDisabled}
+        showSwitch
+        switchDisabled={cameraSwitching}
+        switchLabel={cameraType === 'front' ? 'Back' : 'Front'}
+        onSwitch={switchCamera}
+        cancelLabel={t('common.cancel')}
+        captureLabel={t('common.capture')}
+      />
     );
   }
 
@@ -1542,7 +1496,7 @@ const SkinAnalysisScreen: React.FC = () => {
         backgroundColor: colors.background,
         zIndex: 0,
       }} />
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["bottom"]}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.overviewContent}
@@ -1550,464 +1504,464 @@ const SkinAnalysisScreen: React.FC = () => {
           overScrollMode="never"
           bounces={false}
         >
-        <LinearGradient
-          colors={['#22d3ee', '#6366f1']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroCard}
-        >
-          <View style={styles.heroHeader}>
-            <Text style={styles.heroTitle}>{t('analysis.skin.hero.title')}</Text>
-            <Text style={styles.heroSubtitle}>{t('analysis.skin.hero.subtitle')}</Text>
-          </View>
-          <VideoHero
-            videoUri={heroVideoUri}
-            title={t('analysis.skin.hero.title')}
-            subtitle={t('analysis.skin.hero.subtitle')}
-            onPlayPress={handleStartAnalysis}
-            showPlayButton={false}
-            autoPlay={true}
-            loop={true}
-            muted={true}
-            style={styles.heroVideo}
-            fallbackImageUri="https://images.unsplash.com/photo-1557163435-efdb2550fbfb?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-          />
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={handleStartAnalysis}
-            disabled={startDisabled}
-            style={startDisabled ? { opacity: 0.6 } : undefined}
-          >
-            <LinearGradient
-              colors={['#fef3c7', '#fde68a']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.primaryButton, styles.heroButton]}
-            >
-              <FontAwesome name="camera" size={16} color="#92400e" />
-              <Text style={[styles.primaryButtonText, styles.heroButtonText]}>{t('analysis.skin.start')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* 🔧 FALLBACK BUTTON - Gallery Picker (100% Reliable) */}
-          <TouchableOpacity
-            onPress={analyzeFromGallery}
-            style={{ marginTop: 12 }}
-          >
-            <LinearGradient
-              colors={['#e0f2fe', '#bae6fd']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.primaryButton, styles.heroButton]}
-            >
-              <FontAwesome name="image" size={16} color="#0ea5e9" />
-              <Text style={[styles.primaryButtonText, { color: '#0ea5e9' }]}>{t('common.pickFromGallery')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {permissionChecking && (
-            <Text style={styles.permissionBanner}>{t('analysis.common.requestingPermission')}</Text>
-          )}
-          {analysisError && !permissionChecking && (
-            <Text style={styles.permissionBanner}>{analysisError}</Text>
-          )}
-          
-        </LinearGradient>
-
-         {/* Recent Analysis Section - Always visible */}
-         <View style={styles.sectionHeader}>
-           <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.recent.title')}</Text>
-           <Text style={styles.sectionSubtitle}>{t('analysis.skin.recent.subtitle')}</Text>
-         </View>
-         
-         {(() => {
-           try {
-             const store = useAnalysisStore.getState();
-             const latestCapture = store.latestSkinCapture;
-             const skinHistory = store.skinHistory;
-             
-             // 🔥 FIX: Rimuoviamo console.log eccessivi
-             
-             // Always show the card, with fallback data if no capture exists
-             const fallbackCapture = {
-               id: 'fallback',
-               timestamp: new Date().toISOString(),
-               scores: {
-                 texture: 65,
-                 redness: 25,
-                 hydration: 70,
-                 oiliness: 45,
-                 overall: 60,
-               },
-               confidence: 0.5,
-               quality: {
-                 lighting: 0.7,
-                 focus: 0.6,
-                 roi_coverage: 0.8,
-               },
-             };
-             
-             return (
-               <SkinCaptureCard
-                 capture={latestCapture || fallbackCapture}
-               />
-             );
-           } catch (error) {
-             // 🔥 FIX: Solo errori critici in console
-             console.error('❌ Failed to load latest skin capture:', error);
-             // Fallback capture in case of error
-             const fallbackCapture = {
-               id: 'error-fallback',
-               timestamp: new Date().toISOString(),
-               scores: {
-                 texture: 65,
-                 redness: 25,
-                 hydration: 70,
-                 oiliness: 45,
-                 overall: 60,
-               },
-               confidence: 0.5,
-               quality: {
-                 lighting: 0.7,
-                 focus: 0.6,
-                 roi_coverage: 0.8,
-               },
-             };
-             return <SkinCaptureCard capture={fallbackCapture} />;
-           }
-         })()}
-
-        {/* Detailed Analysis Button */}
-        <TouchableOpacity
-          style={styles.detailedAnalysisButton}
-          onPress={() => setShowDetailedAnalysis(true)}
-          activeOpacity={0.8}
-        >
           <LinearGradient
             colors={['#22d3ee', '#6366f1']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.detailedAnalysisButtonGradient}
+            style={styles.heroCard}
           >
-            <MaterialCommunityIcons name="face-woman-shimmer" size={20} color="#ffffff" />
-            <Text style={styles.detailedAnalysisButtonText}>
-              {t('analysis.skin.detailedAnalysis.buttonText')}
-            </Text>
-            <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
+            <View style={styles.heroHeader}>
+              <Text style={styles.heroTitle}>{t('analysis.skin.hero.title')}</Text>
+              <Text style={styles.heroSubtitle}>{t('analysis.skin.hero.subtitle')}</Text>
+            </View>
+            <VideoHero
+              videoUri={heroVideoUri}
+              title={t('analysis.skin.hero.title')}
+              subtitle={t('analysis.skin.hero.subtitle')}
+              onPlayPress={handleStartAnalysis}
+              showPlayButton={false}
+              autoPlay={true}
+              loop={true}
+              muted={true}
+              style={styles.heroVideo}
+              fallbackImageUri="https://images.unsplash.com/photo-1557163435-efdb2550fbfb?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+            />
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={handleStartAnalysis}
+              disabled={startDisabled}
+              style={startDisabled ? { opacity: 0.6 } : undefined}
+            >
+              <LinearGradient
+                colors={['#fef3c7', '#fde68a']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.primaryButton, styles.heroButton]}
+              >
+                <FontAwesome name="camera" size={16} color="#92400e" />
+                <Text style={[styles.primaryButtonText, styles.heroButtonText]}>{t('analysis.skin.start')}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* 🔧 FALLBACK BUTTON - Gallery Picker (100% Reliable) */}
+            <TouchableOpacity
+              onPress={analyzeFromGallery}
+              style={{ marginTop: 12 }}
+            >
+              <LinearGradient
+                colors={['#e0f2fe', '#bae6fd']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.primaryButton, styles.heroButton]}
+              >
+                <FontAwesome name="image" size={16} color="#0ea5e9" />
+                <Text style={[styles.primaryButtonText, { color: '#0ea5e9' }]}>{t('common.pickFromGallery')}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {permissionChecking && (
+              <Text style={styles.permissionBanner}>{t('analysis.common.requestingPermission')}</Text>
+            )}
+            {analysisError && !permissionChecking && (
+              <Text style={styles.permissionBanner}>{analysisError}</Text>
+            )}
+
           </LinearGradient>
-        </TouchableOpacity>
 
-        {/* Quick Stats Section */}
-        <View style={styles.sectionHeader}>
-         <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.quickStats.title')}</Text>
-          <Text style={styles.sectionSubtitle}>{t('analysis.skin.quickStats.subtitle')}</Text>
-        </View>
-        
-        {/* Gauge Charts Grid 2x2 */}
-        <View style={styles.gaugeGrid}>
-          <View style={styles.gaugeRow}>
-            <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
-              <GaugeChart
-                value={skinHistory.length > 0 
-                  ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.texture || 0), 0) / skinHistory.length)
-                  : 65
-                }
-                maxValue={100}
-                label={t('analysis.skin.metrics.texture')}
-                color="#8b5cf6"
-                subtitle={t('analysis.skin.metrics.textureSubtitle')}
-                trend={2}
-                description={t('analysis.skin.metrics.textureDescription')}
-                historicalData={skinHistory.map((capture) => {
-                  const date = new Date(capture.timestamp);
-                  return {
-                    date: `${date.getDate()}/${date.getMonth() + 1}`,
-                    value: capture.scores?.texture || 0
-                  };
-                })}
-                metric="texture"
-                icon="blur"
-              />
-            </View>
-            
-            <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
-              <GaugeChart
-                value={skinHistory.length > 0 
-                  ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.redness || 0), 0) / skinHistory.length)
-                  : 25
-                }
-                maxValue={100}
-                label={t('analysis.skin.metrics.redness')}
-                color="#ef4444"
-                subtitle={t('analysis.skin.metrics.rednessSubtitle')}
-                trend={-3}
-                description={t('analysis.skin.metrics.rednessDescription')}
-                historicalData={skinHistory.map((capture) => {
-                  const date = new Date(capture.timestamp);
-                  return {
-                    date: `${date.getDate()}/${date.getMonth() + 1}`,
-                    value: capture.scores?.redness || 0
-                  };
-                })}
-                metric="redness"
-                icon="fire"
-              />
-            </View>
+          {/* Recent Analysis Section - Always visible */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.recent.title')}</Text>
+            <Text style={styles.sectionSubtitle}>{t('analysis.skin.recent.subtitle')}</Text>
           </View>
-          
-          <View style={styles.gaugeRow}>
-            <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
-              <GaugeChart
-                value={skinHistory.length > 0 
-                  ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.hydration || 0), 0) / skinHistory.length)
-                  : 45
-                }
-                maxValue={100}
-                label={t('analysis.skin.metrics.hydration')}
-                color="#f59e0b"
-                subtitle={t('analysis.skin.metrics.hydrationSubtitle')}
-                trend={1}
-                description={t('analysis.skin.metrics.hydrationDescription')}
-                historicalData={skinHistory.map((capture) => {
-                  const date = new Date(capture.timestamp);
-                  return {
-                    date: `${date.getDate()}/${date.getMonth() + 1}`,
-                    value: capture.scores?.hydration || 0
-                  };
-                })}
-                metric="hydration"
-                icon="water"
-              />
-            </View>
-            
-            <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
-              <GaugeChart
-                value={skinHistory.length > 0 
-                  ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.oiliness || 0), 0) / skinHistory.length)
-                  : 50
-                }
-                maxValue={100}
-                label={t('analysis.skin.metrics.oiliness')}
-                color="#8b5cf6"
-                subtitle={t('analysis.skin.metrics.oilinessSubtitle')}
-                trend={0}
-                description={t('analysis.skin.metrics.oilinessDescription')}
-                historicalData={skinHistory.map((capture) => {
-                  const date = new Date(capture.timestamp);
-                  return {
-                    date: `${date.getDate()}/${date.getMonth() + 1}`,
-                    value: capture.scores?.oiliness || 0
-                  };
-                })}
-                metric="oiliness"
-                icon="oil-can"
-              />
-            </View>
-          </View>
-        </View>
 
-        {/* Quality Badge - Removed "Bassa" badge as requested */}
-        {qualityInfo && qualityInfo.level !== 'low' && (
-          <QualityBadge
-            confidence={qualityInfo}
-            qualityMessage={t('analysis.skin.quality.message')}
-            onRetakePress={() => alert(t('analysis.skin.retake'))}
-            showRetakeButton={false}
-            compact={true}
-          />
-        )}
-
-
-        {/* Skin Health Trend Chart */}
-        <SkinHealthChart
-          data={skinHistory.map((capture, index) => ({
-            date: `${index + 1}`,
-            texture: capture.scores?.texture || 0,
-            redness: capture.scores?.redness || 0,
-            hydration: capture.scores?.hydration || 0,  // ✅ FIXED: Use hydration instead of shine
-            overall: capture.scores?.overall || 0,
-          }))}
-          title={t('analysis.skin.trends.title')}
-          subtitle={t('analysis.skin.trends.subtitle')}
-        />
-
-        {/* Intelligent Insights Section - Skin Only */}
-        <IntelligentInsightsSection
-          category="skin"
-          data={(() => {
+          {(() => {
             try {
               const store = useAnalysisStore.getState();
-              return {
-                latestCapture: store.latestSkinCapture,
-                skinHistory: store.skinHistory || [],
-                trend: store.skinTrend,
-                insights: store.insights || []
+              const latestCapture = store.latestSkinCapture;
+              const skinHistory = store.skinHistory;
+
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
+
+              // Always show the card, with fallback data if no capture exists
+              const fallbackCapture = {
+                id: 'fallback',
+                timestamp: new Date().toISOString(),
+                scores: {
+                  texture: 65,
+                  redness: 25,
+                  hydration: 70,
+                  oiliness: 45,
+                  overall: 60,
+                },
+                confidence: 0.5,
+                quality: {
+                  lighting: 0.7,
+                  focus: 0.6,
+                  roi_coverage: 0.8,
+                },
               };
+
+              return (
+                <SkinCaptureCard
+                  capture={latestCapture || fallbackCapture}
+                />
+              );
+            } catch (error) {
+              // 🔥 FIX: Solo errori critici in console
+              console.error('❌ Failed to load latest skin capture:', error);
+              // Fallback capture in case of error
+              const fallbackCapture = {
+                id: 'error-fallback',
+                timestamp: new Date().toISOString(),
+                scores: {
+                  texture: 65,
+                  redness: 25,
+                  hydration: 70,
+                  oiliness: 45,
+                  overall: 60,
+                },
+                confidence: 0.5,
+                quality: {
+                  lighting: 0.7,
+                  focus: 0.6,
+                  roi_coverage: 0.8,
+                },
+              };
+              return <SkinCaptureCard capture={fallbackCapture} />;
+            }
+          })()}
+
+          {/* Detailed Analysis Button */}
+          <TouchableOpacity
+            style={styles.detailedAnalysisButton}
+            onPress={() => setShowDetailedAnalysis(true)}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#22d3ee', '#6366f1']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.detailedAnalysisButtonGradient}
+            >
+              <MaterialCommunityIcons name="face-woman-shimmer" size={20} color="#ffffff" />
+              <Text style={styles.detailedAnalysisButtonText}>
+                {t('analysis.skin.detailedAnalysis.buttonText')}
+              </Text>
+              <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Quick Stats Section */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.quickStats.title')}</Text>
+            <Text style={styles.sectionSubtitle}>{t('analysis.skin.quickStats.subtitle')}</Text>
+          </View>
+
+          {/* Gauge Charts Grid 2x2 */}
+          <View style={styles.gaugeGrid}>
+            <View style={styles.gaugeRow}>
+              <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
+                <GaugeChart
+                  value={skinHistory.length > 0
+                    ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.texture || 0), 0) / skinHistory.length)
+                    : 65
+                  }
+                  maxValue={100}
+                  label={t('analysis.skin.metrics.texture')}
+                  color="#8b5cf6"
+                  subtitle={t('analysis.skin.metrics.textureSubtitle')}
+                  trend={2}
+                  description={t('analysis.skin.metrics.textureDescription')}
+                  historicalData={skinHistory.map((capture) => {
+                    const date = new Date(capture.timestamp);
+                    return {
+                      date: `${date.getDate()}/${date.getMonth() + 1}`,
+                      value: capture.scores?.texture || 0
+                    };
+                  })}
+                  metric="texture"
+                  icon="blur"
+                />
+              </View>
+
+              <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
+                <GaugeChart
+                  value={skinHistory.length > 0
+                    ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.redness || 0), 0) / skinHistory.length)
+                    : 25
+                  }
+                  maxValue={100}
+                  label={t('analysis.skin.metrics.redness')}
+                  color="#ef4444"
+                  subtitle={t('analysis.skin.metrics.rednessSubtitle')}
+                  trend={-3}
+                  description={t('analysis.skin.metrics.rednessDescription')}
+                  historicalData={skinHistory.map((capture) => {
+                    const date = new Date(capture.timestamp);
+                    return {
+                      date: `${date.getDate()}/${date.getMonth() + 1}`,
+                      value: capture.scores?.redness || 0
+                    };
+                  })}
+                  metric="redness"
+                  icon="fire"
+                />
+              </View>
+            </View>
+
+            <View style={styles.gaugeRow}>
+              <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
+                <GaugeChart
+                  value={skinHistory.length > 0
+                    ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.hydration || 0), 0) / skinHistory.length)
+                    : 45
+                  }
+                  maxValue={100}
+                  label={t('analysis.skin.metrics.hydration')}
+                  color="#f59e0b"
+                  subtitle={t('analysis.skin.metrics.hydrationSubtitle')}
+                  trend={1}
+                  description={t('analysis.skin.metrics.hydrationDescription')}
+                  historicalData={skinHistory.map((capture) => {
+                    const date = new Date(capture.timestamp);
+                    return {
+                      date: `${date.getDate()}/${date.getMonth() + 1}`,
+                      value: capture.scores?.hydration || 0
+                    };
+                  })}
+                  metric="hydration"
+                  icon="water"
+                />
+              </View>
+
+              <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
+                <GaugeChart
+                  value={skinHistory.length > 0
+                    ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.oiliness || 0), 0) / skinHistory.length)
+                    : 50
+                  }
+                  maxValue={100}
+                  label={t('analysis.skin.metrics.oiliness')}
+                  color="#8b5cf6"
+                  subtitle={t('analysis.skin.metrics.oilinessSubtitle')}
+                  trend={0}
+                  description={t('analysis.skin.metrics.oilinessDescription')}
+                  historicalData={skinHistory.map((capture) => {
+                    const date = new Date(capture.timestamp);
+                    return {
+                      date: `${date.getDate()}/${date.getMonth() + 1}`,
+                      value: capture.scores?.oiliness || 0
+                    };
+                  })}
+                  metric="oiliness"
+                  icon="oil-can"
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Quality Badge - Removed "Bassa" badge as requested */}
+          {qualityInfo && qualityInfo.level !== 'low' && (
+            <QualityBadge
+              confidence={qualityInfo}
+              qualityMessage={t('analysis.skin.quality.message')}
+              onRetakePress={() => alert(t('analysis.skin.retake'))}
+              showRetakeButton={false}
+              compact={true}
+            />
+          )}
+
+
+          {/* Skin Health Trend Chart */}
+          <SkinHealthChart
+            data={skinHistory.map((capture, index) => ({
+              date: `${index + 1}`,
+              texture: capture.scores?.texture || 0,
+              redness: capture.scores?.redness || 0,
+              hydration: capture.scores?.hydration || 0,  // ✅ FIXED: Use hydration instead of shine
+              overall: capture.scores?.overall || 0,
+            }))}
+            title={t('analysis.skin.trends.title')}
+            subtitle={t('analysis.skin.trends.subtitle')}
+          />
+
+          {/* Intelligent Insights Section - Skin Only */}
+          <IntelligentInsightsSection
+            category="skin"
+            data={(() => {
+              try {
+                const store = useAnalysisStore.getState();
+                return {
+                  latestCapture: store.latestSkinCapture,
+                  skinHistory: store.skinHistory || [],
+                  trend: store.skinTrend,
+                  insights: store.insights || []
+                };
+              } catch (error) {
+                return null;
+              }
+            })()}
+            maxInsights={3}
+            showTitle={true}
+            compact={false}
+            onInsightPress={(insight) => {
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
+              // Handle insight press - could navigate to detailed view
+            }}
+            onActionPress={(insight, action) => {
+              // 🔥 FIX: Rimuoviamo console.log eccessivi
+              // Handle action press - could start activity, set reminder, etc.
+            }}
+          />
+
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.advancedModules.title')}</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.skin.advancedModules.subtitle')}</Text>
+          </View>
+          <View style={styles.insightList}>
+            {insightCards.map((card) => (
+              <TouchableOpacity
+                key={card.id}
+                style={[styles.insightCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onPress={() => openSkincareGuide(card.id)}
+                activeOpacity={0.8}
+              >
+                <ImageWithFallback
+                  uri={card.image}
+                  style={styles.insightImage}
+                  fallbackColor={colors.surfaceMuted}
+                />
+                <View style={styles.insightCopy}>
+                  <Text style={[styles.insightTitle, { color: colors.text }]}>{t(`analysis.skin.guides.${card.id}.title`, { defaultValue: card.title })}</Text>
+                  <Text style={[styles.insightDescription, { color: colors.textSecondary }]}>{t(`analysis.skin.guides.${card.id}.description`, { defaultValue: card.description })}</Text>
+                  <View style={styles.guideHint}>
+                    <Text style={[styles.guideHintText, { color: colors.primary }]}>{t('analysis.skin.advancedModules.tapForGuide')}</Text>
+                    <FontAwesome name="chevron-right" size={12} color={colors.primary} />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+
+        {/* Detailed Analysis Popup */}
+        <DetailedAnalysisPopup
+          visible={showDetailedAnalysis}
+          onClose={() => setShowDetailedAnalysis(false)}
+          analysisType="skin"
+          analysisData={(() => {
+            try {
+              const store = useAnalysisStore.getState();
+              return store.latestSkinCapture;
             } catch (error) {
               return null;
             }
           })()}
-          maxInsights={3}
-          showTitle={true}
-          compact={false}
-          onInsightPress={(insight) => {
-            // 🔥 FIX: Rimuoviamo console.log eccessivi
-            // Handle insight press - could navigate to detailed view
-          }}
-          onActionPress={(insight, action) => {
-            // 🔥 FIX: Rimuoviamo console.log eccessivi
-            // Handle action press - could start activity, set reminder, etc.
-          }}
         />
 
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.advancedModules.title')}</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.skin.advancedModules.subtitle')}</Text>
-        </View>
-        <View style={styles.insightList}>
-          {insightCards.map((card) => (
-            <TouchableOpacity 
-              key={card.id} 
-              style={[styles.insightCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => openSkincareGuide(card.id)}
-              activeOpacity={0.8}
-            >
-              <ImageWithFallback 
-                uri={card.image} 
-                style={styles.insightImage}
-                fallbackColor={colors.surfaceMuted}
-              />
-              <View style={styles.insightCopy}>
-                <Text style={[styles.insightTitle, { color: colors.text }]}>{t(`analysis.skin.guides.${card.id}.title`, { defaultValue: card.title })}</Text>
-                <Text style={[styles.insightDescription, { color: colors.textSecondary }]}>{t(`analysis.skin.guides.${card.id}.description`, { defaultValue: card.description })}</Text>
-                <View style={styles.guideHint}>
-                  <Text style={[styles.guideHintText, { color: colors.primary }]}>{t('analysis.skin.advancedModules.tapForGuide')}</Text>
-                  <FontAwesome name="chevron-right" size={12} color={colors.primary} />
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-
-      {/* Detailed Analysis Popup */}
-      <DetailedAnalysisPopup
-        visible={showDetailedAnalysis}
-        onClose={() => setShowDetailedAnalysis(false)}
-        analysisType="skin"
-        analysisData={(() => {
-          try {
-            const store = useAnalysisStore.getState();
-            return store.latestSkinCapture;
-          } catch (error) {
-            return null;
-          }
-        })()}
-      />
-      
-      {/* ✅ ADD: Skincare Guide Modal */}
-      {selectedGuide && (
-        <Modal
-          visible={!!selectedGuide}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={closeSkincareGuide}
-        >
-          <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <TouchableOpacity onPress={closeSkincareGuide} style={[styles.closeButton, { backgroundColor: colors.surfaceMuted }]}>
-                <FontAwesome name="times" size={20} color={colors.text} />
-              </TouchableOpacity>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {t(`analysis.skin.guides.${selectedGuide}.title`, { defaultValue: skincareGuides[selectedGuide as keyof typeof skincareGuides]?.title })}
-              </Text>
-              <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
-                {t(`analysis.skin.guides.${selectedGuide}.description`, { defaultValue: skincareGuides[selectedGuide as keyof typeof skincareGuides]?.subtitle })}
-              </Text>
-            </View>
-            
-            <ScrollView 
-              style={styles.modalContent} 
-              showsVerticalScrollIndicator={false}
-              overScrollMode="never"
-              bounces={false}
-            >
-              {/* Hero Image Section */}
-              <View style={styles.heroImageContainer}>
-                <ImageWithFallback 
-                  uri={skincareGuides[selectedGuide as keyof typeof skincareGuides]?.image || ''} 
-                  style={styles.heroImage}
-                  fallbackColor="#f3f4f6"
-                />
-                <View style={styles.heroOverlay}>
-                  <View style={styles.heroBadge}>
-                    <Text style={styles.heroBadgeText}>{t('analysis.skin.guideModal.expertGuide')}</Text>
-                  </View>
-                </View>
-              </View>
-              
-              {/* Quick Stats Row */}
-              <View style={[styles.quickStatsRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <View style={styles.statItem}>
-                  <Text style={[styles.statNumber, { color: colors.primary }]}>5</Text>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('analysis.skin.guideModal.keyTips')}</Text>
-                </View>
-                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-                <View style={styles.statItem}>
-                  <Text style={[styles.statNumber, { color: colors.primary }]}>4</Text>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('analysis.skin.guideModal.categories')}</Text>
-                </View>
-                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-                <View style={styles.statItem}>
-                  <Text style={[styles.statNumber, { color: colors.primary }]}>2-4</Text>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('analysis.skin.guideModal.weeks')}</Text>
-                </View>
-              </View>
-              
-              {/* Sections with Enhanced Design */}
-              {Object.entries(skincareGuides[selectedGuide as keyof typeof skincareGuides]?.sections || {}).map(([key, section], index) => (
-                <View key={key} style={[
-                  styles.sectionCard,
-                  { 
-                    backgroundColor: index % 2 === 0 ? colors.surface : colors.surfaceMuted,
-                    borderLeftWidth: 4,
-                    borderLeftColor: getSectionColor(key),
-                    borderColor: colors.border,
-                  }
-                ]}>
-                  <View style={styles.sectionHeaderRow}>
-                    <View style={[styles.sectionIcon, { backgroundColor: `${getSectionColor(key)}20` }]}>
-                      <Text style={[styles.sectionEmoji, { color: getSectionColor(key) }]}>
-                        {getSectionEmoji(key)}
-                      </Text>
-                    </View>
-                   <Text style={[styles.sectionTitle, { color: colors.text }]}>{getSectionTitle(key, selectedGuide || '')}</Text>
-                  </View>
-                  
-                  <View style={styles.itemsContainer}>
-                    {section.items.map((item, itemIndex) => (
-                      <View key={itemIndex} style={[styles.itemCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                        <View style={[styles.itemBullet, { backgroundColor: `${getSectionColor(key)}15` }]}>
-                          <Text style={[styles.bulletNumber, { color: getSectionColor(key) }]}>{itemIndex + 1}</Text>
-                        </View>
-                        <Text style={[styles.itemText, { color: colors.text }]}>{item}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              ))}
-              
-              {/* Action Button */}
-              <View style={styles.actionSection}>
-                <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
-                  <FontAwesome name="heart" size={16} color="#ffffff" />
-                  <Text style={styles.actionButtonText}>{t('analysis.skin.guideModal.saveToRoutine')}</Text>
+        {/* ✅ ADD: Skincare Guide Modal */}
+        {selectedGuide && (
+          <Modal
+            visible={!!selectedGuide}
+            animationType="slide"
+            presentationStyle="pageSheet"
+            onRequestClose={closeSkincareGuide}
+          >
+            <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                <TouchableOpacity onPress={closeSkincareGuide} style={[styles.closeButton, { backgroundColor: colors.surfaceMuted }]}>
+                  <FontAwesome name="times" size={20} color={colors.text} />
                 </TouchableOpacity>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  {t(`analysis.skin.guides.${selectedGuide}.title`, { defaultValue: skincareGuides[selectedGuide as keyof typeof skincareGuides]?.title })}
+                </Text>
+                <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+                  {t(`analysis.skin.guides.${selectedGuide}.description`, { defaultValue: skincareGuides[selectedGuide as keyof typeof skincareGuides]?.subtitle })}
+                </Text>
               </View>
-            </ScrollView>
-          </View>
-        </Modal>
-      )}
+
+              <ScrollView
+                style={styles.modalContent}
+                showsVerticalScrollIndicator={false}
+                overScrollMode="never"
+                bounces={false}
+              >
+                {/* Hero Image Section */}
+                <View style={styles.heroImageContainer}>
+                  <ImageWithFallback
+                    uri={skincareGuides[selectedGuide as keyof typeof skincareGuides]?.image || ''}
+                    style={styles.heroImage}
+                    fallbackColor="#f3f4f6"
+                  />
+                  <View style={styles.heroOverlay}>
+                    <View style={styles.heroBadge}>
+                      <Text style={styles.heroBadgeText}>{t('analysis.skin.guideModal.expertGuide')}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Quick Stats Row */}
+                <View style={[styles.quickStatsRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statNumber, { color: colors.primary }]}>5</Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('analysis.skin.guideModal.keyTips')}</Text>
+                  </View>
+                  <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statNumber, { color: colors.primary }]}>4</Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('analysis.skin.guideModal.categories')}</Text>
+                  </View>
+                  <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statNumber, { color: colors.primary }]}>2-4</Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('analysis.skin.guideModal.weeks')}</Text>
+                  </View>
+                </View>
+
+                {/* Sections with Enhanced Design */}
+                {Object.entries(skincareGuides[selectedGuide as keyof typeof skincareGuides]?.sections || {}).map(([key, section], index) => (
+                  <View key={key} style={[
+                    styles.sectionCard,
+                    {
+                      backgroundColor: index % 2 === 0 ? colors.surface : colors.surfaceMuted,
+                      borderLeftWidth: 4,
+                      borderLeftColor: getSectionColor(key),
+                      borderColor: colors.border,
+                    }
+                  ]}>
+                    <View style={styles.sectionHeaderRow}>
+                      <View style={[styles.sectionIcon, { backgroundColor: `${getSectionColor(key)}20` }]}>
+                        <Text style={[styles.sectionEmoji, { color: getSectionColor(key) }]}>
+                          {getSectionEmoji(key)}
+                        </Text>
+                      </View>
+                      <Text style={[styles.sectionTitle, { color: colors.text }]}>{getSectionTitle(key, selectedGuide || '')}</Text>
+                    </View>
+
+                    <View style={styles.itemsContainer}>
+                      {section.items.map((item, itemIndex) => (
+                        <View key={itemIndex} style={[styles.itemCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                          <View style={[styles.itemBullet, { backgroundColor: `${getSectionColor(key)}15` }]}>
+                            <Text style={[styles.bulletNumber, { color: getSectionColor(key) }]}>{itemIndex + 1}</Text>
+                          </View>
+                          <Text style={[styles.itemText, { color: colors.text }]}>{item}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+
+                {/* Action Button */}
+                <View style={styles.actionSection}>
+                  <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
+                    <FontAwesome name="heart" size={16} color="#ffffff" />
+                    <Text style={styles.actionButtonText}>{t('analysis.skin.guideModal.saveToRoutine')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </Modal>
+        )}
       </SafeAreaView>
     </View>
   );
@@ -2064,8 +2018,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     borderRadius: 12,
   },
-  heroVideo: { 
-    width: '100%', 
+  heroVideo: {
+    width: '100%',
     height: 180,
     borderRadius: 24,
     overflow: 'hidden',
@@ -2293,11 +2247,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  captureHeader: {
+    width: '100%',
+    paddingHorizontal: 24,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  captureBackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  captureBackButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
   captureLayout: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingTop: 16,
-    paddingBottom: 100,
+    paddingTop: 1,
+    paddingBottom: 90,
   },
   cameraControls: {
     flexDirection: 'row',
@@ -2952,7 +2926,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  
+
   // ✅ ADD: Guide hint styles
   guideHint: {
     flexDirection: 'row',
@@ -2964,7 +2938,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  
+
   // ✅ ADD: Modal styles
   modalContainer: {
     flex: 1,
@@ -2998,7 +2972,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
-  
+
   // ✅ ENHANCED: Hero Image Section
   heroImageContainer: {
     position: 'relative',
@@ -3034,7 +3008,7 @@ const styles = StyleSheet.create({
     color: '#6366f1',
     letterSpacing: 0.5,
   },
-  
+
   // ✅ ENHANCED: Quick Stats Row
   quickStatsRow: {
     flexDirection: 'row',
@@ -3067,7 +3041,7 @@ const styles = StyleSheet.create({
     height: 40,
     marginHorizontal: 16,
   },
-  
+
   // ✅ ENHANCED: Section Cards
   sectionCard: {
     borderRadius: 20,
@@ -3096,7 +3070,7 @@ const styles = StyleSheet.create({
   sectionEmoji: {
     fontSize: 24,
   },
-  
+
   // ✅ ENHANCED: Items Container
   itemsContainer: {
     gap: 12,
@@ -3127,7 +3101,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontWeight: '500',
   },
-  
+
   // ✅ ENHANCED: Action Section
   actionSection: {
     paddingVertical: 24,

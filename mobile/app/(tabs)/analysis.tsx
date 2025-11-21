@@ -4,23 +4,8 @@
  */
 
 import React from 'react';
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmotionDetectionScreen } from '../../components/EmotionDetectionScreen';
-import { useTheme } from '../../contexts/ThemeContext';
 
 export default function AnalysisScreen() {
-  const { colors } = useTheme();
-  
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <EmotionDetectionScreen />
-    </SafeAreaView>
-  );
+  return <EmotionDetectionScreen />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});

@@ -321,6 +321,13 @@
       "required": "Permissions Required",
       "requiredMessage": "To sync activities with your calendar and reminders, please enable permissions in Settings."
     },
+    "placeholders": {
+      "waitingPermission": "These widgets will display your health data as soon as you grant Apple Health or Google Fit permissions.",
+      "empty": "No data recorded yet. Keep up with your routine and this area will populate automatically.",
+      "loading": "Syncing your data...",
+      "error": "We couldn’t refresh your data. Please try again soon.",
+      "previewBadge": "Preview"
+    },
     "calendar": {
       "synced": "Synced to Calendar",
       "addedMessage": "{{title}} has been added to your calendar!",
@@ -368,7 +375,8 @@
         "valenceWhyItMatters": "Measures the positivity/negativity of your emotional state.",
         "valenceHowItWorks": "Estimate based on facial signals (mouth/eyes/eyebrows).",
         "arousalWhyItMatters": "Indicates how much activation/emotional energy there is at this moment.",
-        "arousalHowItWorks": "Assessment of the intensity of expressive signals."
+        "arousalHowItWorks": "Assessment of the intensity of expressive signals.",
+        "tapToExpand": "Tap to expand"
       },
       "hero": {
         "title": "Real-time Emotion Detection",

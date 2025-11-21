@@ -27,6 +27,7 @@ import * as FileSystem from 'expo-file-system';
 import CameraCapture from './CameraCapture';
 import { useCameraController } from '../hooks/useCameraController';
 import { Platform } from 'react-native';
+import AnalysisCaptureLayout from './shared/AnalysisCaptureLayout';
 
 import { BACKEND_URL } from '../constants/env';
 import UnifiedAnalysisService from '../services/unified-analysis.service';
@@ -57,6 +58,7 @@ import { VideoHero } from './VideoHero';
 import { FoodCaptureCard } from './FoodCaptureCard';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
+import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 import { NutritionalGoalsModal } from './NutritionalGoalsModal';
 import { FridgeIngredientsModal } from './FridgeIngredientsModal';
 import { RecipeDetailModal } from './RecipeDetailModal';
@@ -88,16 +90,16 @@ const heroVideoUri = require('../assets/videos/food-analysis-video.mp4');
 // Guide e insight cards rimosse - non necessarie per food analysis
 
 // Image component with fallback
-const ImageWithFallback: React.FC<{ uri: string; style: any; fallbackColor?: string }> = ({ 
-  uri, 
-  style, 
-  fallbackColor 
+const ImageWithFallback: React.FC<{ uri: string; style: any; fallbackColor?: string }> = ({
+  uri,
+  style,
+  fallbackColor
 }) => {
   const { colors } = useTheme();
   const [imageError, setImageError] = useState(false);
-  
+
   const defaultFallbackColor = fallbackColor || colors.surfaceMuted;
-  
+
   if (imageError) {
     return (
       <View style={[style, { backgroundColor: defaultFallbackColor, justifyContent: 'center', alignItems: 'center' }]}>
@@ -105,10 +107,10 @@ const ImageWithFallback: React.FC<{ uri: string; style: any; fallbackColor?: str
       </View>
     );
   }
-  
+
   return (
-    <Image 
-      source={{ uri }} 
+    <Image
+      source={{ uri }}
       style={style}
       onError={() => setImageError(true)}
       resizeMode="cover"
@@ -124,18 +126,18 @@ const AnimatedCalorieBar: React.FC<{
 }> = ({ current, max, label }) => {
   const { colors } = useTheme();
   const progress = useSharedValue(0);
-  
+
   useEffect(() => {
     const percent = Math.max(0, Math.min(100, (current / (max || 1)) * 100));
     progress.value = withTiming(percent, { duration: 800 });
   }, [current, max, progress]);
-  
+
   const animatedStyle = useAnimatedStyle(() => ({
     width: `${progress.value}%`,
   }));
-  
+
   const caloriesPercent = Math.max(0, Math.min(100, Math.round((current / (max || 1)) * 100)));
-  
+
   return (
     <View style={[styles.calorieBarContainer, { borderColor: colors.border, backgroundColor: colors.surface }]}>
       <View style={styles.calorieBarHeader}>
@@ -147,12 +149,12 @@ const AnimatedCalorieBar: React.FC<{
         </Text>
       </View>
       <View style={[styles.calorieBarTrack, { backgroundColor: colors.borderLight }]}>
-        <Animated.View 
+        <Animated.View
           style={[
-            styles.calorieBarFill, 
+            styles.calorieBarFill,
             { backgroundColor: colors.accent },
             animatedStyle
-          ]} 
+          ]}
         />
       </View>
     </View>
@@ -269,7 +271,7 @@ const getDefaultRecipe = (mealType: string) => {
       shoppingGaps: [],
     },
   };
-  
+
   return defaultRecipes[mealType] || defaultRecipes.breakfast;
 };
 
@@ -277,8 +279,9 @@ export const FoodAnalysisScreen: React.FC = () => {
   const { t } = useTranslation(); // 🆕 i18n hook
   const { colors } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
+  const { hideTabBar, showTabBar } = useTabBarVisibility();
   const [currentImageUri, setCurrentImageUri] = useState(heroImageUri);
-  
+
   const [analyzing, setAnalyzing] = useState(false);
   // Removed capturing state - no more capture overlay
   const [results, setResults] = useState<FoodAnalysisResults | null>(null);
@@ -289,13 +292,13 @@ export const FoodAnalysisScreen: React.FC = () => {
   const [permissionChecking, setPermissionChecking] = useState(false);
   const [analysisReady, setAnalysisReady] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-  
+
   // Enhanced components states
   const [nextBestActions, setNextBestActions] = useState<any[]>([]);
   const [insights, setInsights] = useState<any[]>([]);
   const [qualityInfo, setQualityInfo] = useState<any>(null);
-  
-  
+
+
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
 
@@ -324,10 +327,10 @@ export const FoodAnalysisScreen: React.FC = () => {
   // Modal per configurare obiettivi nutrizionali
   const [showGoalsModal, setShowGoalsModal] = useState(false);
   const [nutritionalGoals, setNutritionalGoals] = useState<any>(null);
-  
+
   // Modal per ingredienti frigo
   const [showFridgeModal, setShowFridgeModal] = useState(false);
-  
+
   // Modal per dettagli ricetta
   const [showRecipeModal, setShowRecipeModal] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
@@ -344,6 +347,15 @@ export const FoodAnalysisScreen: React.FC = () => {
 
   const startDisabled = permissionChecking || analyzing || !analysisReady || !!analysisError;
   const captureDisabled = !cameraController.ready || cameraController.detecting || permissionChecking || analyzing || cameraSwitching;
+  const handleExitCapture = useCallback(() => {
+    cameraController.stopCamera();
+    if (isMountedRef.current) {
+      setAnalyzing(false);
+      setResults(null);
+      setFullAnalysisResult(null);
+    }
+    showTabBar();
+  }, [cameraController, showTabBar]);
 
   const ensureCameraPermission = useCallback(async () => {
     try {
@@ -397,7 +409,7 @@ export const FoodAnalysisScreen: React.FC = () => {
   useEffect(() => {
     // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
     let isMounted = true;
-    
+
     const loadChartData = async () => {
       try {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
@@ -408,7 +420,7 @@ export const FoodAnalysisScreen: React.FC = () => {
         console.error('❌ Failed to load food chart data:', error);
       }
     };
-    
+
     // Delay loading to ensure component is fully mounted
     // 🔥 FIX: Memory leak - salviamo il timeout per cleanup
     const timer = setTimeout(() => {
@@ -416,7 +428,7 @@ export const FoodAnalysisScreen: React.FC = () => {
         loadChartData();
       }
     }, 100);
-    
+
     return () => {
       isMounted = false;
       clearTimeout(timer);
@@ -427,7 +439,7 @@ export const FoodAnalysisScreen: React.FC = () => {
   useEffect(() => {
     // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
     let isMounted = true;
-    
+
     const calculateEnhancedData = async () => {
       try {
         if (fullAnalysisResult && isMounted) {
@@ -444,7 +456,7 @@ export const FoodAnalysisScreen: React.FC = () => {
     };
 
     calculateEnhancedData();
-    
+
     return () => {
       isMounted = false;
     };
@@ -460,13 +472,13 @@ export const FoodAnalysisScreen: React.FC = () => {
           if (profile?.nutritional_goals) {
             const goals = profile.nutritional_goals;
             setNutritionalGoals(goals);
-            
+
             // Calcola i grammi dai percentuali
             const calories = goals.daily_calories || 2000;
             const carbsPct = goals.carbs_percentage || 50;
             const proteinsPct = goals.proteins_percentage || 30;
             const fatsPct = goals.fats_percentage || 20;
-            
+
             setDailyGoals({
               calories,
               carbohydrates: Math.round((calories * carbsPct / 100) / 4), // 4 kcal per grammo di carboidrati
@@ -492,15 +504,15 @@ export const FoodAnalysisScreen: React.FC = () => {
         await AuthService.updateUserProfile(currentUser.id, {
           nutritional_goals: goals,
         });
-        
+
         setNutritionalGoals(goals);
-        
+
         // Calcola i grammi dai percentuali
         const calories = goals.daily_calories;
         const carbsPct = goals.carbs_percentage || 50;
         const proteinsPct = goals.proteins_percentage || 30;
         const fatsPct = goals.fats_percentage || 20;
-        
+
         setDailyGoals({
           calories,
           carbohydrates: Math.round((calories * carbsPct / 100) / 4),
@@ -508,7 +520,7 @@ export const FoodAnalysisScreen: React.FC = () => {
           fats: Math.round((calories * fatsPct / 100) / 9),
           fiber: 25,
         });
-        
+
         setShowGoalsModal(false);
       }
     } catch (error) {
@@ -520,7 +532,7 @@ export const FoodAnalysisScreen: React.FC = () => {
   useEffect(() => {
     // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
     let isMounted = true;
-    
+
     const loadDailyIntake = async () => {
       try {
         const currentUser = await AuthService.getCurrentUser();
@@ -537,7 +549,7 @@ export const FoodAnalysisScreen: React.FC = () => {
     };
 
     loadDailyIntake();
-    
+
     // Ricarica ogni volta che viene aggiunta una nuova analisi
     // 🔥 FIX: Usiamo un flag per evitare subscription multiple
     let subscribed = true;
@@ -555,41 +567,16 @@ export const FoodAnalysisScreen: React.FC = () => {
   }, [fullAnalysisResult]);
 
   // Start camera automatically when screen loads
-  // 🔥 FIX: Rimuoviamo cameraController dalle dipendenze per evitare loop infinito
+  // Show/hide tab bar based on camera state
   useEffect(() => {
-    // 🔥 FIX: Evita di inizializzare la camera più volte
-    if (cameraInitializedRef.current) {
-      return;
-    }
-    
-    // 🔥 FIX: Evita di avviare la camera se è già attiva
     if (cameraController.active) {
-      cameraInitializedRef.current = true;
-      return;
+      hideTabBar();
+      return () => {
+        showTabBar();
+      };
     }
-    
-    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
-    let isMounted = true;
-    
-    const initializeCamera = async () => {
-      if (isMounted && !cameraController.active) {
-        await cameraController.startCamera();
-        if (isMounted) {
-          cameraInitializedRef.current = true;
-        }
-      }
-    };
-    
-    // Delay initialization to avoid conflicts
-    const timer = setTimeout(() => {
-      initializeCamera();
-    }, 300);
-    
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
-  }, []); // 🔥 FIX: Array vuoto per eseguire solo al mount
+    showTabBar();
+  }, [cameraController.active, hideTabBar, showTabBar]);
 
 
   const handleStartAnalysis = async () => {
@@ -633,7 +620,7 @@ export const FoodAnalysisScreen: React.FC = () => {
   // 🔧 FALLBACK: Image Picker for Testing (100% Reliable)
   const analyzeFromGallery = async () => {
     // 🔥 FIX: Rimuoviamo console.log eccessivi
-    
+
     try {
       const ready = await ensureAnalysisReady();
       if (!ready) {
@@ -661,12 +648,12 @@ export const FoodAnalysisScreen: React.FC = () => {
         quality: 0.9, // ✅ Aumentata qualità per migliore analisi
         base64: true,
       };
-      
+
       // ✅ Full screen solo su iOS per migliore visibilità pulsanti
       if (Platform.OS === 'ios') {
         pickerOptions.presentationStyle = ImagePicker.UIImagePickerPresentationStyle.FULL_SCREEN;
       }
-      
+
       const pickerResult = await ImagePicker.launchImageLibraryAsync(pickerOptions);
 
       // 🔥 FIX: Rimuoviamo console.log eccessivi
@@ -676,7 +663,7 @@ export const FoodAnalysisScreen: React.FC = () => {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
 
         // Convert to data URL for analysis
-        const dataUrl = asset.base64 
+        const dataUrl = asset.base64
           ? `data:image/jpeg;base64,${asset.base64}`
           : asset.uri;
 
@@ -688,7 +675,7 @@ export const FoodAnalysisScreen: React.FC = () => {
         }
 
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         if (isMountedRef.current) {
           setAnalyzing(true);
         }
@@ -696,7 +683,7 @@ export const FoodAnalysisScreen: React.FC = () => {
         // Analyze the selected image
         // 🔥 FIX: Rimuoviamo console.log eccessivi
         const analysisResult = await analysisServiceRef.current.analyzeFood(dataUrl);
-        
+
         if (analysisResult.success && analysisResult.data) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
 
@@ -714,7 +701,7 @@ export const FoodAnalysisScreen: React.FC = () => {
             healthScore: analysisResult.data.health_score || 70,
             recommendations: analysisResult.data.recommendations || [],
           };
-          
+
           if (isMountedRef.current) {
             setResults(foodResults);
             setAnalyzing(false);
@@ -746,7 +733,7 @@ export const FoodAnalysisScreen: React.FC = () => {
                   },
                   imageUrl: asset.uri,
                 });
-                
+
                 if (savedAnalysis) {
                   // 🆕 Verifica post-salvataggio che i dati siano nel database
                   const verification = await DatabaseVerificationService.verifyFoodAnalysis(currentUser.id, savedAnalysis.id);
@@ -755,7 +742,7 @@ export const FoodAnalysisScreen: React.FC = () => {
                   } else {
                     UserFeedbackService.showSaveSuccess('analisi');
                   }
-                  
+
                   // Sincronizza i dati con lo store locale per i grafici
                   const foodSession = {
                     id: savedAnalysis.id,
@@ -772,7 +759,7 @@ export const FoodAnalysisScreen: React.FC = () => {
                     confidence: savedAnalysis.confidence || 0.8,
                     identified_foods: savedAnalysis.identified_foods || [],
                   };
-                  
+
                   const store = useAnalysisStore.getState();
                   store.addFoodSession(foodSession);
                 } else {
@@ -854,7 +841,7 @@ export const FoodAnalysisScreen: React.FC = () => {
               UserFeedbackService.showError('Errore durante il salvataggio dell\'analisi. I dati potrebbero non essere stati salvati.');
             }
           }
-          
+
         } else {
           console.error('❌ Gallery food analysis failed:', analysisResult.error);
           if (isMountedRef.current) {
@@ -887,7 +874,7 @@ export const FoodAnalysisScreen: React.FC = () => {
     if (isMountedRef.current) {
       setCameraType(nextType);
     }
-    
+
     // Set switching state AFTER the camera type change to prevent ref loss
     // 🔥 FIX: Memory leak - usiamo Promise per gestire i delay invece di setTimeout annidati
     (async () => {
@@ -895,7 +882,7 @@ export const FoodAnalysisScreen: React.FC = () => {
       if (isMountedRef.current) {
         setCameraSwitching(true);
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         // Reset switching state after a short delay
         await new Promise(resolve => setTimeout(resolve, 1000));
         if (isMountedRef.current) {
@@ -904,15 +891,15 @@ export const FoodAnalysisScreen: React.FC = () => {
         }
       }
     })();
-    
+
   }, [cameraType, cameraSwitching]);
 
   const captureAndAnalyze = async () => {
     // 🔥 FIX: Rimuoviamo console.log eccessivi
-    
+
     // Store cameraController methods in local variables to prevent scope issues
     const { ref, ready, detecting, error, isCameraReady, setDetecting } = cameraController;
-    
+
     // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     if (!isCameraReady()) {
@@ -957,32 +944,32 @@ export const FoodAnalysisScreen: React.FC = () => {
       // Aggressive ref recovery before capture (same as EmotionDetectionScreen)
       if (!ref.current) {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         // Try to restore from global storage first
         const globalRef = (globalThis as any).globalCameraRef;
         if (globalRef) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           ref.current = globalRef;
         }
-        
+
         // Try multiple recovery attempts
         for (let attempt = 1; attempt <= 3; attempt++) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           await new Promise(resolve => setTimeout(resolve, 200 * attempt));
-          
+
           // Force a re-render by updating state
           if (isMountedRef.current) {
             setDetecting(false);
             await new Promise(resolve => setTimeout(resolve, 50));
             setDetecting(true);
           }
-          
+
           if (ref.current) {
             // 🔥 FIX: Rimuoviamo console.log eccessivi
             break;
           }
         }
-        
+
         if (!ref.current) {
           throw new Error('Camera ref is null - camera may have been unmounted. Please restart the camera.');
         }
@@ -1028,12 +1015,12 @@ export const FoodAnalysisScreen: React.FC = () => {
       for (let i = 0; i < captureStrategies.length; i++) {
         const strategy = captureStrategies[i];
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         try {
           // Double-check camera ref is still valid right before capture
           if (!ref.current) {
             // 🔥 FIX: Rimuoviamo console.log eccessivi
-            
+
             // Try to recover ref from global storage
             const globalRef = (globalThis as any).globalCameraRef;
             if (globalRef) {
@@ -1043,19 +1030,19 @@ export const FoodAnalysisScreen: React.FC = () => {
               throw new Error('Camera ref is null and cannot be recovered');
             }
           }
-          
+
           // Additional safety check - ensure the ref has the takePictureAsync method
           if (typeof ref.current.takePictureAsync !== 'function') {
             // 🔥 FIX: Rimuoviamo console.log eccessivi
             throw new Error('Camera ref does not have takePictureAsync method');
           }
-          
+
           // Extra validation for camera switching scenarios
           if (cameraSwitching) {
             // 🔥 FIX: Rimuoviamo console.log eccessivi
             throw new Error('Camera is still switching');
           }
-          
+
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           const capturePromise = ref.current.takePictureAsync(strategy.options);
           const timeoutPromise = new Promise((_, reject) => {
@@ -1067,7 +1054,7 @@ export const FoodAnalysisScreen: React.FC = () => {
           break;
         } catch (strategyError) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
-          
+
           // If this is the first strategy and it fails, try to restart the camera
           if (i === 0 && strategyError.message.includes('ERR_IMAGE_CAPTURE_FAILED')) {
             // 🔥 FIX: Rimuoviamo console.log eccessivi
@@ -1081,7 +1068,7 @@ export const FoodAnalysisScreen: React.FC = () => {
               // 🔥 FIX: Rimuoviamo console.log eccessivi
             }
           }
-          
+
           if (i === captureStrategies.length - 1) {
             throw strategyError; // Re-throw the last error if all strategies fail
           }
@@ -1160,7 +1147,7 @@ export const FoodAnalysisScreen: React.FC = () => {
               },
               imageUrl: photo.uri,
             });
-            
+
             if (savedAnalysis) {
               // 🆕 Verifica post-salvataggio che i dati siano nel database
               const verification = await DatabaseVerificationService.verifyFoodAnalysis(currentUser.id, savedAnalysis.id);
@@ -1169,7 +1156,7 @@ export const FoodAnalysisScreen: React.FC = () => {
               } else {
                 UserFeedbackService.showSaveSuccess('analisi');
               }
-              
+
               // ✅ FIX: Sincronizza i dati con lo store locale per i grafici
               // Usa i dati dall'analisi risultato (result.data) invece di savedAnalysis per garantire valori corretti
               const foodSession = {
@@ -1187,10 +1174,10 @@ export const FoodAnalysisScreen: React.FC = () => {
                 confidence: result.data.confidence || savedAnalysis.confidence || 0.8,
                 identified_foods: result.data.identified_foods || savedAnalysis.identified_foods || [],
               };
-              
+
               const store = useAnalysisStore.getState();
               store.addFoodSession(foodSession);
-              
+
               // ✅ FIX: Ricarica dailyIntake dal database per aggiornare i totali giornalieri
               try {
                 const intake = await FoodAnalysisService.getDailyIntake(currentUser.id);
@@ -1298,7 +1285,7 @@ export const FoodAnalysisScreen: React.FC = () => {
       }
     } catch (error: any) {
       console.error('❌ Capture error:', error?.message || error);
-      
+
       let errorMessage = 'Capture failed';
       if (error?.message) {
         if (error.message.includes('timeout')) {
@@ -1311,7 +1298,7 @@ export const FoodAnalysisScreen: React.FC = () => {
           errorMessage = 'Capture failed';
         }
       }
-      
+
       if (isMountedRef.current) {
         alert(errorMessage);
         setAnalyzing(false);
@@ -1465,7 +1452,7 @@ export const FoodAnalysisScreen: React.FC = () => {
           <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}>
             <CameraFrame />
           </View>
-          
+
           <FoodLoadingScreen onCancel={() => {
             setAnalyzing(false);
             setResults(null);
@@ -1477,68 +1464,19 @@ export const FoodAnalysisScreen: React.FC = () => {
 
   if (cameraController.active && !analyzing) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["bottom"]}>
-          <View style={styles.captureLayout}>
-            <CameraFrame />
-            
-            
-            <View style={styles.cameraControls}>
-              <TouchableOpacity 
-                style={[
-                  styles.ghostButton, 
-                  { 
-                    backgroundColor: colors.primaryMuted + '20',
-                    borderColor: colors.primaryMuted + '40',
-                    shadowColor: colors.primary,
-                  }
-                ]} 
-                onPress={() => cameraController.stopCamera()}
-              >
-                <FontAwesome name="times" size={16} color={colors.primaryDark} />
-                <Text style={[styles.ghostButtonText, { color: colors.primaryDark }]}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
-              
-              {/* Camera Switch Button */}
-              <TouchableOpacity 
-                style={[
-                  styles.ghostButton, 
-                  cameraSwitching && { opacity: 0.5 },
-                  { 
-                    backgroundColor: colors.primaryMuted + '20',
-                    borderColor: colors.primaryMuted + '40',
-                    shadowColor: colors.primary,
-                  }
-                ]} 
-                onPress={switchCamera}
-                disabled={cameraSwitching}
-              >
-                <FontAwesome name="refresh" size={16} color={colors.primaryDark} />
-                <Text style={[styles.ghostButtonText, { color: colors.primaryDark }]}>
-                  {cameraType === 'front' ? 'Back' : 'Front'}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                activeOpacity={0.7} 
-                onPress={captureAndAnalyze}
-                disabled={captureDisabled}
-                style={captureDisabled ? { opacity: 0.5 } : {}}
-              >
-                <LinearGradient
-                  colors={[colors.primary, colors.primaryLight]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.primaryButton}
-                >
-                  <FontAwesome name="camera" size={16} color={colors.textInverse} />
-                  <Text style={[styles.primaryButtonText, { color: colors.textInverse }]}>{t('common.capture')}</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </SafeAreaView>
-      </View>
+      <AnalysisCaptureLayout
+        renderCamera={<CameraFrame />}
+        onBack={handleExitCapture}
+        onCancel={() => cameraController.stopCamera()}
+        onCapture={captureAndAnalyze}
+        captureDisabled={captureDisabled}
+        showSwitch
+        switchDisabled={cameraSwitching}
+        switchLabel={cameraType === 'front' ? 'Back' : 'Front'}
+        onSwitch={switchCamera}
+        cancelLabel={t('common.cancel')}
+        captureLabel={t('common.capture')}
+      />
     );
   }
 
@@ -1582,444 +1520,444 @@ export const FoodAnalysisScreen: React.FC = () => {
           overScrollMode="never"
           bounces={false}
         >
-        <LinearGradient
-          colors={['#10b981', '#059669']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroCard}
-        >
-          <View style={styles.heroHeader}>
-            <Text style={[styles.heroTitle, { color: '#ffffff' }]}>{t('analysis.food.hero.title')}</Text>
-            <Text style={[styles.heroSubtitle, { color: 'rgba(255,255,255,0.9)' }]}>{t('analysis.food.hero.subtitle')}</Text>
-          </View>
-          <VideoHero
-            videoUri={heroVideoUri}
-            title={t('analysis.food.hero.title')}
-            subtitle={t('analysis.food.hero.subtitle')}
-            onPlayPress={handleStartAnalysis}
-            showPlayButton={false}
-            autoPlay={true}
-            loop={true}
-            muted={true}
-            style={styles.heroVideo}
-            fallbackImageUri={heroImageUri}
-          />
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={handleStartAnalysis}
-            disabled={startDisabled}
-            style={startDisabled ? { opacity: 0.6 } : undefined}
-          >
-            <LinearGradient
-              colors={['#8b5cf6', '#6366f1']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.primaryButton, styles.heroButton]}
-            >
-              <FontAwesome name="camera" size={16} color="#ffffff" />
-              <Text style={[styles.primaryButtonText, styles.heroButtonText, { color: '#ffffff' }]}>{t('analysis.food.startAnalysis')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* 🔧 FALLBACK BUTTON - Gallery Picker (100% Reliable) */}
-          <TouchableOpacity
-            onPress={analyzeFromGallery}
-            style={{ marginTop: 12 }}
-          >
-            <LinearGradient
-              colors={['#a78bfa', '#8b5cf6']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.primaryButton, styles.heroButton]}
-            >
-              <FontAwesome name="image" size={16} color="#ffffff" />
-              <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>{t('common.pickFromGallery')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {permissionChecking && (
-            <Text style={[styles.permissionBanner, { color: '#ffffff' }]}>{t('analysis.common.requestingPermission')}</Text>
-          )}
-          {analysisError && !permissionChecking && (
-            <Text style={[styles.permissionBanner, { color: '#fee2e2' }]}>{analysisError}</Text>
-          )}
-          
-        </LinearGradient>
-
-         {/* Recent Analysis Section - Always visible */}
-         <View style={styles.sectionHeader}>
-           <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.recent.title')}</Text>
-           <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.recent.subtitle')}</Text>
-         </View>
-         
-         {(() => {
-           try {
-             // ✅ FIX: Usa la variabile reattiva latestFoodSession invece di getState()
-             // Always show the card, with fallback data if no session exists
-             const fallbackSession = {
-               id: 'fallback',
-               timestamp: new Date().toISOString(),
-               macronutrients: {
-                 carbohydrates: 150,
-                 proteins: 50,
-                 fats: 30,
-                 calories: 1000,
-               },
-               meal_type: 'breakfast',
-               health_score: 65,
-               identified_foods: [],
-             };
-             
-             return (
-               <FoodCaptureCard
-                 session={latestFoodSession || fallbackSession}
-               />
-             );
-           } catch (error) {
-             // 🔥 FIX: Solo errori critici in console
-             console.error('❌ Failed to load latest food session:', error);
-             // Fallback session in case of error
-             const fallbackSession = {
-               id: 'error-fallback',
-               timestamp: new Date().toISOString(),
-               macronutrients: {
-                 carbohydrates: 150,
-                 proteins: 50,
-                 fats: 30,
-                 calories: 1000,
-               },
-               meal_type: 'breakfast',
-               health_score: 65,
-               identified_foods: [],
-             };
-             return <FoodCaptureCard session={fallbackSession} />;
-           }
-         })()}
-
-        {/* Meal Improvement Suggestions Button */}
-        <TouchableOpacity
-          style={styles.detailedAnalysisButton}
-          onPress={() => setShowDetailedAnalysis(true)}
-          activeOpacity={0.8}
-        >
           <LinearGradient
             colors={['#10b981', '#059669']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.detailedAnalysisButtonGradient}
+            style={styles.heroCard}
           >
-            <MaterialCommunityIcons name="lightbulb-on" size={20} color="#ffffff" />
-            <Text style={[styles.detailedAnalysisButtonText, { color: '#ffffff' }]}>
-              {t('analysis.food.mealImprovement.title') || 'Suggerimenti per migliorare questo pasto'}
-            </Text>
-            <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
-          </LinearGradient>
-        </TouchableOpacity>
+            <View style={styles.heroHeader}>
+              <Text style={[styles.heroTitle, { color: '#ffffff' }]}>{t('analysis.food.hero.title')}</Text>
+              <Text style={[styles.heroSubtitle, { color: 'rgba(255,255,255,0.9)' }]}>{t('analysis.food.hero.subtitle')}</Text>
+            </View>
+            <VideoHero
+              videoUri={heroVideoUri}
+              title={t('analysis.food.hero.title')}
+              subtitle={t('analysis.food.hero.subtitle')}
+              onPlayPress={handleStartAnalysis}
+              showPlayButton={false}
+              autoPlay={true}
+              loop={true}
+              muted={true}
+              style={styles.heroVideo}
+              fallbackImageUri={heroImageUri}
+            />
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={handleStartAnalysis}
+              disabled={startDisabled}
+              style={startDisabled ? { opacity: 0.6 } : undefined}
+            >
+              <LinearGradient
+                colors={['#8b5cf6', '#6366f1']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.primaryButton, styles.heroButton]}
+              >
+                <FontAwesome name="camera" size={16} color="#ffffff" />
+                <Text style={[styles.primaryButtonText, styles.heroButtonText, { color: '#ffffff' }]}>{t('analysis.food.startAnalysis')}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
 
-        {/* Nutritional Goals Configuration Section */}
-        <LinearGradient
-          colors={[colors.surface, colors.surfaceElevated]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.goalsCard, { borderColor: colors.border }]}
-        >
-          <View style={styles.goalsHeader}>
-            <View style={[styles.goalsIcon, { backgroundColor: `${colors.accent}22` }]}>
-              <MaterialCommunityIcons name="target" size={24} color={colors.accent} />
-            </View>
-            <View style={styles.goalsContent}>
-              <Text style={[styles.goalsTitle, { color: colors.text }]}>
-                {nutritionalGoals ? t('analysis.food.goals.currentGoals') : t('analysis.food.goals.noGoalsSet')}
-              </Text>
-              {nutritionalGoals && (
-                <Text style={[styles.goalsSubtitle, { color: colors.textSecondary }]}>
-                  {nutritionalGoals.daily_calories} {t('analysis.food.goals.kcalPerDay')} • {nutritionalGoals.carbs_percentage}% • {nutritionalGoals.proteins_percentage}% • {nutritionalGoals.fats_percentage}%
-                </Text>
-              )}
-              {nutritionalGoals?.source && (
-                <Text style={[styles.goalsSource, { color: colors.textTertiary }]}>
-                  {t('analysis.food.goals.from')}: {
-                    nutritionalGoals.source === 'manual' ? t('analysis.food.goals.sourceManual') :
-                    nutritionalGoals.source === 'ai_suggested' ? t('analysis.food.goals.sourceAI') :
-                    t('analysis.food.goals.sourceNutritionist')
-                  }
-                </Text>
-              )}
-            </View>
+            {/* 🔧 FALLBACK BUTTON - Gallery Picker (100% Reliable) */}
+            <TouchableOpacity
+              onPress={analyzeFromGallery}
+              style={{ marginTop: 12 }}
+            >
+              <LinearGradient
+                colors={['#a78bfa', '#8b5cf6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.primaryButton, styles.heroButton]}
+              >
+                <FontAwesome name="image" size={16} color="#ffffff" />
+                <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>{t('common.pickFromGallery')}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {permissionChecking && (
+              <Text style={[styles.permissionBanner, { color: '#ffffff' }]}>{t('analysis.common.requestingPermission')}</Text>
+            )}
+            {analysisError && !permissionChecking && (
+              <Text style={[styles.permissionBanner, { color: '#fee2e2' }]}>{analysisError}</Text>
+            )}
+
+          </LinearGradient>
+
+          {/* Recent Analysis Section - Always visible */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.recent.title')}</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.recent.subtitle')}</Text>
           </View>
-          
+
+          {(() => {
+            try {
+              // ✅ FIX: Usa la variabile reattiva latestFoodSession invece di getState()
+              // Always show the card, with fallback data if no session exists
+              const fallbackSession = {
+                id: 'fallback',
+                timestamp: new Date().toISOString(),
+                macronutrients: {
+                  carbohydrates: 150,
+                  proteins: 50,
+                  fats: 30,
+                  calories: 1000,
+                },
+                meal_type: 'breakfast',
+                health_score: 65,
+                identified_foods: [],
+              };
+
+              return (
+                <FoodCaptureCard
+                  session={latestFoodSession || fallbackSession}
+                />
+              );
+            } catch (error) {
+              // 🔥 FIX: Solo errori critici in console
+              console.error('❌ Failed to load latest food session:', error);
+              // Fallback session in case of error
+              const fallbackSession = {
+                id: 'error-fallback',
+                timestamp: new Date().toISOString(),
+                macronutrients: {
+                  carbohydrates: 150,
+                  proteins: 50,
+                  fats: 30,
+                  calories: 1000,
+                },
+                meal_type: 'breakfast',
+                health_score: 65,
+                identified_foods: [],
+              };
+              return <FoodCaptureCard session={fallbackSession} />;
+            }
+          })()}
+
+          {/* Meal Improvement Suggestions Button */}
           <TouchableOpacity
-            style={[styles.goalsButton, { backgroundColor: colors.primary }]}
-            onPress={() => setShowGoalsModal(true)}
+            style={styles.detailedAnalysisButton}
+            onPress={() => setShowDetailedAnalysis(true)}
             activeOpacity={0.8}
           >
-            <FontAwesome name="cog" size={16} color={colors.textInverse} />
-            <Text style={[styles.goalsButtonText, { color: colors.textInverse }]}>
-              {t('analysis.food.goals.configureGoals')}
-            </Text>
+            <LinearGradient
+              colors={['#10b981', '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.detailedAnalysisButtonGradient}
+            >
+              <MaterialCommunityIcons name="lightbulb-on" size={20} color="#ffffff" />
+              <Text style={[styles.detailedAnalysisButtonText, { color: '#ffffff' }]}>
+                {t('analysis.food.mealImprovement.title') || 'Suggerimenti per migliorare questo pasto'}
+              </Text>
+              <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
+            </LinearGradient>
           </TouchableOpacity>
-        </LinearGradient>
 
-        {/* Daily Intake Section - Always visible */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.dailyIntake.title')}</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.dailyIntake.subtitle')}</Text>
-        </View>
-        
-        {/* Daily Progress: Calories Bar + Macro Gauges */}
-        {(() => {
-          // ✅ FIX: Usa dailyIntake dal database invece di calcolare da foodHistory per evitare duplicati
-          // Il database ha già i totali corretti per oggi, evitando problemi di doppio conteggio
-          const todayTotals = {
-            calories: dailyIntake.calories,
-            carbohydrates: dailyIntake.carbohydrates,
-            proteins: dailyIntake.proteins,
-            fats: dailyIntake.fats,
-          };
-          
-          // Calcola todayHistory solo per i trend dei grafici (senza duplicati)
-          const seenIds = new Set<string>();
-          const todayHistory = foodHistory.filter(session => {
-            // Rimuovi duplicati per ID
-            if (seenIds.has(session.id)) {
-              return false;
-            }
-            seenIds.add(session.id);
-            
-            // Filtra solo per oggi
-            const sessionDate = new Date(session.timestamp);
-            const today = new Date();
-            return sessionDate.toDateString() === today.toDateString();
-          });
-
-          return (
-            <>
-              {/* Animated Calorie Horizontal Progress - Full Width */}
-              <AnimatedCalorieBar
-                current={todayTotals.calories}
-                max={dailyGoals.calories}
-                label={t('analysis.food.metrics.calories')}
-              />
-
-              {/* Macro Gauges: Carbs, Proteins, Fats - In Row */}
-              <View style={styles.gaugeRow}>
-                <GaugeChart
-                value={Math.round(todayTotals.carbohydrates)}
-                maxValue={dailyGoals.carbohydrates}
-                label={t('analysis.food.metrics.carbohydrates')}
-                color={colors.success}
-                subtitle={t('analysis.food.dailyIntake.ofGoal', { value: Math.round((todayTotals.carbohydrates / (dailyGoals.carbohydrates || 1)) * 100) })}
-                trend={todayHistory.length > 1 ? 1 : 0}
-                description={t('analysis.food.dailyIntake.carbsDesc')}
-                historicalData={foodHistory.map((session, index) => ({
-                  date: `${index + 1}`,
-                  value: Math.round(session.macronutrients?.carbohydrates || 0),
-                }))}
-                metric="carbohydrates"
-                icon="leaf"
-              />
-
-              <GaugeChart
-                value={Math.round(todayTotals.proteins)}
-                maxValue={dailyGoals.proteins}
-                label={t('analysis.food.metrics.proteins')}
-                color={colors.error}
-                subtitle={t('analysis.food.dailyIntake.ofGoal', { value: Math.round((todayTotals.proteins / (dailyGoals.proteins || 1)) * 100) })}
-                trend={todayHistory.length > 1 ? 1 : 0}
-                description={t('analysis.food.dailyIntake.proteinsDesc')}
-                historicalData={foodHistory.map((session, index) => ({
-                  date: `${index + 1}`,
-                  value: Math.round(session.macronutrients?.proteins || 0),
-                }))}
-                metric="proteins"
-                icon="heart"
-              />
-
-              <GaugeChart
-                value={Math.round(todayTotals.fats)}
-                maxValue={dailyGoals.fats}
-                label={t('analysis.food.metrics.fats')}
-                color={colors.accent}
-                subtitle={t('analysis.food.dailyIntake.ofGoal', { value: Math.round((todayTotals.fats / (dailyGoals.fats || 1)) * 100) })}
-                trend={todayHistory.length > 1 ? 1 : 0}
-                description={t('analysis.food.dailyIntake.fatsDesc')}
-                historicalData={foodHistory.map((session, index) => ({
-                  date: `${index + 1}`,
-                  value: Math.round(session.macronutrients?.fats || 0),
-                }))}
-                metric="fats"
-                icon="circle"
-              />
+          {/* Nutritional Goals Configuration Section */}
+          <LinearGradient
+            colors={[colors.surface, colors.surfaceElevated]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.goalsCard, { borderColor: colors.border }]}
+          >
+            <View style={styles.goalsHeader}>
+              <View style={[styles.goalsIcon, { backgroundColor: `${colors.accent}22` }]}>
+                <MaterialCommunityIcons name="target" size={24} color={colors.accent} />
               </View>
-            </>
-          );
-        })()}
+              <View style={styles.goalsContent}>
+                <Text style={[styles.goalsTitle, { color: colors.text }]}>
+                  {nutritionalGoals ? t('analysis.food.goals.currentGoals') : t('analysis.food.goals.noGoalsSet')}
+                </Text>
+                {nutritionalGoals && (
+                  <Text style={[styles.goalsSubtitle, { color: colors.textSecondary }]}>
+                    {nutritionalGoals.daily_calories} {t('analysis.food.goals.kcalPerDay')} • {nutritionalGoals.carbs_percentage}% • {nutritionalGoals.proteins_percentage}% • {nutritionalGoals.fats_percentage}%
+                  </Text>
+                )}
+                {nutritionalGoals?.source && (
+                  <Text style={[styles.goalsSource, { color: colors.textTertiary }]}>
+                    {t('analysis.food.goals.from')}: {
+                      nutritionalGoals.source === 'manual' ? t('analysis.food.goals.sourceManual') :
+                        nutritionalGoals.source === 'ai_suggested' ? t('analysis.food.goals.sourceAI') :
+                          t('analysis.food.goals.sourceNutritionist')
+                    }
+                  </Text>
+                )}
+              </View>
+            </View>
 
-        {/* Quality Badge */}
-        {qualityInfo && (
-          <QualityBadge
-            confidence={qualityInfo}
-            qualityMessage="Analysis quality is good. Results are reliable."
-            onRetakePress={() => alert('Retake analysis')}
-            showRetakeButton={false}
-            compact={true}
-          />
-        )}
-
-
-
-        {/* Intelligent Insights Section - Food */}
-        {fullAnalysisResult && (
-          <IntelligentInsightsSection
-            category="food"
-            data={fullAnalysisResult}
-            maxInsights={3}
-            showTitle={true}
-            compact={false}
-            onInsightPress={(insight) => {
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
-              // Handle insight press - could navigate to detailed view
-            }}
-            onActionPress={(insight, action) => {
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
-              // Handle action press - could start activity, set reminder, etc.
-            }}
-          />
-        )}
-
-        {/* Recipes Section - AI Generated Recipes */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.recipes.title')}</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.recipes.subtitle')}</Text>
-        </View>
-        
-        <View style={styles.insightList}>
-          {[
-            {
-              id: 'breakfast',
-              title: t('analysis.food.recipes.breakfast.title'),
-              description: t('analysis.food.recipes.breakfast.description'),
-              image: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=1200&q=80',
-            },
-            {
-              id: 'lunch',
-              title: t('analysis.food.recipes.lunch.title'),
-              description: t('analysis.food.recipes.lunch.description'),
-              image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80',
-            },
-            {
-              id: 'dinner',
-              title: t('analysis.food.recipes.dinner.title'),
-              description: t('analysis.food.recipes.dinner.description'),
-              image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80',
-            },
-            {
-              id: 'snack',
-              title: t('analysis.food.recipes.snack.title'),
-              description: t('analysis.food.recipes.snack.description'),
-              image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=1200&q=80',
-            },
-          ].map((card) => (
-            <TouchableOpacity 
-              key={card.id} 
-              style={[styles.insightCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => {
-                const curatedRecipe = getDefaultRecipe(card.id);
-                setLoadingRecipe(false);
-                setSelectedRecipe({
-                  ...curatedRecipe,
-                  title: curatedRecipe?.title || card.title,
-                });
-                setShowRecipeModal(true);
-              }}
+            <TouchableOpacity
+              style={[styles.goalsButton, { backgroundColor: colors.primary }]}
+              onPress={() => setShowGoalsModal(true)}
               activeOpacity={0.8}
             >
-              <ImageWithFallback 
-                uri={card.image} 
-                style={styles.insightImage}
-                fallbackColor={colors.surfaceMuted}
-              />
-              <View style={styles.insightCopy}>
-                <Text style={[styles.insightTitle, { color: colors.text }]}>{card.title}</Text>
-                <Text style={[styles.insightDescription, { color: colors.textSecondary }]}>{card.description}</Text>
-                <View style={styles.guideHint}>
-                  <Text style={[styles.guideHintText, { color: colors.primary }]}>{t('analysis.food.recipes.tapForRecipe')}</Text>
-                  <FontAwesome name="chevron-right" size={12} color={colors.primary} />
-                </View>
-              </View>
+              <FontAwesome name="cog" size={16} color={colors.textInverse} />
+              <Text style={[styles.goalsButtonText, { color: colors.textInverse }]}>
+                {t('analysis.food.goals.configureGoals')}
+              </Text>
             </TouchableOpacity>
-          ))}
-        </View>
+          </LinearGradient>
 
-        {/* What's in Your Fridge Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.fridge.title')}</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.fridge.subtitle')}</Text>
-        </View>
-        
-        <LinearGradient
-          colors={[colors.surface, colors.surfaceElevated]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.fridgeCard, { borderColor: colors.border }]}
-        >
-          <View style={styles.fridgeHeader}>
-            <View style={[styles.fridgeIcon, { backgroundColor: `${colors.accent}22` }]}>
-              <MaterialCommunityIcons name="fridge" size={24} color={colors.accent} />
-            </View>
-            <View style={styles.fridgeContent}>
-              <Text style={[styles.fridgeTitle, { color: colors.text }]}>{t('analysis.food.fridge.cardTitle')}</Text>
-              <Text style={[styles.fridgeDescription, { color: colors.textSecondary }]}>{t('analysis.food.fridge.cardDesc')}</Text>
-            </View>
+          {/* Daily Intake Section - Always visible */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.dailyIntake.title')}</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.dailyIntake.subtitle')}</Text>
           </View>
-          
-          <TouchableOpacity
-            style={[styles.fridgeButton, { backgroundColor: colors.accent }]}
-            onPress={() => setShowFridgeModal(true)}
-            activeOpacity={0.8}
-          >
-            <FontAwesome name="plus" size={16} color={colors.textInverse} />
-            <Text style={[styles.fridgeButtonText, { color: colors.textInverse }]}>{t('analysis.food.fridge.addIngredients')}</Text>
-          </TouchableOpacity>
-        </LinearGradient>
-      </ScrollView>
 
-      {/* Detailed Analysis Popup */}
+          {/* Daily Progress: Calories Bar + Macro Gauges */}
+          {(() => {
+            // ✅ FIX: Usa dailyIntake dal database invece di calcolare da foodHistory per evitare duplicati
+            // Il database ha già i totali corretti per oggi, evitando problemi di doppio conteggio
+            const todayTotals = {
+              calories: dailyIntake.calories,
+              carbohydrates: dailyIntake.carbohydrates,
+              proteins: dailyIntake.proteins,
+              fats: dailyIntake.fats,
+            };
+
+            // Calcola todayHistory solo per i trend dei grafici (senza duplicati)
+            const seenIds = new Set<string>();
+            const todayHistory = foodHistory.filter(session => {
+              // Rimuovi duplicati per ID
+              if (seenIds.has(session.id)) {
+                return false;
+              }
+              seenIds.add(session.id);
+
+              // Filtra solo per oggi
+              const sessionDate = new Date(session.timestamp);
+              const today = new Date();
+              return sessionDate.toDateString() === today.toDateString();
+            });
+
+            return (
+              <>
+                {/* Animated Calorie Horizontal Progress - Full Width */}
+                <AnimatedCalorieBar
+                  current={todayTotals.calories}
+                  max={dailyGoals.calories}
+                  label={t('analysis.food.metrics.calories')}
+                />
+
+                {/* Macro Gauges: Carbs, Proteins, Fats - In Row */}
+                <View style={styles.gaugeRow}>
+                  <GaugeChart
+                    value={Math.round(todayTotals.carbohydrates)}
+                    maxValue={dailyGoals.carbohydrates}
+                    label={t('analysis.food.metrics.carbohydrates')}
+                    color={colors.success}
+                    subtitle={t('analysis.food.dailyIntake.ofGoal', { value: Math.round((todayTotals.carbohydrates / (dailyGoals.carbohydrates || 1)) * 100) })}
+                    trend={todayHistory.length > 1 ? 1 : 0}
+                    description={t('analysis.food.dailyIntake.carbsDesc')}
+                    historicalData={foodHistory.map((session, index) => ({
+                      date: `${index + 1}`,
+                      value: Math.round(session.macronutrients?.carbohydrates || 0),
+                    }))}
+                    metric="carbohydrates"
+                    icon="leaf"
+                  />
+
+                  <GaugeChart
+                    value={Math.round(todayTotals.proteins)}
+                    maxValue={dailyGoals.proteins}
+                    label={t('analysis.food.metrics.proteins')}
+                    color={colors.error}
+                    subtitle={t('analysis.food.dailyIntake.ofGoal', { value: Math.round((todayTotals.proteins / (dailyGoals.proteins || 1)) * 100) })}
+                    trend={todayHistory.length > 1 ? 1 : 0}
+                    description={t('analysis.food.dailyIntake.proteinsDesc')}
+                    historicalData={foodHistory.map((session, index) => ({
+                      date: `${index + 1}`,
+                      value: Math.round(session.macronutrients?.proteins || 0),
+                    }))}
+                    metric="proteins"
+                    icon="heart"
+                  />
+
+                  <GaugeChart
+                    value={Math.round(todayTotals.fats)}
+                    maxValue={dailyGoals.fats}
+                    label={t('analysis.food.metrics.fats')}
+                    color={colors.accent}
+                    subtitle={t('analysis.food.dailyIntake.ofGoal', { value: Math.round((todayTotals.fats / (dailyGoals.fats || 1)) * 100) })}
+                    trend={todayHistory.length > 1 ? 1 : 0}
+                    description={t('analysis.food.dailyIntake.fatsDesc')}
+                    historicalData={foodHistory.map((session, index) => ({
+                      date: `${index + 1}`,
+                      value: Math.round(session.macronutrients?.fats || 0),
+                    }))}
+                    metric="fats"
+                    icon="circle"
+                  />
+                </View>
+              </>
+            );
+          })()}
+
+          {/* Quality Badge */}
+          {qualityInfo && (
+            <QualityBadge
+              confidence={qualityInfo}
+              qualityMessage="Analysis quality is good. Results are reliable."
+              onRetakePress={() => alert('Retake analysis')}
+              showRetakeButton={false}
+              compact={true}
+            />
+          )}
+
+
+
+          {/* Intelligent Insights Section - Food */}
+          {fullAnalysisResult && (
+            <IntelligentInsightsSection
+              category="food"
+              data={fullAnalysisResult}
+              maxInsights={3}
+              showTitle={true}
+              compact={false}
+              onInsightPress={(insight) => {
+                // 🔥 FIX: Rimuoviamo console.log eccessivi
+                // Handle insight press - could navigate to detailed view
+              }}
+              onActionPress={(insight, action) => {
+                // 🔥 FIX: Rimuoviamo console.log eccessivi
+                // Handle action press - could start activity, set reminder, etc.
+              }}
+            />
+          )}
+
+          {/* Recipes Section - AI Generated Recipes */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.recipes.title')}</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.recipes.subtitle')}</Text>
+          </View>
+
+          <View style={styles.insightList}>
+            {[
+              {
+                id: 'breakfast',
+                title: t('analysis.food.recipes.breakfast.title'),
+                description: t('analysis.food.recipes.breakfast.description'),
+                image: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=1200&q=80',
+              },
+              {
+                id: 'lunch',
+                title: t('analysis.food.recipes.lunch.title'),
+                description: t('analysis.food.recipes.lunch.description'),
+                image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80',
+              },
+              {
+                id: 'dinner',
+                title: t('analysis.food.recipes.dinner.title'),
+                description: t('analysis.food.recipes.dinner.description'),
+                image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80',
+              },
+              {
+                id: 'snack',
+                title: t('analysis.food.recipes.snack.title'),
+                description: t('analysis.food.recipes.snack.description'),
+                image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=1200&q=80',
+              },
+            ].map((card) => (
+              <TouchableOpacity
+                key={card.id}
+                style={[styles.insightCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onPress={() => {
+                  const curatedRecipe = getDefaultRecipe(card.id);
+                  setLoadingRecipe(false);
+                  setSelectedRecipe({
+                    ...curatedRecipe,
+                    title: curatedRecipe?.title || card.title,
+                  });
+                  setShowRecipeModal(true);
+                }}
+                activeOpacity={0.8}
+              >
+                <ImageWithFallback
+                  uri={card.image}
+                  style={styles.insightImage}
+                  fallbackColor={colors.surfaceMuted}
+                />
+                <View style={styles.insightCopy}>
+                  <Text style={[styles.insightTitle, { color: colors.text }]}>{card.title}</Text>
+                  <Text style={[styles.insightDescription, { color: colors.textSecondary }]}>{card.description}</Text>
+                  <View style={styles.guideHint}>
+                    <Text style={[styles.guideHintText, { color: colors.primary }]}>{t('analysis.food.recipes.tapForRecipe')}</Text>
+                    <FontAwesome name="chevron-right" size={12} color={colors.primary} />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* What's in Your Fridge Section */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.fridge.title')}</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.fridge.subtitle')}</Text>
+          </View>
+
+          <LinearGradient
+            colors={[colors.surface, colors.surfaceElevated]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.fridgeCard, { borderColor: colors.border }]}
+          >
+            <View style={styles.fridgeHeader}>
+              <View style={[styles.fridgeIcon, { backgroundColor: `${colors.accent}22` }]}>
+                <MaterialCommunityIcons name="fridge" size={24} color={colors.accent} />
+              </View>
+              <View style={styles.fridgeContent}>
+                <Text style={[styles.fridgeTitle, { color: colors.text }]}>{t('analysis.food.fridge.cardTitle')}</Text>
+                <Text style={[styles.fridgeDescription, { color: colors.textSecondary }]}>{t('analysis.food.fridge.cardDesc')}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.fridgeButton, { backgroundColor: colors.accent }]}
+              onPress={() => setShowFridgeModal(true)}
+              activeOpacity={0.8}
+            >
+              <FontAwesome name="plus" size={16} color={colors.textInverse} />
+              <Text style={[styles.fridgeButtonText, { color: colors.textInverse }]}>{t('analysis.food.fridge.addIngredients')}</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </ScrollView>
+
+        {/* Detailed Analysis Popup */}
         <DetailedAnalysisPopup
           visible={showDetailedAnalysis}
           onClose={() => setShowDetailedAnalysis(false)}
           analysisType="food"
-        analysisData={fullAnalysisResult}
-      />
+          analysisData={fullAnalysisResult}
+        />
 
-      {/* Nutritional Goals Modal */}
-      <NutritionalGoalsModal
-        visible={showGoalsModal}
-        onClose={() => setShowGoalsModal(false)}
-        onSave={handleSaveGoals}
-        currentGoals={nutritionalGoals}
-      />
-      
-      {/* Fridge Ingredients Modal */}
-      <FridgeIngredientsModal
-        visible={showFridgeModal}
-        onClose={() => setShowFridgeModal(false)}
-        onRecipeGenerated={(recipe) => {
-          // TODO: Potresti voler salvare la ricetta o mostrarla in un'altra schermata
-          // 🔥 FIX: Rimuoviamo console.log eccessivi
-        }}
-      />
-      
-      {/* Recipe Detail Modal */}
-      <RecipeDetailModal
-        visible={showRecipeModal}
-        onClose={() => {
-          setShowRecipeModal(false);
-          setSelectedRecipe(null);
-        }}
-        recipe={selectedRecipe}
-        loading={loadingRecipe}
-      />
+        {/* Nutritional Goals Modal */}
+        <NutritionalGoalsModal
+          visible={showGoalsModal}
+          onClose={() => setShowGoalsModal(false)}
+          onSave={handleSaveGoals}
+          currentGoals={nutritionalGoals}
+        />
+
+        {/* Fridge Ingredients Modal */}
+        <FridgeIngredientsModal
+          visible={showFridgeModal}
+          onClose={() => setShowFridgeModal(false)}
+          onRecipeGenerated={(recipe) => {
+            // TODO: Potresti voler salvare la ricetta o mostrarla in un'altra schermata
+            // 🔥 FIX: Rimuoviamo console.log eccessivi
+          }}
+        />
+
+        {/* Recipe Detail Modal */}
+        <RecipeDetailModal
+          visible={showRecipeModal}
+          onClose={() => {
+            setShowRecipeModal(false);
+            setSelectedRecipe(null);
+          }}
+          recipe={selectedRecipe}
+          loading={loadingRecipe}
+        />
       </SafeAreaView>
     </View>
   );
@@ -2076,8 +2014,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     borderRadius: 12,
   },
-  heroVideo: { 
-    width: '100%', 
+  heroVideo: {
+    width: '100%',
     height: 240,
     borderRadius: 24,
     overflow: 'hidden',
@@ -2305,11 +2243,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  captureHeader: {
+    width: '100%',
+    paddingHorizontal: 24,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  captureBackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  captureBackButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
   captureLayout: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingTop: 16,
-    paddingBottom: 100,
+    paddingTop: 1,
+    paddingBottom: 90,
   },
   cameraControls: {
     flexDirection: 'row',
@@ -2996,7 +2954,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  
+
   // ✅ ADD: Guide hint styles
   guideHint: {
     flexDirection: 'row',
@@ -3008,7 +2966,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  
+
   // ✅ ADD: Modal styles
   modalContainer: {
     flex: 1,
@@ -3042,7 +3000,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
-  
+
   // ✅ ENHANCED: Hero Image Section
   heroImageContainer: {
     position: 'relative',
@@ -3078,7 +3036,7 @@ const styles = StyleSheet.create({
     color: '#6366f1',
     letterSpacing: 0.5,
   },
-  
+
   // ✅ ENHANCED: Quick Stats Row
   quickStatsRow: {
     flexDirection: 'row',
@@ -3111,7 +3069,7 @@ const styles = StyleSheet.create({
     height: 40,
     marginHorizontal: 16,
   },
-  
+
   // ✅ ENHANCED: Section Cards
   sectionCard: {
     borderRadius: 20,
@@ -3140,7 +3098,7 @@ const styles = StyleSheet.create({
   sectionEmoji: {
     fontSize: 24,
   },
-  
+
   // ✅ ENHANCED: Items Container
   itemsContainer: {
     gap: 12,
@@ -3171,7 +3129,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontWeight: '500',
   },
-  
+
   // ✅ ENHANCED: Action Section
   actionSection: {
     paddingVertical: 24,
@@ -3225,7 +3183,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 12,
   },
-  
+
   // ✅ ADD: Guide hint styles
   guideHint: {
     flexDirection: 'row',
@@ -3237,7 +3195,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  
+
   // ✅ ADD: Fridge Section Styles
   fridgeCard: {
     borderRadius: 20,
@@ -3293,7 +3251,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-  
+
   // ✅ ADD: Nutritional Goals Card Styles
   goalsCard: {
     borderRadius: 20,

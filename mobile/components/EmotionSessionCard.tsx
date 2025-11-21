@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { EmotionSession } from '../stores/analysis.store';
 import { useTranslation } from '../hooks/useTranslation';
 import { useTheme } from '../contexts/ThemeContext';
@@ -63,7 +64,7 @@ const EMOTION_MC_ICONS: Record<string, string> = {
 // -----------------------------------------------------
 // Utility
 // -----------------------------------------------------
-const getConfidenceLabel = (confidence: number, t: (k: string)=>string) => {
+const getConfidenceLabel = (confidence: number, t: (k: string) => string) => {
   if (confidence >= 0.8) return t('rating.excellent');
   if (confidence >= 0.6) return t('rating.good');
   if (confidence >= 0.4) return t('rating.fair');
@@ -83,7 +84,7 @@ const prettyEmotion = (e?: string, t?: (k: string) => string) => {
   // Prova prima con la chiave esatta, poi con varianti comuni
   let translationKey = `analysis.emotion.names.${key}`;
   let translated = t(translationKey);
-  
+
   // Se la traduzione non esiste, prova con varianti
   if (translated === translationKey) {
     // Mappa varianti comuni
@@ -97,7 +98,7 @@ const prettyEmotion = (e?: string, t?: (k: string) => string) => {
       translated = t(translationKey);
     }
   }
-  
+
   // Se ancora non esiste, fallback al nome capitalizzato
   return translated !== translationKey ? translated : (e || 'neutral').charAt(0).toUpperCase() + (e || 'neutral').slice(1);
 };
@@ -155,8 +156,8 @@ const MetricTile: React.FC<{
     metricKey === 'valence'
       ? value >= 0 ? '#10b981' : '#ef4444'
       : value >= 0.5
-      ? '#f59e0b'
-      : '#3b82f6';
+        ? '#f59e0b'
+        : '#3b82f6';
 
   const display = value.toFixed(2);
 
@@ -182,9 +183,9 @@ const MetricTile: React.FC<{
           <View style={[styles.progressFill, { width: `${percent}%`, backgroundColor: valueColor }]} />
         </View>
 
-        <View style={styles.tapRow}>
-          <Text style={[styles.tapHint, { color: colors.primary }]}>{expanded ? t('ui.tapToCollapse') : t('ui.tapToExpand')}</Text>
-          <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={18} color={colors.primary} />
+        <View style={[styles.tapRow, { backgroundColor: `${valueColor}15` }]}>
+          <Text style={[styles.tapHint, { color: valueColor }]}>{expanded ? t('ui.close') : t('analysis.emotion.sessionCard.tapToExpand')}</Text>
+          <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={16} color={valueColor} />
         </View>
       </TouchableOpacity>
 
@@ -213,16 +214,28 @@ const DominantBanner: React.FC<{ emotion?: string }> = ({ emotion }) => {
   const iconName = (EMOTION_MC_ICONS[key] ?? 'emoticon-neutral-outline') as any;
 
   return (
-    <View style={[styles.banner, { borderColor: `${color}30`, backgroundColor: `${color}10` }]}>
-      <View style={[styles.bannerIconWrap, { backgroundColor: `${color}20` }]}>
-        <MaterialCommunityIcons name={iconName} size={30} color={color} />
+    <LinearGradient
+      colors={[`${color}15`, `${color}05`]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.banner, { borderColor: `${color}20` }]}
+    >
+      {/* Enhanced icon with glow */}
+      <View style={[styles.bannerIconWrap, { backgroundColor: colors.surface, shadowColor: color }]}>
+        <MaterialCommunityIcons name={iconName} size={32} color={color} />
       </View>
+
       <View style={{ flex: 1 }}>
-        <Text style={[styles.bannerEyebrow, { color: colors.textSecondary }]}>{t('analysis.emotion.sessionCard.dominantEmotion')}</Text>
+        <Text style={[styles.bannerEyebrow, { color: colors.textSecondary }]}>{t('analysis.emotion.sessionCard.dominantEmotion').toUpperCase()}</Text>
         <Text style={[styles.bannerEmotion, { color }]}>{prettyEmotion(emotion, t)}</Text>
         <Text style={[styles.bannerSubtitle, { color: colors.textSecondary }]}>{t('analysis.emotion.sessionCard.detectedInLastSession')}</Text>
       </View>
-    </View>
+
+      {/* Decorative emoji badge */}
+      <View style={[styles.emojiDecor, { backgroundColor: `${color}10` }]}>
+        <Text style={styles.emojiText}>✨</Text>
+      </View>
+    </LinearGradient>
   );
 };
 
@@ -233,7 +246,7 @@ export const EmotionSessionCard: React.FC<EmotionSessionCardProps> = ({ session 
   const { t } = useTranslation();
   const { colors } = useTheme();
   const confidence = session.confidence ?? 0.8;
-  
+
   // Check if this is fallback data
   const isFallback = session.id === 'fallback' || session.id === 'error-fallback';
 
@@ -322,23 +335,37 @@ const styles = StyleSheet.create({
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1,
-    marginTop: 6,
-    marginBottom: 12,
-    gap: 12,
+    marginTop: 8,
+    marginBottom: 16,
+    gap: 16,
   },
   bannerIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  emojiDecor: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bannerEyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 0.2 },
-  bannerEmotion: { fontSize: 22, fontWeight: '900', letterSpacing: -0.2, marginTop: 2 },
-  bannerSubtitle: { fontSize: 12, marginTop: 2 },
+  emojiText: {
+    fontSize: 18,
+  },
+  bannerEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 1, marginBottom: 2, opacity: 0.8 },
+  bannerEmotion: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5, marginTop: 0 },
+  bannerSubtitle: { fontSize: 12, marginTop: 2, opacity: 0.7 },
 
   // Grid 2 colonne uguali
   gridRow: {
@@ -374,8 +401,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   progressFill: { height: '100%', borderRadius: 999 },
-  tapRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 },
-  tapHint: { fontSize: 11, fontWeight: '700' },
+  tapRow: {
+    marginTop: 10,
+    flexDirection: 'row', 
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    alignSelf: 'flex-end',
+    marginLeft: 'auto',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  tapHint: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
 
   expandedContent: {
     borderTopWidth: 1,

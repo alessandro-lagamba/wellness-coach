@@ -68,7 +68,7 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
 
   // JIGGLE (solo quando in edit mode e non stai trascinando)
   const jiggle = useSharedValue(0);
-  
+
   // Gestisce jiggle quando cambia editMode o isDragging
   useEffect(() => {
     if (editMode && !isDragging) {
@@ -137,7 +137,7 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
   const onGestureEvent = (event: any) => {
     'worklet';
     if (!editMode || !isDraggingSV.value) return;
-    
+
     // 🆕 Aggiorna direttamente i valori animati (worklet thread, nessun bridge)
     translateX.value = event.nativeEvent.translationX;
     translateY.value = event.nativeEvent.translationY;
@@ -202,15 +202,15 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
       transform: [
         { translateX: translateX.value },
         { translateY: translateY.value },
-        { scale: scale.value },
+        { scale: withSpring(isDraggingSV.value ? 1.05 : 1, { damping: 15, stiffness: 200 }) }, // Increased scale slightly
         { rotateZ: `${jiggleDeg}deg` },
       ],
       zIndex: isDraggingSV.value ? 20 : 1,
       elevation: isDraggingSV.value ? 10 : 1,
       shadowColor: isDraggingSV.value ? '#000' : 'transparent',
-      shadowOffset: isDraggingSV.value ? { width: 0, height: 6 } : { width: 0, height: 0 },
-      shadowOpacity: isDraggingSV.value ? 0.25 : 0,
-      shadowRadius: isDraggingSV.value ? 10 : 0,
+      shadowOffset: isDraggingSV.value ? { width: 0, height: 8 } : { width: 0, height: 0 },
+      shadowOpacity: isDraggingSV.value ? 0.15 : 0,
+      shadowRadius: isDraggingSV.value ? 12 : 0,
     } as any;
   });
 
@@ -286,8 +286,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
     elevation: 3,
   },
   remove: {

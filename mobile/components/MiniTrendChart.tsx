@@ -67,10 +67,12 @@ export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
 
   // 🔥 FIX: Calcola il max reale dai dati (per normalizzazione corretta)
   const dataMax = normalizedData.length > 0 ? Math.max(...normalizedData) : 0;
-  // 🔥 FIX: Usa il max reale per normalizzare i punti, così i valori sono posizionati correttamente
-  // maxValue viene usato solo per le etichette della scala (per avere valori "puliti")
-  const maxForNormalization = dataMax > 0 ? dataMax : 1; // Usa sempre il max reale per normalizzare
-  const maxForLabels = maxValue && maxValue >= dataMax ? maxValue : (dataMax > 0 ? dataMax : 1); // Usa maxValue arrotondato per le etichette
+  // 🔥 FIX: Usa lo stesso valore massimo sia per normalizzare che per le etichette,
+  // rispettando eventuali maxValue passati dal chiamante per mantenere la scala coerente.
+  const resolvedMax =
+    maxValue && maxValue > 0 ? Math.max(maxValue, dataMax) : dataMax > 0 ? dataMax : 1;
+  const maxForNormalization = resolvedMax;
+  const maxForLabels = resolvedMax;
   const min = 0; // Sempre inizia da 0 per tutti i grafici
   const range = maxForNormalization - min || 1;
 

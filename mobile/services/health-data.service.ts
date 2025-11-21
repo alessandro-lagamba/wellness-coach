@@ -374,7 +374,7 @@ export class HealthDataService {
 
       // Sync to Supabase
       const currentUser = await AuthService.getCurrentUser();
-      if (currentUser) {
+      if (currentUser && source !== 'mock') {
         const syncService = HealthDataSyncService.getInstance();
         const syncResult = await syncService.syncHealthData(currentUser.id, healthData, source);
         

@@ -479,88 +479,88 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                 
                 <View style={styles.scoreBreakdown}>
                   <View style={styles.scoreBreakdownRow}>
-                    <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#8b5cf6' + '20' }]}>
-                      <MaterialCommunityIcons name="emoticon-happy" size={22} color="#8b5cf6" />
-                    </View>
-                    <View style={styles.scoreBreakdownTextContainer}>
+                    <View style={styles.scoreBreakdownHeader}>
+                      <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#8b5cf6' + '20' }]}>
+                        <MaterialCommunityIcons name="emoticon-happy" size={22} color="#8b5cf6" />
+                      </View>
                       <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
                         {t('home.dailyCopilot.scoreModal.mood')}
                       </Text>
-                      <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
-                        {t('home.dailyCopilot.scoreModal.moodDesc')}
-                      </Text>
+                      <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#8b5cf6' + '15' }]}>
+                        <Text style={[styles.scoreBreakdownPercentage, { color: '#8b5cf6' }]}>20%</Text>
+                      </View>
                     </View>
-                    <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#8b5cf6' + '15' }]}>
-                      <Text style={[styles.scoreBreakdownPercentage, { color: '#8b5cf6' }]}>20%</Text>
-                    </View>
+                    <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
+                      {t('home.dailyCopilot.scoreModal.moodDesc')}
+                    </Text>
                   </View>
 
                   <View style={styles.scoreBreakdownRow}>
-                    <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#3b82f6' + '20' }]}>
-                      <MaterialCommunityIcons name="bed" size={22} color="#3b82f6" />
-                    </View>
-                    <View style={styles.scoreBreakdownTextContainer}>
+                    <View style={styles.scoreBreakdownHeader}>
+                      <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#3b82f6' + '20' }]}>
+                        <MaterialCommunityIcons name="bed" size={22} color="#3b82f6" />
+                      </View>
                       <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
                         {t('home.dailyCopilot.scoreModal.sleep')}
                       </Text>
-                      <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
-                        {t('home.dailyCopilot.scoreModal.sleepDesc')}
-                      </Text>
+                      <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#3b82f6' + '15' }]}>
+                        <Text style={[styles.scoreBreakdownPercentage, { color: '#3b82f6' }]}>30%</Text>
+                      </View>
                     </View>
-                    <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#3b82f6' + '15' }]}>
-                      <Text style={[styles.scoreBreakdownPercentage, { color: '#3b82f6' }]}>30%</Text>
-                    </View>
+                    <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
+                      {t('home.dailyCopilot.scoreModal.sleepDesc')}
+                    </Text>
                   </View>
 
                   <View style={styles.scoreBreakdownRow}>
-                    <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#10b981' + '20' }]}>
-                      <MaterialCommunityIcons name="walk" size={22} color="#10b981" />
-                    </View>
-                    <View style={styles.scoreBreakdownTextContainer}>
+                    <View style={styles.scoreBreakdownHeader}>
+                      <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#10b981' + '20' }]}>
+                        <MaterialCommunityIcons name="walk" size={22} color="#10b981" />
+                      </View>
                       <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
                         {t('home.dailyCopilot.scoreModal.steps')}
                       </Text>
-                      <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
-                        {t('home.dailyCopilot.scoreModal.stepsDesc')}
-                      </Text>
+                      <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#10b981' + '15' }]}>
+                        <Text style={[styles.scoreBreakdownPercentage, { color: '#10b981' }]}>20%</Text>
+                      </View>
                     </View>
-                    <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#10b981' + '15' }]}>
-                      <Text style={[styles.scoreBreakdownPercentage, { color: '#10b981' }]}>20%</Text>
-                    </View>
+                    <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
+                      {t('home.dailyCopilot.scoreModal.stepsDesc')}
+                    </Text>
                   </View>
 
                   <View style={styles.scoreBreakdownRow}>
-                    <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#ef4444' + '20' }]}>
-                      <MaterialCommunityIcons name="heart-pulse" size={22} color="#ef4444" />
-                    </View>
-                    <View style={styles.scoreBreakdownTextContainer}>
+                    <View style={styles.scoreBreakdownHeader}>
+                      <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#ef4444' + '20' }]}>
+                        <MaterialCommunityIcons name="heart-pulse" size={22} color="#ef4444" />
+                      </View>
                       <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
                         {t('home.dailyCopilot.scoreModal.hrv')}
                       </Text>
-                      <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
-                        {t('home.dailyCopilot.scoreModal.hrvDesc')}
-                      </Text>
+                      <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#ef4444' + '15' }]}>
+                        <Text style={[styles.scoreBreakdownPercentage, { color: '#ef4444' }]}>15%</Text>
+                      </View>
                     </View>
-                    <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#ef4444' + '15' }]}>
-                      <Text style={[styles.scoreBreakdownPercentage, { color: '#ef4444' }]}>15%</Text>
-                    </View>
+                    <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
+                      {t('home.dailyCopilot.scoreModal.hrvDesc')}
+                    </Text>
                   </View>
 
                   <View style={[styles.scoreBreakdownRow, styles.scoreBreakdownRowLast]}>
-                    <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#06b6d4' + '20' }]}>
-                      <MaterialCommunityIcons name="water" size={22} color="#06b6d4" />
-                    </View>
-                    <View style={styles.scoreBreakdownTextContainer}>
+                    <View style={styles.scoreBreakdownHeader}>
+                      <View style={[styles.scoreBreakdownIconContainer, { backgroundColor: '#06b6d4' + '20' }]}>
+                        <MaterialCommunityIcons name="water" size={22} color="#06b6d4" />
+                      </View>
                       <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
                         {t('home.dailyCopilot.scoreModal.hydration')}
                       </Text>
-                      <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
-                        {t('home.dailyCopilot.scoreModal.hydrationDesc')}
-                      </Text>
+                      <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#06b6d4' + '15' }]}>
+                        <Text style={[styles.scoreBreakdownPercentage, { color: '#06b6d4' }]}>15%</Text>
+                      </View>
                     </View>
-                    <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#06b6d4' + '15' }]}>
-                      <Text style={[styles.scoreBreakdownPercentage, { color: '#06b6d4' }]}>15%</Text>
-                    </View>
+                    <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
+                      {t('home.dailyCopilot.scoreModal.hydrationDesc')}
+                    </Text>
                   </View>
                 </View>
               </ScrollView>
@@ -768,15 +768,19 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   scoreBreakdownRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
+    flexDirection: 'column',
+    gap: 6,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: '#e2e8f0',
   },
   scoreBreakdownRowLast: {
     borderBottomWidth: 0,
+  },
+  scoreBreakdownHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   scoreBreakdownIconContainer: {
     width: 48,
@@ -793,8 +797,9 @@ const styles = StyleSheet.create({
   scoreBreakdownLabel: {
     fontSize: 17,
     fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: 0,
     color: '#0f172a',
+    flex: 1,
   },
   scoreBreakdownDescription: {
     fontSize: 14,

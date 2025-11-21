@@ -6,6 +6,20 @@ const STORAGE_KEYS = {
   prompt: (d: string) => `journal:prompt:${d}`,
 };
 
+type DailyPromptOptions = {
+  userId?: string;
+  language?: string;
+  mood?: number | null;
+  moodNote?: string | null;
+  sleepHours?: number | null;
+  sleepQuality?: number | null;
+  sleepNote?: string | null;
+  energy?: string | null;
+  focus?: string | null;
+  goals?: string[] | null;
+  stressTrend?: string | null;
+};
+
 export class DailyJournalService {
   static todayKey(date = new Date()) {
     return date.toISOString().slice(0, 10); // YYYY-MM-DD
@@ -215,13 +229,146 @@ Rispondi SOLO con un oggetto JSON valido.`;
     }
   }
 
-  // Build daily AI prompt from mood/sleep notes (short, helpful)
-  static buildAIPrompt(params: { moodNote?: string; sleepNote?: string }) {
-    const parts: string[] = [];
-    if (params.moodNote) parts.push(`Mood note: ${params.moodNote}`);
-    if (params.sleepNote) parts.push(`Sleep note: ${params.sleepNote}`);
-    if (parts.length === 0) return 'Scrivi due righe su come ti senti oggi e su cosa è successo.';
-    return `Suggerimento per il diario di oggi basato sui tuoi appunti:\n${parts.join('\n')}\nRispondi con una domanda o spunto breve (<=150 caratteri).`;
+  static async generateDailyPrompt(options: DailyPromptOptions): Promise<string | null> {
+    const { getUserLanguage } = await import('./language.service');
+    const language = options.language || (await getUserLanguage());
+
+    try {
+      const { getBackendURL } = await import('../constants/env');
+      const backendURL = await getBackendURL();
+      const instruction = this.buildPromptInstruction(language, options);
+
+      const response = await fetch(`${backendURL}/api/chat/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: instruction,
+          userId: options.userId,
+          context: 'journal_daily_prompt',
+          userContext: {
+            language,
+            mood: options.mood,
+            energy: options.energy,
+            focus: options.focus,
+          },
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const aiText = data.response || data.message || data.text || '';
+        const cleaned = this.cleanPromptText(aiText);
+        if (cleaned) {
+          return cleaned;
+        }
+      } else {
+        console.warn('Daily prompt generation failed:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.warn('Error generating daily journal prompt:', error);
+    }
+
+    return this.createFallbackPrompt(language, options);
+  }
+
+  private static cleanPromptText(text: string) {
+    if (!text) return '';
+    return text.replace(/^["'\s]+|["'\s]+$/g, '').replace(/\s+/g, ' ').trim();
+  }
+
+  private static buildPromptInstruction(language: string, context: DailyPromptOptions) {
+    const baseInstruction =
+      language === 'en'
+        ? `You are an empathetic journaling coach. Based on the context below, craft ONE meaningful question (maximum 12 words) that helps the user reflect. Use plain language, no emoji, no numbering, no quotes, and return only the question text.`
+        : `Sei un coach empatico del journaling. In base al contesto seguente, genera UNA domanda significativa (massimo 12 parole) che aiuti l'utente a riflettere. Usa un linguaggio semplice, senza emoji, numeri o virgolette, e restituisci solo il testo della domanda.`;
+
+    const contextLines: string[] = [];
+    if (context.mood) contextLines.push(`Mood score: ${context.mood}/5`);
+    if (context.moodNote) contextLines.push(`Mood note: ${context.moodNote}`);
+    if (context.sleepHours || context.sleepQuality) {
+      const hours = context.sleepHours ? `${context.sleepHours}h` : 'unknown';
+      const quality = context.sleepQuality ? `${context.sleepQuality}%` : 'unknown';
+      contextLines.push(`Sleep: ${hours}, quality ${quality}`);
+    }
+    if (context.sleepNote) contextLines.push(`Sleep note: ${context.sleepNote}`);
+    if (context.energy) contextLines.push(`Energy: ${context.energy}`);
+    if (context.focus) contextLines.push(`Focus: ${context.focus}`);
+    if (context.goals?.length) contextLines.push(`Goals: ${context.goals.join(', ')}`);
+    if (context.stressTrend) contextLines.push(`Stress trend: ${context.stressTrend}`);
+
+    if (contextLines.length === 0) {
+      contextLines.push(
+        language === 'en'
+          ? 'No recent context provided.'
+          : 'Nessun contesto recente disponibile.'
+      );
+    }
+
+    return `${baseInstruction}\nContext:\n- ${contextLines.join('\n- ')}`;
+  }
+
+  private static createFallbackPrompt(language: string, context: DailyPromptOptions) {
+    const dictionaries = {
+      en: {
+        lowMood: 'What felt toughest about today?',
+        sleep: 'What disrupted your rest last night?',
+        positive: 'What brightened your day today?',
+        energy: 'What would help you recharge tonight?',
+        focus: 'What step moves you toward {focus}?',
+        default: 'What do you want to remember today?',
+      },
+      it: {
+        lowMood: "Cos'ha pesato di più sulla tua giornata?",
+        sleep: 'Cosa ha disturbato il tuo sonno ieri?',
+        positive: 'Qual è stato il momento più bello di oggi?',
+        energy: 'Cosa ti aiuterebbe a ricaricare energie stasera?',
+        focus: 'Quale passo ti avvicina a {focus}?',
+        default: 'Cosa vuoi ricordare di oggi?',
+      },
+    };
+
+    const dict = language === 'en' ? dictionaries.en : dictionaries.it;
+    const moodScore = context.mood ?? 3;
+
+    if (moodScore <= 2 || this.hasNegativeTone(context.moodNote)) {
+      return dict.lowMood;
+    }
+    if (
+      (context.sleepQuality !== null && context.sleepQuality !== undefined && context.sleepQuality < 60) ||
+      this.hasNegativeTone(context.sleepNote)
+    ) {
+      return dict.sleep;
+    }
+    if (moodScore >= 4) {
+      return dict.positive;
+    }
+    if (context.energy && context.energy.toLowerCase() === 'low') {
+      return dict.energy;
+    }
+    if (context.focus) {
+      return dict.focus.replace('{focus}', context.focus);
+    }
+
+    return dict.default;
+  }
+
+  private static hasNegativeTone(note?: string | null) {
+    if (!note) return false;
+    const normalized = note.toLowerCase();
+    const negativeKeywords = [
+      'stress',
+      'stanco',
+      'ansia',
+      'anxious',
+      'tired',
+      'exhausted',
+      'triste',
+      'sad',
+      'preoccupat',
+      'fatica',
+      'worry',
+    ];
+    return negativeKeywords.some((keyword) => normalized.includes(keyword));
   }
 }
 

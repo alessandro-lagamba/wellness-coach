@@ -1,121 +1,365 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform, View, useColorScheme as RNUseColorScheme } from 'react-native';
-import Colors from '../../constants/Colors';
+import React, { useMemo, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  useColorScheme as RNUseColorScheme,
+  ViewStyle,
+  StyleProp,
+  Animated,
+  Easing,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { useColorScheme } from '../../hooks/useColorScheme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useTheme } from '../../contexts/ThemeContext';
+import {
+  TabBarVisibilityProvider,
+  useTabBarVisibility,
+} from '../../contexts/TabBarVisibilityContext';
 
 export default function TabLayout() {
+  return (
+    <TabBarVisibilityProvider>
+      <TabNavigator />
+    </TabBarVisibilityProvider>
+  );
+}
+
+function TabNavigator() {
   const colorScheme = useColorScheme();
   const { t } = useTranslation();
   const { colors } = useTheme();
   const systemColorScheme = RNUseColorScheme();
-  // 🔥 FIX: Fallback color basato su useColorScheme per evitare flash bianco
-  const fallbackBackground = systemColorScheme === 'dark' ? '#1a1625' : '#f8fafc';
+  const insets = useSafeAreaInsets();
+  const { isVisible } = useTabBarVisibility();
+
+  const { mode } = useTheme(); // Use app theme mode
+  const isDark = mode === 'dark'; // Derive isDark from app theme
+
+  const fallbackBackground = isDark ? '#050612' : '#f3f4f6';
   const backgroundColor = colors?.background || fallbackBackground;
-  const surfaceColor = colors?.surface || (systemColorScheme === 'dark' ? '#2d2542' : '#ffffff');
-  const borderColor = colors?.border || (systemColorScheme === 'dark' ? '#3a2f4f' : '#e2e8f0');
+
   const primaryColor = colors?.primary || '#6366f1';
-  const textTertiaryColor = colors?.textTertiary || (systemColorScheme === 'dark' ? '#a78bfa' : '#94a3b8');
+  const defaultSecondary = isDark ? '#9ca3af' : '#6b7280';
+  const inactiveTintColor = colors?.textSecondary || defaultSecondary;
+
+  //
+  // ---- TAB ICON COMPONENT (icon + label always visible) ----
+  //
+  const TabIcon = ({
+    focused,
+    children,
+  }: {
+    focused: boolean;
+    children: React.ReactNode;
+  }) => {
+    const circleAnim = useRef(new Animated.Value(focused ? 1 : 0)).current;
+
+    useEffect(() => {
+      Animated.timing(circleAnim, {
+        toValue: focused ? 1 : 0,
+        duration: 200,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    }, [focused]);
+
+    const scale = circleAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.9, 1],
+    });
+
+    const opacity = circleAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.2, 1],
+    });
+
+    return (
+      <View
+        style={{
+          // flex: 1, // REMOVED to allow better centering control from parent
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Animated.View
+          style={{
+            padding: focused ? 2 : 0,
+            borderRadius: 999,
+            borderWidth: focused ? 1 : 0,
+            borderColor: focused
+              ? isDark
+                ? 'rgba(191,219,254,0.9)'
+                : 'rgba(129,140,248,0.9)'
+              : 'transparent',
+            transform: [{ scale }],
+            opacity,
+            backgroundColor: focused
+              ? isDark
+                ? 'rgba(88,28,135,0.45)'
+                : 'rgba(129,140,248,0.18)'
+              : 'transparent',
+            marginBottom: 3, // Add some spacing between icon and text
+          }}
+        >
+          <View
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            {children}
+          </View>
+        </Animated.View>
+
+      </View>
+    );
+  };
+
+  //
+  // ---- TAB BAR STYLE ----
+  //
+  const baseTabBarStyle = useMemo<ViewStyle>(
+    () => ({
+      position: 'absolute',
+      bottom: insets.bottom + 8,
+      marginHorizontal: 10,
+      borderRadius: 26,
+      backgroundColor: 'transparent',
+      height: 68,
+
+      paddingHorizontal: 10,
+      paddingVertical: 0,
+
+      shadowColor: isDark ? '#000' : '#0f172a',
+      shadowOpacity: isDark ? 0.45 : 0.18,
+      shadowOffset: { width: 0, height: 12 },
+      shadowRadius: isDark ? 26 : 18,
+      elevation: isDark ? 20 : 14,
+
+      borderWidth: 1,
+      borderColor: isDark
+        ? 'rgba(255,255,255,0.1)' // Lighter border for dark mode
+        : 'rgba(15,23,42,0.06)',
+    }),
+    [insets.bottom, isDark],
+  );
+
+  const tabBarStyle = useMemo<StyleProp<ViewStyle>>(
+    () => (isVisible ? baseTabBarStyle : [baseTabBarStyle, { display: 'none' as const }]),
+    [baseTabBarStyle, isVisible],
+  );
+
+  const renderTab = (
+    label: string,
+    focused: boolean,
+    icon: React.ReactNode,
+  ) => (
+    <View style={{
+      alignItems: 'center',
+      justifyContent: 'center',
+      top: 14, // Lower the entire content
+      height: '100%', // Ensure it takes full height to center properly relative to this container if needed, but 'top' does the shift
+    }}>
+      <TabIcon focused={focused}>{icon}</TabIcon>
+      <Text
+        numberOfLines={1}
+        style={{
+          marginTop: 0, // Reduced margin since we added marginBottom to icon
+          fontSize: 10,
+          fontWeight: focused ? '700' : '500',
+          color: focused ? primaryColor : inactiveTintColor,
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
 
   return (
-            <Tabs
-              screenOptions={{
-                tabBarActiveTintColor: primaryColor,
-                tabBarInactiveTintColor: textTertiaryColor,
-                headerShown: false,
-                // 🔥 FIX: Usa backgroundColor con fallback per evitare flash bianco
-                sceneStyle: {
-                  backgroundColor,
-                },
-                tabBarStyle: {
-          position: 'absolute',
-          bottom: 25,
-          marginHorizontal: 30,  // Increased margins to make bar narrower
-          backgroundColor: surfaceColor,  // 🔥 FIX: Usa surfaceColor con fallback
-          borderRadius: 30,  // Much more rounded for pill shape
-          height: 70,  // Reduced height for pill look
-          shadowColor: colors?.shadowColor || '#000000',
-          shadowOpacity: 0.15,  // Increased shadow for better visibility
-          shadowOffset: {
-            width: 0,
-            height: 8
-          },
-          shadowRadius: 20,  // Increased shadow radius
-          elevation: 15,  // Increased elevation
-          paddingBottom: 8,
-          paddingTop: 8,
-          borderTopColor: borderColor,  // 🔥 FIX: Usa borderColor con fallback
-        },
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        sceneStyle: { backgroundColor },
+
+        tabBarActiveTintColor: primaryColor,
+        tabBarInactiveTintColor: inactiveTintColor,
+
+        //
+        // ---- BACKGROUND LIGHT / DARK ----
+        //
+        tabBarBackground: () => (
+          <View
+            style={{
+              flex: 1,
+              borderRadius: 26,
+              overflow: 'hidden',
+              backgroundColor: isDark ? 'rgba(20,20,30,0.6)' : 'transparent', // Fallback/base for dark
+            }}
+          >
+            {isDark ? (
+              <BlurView
+                intensity={40}
+                tint="dark"
+                style={{
+                  flex: 1,
+                  backgroundColor: 'rgba(30,30,45,0.65)', // Semi-transparent dark overlay
+                }}
+              />
+            ) : (
+              <BlurView
+                intensity={35}
+                tint="light"
+                style={{
+                  flex: 1,
+                  backgroundColor: 'rgba(255,255,255,0.9)',
+                }}
+              />
+            )}
+          </View>
+        ),
+
+        tabBarStyle,
+
         tabBarItemStyle: {
-          height: 54,  // Centered height within the pill
+          height: 68, // stessa altezza della barra = centraggio perfetto
           justifyContent: 'center',
           alignItems: 'center',
         },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
-          marginTop: 2,
-        },
-      }}>
-      
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: t('tabs.home'),
-            tabBarIcon: ({ color }) => <FontAwesome name="home" size={24} color={color} />,
-          }}
-        />
-      
+
+        tabBarShowLabel: false,
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: t('tabs.home'),
+          tabBarIcon: ({ color, focused }) => (
+            renderTab(
+              t('tabs.home'),
+              focused,
+              <FontAwesome
+                name="home"
+                size={20}
+                color={focused ? primaryColor : color}
+              />,
+            )
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="analysis"
         options={{
           title: t('tabs.emotion'),
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="emoji-emotions" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            renderTab(
+              t('tabs.emotion'),
+              focused,
+              <MaterialIcons
+                name="emoji-emotions"
+                size={20}
+                color={focused ? primaryColor : color}
+              />,
+            )
+          ),
         }}
       />
-      
+
       <Tabs.Screen
         name="skin"
         options={{
           title: t('tabs.skin'),
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="face" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            renderTab(
+              t('tabs.skin'),
+              focused,
+              <MaterialIcons
+                name="face"
+                size={20}
+                color={focused ? primaryColor : color}
+              />,
+            )
+          ),
         }}
       />
-      
+
       <Tabs.Screen
         name="food"
         options={{
           title: t('tabs.food'),
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="restaurant" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            renderTab(
+              t('tabs.food'),
+              focused,
+              <MaterialIcons
+                name="restaurant"
+                size={20}
+                color={focused ? primaryColor : color}
+              />,
+            )
+          ),
         }}
       />
-      
+
       <Tabs.Screen
         name="suggestions"
         options={{
           title: t('tabs.library'),
-          tabBarIcon: ({ color, size }) => <FontAwesome name="heart-o" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            renderTab(
+              t('tabs.library'),
+              focused,
+              <FontAwesome
+                name="heart-o"
+                size={20}
+                color={focused ? primaryColor : color}
+              />,
+            )
+          ),
         }}
       />
-      
+
       <Tabs.Screen
         name="coach"
         options={{
           title: t('tabs.chat'),
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="chat" size={size} color={color} />,
-          tabBarStyle: { display: 'none' }, // Hide bottom navigation for chat
+          tabBarIcon: ({ color, focused }) => (
+            renderTab(
+              t('tabs.chat'),
+              focused,
+              <MaterialIcons
+                name="chat"
+                size={20}
+                color={focused ? primaryColor : color}
+              />,
+            )
+          ),
         }}
       />
-      
+
       <Tabs.Screen
         name="settings"
         options={{
           title: t('tabs.settings'),
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="settings" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            renderTab(
+              t('tabs.settings'),
+              focused,
+              <MaterialIcons
+                name="settings"
+                size={20}
+                color={focused ? primaryColor : color}
+              />,
+            )
+          ),
         }}
       />
     </Tabs>

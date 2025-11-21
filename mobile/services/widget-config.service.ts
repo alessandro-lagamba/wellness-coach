@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useMemo, useState } from 'react';
+import { HealthDataStatus } from '../types/health.types';
 
 /** ================= Types ================= */
 export type WidgetSize = 'small' | 'medium' | 'large'; // 1/3, 2/3, 3/3 (della row)
@@ -26,6 +27,10 @@ export interface WidgetData {
   sleep?: { hours: number; quality: number; goal: number; deepSleep: string; remSleep: string; bedtime: string; wakeTime: string };
   hrv?: { value: number; restingHR: number; currentHR?: number; avgHRV: number; recovery: string };
   analyses?: { completed: boolean; emotionAnalysis: boolean; skinAnalysis: boolean; lastCheckIn: string; streak: number };
+  placeholder?: {
+    status: HealthDataStatus;
+    message: string;
+  };
 }
 
 /** ============== Singleton Service ============== */

@@ -2,7 +2,6 @@
 
 import React, { useMemo } from "react"
 import { View, Text, StyleSheet, Platform } from "react-native"
-import { LinearGradient } from "expo-linear-gradient"
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons"
 import { useTheme } from "../contexts/ThemeContext"
 
@@ -24,9 +23,9 @@ interface Props {
 }
 
 const statusStyles = {
-  pending:   { bg: "#FEF3C7", text: "#92400E", border: "#FDE68A", icon: "clock-outline" },
+  pending: { bg: "#FEF3C7", text: "#92400E", border: "#FDE68A", icon: "clock-outline" },
   completed: { bg: "#DCFCE7", text: "#065F46", border: "#86EFAC", icon: "check-circle" },
-  warning:   { bg: "#FEE2E2", text: "#991B1B", border: "#FCA5A5", icon: "alert-circle" },
+  warning: { bg: "#FEE2E2", text: "#991B1B", border: "#FCA5A5", icon: "alert-circle" },
 }
 
 const CARD_HEIGHT = 140
@@ -70,7 +69,7 @@ const MiniInfoCard: React.FC<Props> = ({
 
   /* ==================== RENDER SMALL (immutato) ==================== */
   const renderSmall = () => (
-    <LinearGradient colors={[colors.surface, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.innerGradient}>
+    <View style={[styles.innerContainer, { backgroundColor: colors.surface }]}>
       <View style={styles.smallHeader}>
         <Text style={[styles.smallLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
       </View>
@@ -98,39 +97,40 @@ const MiniInfoCard: React.FC<Props> = ({
           </Text>
         )}
       </View>
-    </LinearGradient>
+    </View>
   )
 
   /* ==================== RENDER MEDIUM (immutato) ==================== */
   const renderMedium = () => (
-    <LinearGradient colors={[colors.surface, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.innerGradient, styles.relative]}>
+    <View style={[styles.innerContainer, styles.relative, { backgroundColor: colors.surface }]}>
       <View style={styles.miHeaderRow}>
         <View style={styles.miTitleWrap}>
           <View style={[styles.miIconChip, { backgroundColor: `${color}15`, borderColor: `${color}32` }]}>
             <Text style={styles.miIcon}>{icon}</Text>
           </View>
-          <Text style={[styles.miTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
-            {label}
-          </Text>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={[styles.miTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
+              {label}
+            </Text>
+          </View>
         </View>
+        <Text numberOfLines={1} style={[styles.miValueTopRight, { color }]}>
+          {value}
+        </Text>
       </View>
 
-      <View style={[styles.miBodyRow, styles.miBodyWithRightPadding]}>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={[styles.miValue, { color }]}> 
-            {value}
-          </Text>
+      <View style={styles.miBodyRow}>
+        <View style={{ flex: 1, minWidth: 0, paddingRight: 80 }}>
           {!!subtitle && (
-            <Text numberOfLines={1} style={[styles.miSubtitle, { color: colors.textSecondary }]}>
+            <Text numberOfLines={3} style={[styles.miSubtitle, { color: colors.textSecondary }]}>
               {subtitle}
             </Text>
           )}
         </View>
-
       </View>
 
       {detailChips?.length ? (
-        <View style={[styles.miDetailChipFloat, { borderColor: `${color}22` }]}>
+        <View style={[styles.miDetailChipFloat, { borderColor: `${color}20`, backgroundColor: `${color}08` }]}>
           <Text style={styles.miChipEmoji}>{detailChips[0].icon}</Text>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={[styles.miChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>
@@ -142,16 +142,21 @@ const MiniInfoCard: React.FC<Props> = ({
           </View>
         </View>
       ) : null}
-    </LinearGradient>
+    </View>
   )
 
   /* ==================== RENDER LARGE (fix: blocchi più in alto) ==================== */
   const renderLarge = () => (
-    <LinearGradient
-      colors={[`${color}14`, backgroundColor, `${color}06`]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.innerGradient}
+    <View
+      style={
+        [
+          styles.innerContainer,
+          {
+            backgroundColor: colors.surface,
+            borderColor: `${color}1F`,
+            borderWidth: 1,
+          },
+        ]}
     >
       <View style={styles.largeHeader}>
         <View style={styles.largeHeaderLeft}>
@@ -162,42 +167,40 @@ const MiniInfoCard: React.FC<Props> = ({
             <Text style={[styles.largeLabel, { color: colors.text }]} numberOfLines={1}>
               {label}
             </Text>
+            {!!subtitle && (
+              <Text style={styles.largeSubtitle} numberOfLines={1}>
+                {subtitle}
+              </Text>
+            )}
           </View>
         </View>
+        <Text style={[styles.largeValue, { color }]} numberOfLines={1}>
+          {value}
+        </Text>
       </View>
 
-      <View style={styles.largeBody}>
-        <View style={styles.largeValueBox}>
-          <Text style={[styles.largeValue, { color }]} numberOfLines={1}>
-            {value}
-          </Text>
-          {!!subtitle && (
-            <Text style={styles.largeSubtitle} numberOfLines={2}>
-              {subtitle}
-            </Text>
-          )}
-        </View>
+      <View style={{ flex: 1 }} />
 
-      </View>
-
-      {!!detailChips?.length && (
-        <View style={styles.largeChipsRow}>
-          {detailChips.map((chip) => (
-            <View key={`${chip.label}-${chip.value}`} style={[styles.largeDetailChip, { borderColor: `${color}25`, backgroundColor: colors.surfaceMuted }]}>
-              <Text style={styles.largeChipIcon}>{chip.icon}</Text>
-              <View style={styles.largeChipTextContainer}>
-                <Text style={[styles.largeChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {chip.label}
-                </Text>
-                <Text style={[styles.largeChipValue, { color }]} numberOfLines={1}>
-                  {chip.value}
-                </Text>
+      {
+        !!detailChips?.length && (
+          <View style={styles.largeChipsRow}>
+            {detailChips.map((chip) => (
+              <View key={`${chip.label}-${chip.value}`} style={[styles.largeDetailChip, { borderColor: `${color}20`, backgroundColor: `${color}08` }]}>
+                <Text style={styles.largeChipIcon}>{chip.icon}</Text>
+                <View style={styles.largeChipTextContainer}>
+                  <Text style={[styles.largeChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {chip.label}
+                  </Text>
+                  <Text style={[styles.largeChipValue, { color }]} numberOfLines={1}>
+                    {chip.value}
+                  </Text>
+                </View>
               </View>
-            </View>
-          ))}
-        </View>
-      )}
-    </LinearGradient>
+            ))}
+          </View>
+        )
+      }
+    </View >
   )
 
   // TouchableOpacity rimosso - gestito da EditableWidget
@@ -215,12 +218,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "rgba(99, 102, 241, 0.06)",
-    ...Platform.select({
-      ios: { shadowColor: "#000", shadowOpacity: 0.07, shadowOffset: { width: 0, height: 6 }, shadowRadius: 14 },
-      android: { elevation: 3 },
-    }),
   },
-  innerGradient: { flex: 1, borderRadius: 18, padding: 13 },
+  innerContainer: { flex: 1, borderRadius: 18, padding: 13 },
   relative: { position: "relative" },
 
   /* ========== SMALL (immutato) ========== */
@@ -241,10 +240,9 @@ const styles = StyleSheet.create({
   miIcon: { fontSize: 16, fontWeight: "800" },
   miTitle: { flexShrink: 1, fontSize: 15, fontWeight: "800", color: "#0f172a" },
 
-  miBodyRow: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
-  miBodyWithRightPadding: { paddingRight: 96 },
-  miValue: { fontSize: 20, lineHeight: 24, fontWeight: "900", color: "#0f172a" },
-  miSubtitle: { marginTop: 4, fontSize: 12, color: "#475569", fontWeight: "700" },
+  miBodyRow: { flexDirection: "row", alignItems: "flex-start", flex: 1, marginTop: 4 },
+  miValueTopRight: { fontSize: 26, lineHeight: 30, fontWeight: "900", letterSpacing: -0.5 },
+  miSubtitle: { fontSize: 14, color: "#475569", fontWeight: "600", lineHeight: 18 },
 
   // chip flottante in basso a destra
   miDetailChipFloat: {
@@ -258,7 +256,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    backgroundColor: "#ffffffc7",
     minWidth: 110,
     maxWidth: "55%",
   },
@@ -267,21 +264,18 @@ const styles = StyleSheet.create({
   miChipValue: { fontSize: 12, color: "#0f172a", fontWeight: "900" },
 
   /* ========== LARGE (fix posizionamenti) ========== */
-  largeHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 8 },
+  largeHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   largeHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 },
-  largeHeaderText: { flex: 1, minWidth: 0 },
+  largeHeaderText: { flex: 1, minWidth: 0, justifyContent: "center" },
   largeIconChip: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.2, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   largeIcon: { fontSize: 18 },
   largeLabel: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
+  largeSubtitle: { marginTop: 2, fontSize: 12, color: "#6b7280", fontWeight: "600" },
 
-  // ⬆️ alzo il contenuto visivo per dare più respiro ai valori
-  largeBody: { flexDirection: "row", alignItems: "center", flex: 1, gap: 12, marginTop: -2 },
-  largeValueBox: { flex: 1, minWidth: 0 },
-  largeValue: { fontSize: 26, fontWeight: "800", letterSpacing: -0.2, lineHeight: 28 },
-  largeSubtitle: { marginTop: 4, fontSize: 12.5, color: "#374151", fontWeight: "600", lineHeight: 16 },
+  largeValue: { fontSize: 24, fontWeight: "800", letterSpacing: -0.5, marginLeft: 8 },
 
-  largeChipsRow: { marginTop: 10, flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  largeDetailChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, gap: 8, flex: 1, minWidth: 90, maxWidth: "48%" },
+  largeChipsRow: { marginTop: "auto", flexDirection: "row", flexWrap: "wrap", gap: 7 },
+  largeDetailChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, gap: 8, flex: 1, minWidth: 90, maxWidth: "32%" },
   largeChipIcon: { fontSize: 15, flexShrink: 0 },
   largeChipTextContainer: { flex: 1, minWidth: 0 },
   largeChipLabel: { fontSize: 10, color: "#64748b", fontWeight: "600" },

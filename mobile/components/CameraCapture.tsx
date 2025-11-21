@@ -5,7 +5,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 
 const { width } = Dimensions.get('window');
 const PREVIEW_ASPECT = 3 / 4;
-const PREVIEW_HEIGHT = Math.round(width / PREVIEW_ASPECT);
+const PREVIEW_WIDTH = width - 32; // match wrap horizontal padding
+const PREVIEW_HEIGHT = Math.round((PREVIEW_WIDTH) / PREVIEW_ASPECT);
 
 type Props = {
   isScreenFocused: boolean;
@@ -39,17 +40,17 @@ export default function CameraCapture({
     if (ref && cameraRef.current && cameraRef.current === ref) {
       return; // Same ref, no action needed
     }
-    
+
     cameraRef.current = ref;
-    
+
     if (ref) {
       controller.ref.current = ref;
       setRefSet(true);
       cameraMountedRef.current = true;
-      
+
       // Store globally for persistence
       (globalThis as any).globalCameraRef = ref;
-      
+
       // More aggressive ref restoration (solo se necessario)
       const restoreRefs = () => {
         if (controller.ref.current !== ref) {
@@ -59,10 +60,10 @@ export default function CameraCapture({
           (globalThis as any).globalCameraRef = ref;
         }
       };
-      
+
       // Immediate restoration
       restoreRefs();
-      
+
       // Delayed restoration to catch any async issues (solo una volta)
       // 🔥 FIX: I timeout vengono gestiti in un useEffect separato per evitare problemi con callback ref
       setTimeout(restoreRefs, 100);
@@ -162,12 +163,12 @@ export default function CameraCapture({
             setCameraReady(true);
             controller.setReady(true);
             controller.setError(null);
-            
+
             // Ensure ref is still set after camera is ready
             if (cameraRef.current && !controller.ref.current) {
               controller.ref.current = cameraRef.current;
             }
-            
+
             onReady?.();
           }}
           onMountError={(e) => {
@@ -179,7 +180,7 @@ export default function CameraCapture({
             setCameraError(errorMsg);
           }}
         />
-        
+
         {!cameraReady && !switching && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="white" />
@@ -189,7 +190,7 @@ export default function CameraCapture({
           </View>
         )}
       </View>
-      
+
       {/* Simple instruction text below camera */}
       {instructionText && (
         <Text style={styles.instructionText}>{instructionText}</Text>
@@ -199,15 +200,16 @@ export default function CameraCapture({
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginHorizontal: 20, marginTop: 24, marginBottom: 24 },
+  wrap: { marginHorizontal: 16, marginTop: 0, marginBottom: 8, alignItems: 'center' },
   preview: {
+    width: PREVIEW_WIDTH,
     height: PREVIEW_HEIGHT,
     borderRadius: 28,
     overflow: 'hidden', // Always hidden to ensure rounded corners work on both platforms
     backgroundColor: '#000',
     minHeight: 200,
   },
-  camera: { 
+  camera: {
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
@@ -219,6 +221,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   instructionText: {
+    width: PREVIEW_WIDTH,
     textAlign: 'center',
     color: '#666',
     fontSize: 14,

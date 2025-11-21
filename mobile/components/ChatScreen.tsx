@@ -20,7 +20,7 @@ import { Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Markdown from 'react-native-markdown-display';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -54,8 +54,9 @@ import { AuthService } from '../services/auth.service';
 import { AnalysisIntentService } from '../services/analysis-intent.service';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
+import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 import { ChatSettingsService, ChatTone, ResponseLength } from '../services/chat-settings.service';
-import { JournalSettingsService, JournalTemplate } from '../services/journal-settings.service';
+import { JournalSettingsService, JournalTemplate, JOURNAL_TEMPLATES } from '../services/journal-settings.service';
 import { ExportService } from '../services/export.service';
 
 const { width, height } = Dimensions.get('window');
@@ -74,6 +75,27 @@ interface ChatScreenProps {
   user?: any;
   onLogout?: () => void;
 }
+
+type JournalPromptContext = {
+  mood?: number | null;
+  moodNote?: string | null;
+  sleepHours?: number | null;
+  sleepQuality?: number | null;
+  sleepNote?: string | null;
+  energy?: string | null;
+  focus?: string | null;
+};
+
+const isLegacyJournalPrompt = (prompt?: string | null) => {
+  if (!prompt) return false;
+  const normalized = prompt.toLowerCase();
+  return (
+    normalized.includes('suggerimento per il diario') ||
+    normalized.includes('suggestion for the journal') ||
+    normalized.includes('rispondi con una domanda') ||
+    normalized.includes('answer with a prompt')
+  );
+};
 
 const coachAvatar = 'https://img.heroui.chat/image/avatar?w=320&h=320&u=21';
 
@@ -170,18 +192,24 @@ const extractSuggestionFromAIResponse = (aiResponse: string) => {
 export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const { t, language } = useTranslation(); // 🆕 i18n hook
   const { colors, mode: themeMode } = useTheme();
+  const { hideTabBar, showTabBar } = useTabBarVisibility();
   const router = useRouter();
   const { voiceMode } = useLocalSearchParams(); // 🆕 Rimossa t da qui (era in conflitto)
   const insets = useSafeAreaInsets();
   const surfaceSecondary = (colors as any).surfaceSecondary ?? colors.surface;
   
-  useEffect(() => {
-    AvoidSoftInput.setEnabled(true);
-    AvoidSoftInput.setShouldMimicIOSBehavior(true);
-    return () => {
-      AvoidSoftInput.setEnabled(false);
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      hideTabBar();
+      AvoidSoftInput.setEnabled(true);
+      AvoidSoftInput.setShouldMimicIOSBehavior(true);
+
+      return () => {
+        AvoidSoftInput.setEnabled(false);
+        showTabBar();
+      };
+    }, [hideTabBar, showTabBar]),
+  );
   
   // 🆕 Rimossi log per performance
   useEffect(() => {
@@ -204,6 +232,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [journalText, setJournalText] = useState('');
   const [originalJournalText, setOriginalJournalText] = useState(''); // 🆕 Traccia il testo originale per verificare modifiche
   const [journalPrompt, setJournalPrompt] = useState('');
+  const [promptContext, setPromptContext] = useState<JournalPromptContext | null>(null);
+  const [isPromptLoading, setIsPromptLoading] = useState(false);
   const [journalHistory, setJournalHistory] = useState<any[]>([]);
   // 🔥 FIX: Usa una funzione per ottenere la data odierna invece di una costante
   const getTodayKey = () => DailyJournalService.todayKey();
@@ -273,73 +303,165 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
   // Load journal local + remote, build prompt
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+    const loadJournal = async () => {
       if (!currentUser) return;
+
       const local = await DailyJournalService.getLocalEntry(selectedDayKey);
-      setJournalText(local.content);
-      setOriginalJournalText(local.content); // 🆕 Salva il testo originale quando si carica un giorno
-      setJournalPrompt(local.aiPrompt);
-      // Build prompt from template or mood/sleep notes if empty
-      if (!local.aiPrompt) {
-        const currentTemplate = await JournalSettingsService.getTemplate();
-        const templatePrompt = await JournalSettingsService.getTemplatePrompt();
-        
-        // 🔥 FIX: Recupera le note dal database invece che da AsyncStorage
-        let moodNote: string | null = null;
-        let sleepNote: string | null = null;
-        
-        try {
-          const { supabase } = await import('../lib/supabase');
-          const { data: checkinData } = await supabase
-            .from('daily_copilot_analyses')
-            .select('mood_note, sleep_note')
-            .eq('user_id', currentUser.id)
-            .eq('date', selectedDayKey)
-            .maybeSingle();
-          
-          if (checkinData) {
-            moodNote = checkinData.mood_note || null;
-            sleepNote = checkinData.sleep_note || null;
-          }
-        } catch (error) {
-          // Fallback ad AsyncStorage per retrocompatibilità
-          moodNote = await AsyncStorage.getItem(`checkin:mood_note:${selectedDayKey}`);
-          sleepNote = await AsyncStorage.getItem(`checkin:sleep_note:${selectedDayKey}`);
-        }
-        
-        // Se c'è un template diverso da 'free', usa il prompt del template
-        // Altrimenti usa il prompt tradizionale basato su mood/sleep
-        const prompt = currentTemplate !== 'free' 
-          ? templatePrompt
-          : DailyJournalService.buildAIPrompt({ moodNote: moodNote || undefined, sleepNote: sleepNote || undefined });
-        setJournalPrompt(prompt);
-        await DailyJournalService.saveLocalEntry(selectedDayKey, local.content, prompt);
-      } else {
-        // Se c'è già un prompt ma il template è cambiato, aggiorna se non c'è contenuto
-        const currentTemplate = await JournalSettingsService.getTemplate();
-        if (currentTemplate !== 'free' && !local.content.trim()) {
-          const templatePrompt = await JournalSettingsService.getTemplatePrompt();
-          setJournalPrompt(templatePrompt);
-        }
+      const localContent = local.content ?? '';
+      const localPrompt = local.aiPrompt ?? '';
+      const sanitizedLocalPrompt = isLegacyJournalPrompt(localPrompt) ? '' : localPrompt;
+      const hasLocalContent = localContent.trim().length > 0;
+
+      if (!cancelled) {
+        setJournalText(localContent);
+        setOriginalJournalText(localContent);
+        setJournalPrompt(sanitizedLocalPrompt);
       }
+
+      // Recupera note e contesto dal database
+      let moodNote: string | null = null;
+      let sleepNote: string | null = null;
+      let moodScore: number | null = null;
+      let sleepHours: number | null = null;
+      let sleepQuality: number | null = null;
+      let summaryFocus: string | null = null;
+      let summaryEnergy: string | null = null;
+
+      try {
+        const { supabase } = await import('../lib/supabase');
+        const { data: checkinData } = await supabase
+          .from('daily_copilot_analyses')
+          .select('mood_note, sleep_note, mood, sleep_hours, sleep_quality, summary')
+          .eq('user_id', currentUser.id)
+          .eq('date', selectedDayKey)
+          .maybeSingle();
+
+        if (checkinData) {
+          moodNote = checkinData.mood_note || null;
+          sleepNote = checkinData.sleep_note || null;
+          moodScore = typeof checkinData.mood === 'number' ? checkinData.mood : null;
+          sleepHours = typeof checkinData.sleep_hours === 'number' ? checkinData.sleep_hours : null;
+          sleepQuality = typeof checkinData.sleep_quality === 'number' ? checkinData.sleep_quality : null;
+
+          const summaryData =
+            typeof checkinData.summary === 'string'
+              ? (() => {
+                  try {
+                    return JSON.parse(checkinData.summary);
+                  } catch {
+                    return null;
+                  }
+                })()
+              : checkinData.summary;
+          if (summaryData) {
+            summaryFocus = summaryData.focus || null;
+            summaryEnergy = summaryData.energy || null;
+          }
+        }
+      } catch (error) {
+        moodNote = (await AsyncStorage.getItem(`checkin:mood_note:${selectedDayKey}`)) || null;
+        sleepNote = (await AsyncStorage.getItem(`checkin:sleep_note:${selectedDayKey}`)) || null;
+      }
+
+      if (!moodNote) {
+        moodNote = (await AsyncStorage.getItem(`checkin:mood_note:${selectedDayKey}`)) || null;
+      }
+      if (!sleepNote) {
+        sleepNote = (await AsyncStorage.getItem(`checkin:sleep_note:${selectedDayKey}`)) || null;
+      }
+
+      const contextPayload: JournalPromptContext = {
+        mood: moodScore,
+        moodNote,
+        sleepHours,
+        sleepQuality,
+        sleepNote,
+        energy: summaryEnergy,
+        focus: summaryFocus,
+      };
+
+      if (!cancelled) {
+        setPromptContext(contextPayload);
+      }
+
+      if (!sanitizedLocalPrompt) {
+        const templatePrompt =
+          JOURNAL_TEMPLATES[selectedTemplate]?.prompt ?? JOURNAL_TEMPLATES.free.prompt;
+        let nextPrompt = templatePrompt;
+
+        if (selectedTemplate === 'free') {
+          if (!cancelled) setIsPromptLoading(true);
+          try {
+            const smartPrompt = await DailyJournalService.generateDailyPrompt({
+              userId: currentUser.id,
+              language,
+              ...contextPayload,
+            });
+            if (!cancelled && smartPrompt) {
+              nextPrompt = smartPrompt;
+            }
+          } catch (error) {
+            console.error('Error generating journal prompt:', error);
+          } finally {
+            if (!cancelled) setIsPromptLoading(false);
+          }
+        }
+
+        if (!cancelled) {
+          setJournalPrompt(nextPrompt);
+        }
+        await DailyJournalService.saveLocalEntry(selectedDayKey, localContent, nextPrompt);
+      }
+
       // Recent history
       try {
         const recent = await DailyJournalDBService.listRecent(currentUser.id, 10);
-        setJournalHistory(recent);
+        if (!cancelled) {
+          setJournalHistory(recent);
+        }
       } catch (e) {
-        // 🆕 Rimosso log per performance
+        // ignore
       }
+
       // Try to fetch AI fields for selected day
+      let remoteEntry: any = null;
       try {
-        const existing = await DailyJournalDBService.getEntryByDate(currentUser.id, selectedDayKey);
-        // 🆕 Rimossi log per performance
-        setAiScore((existing as any)?.ai_score ?? null);
-        setAiAnalysis((existing as any)?.ai_analysis ?? null);
+        remoteEntry = await DailyJournalDBService.getEntryByDate(currentUser.id, selectedDayKey);
+        if (!cancelled) {
+          setAiScore((remoteEntry as any)?.ai_score ?? null);
+          setAiAnalysis((remoteEntry as any)?.ai_analysis ?? null);
+        }
       } catch (e) {
-        // 🆕 Rimosso log per performance
+        // ignore
       }
-    })();
-  }, [currentUser, selectedDayKey]);
+
+      if (remoteEntry) {
+        const remoteContent = remoteEntry.content ?? '';
+        const remotePromptRaw = remoteEntry.ai_prompt ?? remoteEntry.prompt ?? sanitizedLocalPrompt ?? '';
+        const remotePrompt = isLegacyJournalPrompt(remotePromptRaw) ? '' : remotePromptRaw;
+        const shouldHydrateFromRemote = remoteContent.trim().length > 0 && !hasLocalContent;
+
+        if (shouldHydrateFromRemote) {
+          if (!cancelled) {
+            setJournalText(remoteContent);
+            setOriginalJournalText(remoteContent);
+            setJournalPrompt(remotePrompt || sanitizedLocalPrompt);
+          }
+          await DailyJournalService.saveLocalEntry(
+            selectedDayKey,
+            remoteContent,
+            remotePrompt || sanitizedLocalPrompt
+          );
+        }
+      }
+    };
+
+    loadJournal();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser, selectedDayKey, selectedTemplate, language]);
 
   // 🆕 Helper per verificare se una data è nel futuro
   const isFutureDate = (isoDate: string): boolean => {
@@ -413,6 +535,58 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       }
     }
   }, [monthDays, selectedDayKey]); // 🔥 FIX: Esegui quando cambiano monthDays o selectedDayKey
+
+  const journalScrollRef = useRef<ScrollView>(null);
+  const scrollJournalToTop = useCallback(() => {
+    requestAnimationFrame(() => {
+      journalScrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
+  }, []);
+
+  const handleOpenJournal = useCallback(
+    (targetDay?: string) => {
+      if (targetDay) {
+        setSelectedDayKey(targetDay);
+      } else {
+        const todayKey = DailyJournalService.todayKey();
+        if (selectedDayKey !== todayKey) {
+          setSelectedDayKey(todayKey);
+        }
+      }
+      setMode('journal');
+      scrollJournalToTop();
+    },
+    [selectedDayKey, scrollJournalToTop],
+  );
+
+  const handleRegeneratePrompt = useCallback(async () => {
+    if (!currentUser?.id) return;
+    const fallbackPrompt =
+      JOURNAL_TEMPLATES[selectedTemplate]?.prompt ?? JOURNAL_TEMPLATES.free.prompt;
+
+    if (selectedTemplate !== 'free') {
+      setJournalPrompt(fallbackPrompt);
+      await DailyJournalService.saveLocalEntry(selectedDayKey, journalText, fallbackPrompt);
+      return;
+    }
+
+    setIsPromptLoading(true);
+    try {
+      const smartPrompt = await DailyJournalService.generateDailyPrompt({
+        userId: currentUser.id,
+        language,
+        ...(promptContext || {}),
+      });
+      const nextPrompt = smartPrompt || fallbackPrompt;
+      setJournalPrompt(nextPrompt);
+      await DailyJournalService.saveLocalEntry(selectedDayKey, journalText, nextPrompt);
+    } catch (error) {
+      console.error('Error regenerating journal prompt:', error);
+      setJournalPrompt(fallbackPrompt);
+    } finally {
+      setIsPromptLoading(false);
+    }
+  }, [currentUser?.id, selectedTemplate, promptContext, selectedDayKey, journalText, language]);
 
   // 🔥 FIX: Centra il giorno selezionato quando si passa alla modalità Journal (solo se non c'è già una selezione)
   useEffect(() => {
@@ -1845,7 +2019,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.segmentBtn, mode === 'journal' && [styles.segmentBtnActive, { backgroundColor: colors.surface }]]}
-                onPress={() => setMode('journal')}
+                onPress={() => handleOpenJournal()}
                 accessibilityRole="button"
                 accessibilityState={{ selected: mode === 'journal' }}
               >
@@ -2102,6 +2276,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             </>
           ) : (
             <ScrollView
+              ref={journalScrollRef}
               style={styles.scrollArea}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
@@ -2324,8 +2499,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 >
                   <View style={styles.journalPromptHeader}>
                     <Text style={[styles.journalPromptTitle, { color: colors.text }]}>{t('journal.dailyPrompt')}</Text>
-                    <TouchableOpacity style={[styles.pillSecondary, { backgroundColor: surfaceSecondary, borderColor: colors.border }]} onPress={() => setJournalPrompt(journalPrompt)}>
-                      <Text style={[styles.pillSecondaryText, { color: colors.primary }]}>{t('journal.regeneratePrompt')}</Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.pillSecondary,
+                        { backgroundColor: surfaceSecondary, borderColor: colors.border },
+                        (selectedTemplate !== 'free' || isPromptLoading) && styles.pillSecondaryDisabled,
+                      ]}
+                      onPress={handleRegeneratePrompt}
+                      disabled={selectedTemplate !== 'free' || isPromptLoading}
+                    >
+                      <Text style={[styles.pillSecondaryText, { color: colors.primary }]}>
+                        {isPromptLoading ? t('common.loading') : t('journal.regeneratePrompt')}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                   <Text style={[styles.journalPromptText, { color: colors.text }]}>{journalPrompt}</Text>
@@ -2433,9 +2618,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('journal.latestNotes')}</Text>
                   {journalHistory.map((it) => (
                     <View key={it.id} style={[styles.historyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      <View style={styles.historyHeader}>
+                        <View style={styles.historyHeader}>
                         <View style={styles.dateChipSm}><Text style={styles.dateChipSmText}>{it.entry_date}</Text></View>
-                        <TouchableOpacity><Text style={styles.openTxt}>{t('journal.open')}</Text></TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => {
+                            handleOpenJournal(it.entry_date);
+                          }}
+                        >
+                          <Text style={styles.openTxt}>{t('journal.open')}</Text>
+                        </TouchableOpacity>
                       </View>
                       <View style={styles.historyPreviewBox}>
                         <Markdown style={chatMarkdownStyles(themeMode, colors)}>{it.content}</Markdown>
@@ -2608,7 +2799,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   </TouchableOpacity>
                   
                   <TouchableOpacity
-                    style={[styles.menuOption, { borderBottomColor: colors.border }]}
+                    style={[styles.menuOption, styles.menuOptionLast]}
                     onPress={() => {
                       setShowChatMenu(false);
                       handleResetAIContext();
@@ -2659,8 +2850,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
                   </TouchableOpacity>
                   
-                  <TouchableOpacity
-                    style={[styles.menuOption]}
+                <TouchableOpacity
+                  style={[styles.menuOption, styles.menuOptionLast]}
                     onPress={() => {
                       setShowChatMenu(false);
                       handleClearJournalEntry();
@@ -2933,6 +3124,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e7ff',
     borderWidth: 1,
     borderColor: '#c7d2fe',
+  },
+  pillSecondaryDisabled: {
+    opacity: 0.6,
   },
   pillSecondaryText: {
     fontSize: 12,
@@ -3571,6 +3765,9 @@ const styles = StyleSheet.create({
     gap: 12,
     borderBottomWidth: 1,
     // borderBottomColor gestito dinamicamente
+  },
+  menuOptionLast: {
+    borderBottomWidth: 0,
   },
   menuOptionText: {
     fontSize: 16,
