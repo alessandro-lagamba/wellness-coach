@@ -259,9 +259,18 @@ Return ONLY JSON.No prose.No code fences.
       }
 
       const data = await response.json();
+
+      // Detailed logging for debugging
+      console.log('🔍 OpenAI Emotion Response:', JSON.stringify(data, null, 2));
+      console.log('🔍 Choices:', data.choices);
+      console.log('🔍 First choice:', data.choices?.[0]);
+      console.log('🔍 Message:', data.choices?.[0]?.message);
+      console.log('🔍 Content:', data.choices?.[0]?.message?.content);
+
       const content = data.choices?.[0]?.message?.content;
 
       if (!content) {
+        console.error('❌ No content in response. Full data:', data);
         throw new Error('No analysis result received from OpenAI');
       }
 
@@ -348,9 +357,18 @@ Return ONLY JSON.No prose.No code fences.
       }
 
       const data = await response.json();
+
+      // Detailed logging for debugging
+      console.log('🔍 OpenAI Skin Response:', JSON.stringify(data, null, 2));
+      console.log('🔍 Choices:', data.choices);
+      console.log('🔍 First choice:', data.choices?.[0]);
+      console.log('🔍 Message:', data.choices?.[0]?.message);
+      console.log('🔍 Content:', data.choices?.[0]?.message?.content);
+
       const content = data.choices?.[0]?.message?.content;
 
       if (!content) {
+        console.error('❌ No content in response. Full data:', data);
         throw new Error('No analysis result received from OpenAI');
       }
 
