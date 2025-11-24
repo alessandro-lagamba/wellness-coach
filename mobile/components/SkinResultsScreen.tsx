@@ -86,6 +86,12 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
     return text;
   };
 
+  // Helper to capitalize first letter
+  const capitalizeFirst = (text: string): string => {
+    if (!text) return text;
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  };
+
   // Prepare data for IntelligentInsightsSection
   const insightsData = useMemo(() => ({
     ...results,
@@ -136,12 +142,12 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
       >
         {/* Hero Section */}
         <ResultHero
-          title={t('analysis.skin.results.healthScore') || 'Skin Health Score'}
+          title={language === 'it' ? 'Punteggio Salute Pelle' : 'Skin Health Score'}
           subtitle={overallScore >= 70
-            ? t('analysis.skin.results.excellent') || 'Excellent Condition'
+            ? (language === 'it' ? 'Buone Condizioni' : 'Good Condition')
             : overallScore >= 40
-              ? t('analysis.skin.results.good') || 'Good Condition'
-              : t('analysis.skin.results.needsAttention') || 'Needs Attention'}
+              ? (language === 'it' ? 'Condizioni Discrete' : 'Fair Condition')
+              : (language === 'it' ? 'Richiede Attenzione' : 'Needs Attention')}
           score={overallScore}
           color={overallScore > 70 ? '#10b981' : overallScore > 40 ? '#f59e0b' : '#ef4444'}
           style={styles.hero}
@@ -149,8 +155,8 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
 
         <View style={styles.contentContainer}>
           {/* Metrics Grid */}
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            {t('analysis.skin.results.detailedMetrics') || 'DETAILED METRICS'}
+          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
+            {language === 'it' ? 'METRICHE DETTAGLIATE' : 'DETAILED METRICS'}
           </Text>
 
           <View style={styles.metricsGrid}>
@@ -158,7 +164,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
             <EnhancedScoreTile
               metric="hydration"
               value={metrics.hydration}
-              label={t('analysis.skin.results.hydration') || 'Hydration'}
+              label={language === 'it' ? 'Idratazione' : 'Hydration'}
               color="#0ea5e9"
               icon="water-percent"
               bucket={MetricsService.getSkinBucket('hydration', metrics.hydration)}
@@ -169,7 +175,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
             <EnhancedScoreTile
               metric="texture"
               value={metrics.texture}
-              label={t('analysis.skin.results.texture') || 'Texture'}
+              label={language === 'it' ? 'Texture' : 'Texture'}
               color="#f59e0b"
               icon="texture"
               bucket={MetricsService.getSkinBucket('texture', metrics.texture)}
@@ -179,7 +185,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
             <EnhancedScoreTile
               metric="redness"
               value={metrics.redness}
-              label={t('analysis.skin.results.redness') || 'Redness'}
+              label={language === 'it' ? 'Rossore' : 'Redness'}
               color="#ef4444"
               icon="heart-pulse"
               bucket={MetricsService.getSkinBucket('redness', metrics.redness)}
@@ -189,7 +195,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
             <EnhancedScoreTile
               metric="oiliness"
               value={metrics.oiliness}
-              label={t('analysis.skin.results.oiliness') || 'Oiliness'}
+              label={language === 'it' ? 'Oleosità' : 'Oiliness'}
               color="#8b5cf6"
               icon="oil"
               bucket={MetricsService.getSkinBucket('oiliness', metrics.oiliness)}
@@ -200,7 +206,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
           {(fullAnalysisResult?.analysis_description || issueActions.length > 0 || (fullAnalysisResult?.notes && fullAnalysisResult.notes.length > 0)) && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                {t('analysis.skin.results.aiObservations') || 'WHAT AI NOTICED'}
+                {language === 'it' ? 'OSSERVAZIONI AI' : 'AI OBSERVATIONS'}
               </Text>
               <View style={[styles.observationsCard, { backgroundColor: isDark ? '#1f2937' : '#fff' }]}>
                 {/* Educational Description */}
@@ -219,7 +225,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
                       <MaterialCommunityIcons name="information-outline" size={22} color={colors.primary} style={{ marginTop: 2 }} />
                     </TouchableOpacity>
                     <Text style={[styles.descriptionText, { color: colors.text }]}>
-                      {translateAIText(fullAnalysisResult.analysis_description)}
+                      {capitalizeFirst(translateAIText(fullAnalysisResult.analysis_description))}
                     </Text>
                   </View>
                 )}
@@ -234,7 +240,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
                   <View key={action.id} style={styles.observationItem}>
                     <MaterialCommunityIcons name="alert-circle-outline" size={18} color="#ef4444" style={{ opacity: 0.9 }} />
                     <Text style={[styles.observationText, { color: colors.text }]}>
-                      {action.description}
+                      {capitalizeFirst(action.description)}
                     </Text>
                   </View>
                 ))}
@@ -244,7 +250,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
                   <View key={`note-${index}`} style={styles.observationItem}>
                     <MaterialCommunityIcons name="eye-outline" size={18} color={colors.text} style={{ opacity: 0.7 }} />
                     <Text style={[styles.observationText, { color: colors.text }]}>
-                      {translateAIText(note)}
+                      {capitalizeFirst(translateAIText(note))}
                     </Text>
                   </View>
                 ))}
@@ -262,7 +268,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
 
           {/* Recommendations Section */}
           <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
-            {t('analysis.skin.results.personalizedRecommendations') || 'RECOMMENDATIONS'}
+            {language === 'it' ? 'RACCOMANDAZIONI PERSONALIZZATE' : 'PERSONALIZED RECOMMENDATIONS'}
           </Text>
 
           {actions.map((action) => (

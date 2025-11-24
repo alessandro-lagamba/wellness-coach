@@ -26,6 +26,7 @@ interface EnhancedMetricTileProps {
   onActionPress?: () => void;
   onExpandPress?: () => void;
   expanded?: boolean;
+  description?: string; // NEW: For Valence/Arousal explanations
 }
 
 export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
@@ -40,6 +41,7 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
   onActionPress,
   onExpandPress,
   expanded = false,
+  description, // NEW
 }) => {
   const { colors, mode } = useTheme();
   const { t } = useTranslation();
@@ -116,8 +118,8 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
 
   return (
     <View style={[
-      styles.container, 
-      { 
+      styles.container,
+      {
         shadowColor: color,
         backgroundColor: isDark ? colors.surfaceElevated : '#ffffff',
         borderColor: isDark ? colors.border : '#f3f4f6',
@@ -187,6 +189,15 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
             </Text>
             <Text style={[styles.detailValue, { color: isDark ? colors.text : '#374151' }]}>
               {bucket.description}
+            </Text>
+          </View>
+        )}
+
+        {/* Description for Valence/Arousal */}
+        {description && (
+          <View style={styles.detailRow}>
+            <Text style={[styles.descriptionText, { color: isDark ? colors.textSecondary : '#6b7280' }]}>
+              {description}
             </Text>
           </View>
         )}
@@ -305,6 +316,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 20,
+  },
+  descriptionText: {
+    fontSize: 13,
+    lineHeight: 19,
+    fontStyle: 'italic',
   },
   actionContainer: {
     borderRadius: 16,

@@ -96,6 +96,44 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
     return translated;
   };
 
+  // Helper to capitalize first letter
+  const capitalizeFirst = (text: string): string => {
+    if (!text) return text;
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  };
+
+  // Get Valence description based on value
+  const getValenceDescription = (valence: number): string => {
+    if (valence > 0.3) {
+      return language === 'it'
+        ? 'L\'espressione facciale suggerisce emozioni positive, con tratti che indicano piacevolezza e soddisfazione.'
+        : 'Facial expression suggests positive emotions, with features indicating pleasantness and satisfaction.';
+    } else if (valence < -0.3) {
+      return language === 'it'
+        ? 'L\'espressione facciale suggerisce emozioni negative, con tratti che indicano disagio o insoddisfazione.'
+        : 'Facial expression suggests negative emotions, with features indicating discomfort or dissatisfaction.';
+    }
+    return language === 'it'
+      ? 'L\'espressione facciale è neutra, senza chiari segnali di emozioni positive o negative.'
+      : 'Facial expression is neutral, without clear signs of positive or negative emotions.';
+  };
+
+  // Get Arousal description based on value
+  const getArousalDescription = (arousal: number): string => {
+    if (arousal > 0.3) {
+      return language === 'it'
+        ? 'Livello di attivazione elevato, indicando energia e vigilanza nell\'espressione.'
+        : 'High activation level, indicating energy and alertness in the expression.';
+    } else if (arousal < -0.3) {
+      return language === 'it'
+        ? 'Livello di attivazione basso, suggerendo calma e rilassatezza.'
+        : 'Low activation level, suggesting calmness and relaxation.';
+    }
+    return language === 'it'
+      ? 'Livello di attivazione moderato, in uno stato di equilibrio tra calma ed energia.'
+      : 'Moderate activation level, in a balanced state between calmness and energy.';
+  };
+
   const getEmotionData = (emotion: string) => {
     const getTips = (emotionKey: string): string[] => {
       const tips = t(`analysis.emotion.results.tips.${emotionKey}`, { returnObjects: true });
@@ -224,7 +262,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
 
         <View style={styles.contentContainer}>
           {/* Metrics Grid */}
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
             {t('analysis.emotion.results.emotionalMetrics') || 'EMOTIONAL METRICS'}
           </Text>
 
@@ -237,6 +275,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
               color={valence > 0 ? '#10b981' : '#ef4444'}
               icon={valence > 0 ? 'emoticon-happy-outline' : 'emoticon-sad-outline'}
               bucket={MetricsService.getEmotionBucket('valence', valence)}
+              description={getValenceDescription(valence)}
               expanded={true}
             />
 
@@ -248,6 +287,8 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
               color="#f59e0b"
               icon="lightning-bolt"
               bucket={MetricsService.getEmotionBucket('arousal', arousal)}
+              description={getArousalDescription(arousal)}
+              expanded={true}
             />
           </View>
 
@@ -290,7 +331,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
                   <View key={index} style={styles.observationItem}>
                     <MaterialCommunityIcons name="eye-outline" size={18} color={colors.text} style={{ opacity: 0.7 }} />
                     <Text style={[styles.observationText, { color: colors.text }]}>
-                      {translateAIText(obs)}
+                      {capitalizeFirst(translateAIText(obs))}
                     </Text>
                   </View>
                 ))}
@@ -320,8 +361,26 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
             />
           ))}
 
+          {/* AI Recommendations Section */}
+          {fullAnalysisResult?.recommendations && fullAnalysisResult.recommendations.length > 0 && (
+            <>
+              <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
+                {language === 'it' ? 'CONSIGLI DI BENESSERE' : 'WELLNESS RECOMMENDATIONS'}
+              </Text>
+
+              {fullAnalysisResult.recommendations.map((rec: string, index: number) => (
+                <View key={index} style={[styles.recommendationCard, { backgroundColor: isDark ? '#1f2937' : '#fff' }]}>
+                  <MaterialCommunityIcons name="lightbulb-outline" size={20} color="#10b981" style={styles.recommendationIcon} />
+                  <Text style={[styles.recommendationText, { color: colors.text }]}>
+                    {capitalizeFirst(rec)}
+                  </Text>
+                </View>
+              ))}
+            </>
+          )}
+
           {/* Bottom spacer for FAB */}
-          <View style={{ height: 100 }} />
+          <View style={{ height: 120 }} />
         </View>
       </ScrollView>
 
@@ -478,6 +537,27 @@ const styles = StyleSheet.create({
     height: 1,
     width: '100%',
     marginVertical: 8,
+  },
+  recommendationCard: {
+    flexDirection: 'row',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 12,
+    gap: 12,
+    alignItems: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  recommendationIcon: {
+    marginTop: 2,
+  },
+  recommendationText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
 

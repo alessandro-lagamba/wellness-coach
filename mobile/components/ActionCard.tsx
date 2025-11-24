@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActionInfo } from '../services/actions.service';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface ActionCardProps {
   action: ActionInfo;
@@ -30,6 +31,8 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   const [isCompleted, setIsCompleted] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const fadeAnim = React.useRef(new Animated.Value(1)).current;
+  const { colors, mode } = useTheme();
+  const isDark = mode === 'dark';
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -53,7 +56,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 
   const handleComplete = () => {
     setIsCompleted(true);
-    
+
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: 300,
@@ -69,8 +72,8 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       'Sei sicuro di voler rimuovere questa azione?',
       [
         { text: 'Annulla', style: 'cancel' },
-        { 
-          text: 'Rimuovi', 
+        {
+          text: 'Rimuovi',
           style: 'destructive',
           onPress: () => {
             setIsDismissed(true);
@@ -107,15 +110,15 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   if (compact) {
     return (
       <Animated.View style={[styles.compactContainer, { opacity: fadeAnim }]}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.compactCard, { borderLeftColor: getPriorityColor(action.priority) }]}
           onPress={handleComplete}
         >
           <View style={styles.compactLeft}>
-            <MaterialCommunityIcons 
-              name={getCategoryIcon(action.category) as any} 
-              size={16} 
-              color={getPriorityColor(action.priority)} 
+            <MaterialCommunityIcons
+              name={getCategoryIcon(action.category) as any}
+              size={16}
+              color={getPriorityColor(action.priority)}
             />
             <Text style={styles.compactTitle} numberOfLines={1}>
               {action.title}
@@ -132,23 +135,23 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <View style={[styles.card, { borderColor: getPriorityColor(action.priority) + '30' }]}>
+      <View style={[styles.card, { borderColor: getPriorityColor(action.priority) + '30', backgroundColor: isDark ? '#1f2937' : '#fff' }]}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <View style={[styles.categoryIcon, { backgroundColor: getPriorityColor(action.priority) + '20' }]}>
-              <MaterialCommunityIcons 
-                name={getCategoryIcon(action.category) as any} 
-                size={20} 
-                color={getPriorityColor(action.priority)} 
+              <MaterialCommunityIcons
+                name={getCategoryIcon(action.category) as any}
+                size={20}
+                color={getPriorityColor(action.priority)}
               />
             </View>
             <View style={styles.headerInfo}>
-              <Text style={styles.category}>{action.category.toUpperCase()}</Text>
-              <Text style={styles.title}>{action.title}</Text>
+              <Text style={[styles.category, { color: isDark ? colors.textSecondary : '#6b7280' }]}>{action.category.toUpperCase()}</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{action.title}</Text>
             </View>
           </View>
-          
+
           <View style={styles.headerRight}>
             <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(action.priority) + '20' }]}>
               <Text style={[styles.priorityText, { color: getPriorityColor(action.priority) }]}>
@@ -163,7 +166,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 
         {/* Description */}
         <View style={styles.descriptionSection}>
-          <Text style={styles.description}>{action.description}</Text>
+          <Text style={[styles.description, { color: colors.text }]}>{action.description}</Text>
         </View>
 
         {/* Resources */}
@@ -183,16 +186,16 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 
         {/* Actions */}
         <View style={styles.actionsSection}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.completeButton, { backgroundColor: getPriorityColor(action.priority) }]}
             onPress={handleComplete}
           >
             <MaterialCommunityIcons name="check" size={16} color="#ffffff" />
             <Text style={styles.completeButtonText}>Completato</Text>
           </TouchableOpacity>
-          
+
           {showSnooze && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.snoozeButton}
               onPress={handleSnooze}
             >
@@ -200,8 +203,8 @@ export const ActionCard: React.FC<ActionCardProps> = ({
               <Text style={styles.snoozeButtonText}>Rimanda</Text>
             </TouchableOpacity>
           )}
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.dismissButton}
             onPress={handleDismiss}
           >
