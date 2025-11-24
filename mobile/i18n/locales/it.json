@@ -950,6 +950,26 @@
           "description": "Idee per spuntini nutrienti per mantenerti energico"
         }
       },
+      "preferences": {
+        "title": "Preferenze Alimentari",
+        "subtitle": "Personalizza la generazione delle ricette con i tuoi gusti, ingredienti preferiti e allergie.",
+        "cuisineLabel": "Cucina preferita",
+        "favorites": "Ingredienti preferiti",
+        "favoritePlaceholder": "Es. basilico fresco, salmone...",
+        "allergies": "Allergie o intolleranze",
+        "allergyPlaceholder": "Es. glutine, lattosio...",
+        "saveError": "Impossibile salvare le preferenze",
+        "cuisines": {
+          "none": "Qualsiasi",
+          "italian": "Italiana",
+          "mediterranean": "Mediterranea",
+          "asian": "Asiatica",
+          "latin": "Latino-americana",
+          "middleEastern": "Mediorientale",
+          "american": "Americana",
+          "vegetarian": "Vegetariana"
+        }
+      },
       "fridge": {
         "title": "Cosa hai nel Frigo?",
         "subtitle": "Ottieni suggerimenti di ricette personalizzati in base ai tuoi ingredienti",

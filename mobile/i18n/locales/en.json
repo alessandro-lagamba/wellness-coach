@@ -944,6 +944,26 @@
           "description": "Nutritious snack ideas to keep you energized"
         }
       },
+      "preferences": {
+        "title": "Food Preferences",
+        "subtitle": "Share your taste, favorite ingredients, and allergies to make AI recipes more realistic.",
+        "cuisineLabel": "Preferred cuisine",
+        "favorites": "Favorite ingredients",
+        "favoritePlaceholder": "e.g. fresh basil, salmon...",
+        "allergies": "Allergies or intolerances",
+        "allergyPlaceholder": "e.g. peanuts, gluten...",
+        "saveError": "Could not save preferences",
+        "cuisines": {
+          "none": "Any",
+          "italian": "Italian",
+          "mediterranean": "Mediterranean",
+          "asian": "Asian",
+          "latin": "Latin American",
+          "middleEastern": "Middle Eastern",
+          "american": "American",
+          "vegetarian": "Vegetarian"
+        }
+      },
       "fridge": {
         "title": "What's in Your Fridge?",
         "subtitle": "Get personalized recipe suggestions based on your ingredients",

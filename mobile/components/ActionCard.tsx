@@ -42,8 +42,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   const { language } = useTranslation();
   const isDark = mode === 'dark';
   const labels = {
-    addButton:
-      language === 'it' ? 'Aggiungi alla routine di oggi' : "Add to today's routine",
+    addButton: language === 'it' ? 'Aggiungi oggi' : 'Add today',
     addedTitle: language === 'it' ? 'Attività aggiunta' : 'Added to routine',
     addedMessage:
       language === 'it'
@@ -106,6 +105,24 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       default:
         return 'lightbulb';
     }
+  };
+
+  const getPriorityLabel = (priority: string) => {
+    if (language === 'it') {
+      switch (priority) {
+        case 'urgent':
+          return 'URGENTE';
+        case 'high':
+          return 'ALTA';
+        case 'medium':
+          return 'MEDIA';
+        case 'low':
+          return 'BASSA';
+        default:
+          return priority.toUpperCase();
+      }
+    }
+    return priority.toUpperCase();
   };
 
   const mapCategoryToWellness = (
@@ -276,7 +293,6 @@ export const ActionCard: React.FC<ActionCardProps> = ({
               />
             </View>
             <View style={styles.headerInfo}>
-              <Text style={[styles.category, { color: isDark ? colors.textSecondary : '#6b7280' }]}>{action.category.toUpperCase()}</Text>
               <Text style={[styles.title, { color: colors.text }]}>{action.title}</Text>
             </View>
           </View>
@@ -284,7 +300,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
           <View style={styles.headerRight}>
             <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(action.priority) + '20' }]}>
               <Text style={[styles.priorityText, { color: getPriorityColor(action.priority) }]}>
-                {action.priority.toUpperCase()}
+                {getPriorityLabel(action.priority)}
               </Text>
             </View>
             {action.estimatedTime && (
@@ -390,12 +406,6 @@ const styles = StyleSheet.create({
   },
   headerInfo: {
     flex: 1,
-  },
-  category: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#6b7280',
-    marginBottom: 2,
   },
   title: {
     fontSize: 16,

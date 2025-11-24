@@ -63,6 +63,9 @@ export interface GenerateRecipeRequest {
   prefs?: string[];
   allergies?: string[];
   cuisineHint?: string;
+  cuisinePreference?: string;
+  favoriteIngredients?: string[];
+  avoidIngredients?: string[];
   maxReadyInMinutes?: number;
 }
 

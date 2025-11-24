@@ -12,7 +12,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
@@ -272,17 +271,18 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
       </ScrollView>
 
       {/* Bottom Action Bar */}
-      <BlurView
-        intensity={90}
-        tint={isDark ? 'dark' : 'light'}
-        style={[styles.bottomBar, { backgroundColor: isDark ? 'rgba(2,6,23,0.65)' : 'rgba(255,255,255,0.7)' }]}
+      <View
+        style={[
+          styles.bottomBar,
+          { backgroundColor: colors.background, borderTopColor: isDark ? 'rgba(148,163,184,0.18)' : 'rgba(15,23,42,0.08)' },
+        ]}
       >
         <View
           style={[
             styles.bottomBarInner,
             {
-              backgroundColor: isDark ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.95)',
-              borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(15,23,42,0.08)',
+              backgroundColor: colors.background,
+              borderColor: isDark ? 'rgba(148,163,184,0.25)' : 'rgba(15,23,42,0.08)',
             },
           ]}
         >
@@ -312,7 +312,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </BlurView>
+      </View>
     </LinearGradient>
   );
 };

@@ -10,6 +10,7 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -86,6 +87,14 @@ interface InsightCard {
 const heroImageUri = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=3280&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
 // Video URI per Food Analysis - usando require per file locali
 const heroVideoUri = require('../assets/videos/food-analysis-video.mp4');
+
+const MIN_SAFE_CALORIES = 1200;
+const MAX_SAFE_CALORIES = 8000;
+const MACRO_PERCENT_LIMITS = {
+  carbs: { min: 5, max: 70 },
+  proteins: { min: 10, max: 40 },
+  fats: { min: 10, max: 70 },
+};
 
 // Guide e insight cards rimosse - non necessarie per food analysis
 
@@ -276,7 +285,7 @@ const getDefaultRecipe = (mealType: string) => {
 };
 
 export const FoodAnalysisScreen: React.FC = () => {
-  const { t } = useTranslation(); // 🆕 i18n hook
+  const { t, language } = useTranslation(); // 🆕 i18n hook
   const { colors } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
   const { hideTabBar, showTabBar } = useTabBarVisibility();
@@ -344,6 +353,104 @@ export const FoodAnalysisScreen: React.FC = () => {
   // 🔥 FIX: Spostato hook useAnalysisStore prima dei return condizionali per rispettare le regole degli hook
   const foodHistory = useAnalysisStore((state) => state.getSafeFoodHistory());
   const latestFoodSession = useAnalysisStore((state) => state.latestFoodSession);
+
+  const ensureSafeCalories = useCallback((calories?: number) => {
+    const normalized = typeof calories === 'number' ? Math.round(calories) : MIN_SAFE_CALORIES;
+    if (normalized < MIN_SAFE_CALORIES) {
+      return MIN_SAFE_CALORIES;
+    }
+    if (normalized > MAX_SAFE_CALORIES) {
+      return MAX_SAFE_CALORIES;
+    }
+    return normalized;
+  }, []);
+
+  const showSafeIntakeWarning = useCallback(
+    (type: 'min' | 'max') => {
+      const isMin = type === 'min';
+      Alert.alert(
+        language === 'it'
+          ? isMin
+            ? 'Apporto minimo consigliato'
+            : 'Apporto massimo consigliato'
+          : isMin
+          ? 'Recommended minimum intake'
+          : 'Recommended maximum intake',
+        language === 'it'
+          ? isMin
+            ? `Per proteggere il tuo benessere non è possibile impostare un obiettivo giornaliero inferiore a ${MIN_SAFE_CALORIES} kcal, in linea con le linee guida dell’OMS.`
+            : `Per mantenere parametri sicuri ti suggeriamo di non superare ${MAX_SAFE_CALORIES} kcal al giorno, salvo indicazioni di professionisti sanitari.`
+          : isMin
+          ? `To keep you safe, daily targets cannot go below ${MIN_SAFE_CALORIES} kcal, following WHO recommendations.`
+          : `To stay within safe ranges, we don't allow daily targets above ${MAX_SAFE_CALORIES} kcal unless advised by healthcare professionals.`,
+      );
+    },
+    [language],
+  );
+
+  const showCalorieGuideline = useCallback(() => {
+    Alert.alert(
+      language === 'it' ? 'Perché esistono limiti agli obiettivi?' : 'Why do we enforce limits?',
+      language === 'it'
+        ? `Obiettivi estremi (meno di ${MIN_SAFE_CALORIES} kcal o più di ${MAX_SAFE_CALORIES} kcal) possono favorire abitudini poco sicure. Manteniamo i target entro fasce suggerite dall’OMS per proteggere il tuo benessere.`
+        : `Extreme targets (below ${MIN_SAFE_CALORIES} kcal or above ${MAX_SAFE_CALORIES} kcal) can encourage unsafe habits. We keep goals within WHO-inspired ranges to protect your wellbeing.`,
+    );
+  }, [language]);
+
+  const showMacroGuideline = useCallback(() => {
+    Alert.alert(
+      language === 'it' ? 'Distribuzione dei macronutrienti' : 'Macronutrient distribution',
+      language === 'it'
+        ? 'Bilanciamo carboidrati, proteine e grassi entro fasce consigliate (carboidrati 35-65%, proteine 15-35%, grassi 15-35%) per evitare carenze o eccessi potenzialmente rischiosi.'
+        : 'We keep carbs, proteins, and fats within recommended bands (carbs 35–65%, proteins 15–35%, fats 15–35%) to avoid potentially risky deficiencies or excesses.',
+    );
+  }, [language]);
+
+  const clampMacroPercentage = useCallback(
+    (value: number | undefined, limits: { min: number; max: number }) => {
+      if (typeof value !== 'number' || Number.isNaN(value)) {
+        return limits.min;
+      }
+      if (value < limits.min) return limits.min;
+      if (value > limits.max) return limits.max;
+      return Math.round(value);
+    },
+    [],
+  );
+
+  const applySafeGoals = useCallback(
+    (incomingGoals: any, showAlerts = false) => {
+      if (!incomingGoals) return null;
+      const normalized = { ...incomingGoals };
+
+      const safeCalories = ensureSafeCalories(normalized.daily_calories);
+      if (safeCalories !== normalized.daily_calories && showAlerts) {
+        const type = safeCalories > (normalized.daily_calories || safeCalories) ? 'min' : 'max';
+        showSafeIntakeWarning(type);
+      }
+      normalized.daily_calories = safeCalories;
+
+      const originalCarbs = normalized.carbs_percentage;
+      const originalProteins = normalized.proteins_percentage;
+      const originalFats = normalized.fats_percentage;
+
+      normalized.carbs_percentage = clampMacroPercentage(originalCarbs, MACRO_PERCENT_LIMITS.carbs);
+      normalized.proteins_percentage = clampMacroPercentage(originalProteins, MACRO_PERCENT_LIMITS.proteins);
+      normalized.fats_percentage = clampMacroPercentage(originalFats, MACRO_PERCENT_LIMITS.fats);
+
+      if (
+        showAlerts &&
+        (normalized.carbs_percentage !== originalCarbs ||
+          normalized.proteins_percentage !== originalProteins ||
+          normalized.fats_percentage !== originalFats)
+      ) {
+        showMacroGuideline();
+      }
+
+      return normalized;
+    },
+    [clampMacroPercentage, ensureSafeCalories, showMacroGuideline, showSafeIntakeWarning],
+  );
 
   const startDisabled = permissionChecking || analyzing || !analysisReady || !!analysisError;
   const captureDisabled = !cameraController.ready || cameraController.detecting || permissionChecking || analyzing || cameraSwitching;
@@ -470,22 +577,23 @@ export const FoodAnalysisScreen: React.FC = () => {
         if (currentUser) {
           const profile = await AuthService.getUserProfile(currentUser.id);
           if (profile?.nutritional_goals) {
-            const goals = profile.nutritional_goals;
-            setNutritionalGoals(goals);
+            const normalizedGoals = applySafeGoals(profile.nutritional_goals, false);
+            if (normalizedGoals) {
+              setNutritionalGoals(normalizedGoals);
 
-            // Calcola i grammi dai percentuali
-            const calories = goals.daily_calories || 2000;
-            const carbsPct = goals.carbs_percentage || 50;
-            const proteinsPct = goals.proteins_percentage || 30;
-            const fatsPct = goals.fats_percentage || 20;
+              const calories = normalizedGoals.daily_calories || 2000;
+              const carbsPct = normalizedGoals.carbs_percentage || 50;
+              const proteinsPct = normalizedGoals.proteins_percentage || 30;
+              const fatsPct = normalizedGoals.fats_percentage || 20;
 
-            setDailyGoals({
-              calories,
-              carbohydrates: Math.round((calories * carbsPct / 100) / 4), // 4 kcal per grammo di carboidrati
-              proteins: Math.round((calories * proteinsPct / 100) / 4), // 4 kcal per grammo di proteine
-              fats: Math.round((calories * fatsPct / 100) / 9), // 9 kcal per grammo di grassi
-              fiber: 25, // g (valore standard)
-            });
+              setDailyGoals({
+                calories,
+                carbohydrates: Math.round((calories * carbsPct) / 400),
+                proteins: Math.round((calories * proteinsPct) / 400),
+                fats: Math.round((calories * fatsPct) / 900),
+                fiber: 25,
+              });
+            }
           }
         }
       } catch (error) {
@@ -501,23 +609,28 @@ export const FoodAnalysisScreen: React.FC = () => {
     try {
       const currentUser = await AuthService.getCurrentUser();
       if (currentUser) {
+        const normalizedGoals = applySafeGoals(goals, true);
+        if (!normalizedGoals) {
+          return;
+        }
+
         await AuthService.updateUserProfile(currentUser.id, {
-          nutritional_goals: goals,
+          nutritional_goals: normalizedGoals,
         });
 
-        setNutritionalGoals(goals);
+        setNutritionalGoals(normalizedGoals);
 
         // Calcola i grammi dai percentuali
-        const calories = goals.daily_calories;
-        const carbsPct = goals.carbs_percentage || 50;
-        const proteinsPct = goals.proteins_percentage || 30;
-        const fatsPct = goals.fats_percentage || 20;
+        const calories = normalizedGoals.daily_calories || MIN_SAFE_CALORIES;
+        const carbsPct = normalizedGoals.carbs_percentage || 50;
+        const proteinsPct = normalizedGoals.proteins_percentage || 30;
+        const fatsPct = normalizedGoals.fats_percentage || 20;
 
         setDailyGoals({
           calories,
-          carbohydrates: Math.round((calories * carbsPct / 100) / 4),
-          proteins: Math.round((calories * proteinsPct / 100) / 4),
-          fats: Math.round((calories * fatsPct / 100) / 9),
+          carbohydrates: Math.round((calories * carbsPct) / 400),
+          proteins: Math.round((calories * proteinsPct) / 400),
+          fats: Math.round((calories * fatsPct) / 900),
           fiber: 25,
         });
 
