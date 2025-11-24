@@ -4,7 +4,7 @@ export const API_CONFIG = {
   OPENAI: {
     API_KEY: process.env.EXPO_PUBLIC_OPENAI_API_KEY || '',
     BASE_URL: 'https://api.openai.com/v1',
-    MODEL: 'gpt-4o', // Using GPT-4o for vision capabilities
+    MODEL: 'gpt-4o-mini', // Primary model for vision tasks
     MAX_TOKENS: 1000,
     TEMPERATURE: 0.1, // Low temperature for consistent results
   },

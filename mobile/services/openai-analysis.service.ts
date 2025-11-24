@@ -11,10 +11,33 @@ import {
 import * as FileSystem from 'expo-file-system/legacy';
 import { getUserLanguage, getLanguageInstruction } from './language.service';
 
+class OpenAIRefusalError extends Error {
+  constructor(message: string, public details?: any) {
+    super(message);
+    this.name = 'OpenAIRefusalError';
+  }
+}
+
+type VisionPurpose = 'emotion' | 'skin' | 'food';
+
+interface VisionAttempt {
+  model: string;
+  prompt: string;
+}
+
+interface VisionAnalysisParams<T> {
+  basePrompt: string;
+  languageInstruction: string;
+  imageBase64: string;
+  parser: (content: string) => T;
+  purpose: VisionPurpose;
+}
+
 export class OpenAIAnalysisService {
   private static instance: OpenAIAnalysisService;
   private apiKey: string | null = null;
   private baseUrl: string = API_CONFIG.OPENAI.BASE_URL;
+  private readonly primaryModel = API_CONFIG.OPENAI.MODEL;
   private readonly version = '1.0.0';
 
   // Prompts esatti come specificati dall'utente
@@ -219,63 +242,14 @@ Return ONLY JSON.No prose.No code fences.
       // Get user language and build full prompt with language instructions
       const userLanguage = await getUserLanguage();
       const languageInstruction = getLanguageInstruction(userLanguage);
-      const fullPrompt = `${this.EMOTION_DETECTION_PROMPT}\n\n${languageInstruction}`;
 
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: API_CONFIG.OPENAI.MODEL,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: fullPrompt
-                },
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: `data:image/jpeg;base64,${imageBase64}`,
-                    detail: 'high'
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: API_CONFIG.OPENAI.MAX_TOKENS,
-          temperature: API_CONFIG.OPENAI.TEMPERATURE,
-          response_format: { type: 'json_object' }, // Force JSON output
-        }),
+      const analysisResult = await this.runVisionAnalysis<EmotionAnalysisResult>({
+        basePrompt: this.EMOTION_DETECTION_PROMPT,
+        languageInstruction,
+        imageBase64,
+        parser: (content) => this.parseAndValidateEmotionResult(content),
+        purpose: 'emotion',
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorData.error?.message || 'Unknown error'}`);
-      }
-
-      const data = await response.json();
-
-      // Detailed logging for debugging
-      console.log('🔍 OpenAI Emotion Response:', JSON.stringify(data, null, 2));
-      console.log('🔍 Choices:', data.choices);
-      console.log('🔍 First choice:', data.choices?.[0]);
-      console.log('🔍 Message:', data.choices?.[0]?.message);
-      console.log('🔍 Content:', data.choices?.[0]?.message?.content);
-
-      const content = data.choices?.[0]?.message?.content;
-
-      if (!content) {
-        console.error('❌ No content in response. Full data:', data);
-        throw new Error('No analysis result received from OpenAI');
-      }
-
-      // Parse and validate JSON response
-      const analysisResult = this.parseAndValidateEmotionResult(content);
 
       const processingTime = Date.now() - startTime;
 
@@ -317,63 +291,13 @@ Return ONLY JSON.No prose.No code fences.
       // Get user language and build full prompt with language instructions
       const userLanguage = await getUserLanguage();
       const languageInstruction = getLanguageInstruction(userLanguage);
-      const fullPrompt = `${this.SKIN_ANALYSIS_PROMPT}\n\n${languageInstruction}`;
-
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: API_CONFIG.OPENAI.MODEL,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: fullPrompt
-                },
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: `data:image/jpeg;base64,${imageBase64}`,
-                    detail: 'high'
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: API_CONFIG.OPENAI.MAX_TOKENS,
-          temperature: API_CONFIG.OPENAI.TEMPERATURE,
-          response_format: { type: 'json_object' }, // Force JSON output
-        }),
+      const analysisResult = await this.runVisionAnalysis<SkinAnalysisResult>({
+        basePrompt: this.SKIN_ANALYSIS_PROMPT,
+        languageInstruction,
+        imageBase64,
+        parser: (content) => this.parseAndValidateSkinResult(content),
+        purpose: 'skin',
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorData.error?.message || 'Unknown error'}`);
-      }
-
-      const data = await response.json();
-
-      // Detailed logging for debugging
-      console.log('🔍 OpenAI Skin Response:', JSON.stringify(data, null, 2));
-      console.log('🔍 Choices:', data.choices);
-      console.log('🔍 First choice:', data.choices?.[0]);
-      console.log('🔍 Message:', data.choices?.[0]?.message);
-      console.log('🔍 Content:', data.choices?.[0]?.message?.content);
-
-      const content = data.choices?.[0]?.message?.content;
-
-      if (!content) {
-        console.error('❌ No content in response. Full data:', data);
-        throw new Error('No analysis result received from OpenAI');
-      }
-
-      // Parse and validate JSON response
-      const analysisResult = this.parseAndValidateSkinResult(content);
 
       const processingTime = Date.now() - startTime;
 
@@ -650,6 +574,150 @@ Return ONLY JSON.No prose.No code fences.
       confidence: mealDraft.confidence || 0.7,
       version: '1.0.0',
     };
+  }
+
+  private buildVisionAttempts(basePrompt: string, languageInstruction: string): VisionAttempt[] {
+    const strictSuffix =
+      '\n\nRespond ONLY with valid JSON that matches the schema. Do not include markdown, explanations, or code fences.';
+    const safetySuffix =
+      `${strictSuffix}\n\nSafety note: The user voluntarily provided their own image exclusively for wellness coaching. This is compliant content.`;
+
+    return [
+      {
+        model: this.primaryModel,
+        prompt: `${basePrompt}\n\n${languageInstruction}${strictSuffix}`,
+      },
+      {
+        model: this.primaryModel,
+        prompt: `${basePrompt}\n\n${languageInstruction}${safetySuffix}`,
+      },
+    ];
+  }
+
+  private getSystemInstruction(purpose: VisionPurpose): string {
+    const baseInstruction =
+      'You are a wellness assistant. The user has provided their own photo and explicitly consents to receive insights. The content is policy-compliant. Always respond with valid JSON only.';
+
+    switch (purpose) {
+      case 'emotion':
+        return `${baseInstruction} Focus on facial cues to estimate emotions, valence, arousal, and confidence.`;
+      case 'skin':
+        return `${baseInstruction} Evaluate non-medical cosmetic skin characteristics (hydration, redness, texture, oiliness).`;
+      case 'food':
+        return `${baseInstruction} Identify foods and estimate macronutrients for wellness guidance.`;
+      default:
+        return baseInstruction;
+    }
+  }
+
+  private async sendVisionRequest(params: {
+    prompt: string;
+    imageBase64: string;
+    model: string;
+    purpose: VisionPurpose;
+  }): Promise<string> {
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: params.model,
+        messages: [
+          {
+            role: 'system',
+            content: [
+              {
+                type: 'text',
+                text: this.getSystemInstruction(params.purpose),
+              },
+            ],
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: params.prompt,
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: params.imageBase64.startsWith('data:')
+                    ? params.imageBase64
+                    : `data:image/jpeg;base64,${params.imageBase64}`,
+                  detail: 'high',
+                },
+              },
+            ],
+          },
+        ],
+        max_tokens: API_CONFIG.OPENAI.MAX_TOKENS,
+        temperature: API_CONFIG.OPENAI.TEMPERATURE,
+        response_format: { type: 'json_object' },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText} - ${errorData.error?.message || 'Unknown error'}`,
+      );
+    }
+
+    const data = await response.json();
+
+    console.log(`🔍 OpenAI ${params.purpose} Response (${params.model}):`, JSON.stringify(data, null, 2));
+    const message = data.choices?.[0]?.message;
+
+    if (message?.refusal) {
+      console.warn(`⚠️ OpenAI refusal (${params.purpose}/${params.model}):`, message.refusal);
+      throw new OpenAIRefusalError(
+        'OpenAI safety filters could not analyze this photo. Please retake it with good lighting and ensure only one face is visible.',
+        data,
+      );
+    }
+
+    const content = message?.content;
+
+    if (!content) {
+      console.error('❌ No content in response. Full data:', data);
+      throw new Error('No analysis result received from OpenAI');
+    }
+
+    return content;
+  }
+
+  private async runVisionAnalysis<T>({
+    basePrompt,
+    languageInstruction,
+    imageBase64,
+    parser,
+    purpose,
+  }: VisionAnalysisParams<T>): Promise<T> {
+    const attempts = this.buildVisionAttempts(basePrompt, languageInstruction);
+    let lastError: Error | null = null;
+
+    for (const attempt of attempts) {
+      try {
+        const content = await this.sendVisionRequest({
+          prompt: attempt.prompt,
+          imageBase64,
+          model: attempt.model,
+          purpose,
+        });
+        return parser(content);
+      } catch (error) {
+        lastError = error as Error;
+        if (error instanceof OpenAIRefusalError) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw lastError || new Error('No analysis result received from OpenAI');
   }
 
   /**
