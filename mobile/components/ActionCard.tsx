@@ -6,10 +6,16 @@ import {
   StyleSheet,
   Animated,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActionInfo } from '../services/actions.service';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTranslation } from '../hooks/useTranslation';
+import { ActionTrackerService } from '../services/action-tracker.service';
+import wellnessActivitiesService, {
+  WellnessActivityInput,
+} from '../services/wellness-activities.service';
 
 interface ActionCardProps {
   action: ActionInfo;
@@ -30,9 +36,45 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 }) => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const fadeAnim = React.useRef(new Animated.Value(1)).current;
   const { colors, mode } = useTheme();
+  const { language } = useTranslation();
   const isDark = mode === 'dark';
+  const labels = {
+    addButton:
+      language === 'it' ? 'Aggiungi alla routine di oggi' : "Add to today's routine",
+    addedTitle: language === 'it' ? 'Attività aggiunta' : 'Added to routine',
+    addedMessage:
+      language === 'it'
+        ? 'Troverai questa attività nella sezione "Cosa fare oggi" di oggi.'
+        : 'You will find this activity in today’s “What to do today” section.',
+    addErrorTitle: language === 'it' ? 'Non aggiunta' : 'Unable to add',
+    addErrorMessage:
+      language === 'it'
+        ? 'Non sono riuscito ad aggiungere questa attività. Riprova più tardi.'
+        : 'We couldn’t add this activity right now. Please try again later.',
+    snooze: language === 'it' ? 'Rimanda' : 'Snooze',
+    dismiss: language === 'it' ? 'Non ora' : 'Not now',
+    removeTitle: language === 'it' ? 'Rimuovi Azione' : 'Remove action',
+    removeMessage: language === 'it'
+      ? 'Sei sicuro di voler rimuovere questa azione?'
+      : 'Are you sure you want to remove this action?',
+    snoozeTitle: language === 'it' ? 'Rimanda Azione' : 'Snooze action',
+    snoozeMessage: language === 'it'
+      ? 'Quando vuoi essere ricordato di questa azione?'
+      : 'When should I remind you about this action?',
+    snoozeHour: language === 'it' ? 'Tra 1 ora' : 'In 1 hour',
+    snoozeFour: language === 'it' ? 'Tra 4 ore' : 'In 4 hours',
+    snoozeDay: language === 'it' ? 'Domani' : 'Tomorrow',
+    cancel: language === 'it' ? 'Annulla' : 'Cancel',
+    snoozed: language === 'it'
+      ? 'Ti ricorderò più tardi di questa attività.'
+      : 'I’ll remind you about this action later.',
+    dismissed: language === 'it'
+      ? 'Ok, non te lo mostrerò più per ora.'
+      : 'Okay, I won’t show this again for now.',
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -46,17 +88,66 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'skincare': return 'face-woman';
-      case 'lifestyle': return 'heart';
-      case 'medical': return 'medical-bag';
-      case 'emotional': return 'brain';
-      default: return 'lightbulb';
+      case 'skincare':
+      case 'skin':
+        return 'face-woman';
+      case 'lifestyle':
+      case 'movement':
+        return 'run';
+      case 'medical':
+        return 'medical-bag';
+      case 'nutrition':
+        return 'food-apple';
+      case 'emotional':
+      case 'mindfulness':
+        return 'brain';
+      case 'recovery':
+        return 'heart-pulse';
+      default:
+        return 'lightbulb';
     }
   };
 
-  const handleComplete = () => {
-    setIsCompleted(true);
+  const mapCategoryToWellness = (
+    category: ActionInfo['category'],
+  ): WellnessActivityInput['category'] => {
+    switch (category) {
+      case 'nutrition':
+        return 'nutrition';
+      case 'lifestyle':
+      case 'movement':
+        return 'movement';
+      case 'skincare':
+      case 'skin':
+      case 'medical':
+      case 'recovery':
+        return 'recovery';
+      default:
+        return 'mindfulness';
+    }
+  };
 
+  const buildActivityInput = (): WellnessActivityInput => {
+    const scheduledTime = new Date();
+    const minutesMatch = action.estimatedTime?.match(/(\d+)/);
+    if (minutesMatch) {
+      scheduledTime.setMinutes(scheduledTime.getMinutes() + Number(minutesMatch[1]));
+    }
+
+    return {
+      title: action.title,
+      description:
+        action.description ||
+        (language === 'it'
+          ? 'Suggerimento personalizzato dal risultato dell’analisi.'
+          : 'Personalized suggestion from your analysis result.'),
+      category: mapCategoryToWellness(action.category),
+      scheduledTime,
+    };
+  };
+
+  const animateRemoval = () => {
+    setIsCompleted(true);
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: 300,
@@ -66,41 +157,71 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     });
   };
 
+  const handleComplete = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+
+    try {
+      const activityInput = buildActivityInput();
+      const result = await wellnessActivitiesService.saveActivity(activityInput);
+
+      if (!result.success) {
+        Alert.alert(labels.addErrorTitle, labels.addErrorMessage);
+        setIsProcessing(false);
+        return;
+      }
+
+      await ActionTrackerService.logAction(action, 'added');
+      Alert.alert(labels.addedTitle, labels.addedMessage);
+      animateRemoval();
+    } catch (error) {
+      console.error('[ActionCard] failed to add activity:', error);
+      Alert.alert(labels.addErrorTitle, labels.addErrorMessage);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleDismiss = () => {
-    Alert.alert(
-      'Rimuovi Azione',
-      'Sei sicuro di voler rimuovere questa azione?',
-      [
-        { text: 'Annulla', style: 'cancel' },
-        {
-          text: 'Rimuovi',
-          style: 'destructive',
-          onPress: () => {
-            setIsDismissed(true);
-            Animated.timing(fadeAnim, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: true,
-            }).start(() => {
-              onDismiss?.(action);
-            });
-          }
-        }
-      ]
+    Alert.alert(labels.removeTitle, labels.removeMessage, [
+      { text: labels.cancel, style: 'cancel' },
+      {
+        text: labels.dismiss,
+        style: 'destructive',
+        onPress: () => {
+          ActionTrackerService.logAction(action, 'dismissed').catch((error) =>
+            console.warn('[ActionCard] failed to log dismiss', error),
+          );
+          setIsDismissed(true);
+          Animated.timing(fadeAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }).start(() => {
+            Alert.alert(labels.dismissed);
+            onDismiss?.(action);
+          });
+        },
+      },
+    ]);
+  };
+
+  const scheduleSnooze = (hours: number) => {
+    const snoozeUntil = new Date(Date.now() + hours * 60 * 60 * 1000);
+    ActionTrackerService.logAction(action, 'snoozed', snoozeUntil).catch((error) =>
+      console.warn('[ActionCard] failed to log snooze', error),
     );
+    onSnooze?.({ ...action, snoozeUntil });
+    Alert.alert(labels.snoozed);
   };
 
   const handleSnooze = () => {
-    Alert.alert(
-      'Rimanda Azione',
-      'Quando vuoi essere ricordato di questa azione?',
-      [
-        { text: 'Annulla', style: 'cancel' },
-        { text: 'Tra 1 ora', onPress: () => onSnooze?.({ ...action, snoozeUntil: new Date(Date.now() + 60 * 60 * 1000) }) },
-        { text: 'Tra 4 ore', onPress: () => onSnooze?.({ ...action, snoozeUntil: new Date(Date.now() + 4 * 60 * 60 * 1000) }) },
-        { text: 'Domani', onPress: () => onSnooze?.({ ...action, snoozeUntil: new Date(Date.now() + 24 * 60 * 60 * 1000) }) },
-      ]
-    );
+    Alert.alert(labels.snoozeTitle, labels.snoozeMessage, [
+      { text: labels.cancel, style: 'cancel' },
+      { text: labels.snoozeHour, onPress: () => scheduleSnooze(1) },
+      { text: labels.snoozeFour, onPress: () => scheduleSnooze(4) },
+      { text: labels.snoozeDay, onPress: () => scheduleSnooze(24) },
+    ]);
   };
 
   if (isCompleted || isDismissed) {
@@ -137,7 +258,15 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <View style={[styles.card, { borderColor: getPriorityColor(action.priority) + '30', backgroundColor: isDark ? '#1f2937' : '#fff' }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View
+          style={[
+            styles.header,
+            {
+              borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.06)',
+              borderBottomWidth: action.description ? StyleSheet.hairlineWidth : 0,
+            },
+          ]}
+        >
           <View style={styles.headerLeft}>
             <View style={[styles.categoryIcon, { backgroundColor: getPriorityColor(action.priority) + '20' }]}>
               <MaterialCommunityIcons
@@ -187,29 +316,36 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         {/* Actions */}
         <View style={styles.actionsSection}>
           <TouchableOpacity
-            style={[styles.completeButton, { backgroundColor: getPriorityColor(action.priority) }]}
+            style={[
+              styles.completeButton,
+              {
+                backgroundColor: getPriorityColor(action.priority),
+                opacity: isProcessing ? 0.7 : 1,
+              },
+            ]}
             onPress={handleComplete}
+            disabled={isProcessing}
           >
-            <MaterialCommunityIcons name="check" size={16} color="#ffffff" />
-            <Text style={styles.completeButtonText}>Completato</Text>
+            {isProcessing ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <>
+                <MaterialCommunityIcons name="calendar-plus" size={16} color="#ffffff" />
+                <Text style={styles.completeButtonText}>{labels.addButton}</Text>
+              </>
+            )}
           </TouchableOpacity>
 
           {showSnooze && (
-            <TouchableOpacity
-              style={styles.snoozeButton}
-              onPress={handleSnooze}
-            >
+            <TouchableOpacity style={styles.snoozeButton} onPress={handleSnooze}>
               <MaterialCommunityIcons name="clock-outline" size={16} color="#6b7280" />
-              <Text style={styles.snoozeButtonText}>Rimanda</Text>
+              <Text style={styles.snoozeButtonText}>{labels.snooze}</Text>
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity
-            style={styles.dismissButton}
-            onPress={handleDismiss}
-          >
+          <TouchableOpacity style={styles.dismissButton} onPress={handleDismiss}>
             <MaterialCommunityIcons name="close" size={16} color="#6b7280" />
-            <Text style={styles.dismissButtonText}>Non ora</Text>
+            <Text style={styles.dismissButtonText}>{labels.dismiss}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -330,9 +466,11 @@ const styles = StyleSheet.create({
   },
   completeButtonText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   snoozeButton: {
     flexDirection: 'row',

@@ -3,7 +3,16 @@ export interface ActionInfo {
   title: string;
   description: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  category: 'skincare' | 'lifestyle' | 'medical' | 'emotional';
+  category:
+    | 'skincare'
+    | 'lifestyle'
+    | 'medical'
+    | 'emotional'
+    | 'nutrition'
+    | 'skin'
+    | 'movement'
+    | 'mindfulness'
+    | 'recovery';
   actionable: boolean;
   estimatedTime?: string;
   resources?: string[];

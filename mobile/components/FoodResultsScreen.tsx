@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
+import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 import { ResultHero } from './ResultHero';
 import { EnhancedMetricTile } from './EnhancedMetricTile';
 import { IntelligentInsightsSection } from './IntelligentInsightsSection';
@@ -52,6 +53,14 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
   const { colors, mode } = useTheme();
   const isDark = mode === 'dark';
   const { t } = useTranslation();
+  const { hideTabBar, showTabBar } = useTabBarVisibility();
+
+  useEffect(() => {
+    hideTabBar();
+    return () => {
+      showTabBar();
+    };
+  }, [hideTabBar, showTabBar]);
 
   // Extract identified foods from fullAnalysisResult if available
   const identifiedFoods = fullAnalysisResult?.identified_foods || results.identifiedFoods || [];
@@ -263,31 +272,45 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
       </ScrollView>
 
       {/* Bottom Action Bar */}
-      <BlurView intensity={90} tint={isDark ? 'dark' : 'light'} style={styles.bottomBar}>
-        <View style={styles.bottomBarContent}>
-          <TouchableOpacity
-            style={[styles.secondaryButton, { borderColor: colors.border }]}
-            onPress={onRetake}
-          >
-            <MaterialCommunityIcons name="camera-retake" size={20} color={colors.text} />
-            <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-              {t('common.retake') || 'Retake'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.primaryButton} onPress={onDone}>
-            <LinearGradient
-              colors={['#3b82f6', '#2563eb']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.gradientButton}
+      <BlurView
+        intensity={90}
+        tint={isDark ? 'dark' : 'light'}
+        style={[styles.bottomBar, { backgroundColor: isDark ? 'rgba(2,6,23,0.65)' : 'rgba(255,255,255,0.7)' }]}
+      >
+        <View
+          style={[
+            styles.bottomBarInner,
+            {
+              backgroundColor: isDark ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.95)',
+              borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(15,23,42,0.08)',
+            },
+          ]}
+        >
+          <View style={styles.bottomBarContent}>
+            <TouchableOpacity
+              style={[styles.secondaryButton, { borderColor: colors.border }]}
+              onPress={onRetake}
             >
-              <Text style={styles.primaryButtonText}>
-                {t('common.done') || 'Done'}
+              <MaterialCommunityIcons name="camera-retake" size={20} color={colors.text} />
+              <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
+                {t('common.retake') || 'Retake'}
               </Text>
-              <MaterialCommunityIcons name="check" size={20} color="#fff" />
-            </LinearGradient>
-          </TouchableOpacity>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.primaryButton} onPress={onDone}>
+              <LinearGradient
+                colors={['#3b82f6', '#2563eb']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.gradientButton}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {t('common.done') || 'Done'}
+                </Text>
+                <MaterialCommunityIcons name="check" size={20} color="#fff" />
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
       </BlurView>
     </LinearGradient>
@@ -356,6 +379,14 @@ const styles = StyleSheet.create({
     right: 0,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
+    paddingTop: 8,
+  },
+  bottomBarInner: {
+    borderRadius: 30,
+    borderWidth: 1,
+    marginHorizontal: 16,
+    marginBottom: Platform.OS === 'ios' ? 18 : 12,
+    overflow: 'hidden',
   },
   bottomBarContent: {
     flexDirection: 'row',

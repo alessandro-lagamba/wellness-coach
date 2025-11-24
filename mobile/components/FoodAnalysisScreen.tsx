@@ -569,14 +569,15 @@ export const FoodAnalysisScreen: React.FC = () => {
   // Start camera automatically when screen loads
   // Show/hide tab bar based on camera state
   useEffect(() => {
-    if (cameraController.active) {
+    const shouldHideTabBar = cameraController.active || analyzing || !!results;
+    if (shouldHideTabBar) {
       hideTabBar();
       return () => {
         showTabBar();
       };
     }
     showTabBar();
-  }, [cameraController.active, hideTabBar, showTabBar]);
+  }, [cameraController.active, analyzing, results, hideTabBar, showTabBar]);
 
 
   const handleStartAnalysis = async () => {

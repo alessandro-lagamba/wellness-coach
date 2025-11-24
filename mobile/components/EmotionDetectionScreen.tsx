@@ -324,14 +324,15 @@ export const EmotionDetectionScreen: React.FC = () => {
   // 🔥 FIX: Rimuoviamo cameraController dalle dipendenze per evitare loop infinito
   // Show/hide tab bar based on camera state
   useEffect(() => {
-    if (cameraController.active) {
+    const shouldHideTabBar = cameraController.active || detecting || showingResults;
+    if (shouldHideTabBar) {
       hideTabBar();
       return () => {
         showTabBar();
       };
     }
     showTabBar();
-  }, [cameraController.active, hideTabBar, showTabBar]);
+  }, [cameraController.active, detecting, showingResults, hideTabBar, showTabBar]);
 
 
   const switchCamera = useCallback(() => {

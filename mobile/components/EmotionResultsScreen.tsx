@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { IntelligentInsightsSection } from './IntelligentInsightsSection';
 import { ActionCard } from './ActionCard';
 import { MetricsService } from '../services/metrics.service';
 import { useAnalysisStore } from '../stores/analysis.store';
+import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 
 const { width } = Dimensions.get('window');
 
@@ -46,6 +47,14 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
   const isDark = mode === 'dark';
   const { t, language } = useTranslation();
   const emotionHistory = useAnalysisStore((state) => state.getSafeEmotionHistory());
+  const { hideTabBar, showTabBar } = useTabBarVisibility();
+
+  useEffect(() => {
+    hideTabBar();
+    return () => {
+      showTabBar();
+    };
+  }, [hideTabBar, showTabBar]);
 
 
 
@@ -227,18 +236,84 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
     }
   }), [currentEmotion, confidence, valence, arousal, fullAnalysisResult, emotionData, emotionHistory]);
 
+  const recommendationRules = useMemo(
+    () => [
+      {
+        keywords: ['medit', 'respiro', 'respira', 'breath'],
+        title: language === 'it' ? 'Reset di Respiro Guidato' : 'Guided Breathing Reset',
+      },
+      {
+        keywords: ['passegg', 'cammin', 'walk', 'movement'],
+        title: language === 'it' ? 'Mini Passeggiata Energizzante' : 'Mood Walk Booster',
+      },
+      {
+        keywords: ['musica', 'sound', 'ascolt', 'music'],
+        title: language === 'it' ? 'Pausa Musicale Calmante' : 'Calming Music Break',
+      },
+      {
+        keywords: ['scrivi', 'journal', 'diario', 'gratitude', 'gratitudine'],
+        title: language === 'it' ? 'Mini Sessione di Journaling' : 'Quick Journaling Ritual',
+      },
+      {
+        keywords: ['stretch', 'allunga', 'yoga', 'postura'],
+        title: language === 'it' ? 'Stretching di Rilascio' : 'Release Stretch',
+      },
+      {
+        keywords: ['bere', 'acqua', 'idrata', 'drink'],
+        title: language === 'it' ? 'Idratazione Mirata' : 'Hydration Reminder',
+      },
+      {
+        keywords: ['sole', 'luce', 'sun', 'outdoor'],
+        title: language === 'it' ? 'Dose di Luce Naturale' : 'Sunlight Boost',
+      },
+    ],
+    [language],
+  );
+
+  const fallbackRecommendationTitles = useMemo(
+    () =>
+      language === 'it'
+        ? ['Suggerimento Personalizzato', 'Momento di Benessere', 'Rituale Espresso']
+        : ['Personalized Tip', 'Wellness Moment', 'Quick Ritual'],
+    [language],
+  );
+
+  const getRecommendationTitle = useCallback((text: string, index: number) => {
+    if (!text) {
+      return fallbackRecommendationTitles[index % fallbackRecommendationTitles.length];
+    }
+    const lower = text.toLowerCase();
+    const matchedRule = recommendationRules.find((rule) =>
+      rule.keywords.some((keyword) => lower.includes(keyword)),
+    );
+    if (matchedRule) {
+      return matchedRule.title;
+    }
+    return fallbackRecommendationTitles[index % fallbackRecommendationTitles.length];
+  }, [fallbackRecommendationTitles, recommendationRules]);
+
+  const whatToDoTitle = useMemo(
+    () => (language === 'it' ? 'Cosa fare oggi' : 'What to do today').toUpperCase(),
+    [language],
+  );
+
+  const wellnessRecommendationsTitle = useMemo(
+    () => (language === 'it' ? 'CONSIGLI DI BENESSERE' : 'WELLNESS RECOMMENDATIONS'),
+    [language],
+  );
+
   // Generate actions from tips
   const actions = useMemo(() => {
     return emotionData.tips.map((tip, index) => ({
       id: `tip-${index}`,
-      title: t('analysis.emotion.wellnessTip') || 'Wellness Tip',
+      title: getRecommendationTitle(tip, index),
       description: tip,
-      category: 'emotion',
+      category: 'emotional',
       priority: index === 0 ? 'high' : 'medium',
       actionable: true,
       estimatedTime: '5 min',
     }));
-  }, [emotionData.tips, language]);
+  }, [emotionData.tips, getRecommendationTitle]);
 
   if (!currentEmotion) return null;
 
@@ -349,7 +424,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
 
           {/* Recommendations / Tips */}
           <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
-            {t('analysis.emotion.results.wellnessTips') || 'WELLNESS TIPS'}
+            {whatToDoTitle}
           </Text>
 
           {actions.map((action) => (
@@ -365,7 +440,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
           {fullAnalysisResult?.recommendations && fullAnalysisResult.recommendations.length > 0 && (
             <>
               <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
-                {language === 'it' ? 'CONSIGLI DI BENESSERE' : 'WELLNESS RECOMMENDATIONS'}
+                {wellnessRecommendationsTitle}
               </Text>
 
               {fullAnalysisResult.recommendations.map((rec: string, index: number) => (
@@ -373,7 +448,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
                   key={`ai-rec-${index}`}
                   action={{
                     id: `ai-recommendation-${index}`,
-                    title: language === 'it' ? 'Consiglio AI' : 'AI Recommendation',
+                    title: getRecommendationTitle(rec, index),
                     description: capitalizeFirst(rec),
                     category: 'emotional',
                     priority: index === 0 ? 'high' : index === 1 ? 'medium' : 'low',
@@ -393,31 +468,45 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
       </ScrollView>
 
       {/* Bottom Action Bar */}
-      <BlurView intensity={90} tint={isDark ? 'dark' : 'light'} style={styles.bottomBar}>
-        <View style={styles.bottomBarContent}>
-          <TouchableOpacity
-            style={[styles.secondaryButton, { borderColor: colors.border }]}
-            onPress={onRetake}
-          >
-            <MaterialCommunityIcons name="camera-retake" size={20} color={colors.text} />
-            <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-              {t('analysis.emotion.results.retake') || 'Retake'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.primaryButton} onPress={onGoBack}>
-            <LinearGradient
-              colors={emotionData.gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.gradientButton}
+      <BlurView
+        intensity={90}
+        tint={isDark ? 'dark' : 'light'}
+        style={[styles.bottomBar, { backgroundColor: isDark ? 'rgba(2,6,23,0.65)' : 'rgba(255,255,255,0.7)' }]}
+      >
+        <View
+          style={[
+            styles.bottomBarInner,
+            {
+              backgroundColor: isDark ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.95)',
+              borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(15,23,42,0.08)',
+            },
+          ]}
+        >
+          <View style={styles.bottomBarContent}>
+            <TouchableOpacity
+              style={[styles.secondaryButton, { borderColor: colors.border }]}
+              onPress={onRetake}
             >
-              <Text style={styles.primaryButtonText}>
-                {t('common.done') || 'Done'}
+              <MaterialCommunityIcons name="camera-retake" size={20} color={colors.text} />
+              <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
+                {t('analysis.emotion.results.retake') || 'Retake'}
               </Text>
-              <MaterialCommunityIcons name="check" size={20} color="#fff" />
-            </LinearGradient>
-          </TouchableOpacity>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.primaryButton} onPress={onGoBack}>
+              <LinearGradient
+                colors={emotionData.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.gradientButton}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {t('common.done') || 'Done'}
+                </Text>
+                <MaterialCommunityIcons name="check" size={20} color="#fff" />
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
       </BlurView>
     </LinearGradient>
@@ -461,6 +550,14 @@ const styles = StyleSheet.create({
     right: 0,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
+    paddingTop: 8,
+  },
+  bottomBarInner: {
+    borderRadius: 30,
+    borderWidth: 1,
+    marginHorizontal: 16,
+    marginBottom: Platform.OS === 'ios' ? 18 : 12,
+    overflow: 'hidden',
   },
   bottomBarContent: {
     flexDirection: 'row',

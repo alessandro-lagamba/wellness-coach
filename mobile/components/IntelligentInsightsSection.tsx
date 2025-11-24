@@ -179,13 +179,14 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
   };
 
   const categoryInfo = getCategoryInfo();
+  const sectionTitle = (categoryInfo.title || '').toUpperCase();
 
   if (loading) {
     return (
       <View style={styles.container}>
         {showTitle && (
           <View style={styles.header}>
-            <Text style={styles.title}>{categoryInfo.title}</Text>
+            <Text style={styles.title}>{sectionTitle}</Text>
             <Text style={styles.subtitle}>{categoryInfo.subtitle}</Text>
           </View>
         )}
@@ -208,7 +209,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
       <View style={styles.container}>
         {showTitle && (
           <View style={styles.header}>
-            <Text style={styles.title}>{categoryInfo.title}</Text>
+            <Text style={styles.title}>{sectionTitle}</Text>
             <Text style={styles.subtitle}>{categoryInfo.subtitle}</Text>
           </View>
         )}
@@ -233,7 +234,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
       <View style={styles.container}>
         {showTitle && (
           <View style={styles.header}>
-            <Text style={styles.title}>{categoryInfo.title}</Text>
+            <Text style={styles.title}>{sectionTitle}</Text>
             <Text style={styles.subtitle}>{categoryInfo.subtitle}</Text>
           </View>
         )}
@@ -255,7 +256,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
         <View style={styles.header}>
           <View style={styles.titleRow}>
             <View style={styles.titleContainer}>
-              <Text style={[styles.title, { color: colors.text }]}>{categoryInfo.title}</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{sectionTitle}</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{categoryInfo.subtitle}</Text>
             </View>
             <TouchableOpacity 
