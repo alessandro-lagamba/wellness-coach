@@ -48,12 +48,19 @@ export async function getUserLanguage(): Promise<'it' | 'en'> {
 
 /**
  * Ottiene l'istruzione per la lingua da aggiungere ai prompt AI
+ * CRITICAL: This instruction ensures AI returns valid JSON with translated string values,
+ * not prose responses in the target language.
  * @param language - La lingua dell'utente
  * @returns Istruzione per l'AI sulla lingua da usare
  */
 export function getLanguageInstruction(language: 'it' | 'en'): string {
-  return language === 'it'
-    ? 'IMPORTANT: Respond in Italian. All text in your response must be in Italian.'
-    : 'IMPORTANT: Respond in English. All text in your response must be in English.';
+  const targetLanguage = language === 'it' ? 'Italian (Italiano)' : 'English';
+
+  return `IMPORTANT LANGUAGE INSTRUCTIONS:
+- You MUST return ONLY valid JSON with the exact structure specified in the schema.
+- Translate ONLY the string values (text content) to ${targetLanguage}.
+- Do NOT translate property names, keys, or the JSON structure itself.
+- Do NOT write any text outside the JSON object.
+- Return ONLY raw JSON. No markdown. No code fences. No prose. No explanations.`;
 }
 

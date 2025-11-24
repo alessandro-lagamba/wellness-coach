@@ -9,6 +9,7 @@ import {
   AnalysisHistory
 } from '../types/analysis.types';
 import * as FileSystem from 'expo-file-system/legacy';
+import { getUserLanguage, getLanguageInstruction } from './language.service';
 
 export class OpenAIAnalysisService {
   private static instance: OpenAIAnalysisService;
@@ -17,7 +18,7 @@ export class OpenAIAnalysisService {
   private readonly version = '1.0.0';
 
   // Prompts esatti come specificati dall'utente
-  private readonly EMOTION_DETECTION_PROMPT = (language: string = 'en') => `You are an expert in facial emotion analysis for wellness coaching.
+  private readonly EMOTION_DETECTION_PROMPT = `You are an expert in facial emotion analysis for wellness coaching.
 Task: analyze ONE face photo and return STRICT JSON that matches the provided JSON Schema.
 Constraints:
 - Estimate 7 basic emotions + dominant_emotion, valence (-1..1), arousal (-1..1), confidence (0..1).
@@ -25,14 +26,12 @@ Constraints:
 - Observations: describe specific facial cues (e.g., "corners of mouth raised", "eyebrows relaxed", "eyes wide open"). Be objective.
 - Recommendations: provide 3-5 short, actionable wellness tips based on the detected emotion (e.g., "Take a deep breath", "Go for a short walk").
 - Analysis Description: Provide a short, educational paragraph (2-3 sentences) explaining the analysis result to the user. Explain "why" this emotion was detected and what it means for their wellness. Focus on the science of facial expressions (e.g., "The raised inner eyebrows suggest...").
-- Language: Output all text (observations, recommendations, analysis_description) in ${language === 'it' ? 'Italian (Italiano)' : 'English'}.
 
-Return ONLY JSON. No prose. No code fences.
 Schema: {
   "type": "object",
   "required": ["dominant_emotion","emotions","valence","arousal","confidence","observations","recommendations","analysis_description","version"],
   "properties": {
-    "dominant_emotion": {"type":"string","enum":["joy","sadness","anger","fear","surprise","disgust","neutral"]},
+    "dominant_emotion": {"type":"string","enum":["joy","sadness","anger","fear"," surprise","disgust","neutral"]},
     "emotions": {
       "type":"object",
       "required":["joy","sadness","anger","fear","surprise","disgust","neutral"],
@@ -56,20 +55,18 @@ Schema: {
   }
 }`;
 
-  private readonly SKIN_ANALYSIS_PROMPT = (language: string = 'en') => `You are a dermatology-assistant focused on non-diagnostic cosmetic skin assessment from a single photo.
+  private readonly SKIN_ANALYSIS_PROMPT = `You are a dermatology-assistant focused on non-diagnostic cosmetic skin assessment from a single photo.
 Task: analyze the skin quality (texture, redness, oiliness, hydration) and return STRICT JSON per schema.
 Constraints:
 - Consider lighting, focus, and visible areas. If artifacts (makeup/filters/overexposure) reduce confidence.
 - Provide concise product-agnostic recommendations (hydration, sunscreen, cleansing, etc.). Non-medical.
 - Analysis Description: Provide a short, educational paragraph (2-3 sentences) explaining the skin condition to the user. Explain what the scores mean and offer a general wellness tip. Focus on skin physiology (e.g., "Sebum production appears balanced...").
-- Language: Output all text (issues, recommendations, notes, analysis_description) in ${language === 'it' ? 'Italian (Italiano)' : 'English'}.
 
-Return ONLY JSON. No prose. No code fences.
 Schema: {
   "type":"object",
   "required":["scores","issues","recommendations","confidence","notes","analysis_description","version"],
   "properties":{
-    "scores":{
+    " scores":{
       "type":"object",
       "required":["texture","redness","oiliness","hydration","overall"],
       "properties":{
@@ -219,6 +216,11 @@ Return ONLY JSON.No prose.No code fences.
       // Convert image to base64
       const imageBase64 = await this.convertImageToBase64(request.imageUri);
 
+      // Get user language and build full prompt with language instructions
+      const userLanguage = await getUserLanguage();
+      const languageInstruction = getLanguageInstruction(userLanguage);
+      const fullPrompt = `${this.EMOTION_DETECTION_PROMPT}\n\n${languageInstruction}`;
+
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -233,7 +235,7 @@ Return ONLY JSON.No prose.No code fences.
               content: [
                 {
                   type: 'text',
-                  text: this.EMOTION_DETECTION_PROMPT(request.language)
+                  text: fullPrompt
                 },
                 {
                   type: 'image_url',
@@ -302,6 +304,11 @@ Return ONLY JSON.No prose.No code fences.
       // Convert image to base64
       const imageBase64 = await this.convertImageToBase64(request.imageUri);
 
+      // Get user language and build full prompt with language instructions
+      const userLanguage = await getUserLanguage();
+      const languageInstruction = getLanguageInstruction(userLanguage);
+      const fullPrompt = `${this.SKIN_ANALYSIS_PROMPT}\n\n${languageInstruction}`;
+
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -316,7 +323,7 @@ Return ONLY JSON.No prose.No code fences.
               content: [
                 {
                   type: 'text',
-                  text: this.SKIN_ANALYSIS_PROMPT(request.language)
+                  text: fullPrompt
                 },
                 {
                   type: 'image_url',
