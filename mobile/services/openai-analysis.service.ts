@@ -249,6 +249,7 @@ Return ONLY JSON.No prose.No code fences.
           ],
           max_tokens: API_CONFIG.OPENAI.MAX_TOKENS,
           temperature: API_CONFIG.OPENAI.TEMPERATURE,
+          response_format: { type: 'json_object' }, // Force JSON output
         }),
       });
 
@@ -337,6 +338,7 @@ Return ONLY JSON.No prose.No code fences.
           ],
           max_tokens: API_CONFIG.OPENAI.MAX_TOKENS,
           temperature: API_CONFIG.OPENAI.TEMPERATURE,
+          response_format: { type: 'json_object' }, // Force JSON output
         }),
       });
 
