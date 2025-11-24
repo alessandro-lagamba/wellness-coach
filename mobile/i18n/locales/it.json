@@ -17,7 +17,13 @@
     "continue": "Continua",
     "back": "Indietro",
     "update": "Aggiorna",
-    "reset": "Reset"
+    "reset": "Reset",
+    "status": "Stato",
+    "trend": "Trend",
+    "done": "Fatto",
+    "retake": "Ripeti",
+    "recommendation": "Raccomandazione",
+    "markAsDone": "Segna come Completato"
   },
   "settings": {
     "title": "Impostazioni",
@@ -410,6 +416,17 @@
         "thisMonth": "Questo mese",
         "valenceDesc": "Misura la positività della tua espressione e dell'affetto generale.",
         "arousalDesc": "Misura l'intensità/energia rilevata nel momento.",
+        "buckets": {
+          "negative": "Negativo",
+          "neutral": "Neutrale",
+          "positive": "Positivo",
+          "veryPositive": "Molto Positivo",
+          "low": "Basso",
+          "medium": "Medio",
+          "high": "Alto",
+          "veryLow": "Molto Basso",
+          "veryHigh": "Molto Alto"
+        },
         "valenceDescription": "Valence misura quanto positive o negative sono le tue emozioni. Valori alti indicano felicità e soddisfazione, mentre valori bassi indicano tristezza o preoccupazione. Questo metrico ti aiuta a capire il tuo stato emotivo generale.",
         "arousalDescription": "Arousal misura l'intensità delle tue emozioni, indipendentemente dal fatto che siano positive o negative. Valori alti indicano eccitazione o stress, mentre valori bassi indicano calma o rilassamento. Ti aiuta a capire il tuo livello di attivazione emotiva.",
         "sessionsDescription": "Il numero di sessioni di analisi emotiva che hai completato questo mese. Tracciare regolarmente le tue emozioni ti aiuta a comprendere meglio i tuoi pattern emotivi e il tuo benessere generale."
@@ -448,6 +465,10 @@
         "aiObservations": "Osservazioni AI",
         "aiRecommendations": "Raccomandazioni AI",
         "wellnessGuidance": "Guida al Benessere",
+        "wellnessScore": "Punteggio Benessere",
+        "detectedEmotion": "Emozione Rilevata",
+        "emotionalMetrics": "METRICHE EMOTIVE",
+        "wellnessTip": "Consiglio di Benessere",
         "goBack": "Indietro",
         "retake": "Ripeti",
         "emotions": {
@@ -663,9 +684,16 @@
         "analysisTimeDesc": "Elaborazione in tempo reale completata",
         "skinHealth": "Salute della Pelle",
         "skinHealthDesc": "Valutazione completa del benessere",
+        "skinHealthLabel": "Salute della Pelle",
         "detectedIssues": "Problemi Rilevati",
         "analysisNotes": "Note di Analisi",
         "personalizedRecommendations": "Raccomandazioni Personalizzate",
+        "healthScore": "Punteggio Salute Pelle",
+        "excellent": "Condizione Eccellente",
+        "good": "Condizione Buona",
+        "needsAttention": "Richiede Attenzione",
+        "recommendation": "Consiglio per la Pelle",
+        "detectedIssue": "Problema Rilevato",
         "dailySkincareTips": "Consigli Giornalieri per la Cura della Pelle",
         "tip1": "Usa sempre una crema solare SPF 30+, anche nelle giornate nuvolose",
         "tip2": "Bevi 8-10 bicchieri d'acqua al giorno per un'idratazione ottimale",
@@ -838,6 +866,14 @@
         "fiber": "Fibra",
         "healthScore": "Punteggio Salute"
       },
+      "healthScore": "Punteggio Salute",
+      "excellent": "Eccellente Nutrizione",
+      "good": "Buona Nutrizione",
+      "needsImprovement": "Richiede Miglioramento",
+      "nutritionalBreakdown": "ANALISI NUTRIZIONALE",
+      "protein": "Proteine",
+      "carbs": "Carboidrati",
+      "fat": "Grassi",
       "howItWorks": {
         "title": "Come funziona l'analisi del cibo",
         "subtitle": "Scopri come la nostra AI analizza i tuoi pasti",
@@ -1051,7 +1087,9 @@
     "tapToExpand": "Tocca per espandere",
     "tapToCollapse": "Tocca per ridurre",
     "whyItMatters": "Perché è importante",
-    "howItWorks": "Come funziona"
+    "howItWorks": "Come funziona",
+    "analysisInProgress": "ANALISI IN CORSO",
+    "analyzing": "Analisi in corso..."
   },
   "rating": {
     "excellent": "Eccellente",

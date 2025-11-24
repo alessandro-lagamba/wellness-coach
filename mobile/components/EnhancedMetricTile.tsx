@@ -5,9 +5,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { BucketInfo, TrendInfo, ActionInfo } from '../services/metrics.service';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BucketInfo, TrendInfo } from '../services/metrics.service';
+import { ActionInfo } from '../services/actions.service';
+import { useTheme } from '../contexts/ThemeContext';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface EnhancedMetricTileProps {
   metric: string;
@@ -36,6 +41,9 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
   onExpandPress,
   expanded = false,
 }) => {
+  const { colors, mode } = useTheme();
+  const { t } = useTranslation();
+  const isDark = mode === 'dark';
   const [isExpanded, setIsExpanded] = useState(expanded);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -73,125 +81,137 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
   };
 
   const formatValue = (value: number) => {
+    if (value === undefined || value === null) return '--';
     // Per emotion metrics, mostra con segno + o -
     if (metric === 'valence') {
       return (value >= 0 ? '+' : '') + value.toFixed(2);
     }
-    return value.toFixed(2);
+    // Arousal is 0-1, display as percentage
+    if (metric === 'arousal') {
+      return Math.round(value * 100) + '%';
+    }
+    return value.toFixed(0); // Simplified for cleaner look
+  };
+
+  // Translate bucket label
+  const getTranslatedBucketLabel = (label: string): string => {
+    const labelLower = label.toLowerCase();
+    if (labelLower.includes('negative')) return t('analysis.emotion.metrics.buckets.negative') || label;
+    if (labelLower.includes('neutral')) return t('analysis.emotion.metrics.buckets.neutral') || label;
+    if (labelLower.includes('positive')) {
+      if (labelLower.includes('very')) return t('analysis.emotion.metrics.buckets.veryPositive') || label;
+      return t('analysis.emotion.metrics.buckets.positive') || label;
+    }
+    if (labelLower.includes('low')) {
+      if (labelLower.includes('very')) return t('analysis.emotion.metrics.buckets.veryLow') || label;
+      return t('analysis.emotion.metrics.buckets.low') || label;
+    }
+    if (labelLower.includes('medium')) return t('analysis.emotion.metrics.buckets.medium') || label;
+    if (labelLower.includes('high')) {
+      if (labelLower.includes('very')) return t('analysis.emotion.metrics.buckets.veryHigh') || label;
+      return t('analysis.emotion.metrics.buckets.high') || label;
+    }
+    return label;
   };
 
   return (
-    <View style={[styles.container, { borderColor: color + '30' }]}>
-      {/* Header con valore e bucket */}
-      <TouchableOpacity style={styles.header} onPress={handleExpandPress}>
+    <View style={[
+      styles.container, 
+      { 
+        shadowColor: color,
+        backgroundColor: isDark ? colors.surfaceElevated : '#ffffff',
+        borderColor: isDark ? colors.border : '#f3f4f6',
+      }
+    ]}>
+      <TouchableOpacity style={styles.header} onPress={handleExpandPress} activeOpacity={0.7}>
         <View style={styles.leftSection}>
-          <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
-            <MaterialCommunityIcons name={icon as any} size={24} color={color} />
-          </View>
+          <LinearGradient
+            colors={[color, color + '90']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.iconContainer}
+          >
+            <MaterialCommunityIcons name={icon as any} size={22} color="#fff" />
+          </LinearGradient>
+
           <View style={styles.metricInfo}>
-            <Text style={styles.label}>{label}</Text>
-            <Text style={[styles.value, { color }]}>{formatValue(value)}</Text>
+            <Text style={[styles.label, { color: isDark ? colors.textSecondary : '#6b7280' }]}>{label}</Text>
+            <Text style={[styles.value, { color: isDark ? colors.text : '#1f2937' }]}>{formatValue(value)}</Text>
           </View>
         </View>
-        
+
         <View style={styles.rightSection}>
           {bucket && (
-            <View style={[styles.bucketBadge, { backgroundColor: bucket.color + '20' }]}>
+            <View style={[styles.bucketBadge, { backgroundColor: bucket.color + '15' }]}>
               <Text style={[styles.bucketText, { color: bucket.color }]}>
-                {bucket.icon} {bucket.label}
+                {getTranslatedBucketLabel(bucket.label)}
               </Text>
             </View>
           )}
-          
-          {trend && (
-            <Text style={[styles.trendText, { color: getTrendColor(trend) }]}>
-              {trend.trend} {trend.percentage}%
-            </Text>
-          )}
-          
-          <MaterialCommunityIcons 
-            name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-            size={20} 
-            color="#6b7280" 
+
+          <MaterialCommunityIcons
+            name={isExpanded ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color={isDark ? colors.textSecondary : '#9ca3af'}
           />
         </View>
       </TouchableOpacity>
 
-      {/* Contenuto espandibile */}
-      <Animated.View 
+      <Animated.View
         style={[
           styles.expandedContent,
-          { 
+          {
             opacity: fadeAnim,
             height: isExpanded ? 'auto' : 0,
             overflow: 'hidden'
           }
         ]}
       >
-        {/* Trend dettagliato */}
+        <View style={[styles.divider, { backgroundColor: isDark ? colors.border : '#f3f4f6' }]} />
+
         {trend && (
-          <View style={styles.trendSection}>
-            <Text style={styles.trendLabel}>Trend vs tuo solito:</Text>
-            <Text style={[styles.trendDescription, { color: getTrendColor(trend) }]}>
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: isDark ? colors.textSecondary : '#9ca3af' }]}>
+              {t('common.trend') || 'Trend'}
+            </Text>
+            <Text style={[styles.detailValue, { color: getTrendColor(trend) }]}>
               {trend.trend} {trend.percentage}% {trend.text}
             </Text>
           </View>
         )}
 
-        {/* Bucket description */}
         {bucket && (
-          <View style={styles.bucketSection}>
-            <Text style={styles.bucketLabel}>Stato emotivo:</Text>
-            <Text style={styles.bucketDescription}>{bucket.description}</Text>
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: isDark ? colors.textSecondary : '#9ca3af' }]}>
+              {t('common.status') || 'Status'}
+            </Text>
+            <Text style={[styles.detailValue, { color: isDark ? colors.text : '#374151' }]}>
+              {bucket.description}
+            </Text>
           </View>
         )}
 
-        {/* Interpretazione metrica */}
-        <View style={styles.interpretationSection}>
-          <Text style={styles.interpretationLabel}>Cosa significa:</Text>
-          <Text style={styles.interpretationText}>
-            {metric === 'valence' 
-              ? 'Valore positivo = felice/contento, Valore negativo = triste/frustrato'
-              : 'Valore alto = eccitato/stressato, Valore basso = calmo/rilassato'
-            }
-          </Text>
-        </View>
-
-        {/* Action suggerita */}
         {action && action.actionable && (
-          <View style={styles.actionSection}>
+          <View style={[styles.actionContainer, { backgroundColor: isDark ? colors.surface : '#f9fafb' }]}>
             <View style={styles.actionHeader}>
-              <Text style={styles.actionLabel}>🎯 Azione suggerita:</Text>
-              <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(action.priority) + '20' }]}>
-                <Text style={[styles.priorityText, { color: getPriorityColor(action.priority) }]}>
-                  {action.priority.toUpperCase()}
-                </Text>
-              </View>
+              <MaterialCommunityIcons name="lightbulb-on-outline" size={16} color={getPriorityColor(action.priority)} />
+              <Text style={[styles.actionTitle, { color: getPriorityColor(action.priority) }]}>
+                {t('common.recommendation') || 'Recommendation'}
+              </Text>
             </View>
-            
-            <Text style={styles.actionTitle}>{action.title}</Text>
-            <Text style={styles.actionDescription}>{action.description}</Text>
-            
-            {action.estimatedTime && (
-              <Text style={styles.actionTime}>⏱️ Tempo stimato: {action.estimatedTime}</Text>
-            )}
-            
-            {action.resources && action.resources.length > 0 && (
-              <View style={styles.resourcesSection}>
-                <Text style={styles.resourcesLabel}>Cosa ti serve:</Text>
-                {action.resources.map((resource, index) => (
-                  <Text key={index} style={styles.resource}>• {resource}</Text>
-                ))}
-              </View>
-            )}
-            
-            <TouchableOpacity 
+
+            <Text style={[styles.actionDescription, { color: isDark ? colors.text : '#4b5563' }]}>
+              {action.description}
+            </Text>
+
+            <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: getPriorityColor(action.priority) }]}
               onPress={onActionPress}
             >
               <Text style={styles.actionButtonText}>
-                ✅ Completato
+                {t('common.markAsDone') || 'Mark as Done'}
               </Text>
+              <MaterialCommunityIcons name="check" size={16} color="#fff" />
             </TouchableOpacity>
           </View>
         )}
@@ -202,15 +222,13 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 20,
+    marginVertical: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
     borderWidth: 1,
-    marginVertical: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   header: {
     flexDirection: 'row',
@@ -222,163 +240,104 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    gap: 14,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   metricInfo: {
     flex: 1,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   value: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   rightSection: {
     alignItems: 'flex-end',
+    gap: 4,
   },
   bucketBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 10,
     marginBottom: 4,
   },
   bucketText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  trendText: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 4,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   expandedContent: {
     paddingHorizontal: 16,
     paddingBottom: 16,
   },
-  trendSection: {
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+  divider: {
+    height: 1,
+    marginBottom: 16,
   },
-  trendLabel: {
+  detailRow: {
+    marginBottom: 12,
+  },
+  detailLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6b7280',
     marginBottom: 4,
+    textTransform: 'uppercase',
   },
-  trendDescription: {
+  detailValue: {
     fontSize: 14,
     fontWeight: '500',
+    lineHeight: 20,
   },
-  bucketSection: {
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  bucketLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  bucketDescription: {
-    fontSize: 14,
-    color: '#374151',
-  },
-  interpretationSection: {
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  interpretationLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  interpretationText: {
-    fontSize: 14,
-    color: '#374151',
-    fontStyle: 'italic',
-  },
-  actionSection: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-    padding: 12,
+  actionContainer: {
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 4,
   },
   actionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 6,
     marginBottom: 8,
   },
-  actionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6b7280',
-  },
-  priorityBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  priorityText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
   actionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   actionDescription: {
     fontSize: 14,
-    color: '#374151',
-    marginBottom: 8,
-  },
-  actionTime: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 8,
-  },
-  resourcesSection: {
     marginBottom: 12,
-  },
-  resourcesLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  resource: {
-    fontSize: 12,
-    color: '#374151',
-    marginBottom: 2,
+    lineHeight: 20,
   },
   actionButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
   },
   actionButtonText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
 });

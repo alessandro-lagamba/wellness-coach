@@ -17,7 +17,13 @@
     "continue": "Continue",
     "back": "Back",
     "update": "Update",
-    "reset": "Reset"
+    "reset": "Reset",
+    "status": "Status",
+    "trend": "Trend",
+    "done": "Done",
+    "retake": "Retake",
+    "recommendation": "Recommendation",
+    "markAsDone": "Mark as Done"
   },
   "settings": {
     "title": "Settings",
@@ -393,6 +399,17 @@
         "intensity": "Intensity",
         "sessions": "Sessions",
         "thisMonth": "This month",
+      "buckets": {
+        "negative": "Negative",
+        "neutral": "Neutral",
+        "positive": "Positive",
+        "veryPositive": "Very Positive",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "veryLow": "Very Low",
+        "veryHigh": "Very High"
+      },
         "valenceDesc": "Tracks the positivity of your expression and overall affect.",
         "arousalDesc": "Measures the intensity or energy level detected at the moment.",
         "valenceDescription": "Valence measures how positive or negative your emotions are. High values indicate happiness and satisfaction, while low values indicate sadness or worry. This metric helps you understand your overall emotional state.",
@@ -433,6 +450,10 @@
         "aiObservations": "AI Observations",
         "aiRecommendations": "AI Recommendations",
         "wellnessGuidance": "Wellness Guidance",
+        "wellnessScore": "Wellness Score",
+        "detectedEmotion": "Detected Emotion",
+        "emotionalMetrics": "EMOTIONAL METRICS",
+        "wellnessTip": "Wellness Tip",
         "goBack": "Go Back",
         "retake": "Retake",
         "emotions": {
@@ -661,7 +682,14 @@
         "analysisTimeDesc": "Real-time processing completed",
         "skinHealth": "Skin Health",
         "skinHealthDesc": "Comprehensive wellness assessment",
+        "skinHealthLabel": "Skin Health",
         "detectedIssues": "Detected Issues",
+        "healthScore": "Skin Health Score",
+        "excellent": "Excellent Condition",
+        "good": "Good Condition",
+        "needsAttention": "Needs Attention",
+        "recommendation": "Skin Care Tip",
+        "detectedIssue": "Detected Issue",
         "analysisNotes": "Analysis Notes",
         "personalizedRecommendations": "Personalized Recommendations",
         "dailySkincareTips": "Daily Skincare Tips",
@@ -836,6 +864,14 @@
         "fiber": "Fiber",
         "healthScore": "Health Score"
       },
+      "healthScore": "Health Score",
+      "excellent": "Excellent Nutrition",
+      "good": "Good Nutrition",
+      "needsImprovement": "Needs Improvement",
+      "nutritionalBreakdown": "NUTRITIONAL BREAKDOWN",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fat": "Fats",
       "howItWorks": {
         "title": "How Food Analysis Works",
         "subtitle": "Learn how our AI analyzes your meals",
@@ -1043,7 +1079,9 @@
     "tapToExpand": "Tap to expand",
     "tapToCollapse": "Tap to collapse",
     "whyItMatters": "Why it matters",
-    "howItWorks": "How it works"
+    "howItWorks": "How it works",
+    "analysisInProgress": "ANALYSIS IN PROGRESS",
+    "analyzing": "Analyzing..."
   },
   "rating": {
     "excellent": "Excellent",

@@ -55,8 +55,12 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
       if (status.didJustFinish && !loop) {
         setIsPlaying(false);
       }
-    } else if (status.error) {
-      console.error('❌ Video playback error:', status.error);
+    } else {
+      // @ts-ignore
+      if (status.error) {
+        // @ts-ignore
+        console.error('❌ Video playback error:', status.error);
+      }
     }
   };
 
@@ -87,16 +91,16 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
           resizeMode="cover"
         />
       )}
-      
+
       {/* Overlay gradient */}
       <LinearGradient
-        colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.4)']}
+        colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.6)']}
         style={styles.overlay}
       />
-      
+
       {/* Content - Text removed for cleaner video experience */}
       <View style={styles.content}>
-        
+
         {showPlayButton && (
           <TouchableOpacity
             style={styles.playButton}
@@ -117,7 +121,7 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
             </LinearGradient>
           </TouchableOpacity>
         )}
-        
+
         {/* Touch overlay per interazione con il video quando non c'è il pulsante */}
         {!showPlayButton && onPlayPress && (
           <TouchableOpacity
@@ -134,13 +138,20 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    borderRadius: 24,
+    borderRadius: 32,
     overflow: 'hidden',
-    height: 240,
+    height: 280,
+    backgroundColor: '#000',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
   video: {
     width: '100%',
     height: '100%',
+    opacity: 0.9,
   },
   overlay: {
     position: 'absolute',
@@ -155,25 +166,27 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    padding: 20,
+    padding: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
   playButton: {
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: 0,
   },
   playButtonGradient: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   touchOverlay: {
     position: 'absolute',

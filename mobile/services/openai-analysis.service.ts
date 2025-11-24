@@ -1,12 +1,12 @@
 // OpenAI Analysis Service
 import { API_CONFIG } from '../config/api.config';
-import { 
-  EmotionAnalysisResult, 
+import {
+  EmotionAnalysisResult,
   SkinAnalysisResult,
   FoodAnalysisResult,
-  AnalysisRequest, 
+  AnalysisRequest,
   AnalysisResponse,
-  AnalysisHistory 
+  AnalysisHistory
 } from '../types/analysis.types';
 import * as FileSystem from 'expo-file-system/legacy';
 
@@ -17,17 +17,20 @@ export class OpenAIAnalysisService {
   private readonly version = '1.0.0';
 
   // Prompts esatti come specificati dall'utente
-  private readonly EMOTION_DETECTION_PROMPT = `You are an expert in facial emotion analysis for wellness coaching.
+  private readonly EMOTION_DETECTION_PROMPT = (language: string = 'en') => `You are an expert in facial emotion analysis for wellness coaching.
 Task: analyze ONE face photo and return STRICT JSON that matches the provided JSON Schema.
 Constraints:
 - Estimate 7 basic emotions + dominant_emotion, valence (-1..1), arousal (-1..1), confidence (0..1).
 - Base judgement on visible facial cues only (brows, eyes, mouth). Do NOT infer from background.
-- If face is partially occluded or low quality, lower confidence and say why in observations.
+- Observations: describe specific facial cues (e.g., "corners of mouth raised", "eyebrows relaxed", "eyes wide open"). Be objective.
+- Recommendations: provide 3-5 short, actionable wellness tips based on the detected emotion (e.g., "Take a deep breath", "Go for a short walk").
+- Analysis Description: Provide a short, educational paragraph (2-3 sentences) explaining the analysis result to the user. Explain "why" this emotion was detected and what it means for their wellness. Focus on the science of facial expressions (e.g., "The raised inner eyebrows suggest...").
+- Language: Output all text (observations, recommendations, analysis_description) in ${language === 'it' ? 'Italian (Italiano)' : 'English'}.
 
 Return ONLY JSON. No prose. No code fences.
 Schema: {
   "type": "object",
-  "required": ["dominant_emotion","emotions","valence","arousal","confidence","observations","recommendations","version"],
+  "required": ["dominant_emotion","emotions","valence","arousal","confidence","observations","recommendations","analysis_description","version"],
   "properties": {
     "dominant_emotion": {"type":"string","enum":["joy","sadness","anger","fear","surprise","disgust","neutral"]},
     "emotions": {
@@ -48,20 +51,23 @@ Schema: {
     "confidence":{"type":"number","minimum":0,"maximum":1},
     "observations":{"type":"array","items":{"type":"string"}, "maxItems":5},
     "recommendations":{"type":"array","items":{"type":"string"}, "maxItems":5},
+    "analysis_description":{"type":"string"},
     "version":{"type":"string"}
   }
 }`;
 
-  private readonly SKIN_ANALYSIS_PROMPT = `You are a dermatology-assistant focused on non-diagnostic cosmetic skin assessment from a single photo.
+  private readonly SKIN_ANALYSIS_PROMPT = (language: string = 'en') => `You are a dermatology-assistant focused on non-diagnostic cosmetic skin assessment from a single photo.
 Task: analyze the skin quality (texture, redness, oiliness, hydration) and return STRICT JSON per schema.
 Constraints:
 - Consider lighting, focus, and visible areas. If artifacts (makeup/filters/overexposure) reduce confidence.
 - Provide concise product-agnostic recommendations (hydration, sunscreen, cleansing, etc.). Non-medical.
+- Analysis Description: Provide a short, educational paragraph (2-3 sentences) explaining the skin condition to the user. Explain what the scores mean and offer a general wellness tip. Focus on skin physiology (e.g., "Sebum production appears balanced...").
+- Language: Output all text (issues, recommendations, notes, analysis_description) in ${language === 'it' ? 'Italian (Italiano)' : 'English'}.
 
 Return ONLY JSON. No prose. No code fences.
 Schema: {
   "type":"object",
-  "required":["scores","issues","recommendations","confidence","notes","version"],
+  "required":["scores","issues","recommendations","confidence","notes","analysis_description","version"],
   "properties":{
     "scores":{
       "type":"object",
@@ -78,76 +84,77 @@ Schema: {
     "recommendations":{"type":"array","items":{"type":"string"}, "maxItems":6},
     "confidence":{"type":"number","minimum":0,"maximum":1},
     "notes":{"type":"array","items":{"type":"string"}, "maxItems":5},
+    "analysis_description":{"type":"string"},
     "version":{"type":"string"}
   }
 }`;
 
   private readonly FOOD_ANALYSIS_PROMPT = `You are a nutrition expert analyzing food from a photo for wellness coaching.
-Task: identify foods, estimate macronutrients, vitamins, minerals, and provide health insights. Return STRICT JSON per schema.
-Constraints:
-- Identify all visible foods accurately. Estimate portions based on typical serving sizes.
-- Calculate macronutrients (carbs, proteins, fats, fiber, calories) in grams/kcal.
-- Estimate key vitamins (A, C, D, E, K, B-complex) and minerals (calcium, iron, magnesium, potassium, sodium, zinc) when identifiable.
-- Determine meal type (breakfast/lunch/dinner/snack/other) based on foods and context.
-- Provide health score (0-100) based on nutritional balance, variety, and quality.
+  Task: identify foods, estimate macronutrients, vitamins, minerals, and provide health insights.Return STRICT JSON per schema.
+    Constraints:
+- Identify all visible foods accurately.Estimate portions based on typical serving sizes.
+- Calculate macronutrients(carbs, proteins, fats, fiber, calories) in grams / kcal.
+- Estimate key vitamins(A, C, D, E, K, B - complex) and minerals(calcium, iron, magnesium, potassium, sodium, zinc) when identifiable.
+- Determine meal type(breakfast / lunch / dinner / snack / other) based on foods and context.
+- Provide health score(0 - 100) based on nutritional balance, variety, and quality.
 - If portions are unclear or foods partially hidden, lower confidence and explain in observations.
 
-Return ONLY JSON. No prose. No code fences.
-Schema: {
+Return ONLY JSON.No prose.No code fences.
+  Schema: {
   "type": "object",
-  "required": ["identified_foods", "macronutrients", "recommendations", "observations", "confidence", "version"],
-  "properties": {
-    "identified_foods": {"type": "array", "items": {"type": "string"}},
+    "required": ["identified_foods", "macronutrients", "recommendations", "observations", "confidence", "version"],
+      "properties": {
+    "identified_foods": { "type": "array", "items": { "type": "string" } },
     "macronutrients": {
       "type": "object",
-      "required": ["carbohydrates", "proteins", "fats", "calories"],
-      "properties": {
-        "carbohydrates": {"type": "number", "minimum": 0},
-        "proteins": {"type": "number", "minimum": 0},
-        "fats": {"type": "number", "minimum": 0},
-        "fiber": {"type": "number", "minimum": 0},
-        "calories": {"type": "number", "minimum": 0}
+        "required": ["carbohydrates", "proteins", "fats", "calories"],
+          "properties": {
+        "carbohydrates": { "type": "number", "minimum": 0 },
+        "proteins": { "type": "number", "minimum": 0 },
+        "fats": { "type": "number", "minimum": 0 },
+        "fiber": { "type": "number", "minimum": 0 },
+        "calories": { "type": "number", "minimum": 0 }
       }
     },
     "vitamins": {
       "type": "object",
-      "properties": {
-        "vitamin_a": {"type": "number", "minimum": 0},
-        "vitamin_c": {"type": "number", "minimum": 0},
-        "vitamin_d": {"type": "number", "minimum": 0},
-        "vitamin_e": {"type": "number", "minimum": 0},
-        "vitamin_k": {"type": "number", "minimum": 0},
-        "thiamine": {"type": "number", "minimum": 0},
-        "riboflavin": {"type": "number", "minimum": 0},
-        "niacin": {"type": "number", "minimum": 0},
-        "vitamin_b6": {"type": "number", "minimum": 0},
-        "folate": {"type": "number", "minimum": 0},
-        "vitamin_b12": {"type": "number", "minimum": 0}
+        "properties": {
+        "vitamin_a": { "type": "number", "minimum": 0 },
+        "vitamin_c": { "type": "number", "minimum": 0 },
+        "vitamin_d": { "type": "number", "minimum": 0 },
+        "vitamin_e": { "type": "number", "minimum": 0 },
+        "vitamin_k": { "type": "number", "minimum": 0 },
+        "thiamine": { "type": "number", "minimum": 0 },
+        "riboflavin": { "type": "number", "minimum": 0 },
+        "niacin": { "type": "number", "minimum": 0 },
+        "vitamin_b6": { "type": "number", "minimum": 0 },
+        "folate": { "type": "number", "minimum": 0 },
+        "vitamin_b12": { "type": "number", "minimum": 0 }
       }
     },
     "minerals": {
       "type": "object",
-      "properties": {
-        "calcium": {"type": "number", "minimum": 0},
-        "iron": {"type": "number", "minimum": 0},
-        "magnesium": {"type": "number", "minimum": 0},
-        "phosphorus": {"type": "number", "minimum": 0},
-        "potassium": {"type": "number", "minimum": 0},
-        "sodium": {"type": "number", "minimum": 0},
-        "zinc": {"type": "number", "minimum": 0},
-        "copper": {"type": "number", "minimum": 0},
-        "manganese": {"type": "number", "minimum": 0},
-        "selenium": {"type": "number", "minimum": 0}
+        "properties": {
+        "calcium": { "type": "number", "minimum": 0 },
+        "iron": { "type": "number", "minimum": 0 },
+        "magnesium": { "type": "number", "minimum": 0 },
+        "phosphorus": { "type": "number", "minimum": 0 },
+        "potassium": { "type": "number", "minimum": 0 },
+        "sodium": { "type": "number", "minimum": 0 },
+        "zinc": { "type": "number", "minimum": 0 },
+        "copper": { "type": "number", "minimum": 0 },
+        "manganese": { "type": "number", "minimum": 0 },
+        "selenium": { "type": "number", "minimum": 0 }
       }
     },
-    "meal_type": {"type": "string", "enum": ["breakfast", "lunch", "dinner", "snack", "other"]},
-    "health_score": {"type": "number", "minimum": 0, "maximum": 100},
-    "recommendations": {"type": "array", "items": {"type": "string"}, "maxItems": 6},
-    "observations": {"type": "array", "items": {"type": "string"}, "maxItems": 5},
-    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-    "version": {"type": "string"}
+    "meal_type": { "type": "string", "enum": ["breakfast", "lunch", "dinner", "snack", "other"] },
+    "health_score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "recommendations": { "type": "array", "items": { "type": "string" }, "maxItems": 6 },
+    "observations": { "type": "array", "items": { "type": "string" }, "maxItems": 5 },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "version": { "type": "string" }
   }
-}`;
+} `;
 
   public static getInstance(): OpenAIAnalysisService {
     if (!OpenAIAnalysisService.instance) {
@@ -163,7 +170,7 @@ Schema: {
     try {
       // Try to get API key from environment or parameter
       this.apiKey = apiKey || API_CONFIG.OPENAI.API_KEY || null;
-      
+
       if (!this.apiKey) {
         console.warn('OpenAI API key not provided. Analysis will not work.');
         return false;
@@ -199,7 +206,7 @@ Schema: {
    */
   async analyzeEmotion(request: AnalysisRequest): Promise<AnalysisResponse<EmotionAnalysisResult>> {
     const startTime = Date.now();
-    
+
     try {
       if (!this.apiKey) {
         throw new Error('OpenAI API key not configured');
@@ -211,7 +218,7 @@ Schema: {
 
       // Convert image to base64
       const imageBase64 = await this.convertImageToBase64(request.imageUri);
-      
+
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -226,7 +233,7 @@ Schema: {
               content: [
                 {
                   type: 'text',
-                  text: this.EMOTION_DETECTION_PROMPT
+                  text: this.EMOTION_DETECTION_PROMPT(request.language)
                 },
                 {
                   type: 'image_url',
@@ -257,9 +264,9 @@ Schema: {
 
       // Parse and validate JSON response
       const analysisResult = this.parseAndValidateEmotionResult(content);
-      
+
       const processingTime = Date.now() - startTime;
-      
+
       return {
         success: true,
         data: analysisResult,
@@ -282,7 +289,7 @@ Schema: {
    */
   async analyzeSkin(request: AnalysisRequest): Promise<AnalysisResponse<SkinAnalysisResult>> {
     const startTime = Date.now();
-    
+
     try {
       if (!this.apiKey) {
         throw new Error('OpenAI API key not configured');
@@ -294,7 +301,7 @@ Schema: {
 
       // Convert image to base64
       const imageBase64 = await this.convertImageToBase64(request.imageUri);
-      
+
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -309,7 +316,7 @@ Schema: {
               content: [
                 {
                   type: 'text',
-                  text: this.SKIN_ANALYSIS_PROMPT
+                  text: this.SKIN_ANALYSIS_PROMPT(request.language)
                 },
                 {
                   type: 'image_url',
@@ -340,9 +347,9 @@ Schema: {
 
       // Parse and validate JSON response
       const analysisResult = this.parseAndValidateSkinResult(content);
-      
+
       const processingTime = Date.now() - startTime;
-      
+
       return {
         success: true,
         data: analysisResult,
@@ -428,12 +435,12 @@ Schema: {
     try {
       // Clean the content - remove any markdown formatting
       const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      
+
       const result = JSON.parse(cleanContent) as EmotionAnalysisResult;
-      
+
       // Validate required fields
-      if (!result.dominant_emotion || !result.emotions || typeof result.valence !== 'number' || 
-          typeof result.arousal !== 'number' || typeof result.confidence !== 'number') {
+      if (!result.dominant_emotion || !result.emotions || typeof result.valence !== 'number' ||
+        typeof result.arousal !== 'number' || typeof result.confidence !== 'number') {
         throw new Error('Invalid emotion analysis result structure');
       }
 
@@ -475,9 +482,9 @@ Schema: {
     try {
       // Clean the content - remove any markdown formatting
       const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      
+
       const result = JSON.parse(cleanContent) as SkinAnalysisResult;
-      
+
       // Validate required fields
       if (!result.scores || typeof result.confidence !== 'number') {
         throw new Error('Invalid skin analysis result structure');
@@ -515,7 +522,7 @@ Schema: {
    */
   async analyzeFood(request: AnalysisRequest): Promise<AnalysisResponse<FoodAnalysisResult>> {
     const startTime = Date.now();
-    
+
     try {
       if (request.analysisType !== 'food') {
         throw new Error('Invalid analysis type for food analysis');
@@ -527,7 +534,7 @@ Schema: {
 
       // Convert image to base64
       const imageBase64 = await this.convertImageToBase64(request.imageUri);
-      
+
       // Call backend nutrition API
       const response = await fetch(`${backendURL}/api/nutrition/analyze-image`, {
         method: 'POST',
@@ -557,9 +564,9 @@ Schema: {
       // Convert backend MealDraft format to FoodAnalysisResult format
       const mealDraft = data.data;
       const analysisResult = this.convertMealDraftToFoodResult(mealDraft);
-      
+
       const processingTime = Date.now() - startTime;
-      
+
       return {
         success: true,
         data: analysisResult,
@@ -609,8 +616,8 @@ Schema: {
       },
       vitamins,
       minerals,
-      mealType: mealDraft.mealType || 'unknown',
-      healthScore,
+      meal_type: mealDraft.mealType || 'unknown',
+      health_score: healthScore,
       recommendations: mealDraft.suggestions || [],
       observations: mealDraft.items?.map((item: any) => item.notes).filter(Boolean) || [],
       confidence: mealDraft.confidence || 0.7,
@@ -654,12 +661,12 @@ Schema: {
     try {
       // Clean the content - remove any markdown formatting
       const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      
+
       const result = JSON.parse(cleanContent) as FoodAnalysisResult;
-      
+
       // Validate required fields
-      if (!result.identified_foods || !Array.isArray(result.identified_foods) || 
-          !result.macronutrients || typeof result.confidence !== 'number') {
+      if (!result.identified_foods || !Array.isArray(result.identified_foods) ||
+        !result.macronutrients || typeof result.confidence !== 'number') {
         throw new Error('Invalid food analysis result structure');
       }
 
@@ -672,8 +679,8 @@ Schema: {
       }
 
       // Validate optional health score
-      if (result.health_score !== undefined && 
-          (typeof result.health_score !== 'number' || result.health_score < 0 || result.health_score > 100)) {
+      if (result.health_score !== undefined &&
+        (typeof result.health_score !== 'number' || result.health_score < 0 || result.health_score > 100)) {
         throw new Error('Health score must be between 0 and 100');
       }
 
@@ -713,10 +720,10 @@ Schema: {
   /**
    * Get API key status (without exposing the key)
    */
-  getApiKeyStatus(): { configured: boolean; valid: boolean } {
+  getApiKeyStatus(): { openai: boolean; configured: boolean } {
     return {
+      openai: this.isInitialized(),
       configured: !!this.apiKey,
-      valid: this.isInitialized(),
     };
   }
 
@@ -765,7 +772,7 @@ Schema: {
       }
 
       const data = await response.json();
-      
+
       if (data.choices && data.choices[0] && data.choices[0].message) {
         return {
           success: true,

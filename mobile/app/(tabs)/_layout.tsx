@@ -44,8 +44,10 @@ function TabNavigator() {
   const backgroundColor = colors?.background || fallbackBackground;
 
   const primaryColor = colors?.primary || '#6366f1';
-  const defaultSecondary = isDark ? '#9ca3af' : '#6b7280';
-  const inactiveTintColor = colors?.textSecondary || defaultSecondary;
+  // Force darker color for better visibility in light mode, ignoring theme default
+  const inactiveTintColor = isDark
+    ? (colors?.textSecondary || '#9ca3af')
+    : '#1f2937'; // Gray 800 - Very dark grey for maximum visibility
 
   //
   // ---- TAB ICON COMPONENT (icon + label always visible) ----
@@ -75,7 +77,7 @@ function TabNavigator() {
 
     const opacity = circleAnim.interpolate({
       inputRange: [0, 1],
-      outputRange: [0.2, 1],
+      outputRange: [0.5, 1], // Increased from 0.2 to 0.7 for better visibility of inactive icons
     });
 
     return (

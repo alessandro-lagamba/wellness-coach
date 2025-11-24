@@ -59,6 +59,7 @@ export interface EmotionAnalysisResult {
   confidence: number; // 0 to 1
   observations: string[]; // max 5 items
   recommendations: string[]; // max 5 items
+  analysis_description?: string; // Educational description of the analysis
   version: string;
 }
 
@@ -76,6 +77,7 @@ export interface SkinAnalysisResult {
   recommendations: string[]; // max 6 items
   confidence: number; // 0 to 1
   notes: string[]; // max 5 items
+  analysis_description?: string; // Educational description of the analysis
   version: string;
 }
 
@@ -85,6 +87,7 @@ export interface Macronutrients {
   proteins: number; // grams
   fats: number; // grams
   fiber?: number; // grams
+  sugar?: number; // grams
   calories: number; // kcal
 }
 
@@ -136,6 +139,7 @@ export interface AnalysisRequest {
   mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   prefs?: string[];
   allergies?: string[];
+  language?: string; // e.g., 'it', 'en'
 }
 
 export interface AnalysisResponse<T> {

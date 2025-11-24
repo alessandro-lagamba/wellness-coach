@@ -39,7 +39,7 @@ import { SkinCaptureCard } from './SkinCaptureCard';
 import { useAnalysisStore, SkinCapture } from '../stores/analysis.store';
 import { SkinHealthChart } from './charts/SkinHealthChart';
 import { GaugeChart } from './charts/GaugeChart';
-import { SkinLoadingScreen } from './SkinLoadingScreen';
+import { AnalysisLoader } from './shared/AnalysisLoader';
 import { SkinResultsScreen } from './SkinResultsScreen';
 import { EnhancedScoreTile } from './EnhancedScoreTile';
 import { QualityBadge } from './QualityBadge';
@@ -325,7 +325,7 @@ const ImageWithFallback: React.FC<{ uri: string; style: any; fallbackColor?: str
 };
 
 const SkinAnalysisScreen: React.FC = () => {
-  const { t } = useTranslation(); // 🆕 i18n hook
+  const { t, i18n } = useTranslation(); // 🆕 i18n hook
   const { colors } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
   const { hideTabBar, showTabBar } = useTabBarVisibility();
@@ -600,7 +600,7 @@ const SkinAnalysisScreen: React.FC = () => {
 
         // Analyze the selected image
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        const analysisResult = await analysisServiceRef.current.analyzeSkin(dataUrl);
+        const analysisResult = await analysisServiceRef.current.analyzeSkin(dataUrl, undefined, i18n?.language || 'en');
 
         if (analysisResult.success && analysisResult.data) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
@@ -1048,7 +1048,7 @@ const SkinAnalysisScreen: React.FC = () => {
       const dataUrl = `data:image/jpeg;base64,${photo.base64}`;
       // 🔥 FIX: Rimuoviamo console.log eccessivi
 
-      const result = await analysisServiceRef.current.analyzeSkin(dataUrl, 'skin-analysis-session');
+      const result = await analysisServiceRef.current.analyzeSkin(dataUrl, 'skin-analysis-session', i18n?.language || 'en');
       if (!result.success || !result.data) {
         throw new Error(result.error || 'Skin analysis failed.');
       }
@@ -1386,17 +1386,7 @@ const SkinAnalysisScreen: React.FC = () => {
     opacity: withRepeat(withSequence(withTiming(0.7, { duration: 1200 }), withTiming(0.1, { duration: 1200 })), -1, false),
   }));
 
-  const LoadingSpinner = () => {
-    const rotation = useAnimatedStyle(() => ({
-      transform: [
-        {
-          rotate: withRepeat(withTiming('360deg', { duration: 1600 }), -1, false),
-        },
-      ],
-    }));
 
-    return <Animated.View style={[styles.spinner, rotation]} />;
-  };
 
   const CameraFrame = () => {
     const handleCameraReady = () => {
@@ -1427,21 +1417,11 @@ const SkinAnalysisScreen: React.FC = () => {
   if (analyzing) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, flex: 1 }]}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
-          {/* Keep camera mounted but hidden during analysis */}
-          <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}>
-            <CameraFrame />
-          </View>
-
-          <View style={{ flex: 1, justifyContent: 'center' }}>
-            <SkinLoadingScreen onCancel={() => {
-              if (isMountedRef.current) {
-                setAnalyzing(false);
-                setResults(null);
-              }
-            }} />
-          </View>
-        </SafeAreaView>
+        <CameraFrame />
+        <AnalysisLoader messages={[
+          'Esaminando texture e uniformità della pelle...',
+          'Rilevando luminosità e idratazione...'
+        ]} />
       </View>
     );
   }

@@ -1,13 +1,13 @@
 // Unified Analysis Service
 import OpenAIAnalysisService from './openai-analysis.service';
 import AnalysisStorageService from './analysis-storage.service';
-import { 
-  AnalysisRequest, 
-  AnalysisResponse, 
-  EmotionAnalysisResult, 
+import {
+  AnalysisRequest,
+  AnalysisResponse,
+  EmotionAnalysisResult,
   SkinAnalysisResult,
   FoodAnalysisResult,
-  AnalysisHistory 
+  AnalysisHistory
 } from '../types/analysis.types';
 
 export class UnifiedAnalysisService {
@@ -62,8 +62,9 @@ export class UnifiedAnalysisService {
    * Analyze emotion from image
    */
   async analyzeEmotion(
-    imageUri: string, 
-    sessionId?: string
+    imageUri: string,
+    sessionId?: string,
+    language?: string
   ): Promise<AnalysisResponse<EmotionAnalysisResult>> {
     try {
       const request: AnalysisRequest = {
@@ -71,6 +72,7 @@ export class UnifiedAnalysisService {
         analysisType: 'emotion',
         sessionId,
         timestamp: new Date(),
+        language,
       };
 
       // Perform analysis
@@ -111,8 +113,9 @@ export class UnifiedAnalysisService {
    * Analyze skin from image
    */
   async analyzeSkin(
-    imageUri: string, 
-    sessionId?: string
+    imageUri: string,
+    sessionId?: string,
+    language?: string
   ): Promise<AnalysisResponse<SkinAnalysisResult>> {
     try {
       const request: AnalysisRequest = {
@@ -120,6 +123,7 @@ export class UnifiedAnalysisService {
         analysisType: 'skin',
         sessionId,
         timestamp: new Date(),
+        language,
       };
 
       // Perform analysis
@@ -155,7 +159,7 @@ export class UnifiedAnalysisService {
    * Analyze food from image
    */
   async analyzeFood(
-    imageUri: string, 
+    imageUri: string,
     sessionId?: string
   ): Promise<AnalysisResponse<FoodAnalysisResult>> {
     try {
@@ -295,18 +299,18 @@ export class UnifiedAnalysisService {
 
     emotionAnalyses.forEach(analysis => {
       const result = analysis.result as EmotionAnalysisResult;
-      
+
       // Count dominant emotions
-      dominantEmotions[result.dominant_emotion] = 
+      dominantEmotions[result.dominant_emotion] =
         (dominantEmotions[result.dominant_emotion] || 0) + 1;
-      
+
       // Sum valence and arousal
       totalValence += result.valence;
       totalArousal += result.arousal;
-      
+
       // Track confidence trend
       confidenceTrend.push(result.confidence);
-      
+
       // Collect recommendations
       allRecommendations.push(...result.recommendations);
     });
@@ -374,17 +378,17 @@ export class UnifiedAnalysisService {
 
     skinAnalyses.forEach(analysis => {
       const result = analysis.result as SkinAnalysisResult;
-      
+
       // Sum scores
       totalTexture += result.scores.texture;
       totalRedness += result.scores.redness;
       totalOiliness += result.scores.oiliness;
       totalHydration += result.scores.hydration;
       totalOverall += result.scores.overall;
-      
+
       // Track confidence trend
       confidenceTrend.push(result.confidence);
-      
+
       // Collect issues and recommendations
       allIssues.push(...result.issues);
       allRecommendations.push(...result.recommendations);
@@ -441,7 +445,7 @@ export class UnifiedAnalysisService {
       }
 
       const response = await this.openaiService.generateTextAnalysis(prompt);
-      
+
       if (response.success && response.analysis) {
         return {
           success: true,

@@ -10,6 +10,7 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  BackHandler, // Added BackHandler
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -30,7 +31,7 @@ import SimpleCameraTest from './SimpleCameraTest';
 import MinimalCameraTest from './MinimalCameraTest';
 import AnalysisCaptureLayout from './shared/AnalysisCaptureLayout';
 
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { UnifiedAnalysisService } from '../services/unified-analysis.service';
 import { EmotionAnalysisService } from '../services/emotion-analysis.service';
 import { AuthService } from '../services/auth.service';
@@ -40,7 +41,7 @@ import { useAnalysisStore } from '../stores/analysis.store';
 import { LoadingScreen } from './LoadingScreen';
 import { EmotionTrendChart } from './charts/EmotionTrendChart';
 import { GaugeChart } from './charts/GaugeChart';
-import { EmotionLoadingScreen } from './EmotionLoadingScreen';
+import { AnalysisLoader } from './shared/AnalysisLoader';
 import { EmotionResultsScreen } from './EmotionResultsScreen';
 import { EnhancedMetricTile } from './EnhancedMetricTile';
 import { QualityBadge } from './QualityBadge';
@@ -103,7 +104,7 @@ const withAlpha = (color: string | undefined, alpha: string) => {
 };
 
 export const EmotionDetectionScreen: React.FC = () => {
-  const { t } = useTranslation(); // 🆕 i18n hook
+  const { t, i18n } = useTranslation(); // 🆕 i18n hook
   const { colors: themeColors } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
   const router = useRouter();
@@ -141,6 +142,9 @@ export const EmotionDetectionScreen: React.FC = () => {
 
   const analysisServiceRef = useRef(UnifiedAnalysisService.getInstance());
   const isMountedRef = useRef(true);
+
+  // 🆕 FIX: Use reactive hook to get latest emotion session (triggers re-render when store updates)
+  const latestEmotionSession = useAnalysisStore((state) => state.latestEmotionSession);
 
   const emotionDisplayData = useMemo(() => {
     const mapped = {} as Record<Emotion, EmotionData>;
@@ -343,6 +347,25 @@ export const EmotionDetectionScreen: React.FC = () => {
   }, [cameraSwitching]);
 
 
+  // Intercept back button/gesture to close camera instead of navigating back
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        // Check if we are in a "sub-mode" that should be closed first
+        if (cameraController.active || detecting || showingResults || currentEmotion) {
+          handleExitCapture();
+          return true; // Prevent default behavior (navigating away)
+        }
+        return false; // Allow default behavior
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => subscription.remove();
+    }, [cameraController.active, detecting, showingResults, currentEmotion, handleExitCapture])
+  );
+
+
   // No background camera initialization - privacy first!
 
   const handleStartDetection = async () => {
@@ -436,13 +459,17 @@ export const EmotionDetectionScreen: React.FC = () => {
 
         // Analyze the selected image
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        const analysisResult = await analysisServiceRef.current.analyzeEmotion(dataUrl);
-
-        if (analysisResult.success && analysisResult.data) {
+        // Perform analysis
+        const result = await analysisServiceRef.current.analyzeEmotion(
+          asset.uri,
+          sessionId,
+          i18n?.language || 'en' // Pass current language with fallback
+        );
+        if (result.success && result.data) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
 
           // Process results (same logic as camera capture)
-          const { scores, dominantEmotion, confidence } = analysisResult.data;
+          const { scores, dominantEmotion, confidence } = result.data;
           const newConfidences = Math.round(confidence * 100);
           const dominantEmotionKey = dominantEmotion as Emotion;
 
@@ -489,7 +516,7 @@ export const EmotionDetectionScreen: React.FC = () => {
     // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     // Store cameraController methods in local variables to prevent scope issues
-    const { ref, ready, detecting, error, isCameraReady, setDetecting } = cameraController;
+    const { ref, ready, detecting, error, isCameraReady, setDetecting: setCameraDetecting } = cameraController;
 
     // 🔥 FIX: Rimuoviamo console.log eccessivi
 
@@ -664,7 +691,7 @@ export const EmotionDetectionScreen: React.FC = () => {
       const dataUrl = `data:image/jpeg;base64,${photo.base64}`;
       // 🔥 FIX: Rimuoviamo console.log eccessivi
 
-      const analysisResult = await analysisServiceRef.current.analyzeEmotion(dataUrl, 'emotion-analysis-session');
+      const analysisResult = await analysisServiceRef.current.analyzeEmotion(dataUrl, 'emotion-analysis-session', i18n?.language || 'en');
       if (!analysisResult.success || !analysisResult.data) {
         throw new Error(analysisResult.error || 'Analysis failed.');
       }
@@ -721,6 +748,14 @@ export const EmotionDetectionScreen: React.FC = () => {
 
               const store = useAnalysisStore.getState();
               store.addEmotionSession(emotionSession);
+
+              // 🆕 FIX: Reload data from database to ensure latest session is shown
+              // This ensures the store is synced with the database
+              try {
+                await ChartDataService.loadEmotionDataForCharts();
+              } catch (reloadError) {
+                console.error('Error reloading emotion data after save:', reloadError);
+              }
             } else {
               // 🆕 Nessun errore lanciato ma savedAnalysis è null
               if (isMountedRef.current) {
@@ -915,208 +950,7 @@ export const EmotionDetectionScreen: React.FC = () => {
     opacity: withRepeat(withSequence(withTiming(0.7, { duration: 1200 }), withTiming(0.1, { duration: 1200 })), -1, false),
   }));
 
-  const LoadingSpinner = () => {
-    // Main rotating ring
-    const ringRotation = useAnimatedStyle(() => ({
-      transform: [
-        {
-          rotate: withRepeat(withTiming('360deg', { duration: 3000 }), -1, false),
-        },
-      ],
-    }));
 
-    // Inner pulsing orb
-    const pulseAnimation = useAnimatedStyle(() => ({
-      transform: [
-        {
-          scale: withRepeat(
-            withSequence(
-              withTiming(0.9, { duration: 1200 }),
-              withTiming(1.1, { duration: 1200 }),
-              withTiming(0.9, { duration: 1200 })
-            ),
-            -1,
-            false
-          ),
-        },
-      ],
-      opacity: withRepeat(
-        withSequence(
-          withTiming(0.6, { duration: 1200 }),
-          withTiming(1, { duration: 1200 }),
-          withTiming(0.6, { duration: 1200 })
-        ),
-        -1,
-        false
-      ),
-    }));
-
-    // Outer expanding circles
-    const outerPulse1 = useAnimatedStyle(() => ({
-      transform: [
-        {
-          scale: withRepeat(
-            withSequence(
-              withTiming(1, { duration: 2000 }),
-              withTiming(1.5, { duration: 2000 }),
-              withTiming(1, { duration: 2000 })
-            ),
-            -1,
-            false
-          ),
-        },
-      ],
-      opacity: withRepeat(
-        withSequence(
-          withTiming(0.4, { duration: 2000 }),
-          withTiming(0.1, { duration: 2000 }),
-          withTiming(0.4, { duration: 2000 })
-        ),
-        -1,
-        false
-      ),
-    }));
-
-    const outerPulse2 = useAnimatedStyle(() => ({
-      transform: [
-        {
-          scale: withRepeat(
-            withSequence(
-              withTiming(1.2, { duration: 2500 }),
-              withTiming(1.8, { duration: 2500 }),
-              withTiming(1.2, { duration: 2500 })
-            ),
-            -1,
-            false
-          ),
-        },
-      ],
-      opacity: withRepeat(
-        withSequence(
-          withTiming(0.3, { duration: 2500 }),
-          withTiming(0.05, { duration: 2500 }),
-          withTiming(0.3, { duration: 2500 })
-        ),
-        -1,
-        false
-      ),
-    }));
-
-    // Floating particles
-    const particle1 = useAnimatedStyle(() => ({
-      transform: [
-        {
-          translateY: withRepeat(
-            withSequence(
-              withTiming(0, { duration: 1000 }),
-              withTiming(-20, { duration: 1000 }),
-              withTiming(0, { duration: 1000 })
-            ),
-            -1,
-            false
-          ),
-        },
-        {
-          rotate: withRepeat(withTiming('360deg', { duration: 4000 }), -1, false),
-        },
-      ],
-    }));
-
-    const particle2 = useAnimatedStyle(() => ({
-      transform: [
-        {
-          translateY: withRepeat(
-            withSequence(
-              withTiming(0, { duration: 1200 }),
-              withTiming(-30, { duration: 1200 }),
-              withTiming(0, { duration: 1200 })
-            ),
-            -1,
-            false
-          ),
-        },
-        {
-          rotate: withRepeat(withTiming('-360deg', { duration: 3500 }), -1, false),
-        },
-      ],
-    }));
-
-    const particle3 = useAnimatedStyle(() => ({
-      transform: [
-        {
-          translateY: withRepeat(
-            withSequence(
-              withTiming(0, { duration: 900 }),
-              withTiming(-25, { duration: 900 }),
-              withTiming(0, { duration: 900 })
-            ),
-            -1,
-            false
-          ),
-        },
-        {
-          rotate: withRepeat(withTiming('360deg', { duration: 4500 }), -1, false),
-        },
-      ],
-    }));
-
-    // Animated dots with timing offset
-    const dotsAnimation = useAnimatedStyle(() => ({
-      opacity: withRepeat(
-        withSequence(
-          withTiming(0.3, { duration: 800 }),
-          withTiming(1, { duration: 800 }),
-          withTiming(0.3, { duration: 800 })
-        ),
-        -1,
-        false
-      ),
-      transform: [
-        {
-          scale: withRepeat(
-            withSequence(
-              withTiming(0.8, { duration: 800 }),
-              withTiming(1.2, { duration: 800 }),
-              withTiming(0.8, { duration: 800 })
-            ),
-            -1,
-            false
-          ),
-        },
-      ],
-    }));
-
-    return (
-      <View style={styles.loadingContainer}>
-        {/* Outer expanding circles */}
-        <Animated.View style={[styles.outerPulse, outerPulse2]} />
-        <Animated.View style={[styles.outerPulse, outerPulse1]} />
-
-        {/* Main loading elements */}
-        <Animated.View style={[styles.loadingRing, ringRotation]} />
-        <Animated.View style={[styles.loadingOrb, pulseAnimation]} />
-
-        {/* Floating particles */}
-        <Animated.View style={[styles.particle, styles.particle1, particle1]} />
-        <Animated.View style={[styles.particle, styles.particle2, particle2]} />
-        <Animated.View style={[styles.particle, styles.particle3, particle3]} />
-
-        {/* Text content */}
-        <View style={styles.loadingTextContainer}>
-          <Text style={styles.detectingTitle}>{t('analysis.emotion.analyzingExpressions')}</Text>
-          <Text style={styles.detectingSubtitle}>
-            {t('analysis.emotion.processingSubtitle')}
-          </Text>
-
-          <View style={styles.loadingDots}>
-            <Animated.View style={[styles.loadingDot, styles.dot1, dotsAnimation]} />
-            <Animated.View style={[styles.loadingDot, styles.dot2, dotsAnimation]} />
-            <Animated.View style={[styles.loadingDot, styles.dot3, dotsAnimation]} />
-          </View>
-        </View>
-      </View>
-    );
-  };
 
   const CameraFrame = () => {
     const pulseStyle = useAnimatedStyle(() => ({
@@ -1156,22 +990,11 @@ export const EmotionDetectionScreen: React.FC = () => {
   if (detecting) {
     return (
       <View style={[styles.container, { backgroundColor: themeColors.background, flex: 1 }]}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={["top", "bottom"]}>
-          {/* Keep camera mounted but hidden during analysis */}
-          <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}>
-            <CameraFrame />
-          </View>
-
-          <View style={{ flex: 1, justifyContent: 'center' }}>
-            <EmotionLoadingScreen onCancel={() => {
-              if (isMountedRef.current) {
-                setDetecting(false);
-                setCurrentEmotion(null);
-                setShowingResults(false);
-              }
-            }} />
-          </View>
-        </SafeAreaView>
+        <CameraFrame />
+        <AnalysisLoader messages={[
+          'Analizzando l’espressione del tuo volto...',
+          'Interpretando i segnali di occhi e bocca...'
+        ]} />
       </View>
     );
   }
@@ -1346,12 +1169,6 @@ export const EmotionDetectionScreen: React.FC = () => {
 
           {(() => {
             try {
-              const store = useAnalysisStore.getState();
-              const latestSession = store.latestEmotionSession;
-              const emotionHistory = store.emotionHistory;
-
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
-
               // Always show the card, with fallback data if no session exists
               const fallbackSession = {
                 id: 'fallback',
@@ -1365,7 +1182,7 @@ export const EmotionDetectionScreen: React.FC = () => {
 
               return (
                 <EmotionSessionCard
-                  session={latestSession || fallbackSession}
+                  session={latestEmotionSession || fallbackSession}
                 />
               );
             } catch (error) {

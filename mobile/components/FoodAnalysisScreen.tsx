@@ -39,7 +39,7 @@ import { DatabaseVerificationService } from '../services/database-verification.s
 import { useAnalysisStore } from '../stores/analysis.store';
 import { CoachService } from '../services/coach.service';
 import { GaugeChart } from './charts/GaugeChart';
-import { FoodLoadingScreen } from './FoodLoadingScreen';
+import { AnalysisLoader } from './shared/AnalysisLoader';
 import { FoodResultsScreen } from './FoodResultsScreen';
 import { FoodAnalysisResult } from '../types/analysis.types';
 import { EnhancedScoreTile } from './EnhancedScoreTile';
@@ -1404,17 +1404,7 @@ export const FoodAnalysisScreen: React.FC = () => {
     opacity: withRepeat(withSequence(withTiming(0.7, { duration: 1200 }), withTiming(0.1, { duration: 1200 })), -1, false),
   }));
 
-  const LoadingSpinner = () => {
-    const rotation = useAnimatedStyle(() => ({
-      transform: [
-        {
-          rotate: withRepeat(withTiming('360deg', { duration: 1600 }), -1, false),
-        },
-      ],
-    }));
 
-    return <Animated.View style={[styles.spinner, rotation]} />;
-  };
 
   const CameraFrame = () => {
     const handleCameraReady = () => {
@@ -1446,18 +1436,12 @@ export const FoodAnalysisScreen: React.FC = () => {
 
   if (analyzing) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["bottom"]}>
-          {/* Keep camera mounted but hidden during analysis */}
-          <View style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}>
-            <CameraFrame />
-          </View>
-
-          <FoodLoadingScreen onCancel={() => {
-            setAnalyzing(false);
-            setResults(null);
-          }} />
-        </SafeAreaView>
+      <View style={[styles.container, { backgroundColor: colors.background, flex: 1 }]}>
+        <CameraFrame />
+        <AnalysisLoader messages={[
+          'Identificando gli ingredienti del tuo piatto...',
+          'Stimando calorie e nutrienti...'
+        ]} />
       </View>
     );
   }
@@ -1486,16 +1470,16 @@ export const FoodAnalysisScreen: React.FC = () => {
   if (results) {
     return (
       <FoodResultsScreen
-        results={fullAnalysisResult}
+        results={results}
         fullAnalysisResult={fullAnalysisResult}
-        onGoBack={() => {
+        onRetake={resetAnalysis}
+        onDone={() => {
           setResults(null);
           setAnalyzing(false);
           setFullAnalysisResult(null);
           // Immediately restart camera to prevent flash
           cameraController.startCamera();
         }}
-        onRetake={resetAnalysis}
       />
     );
   }

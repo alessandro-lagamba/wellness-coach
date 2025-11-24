@@ -56,10 +56,10 @@ class IntelligentInsightService {
       // Check database first for today's insights
       const dbService = (await import('./intelligent-insight-db.service')).default.getInstance();
       const today = new Date().toISOString().split('T')[0];
-      
+
       const { success: dbSuccess, data: existingInsights } = await dbService.getIntelligentInsights(
-        currentUser.id, 
-        request.category, 
+        currentUser.id,
+        request.category,
         today
       );
 
@@ -109,7 +109,7 @@ class IntelligentInsightService {
 
       // Generate AI analysis
       const analysisResponse = await this.generateAIAnalysis(request, userContext);
-      
+
       // Save to database
       try {
         await dbService.saveIntelligentInsights(currentUser.id, request.category, analysisResponse);
@@ -117,7 +117,7 @@ class IntelligentInsightService {
       } catch (dbError) {
         console.warn('⚠️ Failed to save intelligent insights to database:', dbError);
       }
-      
+
       // Cache the result
       this.setCachedInsights(cacheKey, analysisResponse);
 
@@ -189,11 +189,19 @@ Analizza i dati storici delle analisi emozionali e fornisci insight pratici per 
 Dati recenti:
 ${JSON.stringify(emotionData)}
 
+Osservazioni rilevate dall'AI visiva:
+${emotionData.observations ? emotionData.observations.join('\n- ') : 'Nessuna osservazione specifica.'}
+
+Raccomandazioni iniziali:
+${emotionData.recommendations ? emotionData.recommendations.join('\n- ') : 'Nessuna raccomandazione iniziale.'}
+
 Istruzioni:
 1. Analizza trend di valence, arousal e categorie emotive (positive, neutre, negative).
-2. Fornisci massimo 3 insight pratici, brevi e personalizzati.
-3. Suggerisci routine giornaliere per migliorare umore o gestire eventuali cali (es. attività fisica leggera, respirazione, journaling).
-4. Rispondi solo con raccomandazioni pratiche, non spiegazioni scientifiche.
+2. Usa le osservazioni visive per contestualizzare i consigli.
+3. Espandi le raccomandazioni iniziali in insight pratici e dettagliati.
+4. Fornisci massimo 3 insight pratici, brevi e personalizzati.
+5. Suggerisci routine giornaliere per migliorare umore o gestire eventuali cali (es. attività fisica leggera, respirazione, journaling).
+6. Rispondi solo con raccomandazioni pratiche, non spiegazioni scientifiche.
 
 IMPORTANTE: Rispondi SOLO con un JSON valido nel seguente formato:
 
@@ -286,7 +294,7 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
    */
   private parseAIAnalysis(analysisText: string, request: InsightAnalysisRequest): InsightAnalysisResponse {
     console.log('🤖 Parsing AI insight analysis:', analysisText);
-    
+
     try {
       // Try to parse the entire response as JSON first
       let parsedData = null;
@@ -300,16 +308,16 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
           try {
             // Try to fix incomplete JSON by adding missing closing braces
             let jsonStr = jsonMatch[0];
-            
+
             // Count opening and closing braces
             const openBraces = (jsonStr.match(/\{/g) || []).length;
             const closeBraces = (jsonStr.match(/\}/g) || []).length;
-            
+
             // Add missing closing braces
             if (openBraces > closeBraces) {
               jsonStr += '}'.repeat(openBraces - closeBraces);
             }
-            
+
             // Try to fix incomplete strings
             if (jsonStr.includes('"description": "') && !jsonStr.includes('",')) {
               // Find the last incomplete description and close it
@@ -320,7 +328,7 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
                 jsonStr = jsonStr.replace(lastMatch, fixedMatch);
               }
             }
-            
+
             parsedData = JSON.parse(jsonStr);
             console.log('📋 Extracted and fixed JSON parse successful:', parsedData);
           } catch (fixError) {
@@ -330,10 +338,10 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
           }
         }
       }
-      
+
       if (parsedData && parsedData.insights && Array.isArray(parsedData.insights)) {
         console.log('🎯 Using AI-generated insights');
-        
+
         return {
           insights: parsedData.insights.map((insight: any, index: number) => ({
             id: insight.id || `${request.category}-insight-${index}`,
@@ -356,7 +364,7 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
     } catch (error) {
       console.log('⚠️ Could not parse AI JSON, using fallback:', error);
     }
-    
+
     // Fallback to basic insights
     return this.getFallbackInsights(request.category);
   }
@@ -386,13 +394,13 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
             };
           }
         });
-        
+
         return { insights };
       }
     } catch (error) {
       console.log('⚠️ Could not extract partial insights:', error);
     }
-    
+
     return null;
   }
 
@@ -458,7 +466,7 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
 
   private setCachedInsights(key: string, insights: InsightAnalysisResponse): void {
     this.cache.set(key, insights);
-    
+
     // Clean up old cache entries
     setTimeout(() => {
       this.cache.delete(key);
