@@ -24,7 +24,7 @@ Constraints:
 - Estimate 7 basic emotions + dominant_emotion, valence (-1..1), arousal (-1..1), confidence (0..1).
 - Base judgement on visible facial cues only (brows, eyes, mouth). Do NOT infer from background.
 - Observations: describe specific facial cues (e.g., "corners of mouth raised", "eyebrows relaxed", "eyes wide open"). Be objective.
-- Recommendations: provide 3-5 short, actionable wellness tips based on the detected emotion (e.g., "Take a deep breath", "Go for a short walk").
+- Recommendations: provide 3-5 detailed, actionable wellness tips based on the detected emotion. Each should be a complete sentence explaining WHAT to do and WHY it helps (e.g., "Take a 5-minute walk outside to boost your mood through natural light exposure and gentle movement" or "Practice deep breathing for 2 minutes to calm your nervous system and reduce stress"). Be specific and practical.
 - Analysis Description: Provide a short, educational paragraph (2-3 sentences) explaining the analysis result to the user. Explain "why" this emotion was detected and what it means for their wellness. Focus on the science of facial expressions (e.g., "The raised inner eyebrows suggest...").
 
 Schema: {
@@ -59,7 +59,7 @@ Schema: {
 Task: analyze the skin quality (texture, redness, oiliness, hydration) and return STRICT JSON per schema.
 Constraints:
 - Consider lighting, focus, and visible areas. If artifacts (makeup/filters/overexposure) reduce confidence.
-- Provide concise product-agnostic recommendations (hydration, sunscreen, cleansing, etc.). Non-medical.
+- Recommendations: Provide 3-5 detailed, actionable skincare recommendations. Each should be a complete sentence explaining WHAT to do, WHEN to do it, and WHY (e.g., "Apply a gentle moisturizer within 30 minutes after washing your face to lock in hydration and strengthen your skin barrier"). Be specific and practical. Product-agnostic. Non-medical.
 - Analysis Description: Provide a short, educational paragraph (2-3 sentences) explaining the skin condition to the user. Explain what the scores mean and offer a general wellness tip. Focus on skin physiology (e.g., "Sebum production appears balanced...").
 
 Schema: {

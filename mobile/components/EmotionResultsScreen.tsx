@@ -254,7 +254,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         {/* Hero Section */}
         <ResultHero
           title={emotionData.title}
-          subtitle={t('analysis.emotion.wellnessScore') || 'Wellness Score'}
+          subtitle={language === 'it' ? 'Punteggio Benessere' : 'Wellness Score'}
           score={emotionData.wellnessScore}
           color={emotionData.gradient[0]}
           style={styles.hero}
@@ -361,7 +361,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
             />
           ))}
 
-          {/* AI Recommendations Section */}
+          {/* AI Recommendations Section - Using ActionCard format like Skin */}
           {fullAnalysisResult?.recommendations && fullAnalysisResult.recommendations.length > 0 && (
             <>
               <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
@@ -369,18 +369,26 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
               </Text>
 
               {fullAnalysisResult.recommendations.map((rec: string, index: number) => (
-                <View key={index} style={[styles.recommendationCard, { backgroundColor: isDark ? '#1f2937' : '#fff' }]}>
-                  <MaterialCommunityIcons name="lightbulb-outline" size={20} color="#10b981" style={styles.recommendationIcon} />
-                  <Text style={[styles.recommendationText, { color: colors.text }]}>
-                    {capitalizeFirst(rec)}
-                  </Text>
-                </View>
+                <ActionCard
+                  key={`ai-rec-${index}`}
+                  action={{
+                    id: `ai-recommendation-${index}`,
+                    title: language === 'it' ? 'Consiglio AI' : 'AI Recommendation',
+                    description: capitalizeFirst(rec),
+                    category: 'emotional',
+                    priority: index === 0 ? 'high' : index === 1 ? 'medium' : 'low',
+                    actionable: true,
+                    estimatedTime: '2 min',
+                  }}
+                  onComplete={() => { }}
+                  onDismiss={() => { }}
+                />
               ))}
             </>
           )}
 
           {/* Bottom spacer for FAB */}
-          <View style={{ height: 120 }} />
+          <View style={{ height: 140 }} />
         </View>
       </ScrollView>
 

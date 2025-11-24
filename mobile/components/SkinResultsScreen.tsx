@@ -106,14 +106,14 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
   const actions = useMemo(() => {
     return recommendations.map((rec, index) => ({
       id: `rec-${index}`,
-      title: t('analysis.skin.results.recommendation') || 'Skin Care Tip',
-      description: translateAIText(rec),
+      title: language === 'it' ? 'Raccomandazione Cura Pelle' : 'Skin Care Recommendation',
+      description: capitalizeFirst(translateAIText(rec)),
       category: 'skin',
-      priority: index === 0 ? 'high' : 'medium',
+      priority: index === 0 ? 'high' : index === 1 ? 'medium' : 'low',
       actionable: true,
       estimatedTime: '2 min',
     }));
-  }, [recommendations, language, t]);
+  }, [recommendations, language]);
 
   // Generate actions from issues (as alerts)
   const issueActions = useMemo(() => {
