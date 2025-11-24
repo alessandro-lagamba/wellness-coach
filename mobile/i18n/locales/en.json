@@ -942,7 +942,55 @@
         "snack": {
           "title": "Healthy Snacks",
           "description": "Nutritious snack ideas to keep you energized"
+        },
+        "libraryTitle": "Your recipe library",
+        "librarySubtitle": "Save, edit, and plan recipes tailored to your taste.",
+        "timeUnknown": "Time not available",
+        "saveToLibrary": "Save to library",
+        "emptyTitle": "No saved recipes yet",
+        "emptySubtitle": "Generate a recipe from your fridge ingredients and save it here.",
+        "filters": {
+          "searchPlaceholder": "Search by recipe name",
+          "ingredientsPlaceholder": "Filter by ingredient",
+          "favorites": "Favorites",
+          "time": {
+            "all": "All times",
+            "quick": "Quick (<20 min)",
+            "balanced": "Balanced (20-40 min)",
+            "slow": "Slow (>40 min)"
+          }
+        },
+        "editor": {
+          "title": "Edit recipe",
+          "recipeName": "Recipe name",
+          "recipeNamePlaceholder": "e.g. Protein quinoa bowl",
+          "description": "Description",
+          "descriptionPlaceholder": "Add a description or notes",
+          "servings": "Servings",
+          "mealType": "Meal moment",
+          "favoriteToggle": "Mark as favorite",
+          "tags": "Tags",
+          "notes": "Personal notes",
+          "ingredients": "Ingredients (one per line)",
+          "ingredientsPlaceholder": "e.g. 2 eggs\n80 g oats",
+          "steps": "Steps (one per line)",
+          "stepsPlaceholder": "e.g. Toast the oats\nSimmer gently",
+          "titleRequired": "Recipe name is required",
+          "saveError": "Unable to save the recipe",
+          "deleteTitle": "Delete recipe",
+          "deleteMessage": "Are you sure you want to delete this recipe?",
+          "deleteError": "Unable to delete the recipe"
         }
+      },
+      "mealPlanner": {
+        "title": "Meal planning",
+        "subtitle": "Organize your weekly meals and keep macros on track.",
+        "customRecipe": "Custom recipe",
+        "addToPlan": "Plan",
+        "assignTitle": "Assign {{meal}} on {{date}}",
+        "assignFallback": "Assign recipe",
+        "remove": "Remove",
+        "noRecipes": "No recipes match this filter"
       },
       "preferences": {
         "title": "Food Preferences",
@@ -1008,7 +1056,21 @@
         "ingredientsSaved": "Ingredients saved successfully!",
         "saveError": "Error saving ingredients",
         "savedIngredients": "Saved Ingredients",
-        "removeError": "Error removing ingredient"
+        "removeError": "Error removing ingredient",
+        "saveRecipeTitle": "Save recipe",
+        "saveRecipeDescription": "Customize the name, add tags, and store this recipe in your library.",
+        "recipeNameLabel": "Recipe name",
+        "recipeNamePlaceholder": "e.g. High-protein salmon bowl",
+        "tagsLabel": "Tags (comma separated)",
+        "tagsPlaceholder": "e.g. protein, quick, light",
+        "notesLabel": "Personal notes",
+        "notesPlaceholder": "Add specific adjustments or tips",
+        "favoriteToggle": "Mark as favorite",
+        "recipeSavedTitle": "Recipe saved",
+        "recipeSavedMessage": "The recipe is now available in your library.",
+        "recipeSaveError": "Unable to save the recipe. Please try again.",
+        "recipeNameRequired": "Recipe name is required",
+        "saveRecipe": "Save recipe"
       },
       "goals": {
         "title": "Nutritional Goals",

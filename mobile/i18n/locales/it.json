@@ -948,7 +948,55 @@
         "snack": {
           "title": "Spuntini Sani",
           "description": "Idee per spuntini nutrienti per mantenerti energico"
+        },
+        "libraryTitle": "Le tue ricette",
+        "librarySubtitle": "Salva, modifica e pianifica ricette personalizzate.",
+        "timeUnknown": "Tempo non disponibile",
+        "saveToLibrary": "Salva tra le ricette",
+        "emptyTitle": "Nessuna ricetta salvata",
+        "emptySubtitle": "Genera una ricetta dal tuo frigo e salvala qui per riutilizzarla.",
+        "filters": {
+          "searchPlaceholder": "Cerca per nome ricetta",
+          "ingredientsPlaceholder": "Filtra per ingrediente",
+          "favorites": "Preferite",
+          "time": {
+            "all": "Tutti i tempi",
+            "quick": "Veloce (<20 min)",
+            "balanced": "Normale (20-40 min)",
+            "slow": "Lenta (>40 min)"
+          }
+        },
+        "editor": {
+          "title": "Modifica ricetta",
+          "recipeName": "Nome ricetta",
+          "recipeNamePlaceholder": "Es. Bowl di quinoa proteica",
+          "description": "Descrizione",
+          "descriptionPlaceholder": "Aggiungi una descrizione o note",
+          "servings": "Porzioni",
+          "mealType": "Momento del pasto",
+          "favoriteToggle": "Segna come preferita",
+          "tags": "Tag",
+          "notes": "Note personali",
+          "ingredients": "Ingredienti (uno per riga)",
+          "ingredientsPlaceholder": "Es. 2 uova\n80 g avena",
+          "steps": "Passaggi (uno per riga)",
+          "stepsPlaceholder": "Es. Tosta l'avena\nCuoci a fuoco lento",
+          "titleRequired": "Il nome della ricetta è obbligatorio",
+          "saveError": "Impossibile salvare la ricetta",
+          "deleteTitle": "Elimina ricetta",
+          "deleteMessage": "Vuoi davvero eliminare questa ricetta?",
+          "deleteError": "Impossibile eliminare la ricetta"
         }
+      },
+      "mealPlanner": {
+        "title": "Pianificazione pasti",
+        "subtitle": "Organizza i pasti della settimana e tieni traccia dei macronutrienti.",
+        "customRecipe": "Ricetta personalizzata",
+        "addToPlan": "Pianifica",
+        "assignTitle": "Assegna {{meal}} al {{date}}",
+        "assignFallback": "Assegna ricetta",
+        "remove": "Rimuovi",
+        "noRecipes": "Nessuna ricetta disponibile per questo filtro"
       },
       "preferences": {
         "title": "Preferenze Alimentari",
@@ -1016,7 +1064,21 @@
         "savedIngredients": "Ingredienti Salvati",
         "removeError": "Errore durante la rimozione dell'ingrediente",
         "takePhoto": "Foto",
-        "newIngredients": "Nuovi Ingredienti"
+        "newIngredients": "Nuovi Ingredienti",
+        "saveRecipeTitle": "Salva ricetta",
+        "saveRecipeDescription": "Personalizza il nome, aggiungi tag e salva questa ricetta nella tua libreria.",
+        "recipeNameLabel": "Nome ricetta",
+        "recipeNamePlaceholder": "Es. Bowl proteico al salmone",
+        "tagsLabel": "Tag (separati da virgola)",
+        "tagsPlaceholder": "es. proteico, veloce, light",
+        "notesLabel": "Note personali",
+        "notesPlaceholder": "Aggiungi consigli o modifiche personali",
+        "favoriteToggle": "Segna come preferita",
+        "recipeSavedTitle": "Ricetta salvata",
+        "recipeSavedMessage": "La ricetta è stata aggiunta alla tua libreria.",
+        "recipeSaveError": "Impossibile salvare la ricetta. Riprova.",
+        "recipeNameRequired": "Il nome della ricetta è obbligatorio",
+        "saveRecipe": "Salva ricetta"
       },
       "goals": {
         "title": "Obiettivi Nutrizionali",

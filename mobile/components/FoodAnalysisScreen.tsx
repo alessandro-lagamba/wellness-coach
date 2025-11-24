@@ -1,8 +1,9 @@
 // @ts-nocheck
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
@@ -63,9 +64,54 @@ import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 import { NutritionalGoalsModal } from './NutritionalGoalsModal';
 import { FridgeIngredientsModal } from './FridgeIngredientsModal';
 import { RecipeDetailModal } from './RecipeDetailModal';
+import RecipeEditorModal from './RecipeEditorModal';
+import recipeLibraryService, { MealType, UserRecipe } from '../services/recipe-library.service';
+import mealPlanService, { MealPlanEntry, MealPlanMealType } from '../services/meal-plan.service';
 // Removed useInsights - now using IntelligentInsightsSection directly
 
 const { width } = Dimensions.get('window');
+
+type TimeFilter = 'all' | 'quick' | 'balanced' | 'slow';
+const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+const getDefaultMealType = (recipe?: UserRecipe): MealPlanMealType => {
+  if (recipe?.meal_types?.length) {
+    const candidate = recipe.meal_types[0] as MealPlanMealType;
+    if (MEAL_TYPES.includes(candidate)) {
+      return candidate;
+    }
+  }
+  return 'dinner';
+};
+
+const getWeekStart = (date: Date) => {
+  const d = new Date(date);
+  const day = d.getDay(); // 0 (Sun) - 6 (Sat)
+  const diff = (day + 6) % 7; // shift to Monday start
+  d.setDate(d.getDate() - diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const addDays = (date: Date, days: number) => {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+};
+
+const formatShortDate = (date: Date, language: string) =>
+  new Intl.DateTimeFormat(language === 'it' ? 'it-IT' : 'en-US', {
+    weekday: 'short',
+    day: 'numeric',
+  }).format(date);
+
+const toISODate = (date: Date) => date.toISOString().split('T')[0];
+
+const classifyTimeBucket = (minutes?: number | null): TimeFilter => {
+  if (!minutes || minutes <= 0) return 'balanced';
+  if (minutes <= 20) return 'quick';
+  if (minutes <= 40) return 'balanced';
+  return 'slow';
+};
 
 interface FoodAnalysisResults {
   calories: number;
@@ -343,6 +389,28 @@ export const FoodAnalysisScreen: React.FC = () => {
   // Modal per dettagli ricetta
   const [showRecipeModal, setShowRecipeModal] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
+  const [userRecipes, setUserRecipes] = useState<UserRecipe[]>([]);
+  const [recipesLoading, setRecipesLoading] = useState(false);
+  const [recipeSearch, setRecipeSearch] = useState('');
+  const [ingredientFilter, setIngredientFilter] = useState('');
+  const [favoriteOnly, setFavoriteOnly] = useState(false);
+  const [mealTypeFilter, setMealTypeFilter] = useState<Record<MealType, boolean>>({
+    breakfast: true,
+    lunch: true,
+    dinner: true,
+    snack: true,
+  });
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
+  const [editingRecipe, setEditingRecipe] = useState<UserRecipe | null>(null);
+  const [weekStart, setWeekStart] = useState<Date>(() => getWeekStart(new Date()));
+  const [mealPlanEntries, setMealPlanEntries] = useState<MealPlanEntry[]>([]);
+  const [mealPlanLoading, setMealPlanLoading] = useState(false);
+  const [slotPicker, setSlotPicker] = useState<{
+    visible: boolean;
+    date?: string;
+    mealType?: MealPlanMealType;
+  }>({ visible: false });
+  const [slotSearch, setSlotSearch] = useState('');
   const [loadingRecipe, setLoadingRecipe] = useState(false);
 
   const analysisServiceRef = useRef(UnifiedAnalysisService.getInstance());
@@ -604,6 +672,195 @@ export const FoodAnalysisScreen: React.FC = () => {
 
     loadNutritionalGoals();
   }, []);
+
+  const loadRecipeLibrary = useCallback(async () => {
+    try {
+      setRecipesLoading(true);
+      const list = await recipeLibraryService.list();
+      setUserRecipes(list);
+    } catch (error) {
+      console.error('❌ Failed to load recipe library:', error);
+    } finally {
+      setRecipesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRecipeLibrary();
+  }, [loadRecipeLibrary]);
+
+  const weekRangeISO = useMemo(() => {
+    const startISO = toISODate(weekStart);
+    const endISO = toISODate(addDays(weekStart, 6));
+    return { startISO, endISO };
+  }, [weekStart]);
+
+  const loadMealPlan = useCallback(async () => {
+    try {
+      setMealPlanLoading(true);
+      const entries = await mealPlanService.getEntries(weekRangeISO.startISO, weekRangeISO.endISO);
+      setMealPlanEntries(entries);
+    } catch (error) {
+      console.error('❌ Failed to load meal plan:', error);
+    } finally {
+      setMealPlanLoading(false);
+    }
+  }, [weekRangeISO.startISO, weekRangeISO.endISO]);
+
+  useEffect(() => {
+    loadMealPlan();
+  }, [loadMealPlan]);
+
+  const weekDays = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, index) => {
+      const date = addDays(weekStart, index);
+      return {
+        date,
+        iso: toISODate(date),
+        label: formatShortDate(date, language),
+      };
+    });
+  }, [weekStart, language]);
+
+  const filteredRecipes = useMemo(() => {
+    const search = recipeSearch.trim().toLowerCase();
+    const ingredient = ingredientFilter.trim().toLowerCase();
+    const activeMeals = Object.entries(mealTypeFilter)
+      .filter(([, active]) => active)
+      .map(([key]) => key);
+
+    return userRecipes.filter((recipe) => {
+      if (favoriteOnly && !recipe.favorite) return false;
+      if (search && !recipe.title.toLowerCase().includes(search)) return false;
+      if (ingredient) {
+        const hasIngredient = (recipe.ingredients || []).some((ing) =>
+          (ing.name || '').toLowerCase().includes(ingredient),
+        );
+        if (!hasIngredient) return false;
+      }
+      if (activeMeals.length && recipe.meal_types?.length) {
+        if (!recipe.meal_types.some((type) => activeMeals.includes(type))) {
+          return false;
+        }
+      }
+      if (timeFilter !== 'all') {
+        const bucket = classifyTimeBucket(recipe.total_minutes || recipe.ready_in_minutes || 0);
+        if (bucket !== timeFilter) return false;
+      }
+      return true;
+    });
+  }, [userRecipes, recipeSearch, ingredientFilter, favoriteOnly, mealTypeFilter, timeFilter]);
+
+  const toggleMealTypeFilter = (type: MealType) => {
+    setMealTypeFilter((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  };
+
+  const handleRecipeFavoriteToggle = async (recipe: UserRecipe) => {
+    try {
+      await recipeLibraryService.toggleFavorite(recipe.id, !recipe.favorite);
+      await loadRecipeLibrary();
+    } catch (error) {
+      console.error('❌ Failed to toggle favorite:', error);
+    }
+  };
+
+  const handleRecipeSaved = useCallback(() => {
+    loadRecipeLibrary();
+  }, [loadRecipeLibrary]);
+
+  const handleRecipeEditorSaved = (updated: UserRecipe) => {
+    setEditingRecipe(null);
+    setUserRecipes((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    loadRecipeLibrary();
+  };
+
+  const handleRecipeDeleted = (id: string) => {
+    setEditingRecipe(null);
+    setUserRecipes((prev) => prev.filter((recipe) => recipe.id !== id));
+    loadRecipeLibrary();
+  };
+
+  const getEntryForCell = (dateISO: string, mealType: MealPlanMealType) =>
+    mealPlanEntries.find((entry) => entry.plan_date === dateISO && entry.meal_type === mealType);
+
+  const shiftWeek = (direction: number) => {
+    setWeekStart((prev) => addDays(prev, direction * 7));
+  };
+
+  const openSlotPicker = (dateISO: string, mealType: MealPlanMealType) => {
+    setSlotPicker({ visible: true, date: dateISO, mealType });
+    setSlotSearch('');
+  };
+
+  const closeSlotPicker = () => setSlotPicker({ visible: false });
+
+  const handleAssignRecipeToSlot = async (recipeId: string) => {
+    if (!slotPicker.date || !slotPicker.mealType) return;
+    try {
+      await mealPlanService.upsertEntry({
+        plan_date: slotPicker.date,
+        meal_type: slotPicker.mealType,
+        recipe_id: recipeId,
+      });
+      await loadMealPlan();
+      closeSlotPicker();
+    } catch (error) {
+      console.error('❌ Failed to assign recipe to meal plan:', error);
+    }
+  };
+
+  const handleClearSlot = async () => {
+    if (!slotPicker.date || !slotPicker.mealType) return;
+    try {
+      await mealPlanService.removeEntry(slotPicker.date, slotPicker.mealType);
+      await loadMealPlan();
+      closeSlotPicker();
+    } catch (error) {
+      console.error('❌ Failed to remove meal plan entry:', error);
+    }
+  };
+
+  const filteredSlotRecipes = useMemo(() => {
+    if (!slotPicker.visible) return [];
+    const search = slotSearch.trim().toLowerCase();
+    return userRecipes.filter((recipe) => {
+      if (slotPicker.mealType && recipe.meal_types?.length) {
+        if (!recipe.meal_types.includes(slotPicker.mealType)) {
+          return false;
+        }
+      }
+      if (search && !recipe.title.toLowerCase().includes(search)) {
+        return false;
+      }
+      return true;
+    });
+  }, [slotPicker, slotSearch, userRecipes]);
+
+  const weeklySummary = useMemo(() => {
+    let calories = 0;
+    let protein = 0;
+    let carbs = 0;
+    let fat = 0;
+    mealPlanEntries.forEach((entry) => {
+      const servings = entry.servings || 1;
+      if (entry.recipe?.calories_per_serving) {
+        calories += entry.recipe.calories_per_serving * servings;
+      }
+      if (entry.recipe?.macros?.protein) {
+        protein += entry.recipe.macros.protein * servings;
+      }
+      if (entry.recipe?.macros?.carbs) {
+        carbs += entry.recipe.macros.carbs * servings;
+      }
+      if (entry.recipe?.macros?.fat) {
+        fat += entry.recipe.macros.fat * servings;
+      }
+    });
+    return { calories, protein, carbs, fat };
+  }, [mealPlanEntries]);
 
   const handleSaveGoals = async (goals: any) => {
     try {
@@ -1902,6 +2159,291 @@ export const FoodAnalysisScreen: React.FC = () => {
             />
           )}
 
+          {/* Recipe Library Section */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('analysis.food.recipes.libraryTitle')}
+            </Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+              {t('analysis.food.recipes.librarySubtitle')}
+            </Text>
+          </View>
+
+          <View style={[styles.recipeFiltersCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.filterInput, { borderColor: colors.border }]}>
+              <MaterialCommunityIcons name="magnify" size={18} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.filterTextInput, { color: colors.text }]}
+                value={recipeSearch}
+                onChangeText={setRecipeSearch}
+                placeholder={t('analysis.food.recipes.filters.searchPlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+              />
+            </View>
+            <View style={[styles.filterInput, { borderColor: colors.border }]}>
+              <MaterialCommunityIcons name="sprout-outline" size={18} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.filterTextInput, { color: colors.text }]}
+                value={ingredientFilter}
+                onChangeText={setIngredientFilter}
+                placeholder={t('analysis.food.recipes.filters.ingredientsPlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+              />
+            </View>
+            <View style={styles.filterChipsRow}>
+              {MEAL_TYPES.map((type) => {
+                const active = mealTypeFilter[type];
+                return (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.filterChip,
+                      {
+                        backgroundColor: active ? colors.primary : colors.surfaceElevated,
+                        borderColor: active ? colors.primary : colors.border,
+                      },
+                    ]}
+                    onPress={() => toggleMealTypeFilter(type)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        { color: active ? colors.textInverse : colors.text },
+                      ]}
+                    >
+                      {t(`analysis.food.mealTypes.${type}`)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={styles.filterChipsRow}>
+              {(['all', 'quick', 'balanced', 'slow'] as TimeFilter[]).map((bucket) => {
+                const active = timeFilter === bucket;
+                return (
+                  <TouchableOpacity
+                    key={bucket}
+                    style={[
+                      styles.timeChip,
+                      {
+                        backgroundColor: active ? colors.accent : colors.surfaceElevated,
+                        borderColor: active ? colors.accent : colors.border,
+                      },
+                    ]}
+                    onPress={() => setTimeFilter(bucket)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        { color: active ? colors.textInverse : colors.text },
+                      ]}
+                    >
+                      {t(`analysis.food.recipes.filters.time.${bucket}`)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity
+                style={[
+                  styles.timeChip,
+                  {
+                    backgroundColor: favoriteOnly ? colors.warning + '22' : colors.surfaceElevated,
+                    borderColor: favoriteOnly ? colors.warning : colors.border,
+                  },
+                ]}
+                onPress={() => setFavoriteOnly((prev) => !prev)}
+              >
+                <MaterialCommunityIcons
+                  name={favoriteOnly ? 'star' : 'star-outline'}
+                  size={14}
+                  color={favoriteOnly ? colors.warning : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    { color: favoriteOnly ? colors.warning : colors.text },
+                  ]}
+                >
+                  {t('analysis.food.recipes.filters.favorites')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {recipesLoading ? (
+            <View style={styles.recipeLoadingState}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={{ color: colors.textSecondary, marginTop: 8 }}>
+                {t('analysis.food.recipes.loading')}
+              </Text>
+            </View>
+          ) : filteredRecipes.length > 0 ? (
+            <View style={styles.recipeCardList}>
+              {filteredRecipes.map((recipe) => (
+                <View
+                  key={recipe.id}
+                  style={[styles.recipeCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={styles.recipeCardHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.recipeCardTitle, { color: colors.text }]}>
+                        {recipe.title}
+                      </Text>
+                      <Text style={[styles.recipeCardMeta, { color: colors.textSecondary }]}>
+                        {(recipe.ready_in_minutes || recipe.total_minutes || 0) > 0
+                          ? `${recipe.ready_in_minutes || recipe.total_minutes} ${t('analysis.food.fridge.minutes')}`
+                          : t('analysis.food.recipes.timeUnknown')}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => handleRecipeFavoriteToggle(recipe)}>
+                      <MaterialCommunityIcons
+                        name={recipe.favorite ? 'star' : 'star-outline'}
+                        size={20}
+                        color={recipe.favorite ? colors.warning : colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {recipe.tags?.length > 0 && (
+                    <View style={styles.recipeTagsRow}>
+                      {recipe.tags.slice(0, 3).map((tag) => (
+                        <View key={`${recipe.id}-${tag}`} style={[styles.recipeTag, { backgroundColor: colors.surfaceElevated }]}>
+                          <Text style={[styles.recipeTagText, { color: colors.textSecondary }]}>{tag}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  <View style={styles.recipeActionsRow}>
+                    <TouchableOpacity
+                      style={[styles.recipeActionButton, { borderColor: colors.border }]}
+                      onPress={() => setSelectedRecipe(recipe)}
+                    >
+                      <MaterialCommunityIcons name="eye-outline" size={16} color={colors.textSecondary} />
+                      <Text style={[styles.recipeActionText, { color: colors.text }]}>
+                        {t('common.view')}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.recipeActionButton, { borderColor: colors.primary }]}
+                      onPress={() => setEditingRecipe(recipe)}
+                    >
+                      <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.primary} />
+                      <Text style={[styles.recipeActionText, { color: colors.primary }]}>
+                        {t('common.edit')}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.recipeActionButton, { borderColor: colors.accent }]}
+                      onPress={() => openSlotPicker(toISODate(new Date()), getDefaultMealType(recipe))}
+                    >
+                      <MaterialCommunityIcons name="calendar-plus" size={16} color={colors.accent} />
+                      <Text style={[styles.recipeActionText, { color: colors.accent }]}>
+                        {t('analysis.food.mealPlanner.addToPlan')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={[styles.emptyRecipeState, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <MaterialCommunityIcons name="chef-hat" size={28} color={colors.textSecondary} />
+              <Text style={[styles.emptyRecipeTitle, { color: colors.text }]}>{t('analysis.food.recipes.emptyTitle')}</Text>
+              <Text style={[styles.emptyRecipeSubtitle, { color: colors.textSecondary }]}>
+                {t('analysis.food.recipes.emptySubtitle')}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.mealPlanner.title')}</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.mealPlanner.subtitle')}</Text>
+          </View>
+
+          <View style={[styles.mealPlannerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.weekNavigator}>
+              <TouchableOpacity onPress={() => shiftWeek(-1)} style={styles.navButton}>
+                <MaterialCommunityIcons name="chevron-left" size={20} color={colors.text} />
+              </TouchableOpacity>
+              <Text style={[styles.weekLabel, { color: colors.text }]}>
+                {`${formatShortDate(weekStart, language)} — ${formatShortDate(addDays(weekStart, 6), language)}`}
+              </Text>
+              <TouchableOpacity onPress={() => shiftWeek(1)} style={styles.navButton}>
+                <MaterialCommunityIcons name="chevron-right" size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {mealPlanLoading ? (
+              <View style={styles.recipeLoadingState}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {weekDays.map((day) => (
+                  <View key={day.iso} style={styles.mealPlannerColumn}>
+                    <Text style={[styles.mealPlannerDay, { color: colors.text }]}>{day.label}</Text>
+                    {MEAL_TYPES.map((mealType) => {
+                      const entry = getEntryForCell(day.iso, mealType as MealPlanMealType);
+                      return (
+                        <TouchableOpacity
+                          key={`${day.iso}-${mealType}`}
+                          style={[
+                            styles.mealCell,
+                            {
+                              borderColor: entry ? colors.primary : colors.border,
+                              backgroundColor: entry ? colors.primary + '15' : colors.surfaceElevated,
+                            },
+                          ]}
+                          onPress={() => openSlotPicker(day.iso, mealType as MealPlanMealType)}
+                        >
+                          {entry ? (
+                            <>
+                              <Text style={[styles.mealCellTitle, { color: colors.text }]} numberOfLines={1}>
+                                {entry.recipe?.title || t('analysis.food.mealPlanner.customRecipe')}
+                              </Text>
+                              <Text style={[styles.mealCellMeta, { color: colors.textSecondary }]}>
+                                {(entry.recipe?.ready_in_minutes || entry.recipe?.total_minutes || 0) > 0
+                                  ? `${entry.recipe?.ready_in_minutes || entry.recipe?.total_minutes} min`
+                                  : ''}
+                              </Text>
+                            </>
+                          ) : (
+                            <View style={styles.emptyMealCell}>
+                              <MaterialCommunityIcons name="plus" size={16} color={colors.textSecondary} />
+                              <Text style={[styles.emptyMealCellText, { color: colors.textSecondary }]}>
+                                {t(`analysis.food.mealTypes.${mealType}`)}
+                              </Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+
+            <View style={styles.mealSummaryRow}>
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('analysis.food.metrics.calories')}</Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]}>{Math.round(weeklySummary.calories)} kcal</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('analysis.food.metrics.proteins')}</Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]}>{Math.round(weeklySummary.protein)} g</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('analysis.food.metrics.carbohydrates')}</Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]}>{Math.round(weeklySummary.carbs)} g</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('analysis.food.metrics.fats')}</Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]}>{Math.round(weeklySummary.fat)} g</Text>
+              </View>
+            </View>
+          </View>
+
 
 
           {/* Intelligent Insights Section - Food */}
@@ -2044,6 +2586,7 @@ export const FoodAnalysisScreen: React.FC = () => {
             // TODO: Potresti voler salvare la ricetta o mostrarla in un'altra schermata
             // 🔥 FIX: Rimuoviamo console.log eccessivi
           }}
+          onRecipeSaved={handleRecipeSaved}
         />
 
         {/* Recipe Detail Modal */}
@@ -2056,6 +2599,89 @@ export const FoodAnalysisScreen: React.FC = () => {
           recipe={selectedRecipe}
           loading={loadingRecipe}
         />
+
+        <RecipeEditorModal
+          visible={!!editingRecipe}
+          recipe={editingRecipe}
+          onClose={() => setEditingRecipe(null)}
+          onSaved={handleRecipeEditorSaved}
+          onDeleted={handleRecipeDeleted}
+        />
+
+        <Modal
+          visible={slotPicker.visible}
+          transparent
+          animationType="slide"
+          onRequestClose={closeSlotPicker}
+        >
+          <View style={styles.slotModalOverlay}>
+            <View style={[styles.slotModalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.slotModalTitle, { color: colors.text }]}>
+                {slotPicker.mealType
+                  ? t('analysis.food.mealPlanner.assignTitle', {
+                      meal: t(`analysis.food.mealTypes.${slotPicker.mealType}`),
+                      date: slotPicker.date,
+                    })
+                  : t('analysis.food.mealPlanner.assignFallback')}
+              </Text>
+              <View style={[styles.filterInput, { borderColor: colors.border }]}>
+                <MaterialCommunityIcons name="magnify" size={18} color={colors.textSecondary} />
+                <TextInput
+                  style={[styles.filterTextInput, { color: colors.text }]}
+                  value={slotSearch}
+                  onChangeText={setSlotSearch}
+                  placeholder={t('analysis.food.recipes.filters.searchPlaceholder')}
+                  placeholderTextColor={colors.textTertiary}
+                />
+              </View>
+
+              <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+                {filteredSlotRecipes.map((recipe) => (
+                  <TouchableOpacity
+                    key={recipe.id}
+                    style={[styles.slotRecipeButton, { borderColor: colors.border }]}
+                    onPress={() => handleAssignRecipeToSlot(recipe.id)}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.recipeCardTitle, { color: colors.text }]}>{recipe.title}</Text>
+                      <Text style={[styles.recipeCardMeta, { color: colors.textSecondary }]}>
+                        {(recipe.ready_in_minutes || recipe.total_minutes || 0) > 0
+                          ? `${recipe.ready_in_minutes || recipe.total_minutes} min`
+                          : t('analysis.food.recipes.timeUnknown')}
+                      </Text>
+                    </View>
+                    <MaterialCommunityIcons name="chevron-right" size={18} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                ))}
+
+                {filteredSlotRecipes.length === 0 && (
+                  <Text style={[styles.emptyMealCellText, { color: colors.textSecondary, textAlign: 'center', paddingVertical: 16 }]}>
+                    {t('analysis.food.mealPlanner.noRecipes')}
+                  </Text>
+                )}
+              </ScrollView>
+
+              <View style={styles.slotModalActions}>
+                {slotPicker.date && slotPicker.mealType && getEntryForCell(slotPicker.date, slotPicker.mealType) && (
+                  <TouchableOpacity
+                    style={[styles.secondaryButton, { borderColor: colors.error }]}
+                    onPress={handleClearSlot}
+                  >
+                    <Text style={[styles.secondaryButtonText, { color: colors.error }]}>
+                      {t('analysis.food.mealPlanner.remove')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.secondaryButton, { borderColor: colors.border }]}
+                  onPress={closeSlotPicker}
+                >
+                  <Text style={[styles.secondaryButtonText, { color: colors.text }]}>{t('common.close')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -2187,6 +2813,128 @@ const styles = StyleSheet.create({
     fontSize: 13,
     // Color will be set inline with colors.textSecondary
   },
+  recipeFiltersCard: {
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 16,
+    gap: 12,
+  },
+  filterInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  filterTextInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  filterChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  filterChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  timeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    gap: 6,
+  },
+  recipeLoadingState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  recipeCardList: {
+    gap: 12,
+  },
+  recipeCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 16,
+    gap: 8,
+    shadowColor: '#00000012',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  recipeCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  recipeCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  recipeCardMeta: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  recipeTagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  recipeTag: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  recipeTagText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  recipeActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  recipeActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  recipeActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  emptyRecipeState: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 20,
+    alignItems: 'center',
+    gap: 6,
+  },
+  emptyRecipeTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  emptyRecipeSubtitle: {
+    fontSize: 13,
+    textAlign: 'center',
+  },
   insightsSection: {
     marginBottom: 24,
   },
@@ -2231,6 +2979,107 @@ const styles = StyleSheet.create({
   },
   insightList: {
     gap: 16,
+  },
+  mealPlannerCard: {
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 16,
+    gap: 12,
+  },
+  weekNavigator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  navButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  weekLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  mealPlannerColumn: {
+    width: 130,
+    marginRight: 12,
+  },
+  mealPlannerDay: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  mealCell: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 10,
+    minHeight: 70,
+    justifyContent: 'center',
+  },
+  mealCellTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  mealCellMeta: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  emptyMealCell: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  emptyMealCellText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  mealSummaryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  summaryItem: {
+    flex: 1,
+  },
+  summaryLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  slotModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  slotModalCard: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    padding: 24,
+    gap: 16,
+  },
+  slotModalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  slotRecipeButton: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
+  slotModalActions: {
+    flexDirection: 'row',
+    gap: 12,
   },
   insightCard: {
     flexDirection: 'row',
