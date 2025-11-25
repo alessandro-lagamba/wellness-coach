@@ -135,9 +135,9 @@ VINCOLI OBBLIGATORI:
 - INGREDIENTI DA EVITARE: ${avoidList}
 - Se un ingrediente disponibile contiene o deriva da allergeni, ESCLUDILO completamente o proponi una sostituzione sicura.
 
-PREFERENZE:
-- Tipo di cucina: ${cuisine}
-- Ingredienti preferiti (da privilegiare se possibile): ${favoriteIngredientsList}
+PREFERENZE (da privilegiare quando possibile, ma non obbligatorie):
+- Tipo di cucina: ${cuisine} (stile culinario da seguire)
+- Ingredienti preferiti: ${favoriteIngredientsList} (privilegia questi ingredienti se disponibili e compatibili con la ricetta, ma non sono obbligatori - usa il buon senso)
 - Preferenze dietetiche: ${body.prefs?.join(", ") || "nessuna"}
 
 Target (opzionali): kcal/serv=${body.targetCaloriesPerServing ?? "flex"}, macros=${JSON.stringify(body.targetMacros || {})}
@@ -148,7 +148,8 @@ Regole:
 
 - ⚠️ CRITICO: NON includere MAI ingredienti che contengono o derivano da: ${allergiesList}. Se necessario, proponi alternative sicure.
 - Se mancano ingredienti critici, elencali in "shoppingGaps" e proponi sostituzioni pratiche.
-- Privilegia lo stile culinario: ${cuisine}
+- Privilegia lo stile culinario: ${cuisine} (usa tecniche, spezie e combinazioni tipiche di questa cucina).
+- Ingredienti preferiti: quando possibile e appropriato, cerca di includere ${favoriteIngredientsList} nella ricetta, ma solo se hanno senso nel contesto e sono disponibili. Non forzare l'inclusione se non sono compatibili.
 - Macro per porzione vicine al target (±20%); se non c'è target, mantenere profilo equilibrato (30/40/30).
 - Passi chiari e brevi; dosi in g/ml quando possibile.
 

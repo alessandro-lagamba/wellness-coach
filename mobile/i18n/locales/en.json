@@ -897,7 +897,12 @@
         "minerals": "Minerals",
         "recommendations": "Recommendations",
         "recommendationTitle": "Dietary Recommendation",
-        "observations": "Observations"
+        "observations": "Observations",
+        "priority": {
+          "high": "HIGH",
+          "medium": "MEDIUM",
+          "low": "LOW"
+        }
       },
       "mealType": {
         "breakfast": "Breakfast",

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 import { ResultHero } from './ResultHero';
 import { EnhancedMetricTile } from './EnhancedMetricTile';
 import { IntelligentInsightsSection } from './IntelligentInsightsSection';
-import { ActionCard } from './ActionCard';
+import { NutritionRecommendationCard } from './NutritionRecommendationCard';
 import { MetricsService } from '../services/metrics.service';
 
 const { width } = Dimensions.get('window');
@@ -51,7 +51,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
 }) => {
   const { colors, mode } = useTheme();
   const isDark = mode === 'dark';
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { hideTabBar, showTabBar } = useTabBarVisibility();
 
   useEffect(() => {
@@ -125,18 +125,80 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
     observations: fullAnalysisResult?.observations || [],
   }), [results, fullAnalysisResult, identifiedFoods]);
 
-  // Generate actions from recommendations
-  const actions = useMemo(() => {
+  // Recommendation title rules (similar to EmotionResultsScreen)
+  const recommendationRules = useMemo(
+    () => [
+      {
+        keywords: ['insalata', 'verdura', 'vegetable', 'salad', 'verdure'],
+        title: language === 'it' ? 'Aggiungi Verdure' : 'Add Vegetables',
+      },
+      {
+        keywords: ['acqua', 'bevanda', 'water', 'drink', 'idrata'],
+        title: language === 'it' ? 'Idratazione' : 'Hydration',
+      },
+      {
+        keywords: ['proteina', 'protein', 'carne', 'pesce', 'meat', 'fish'],
+        title: language === 'it' ? 'Bilanciamento Proteico' : 'Protein Balance',
+      },
+      {
+        keywords: ['fibra', 'fiber', 'cereali', 'grain', 'integrale', 'whole'],
+        title: language === 'it' ? 'Aumenta le Fibre' : 'Increase Fiber',
+      },
+      {
+        keywords: ['frutta', 'fruit', 'vitamine', 'vitamin'],
+        title: language === 'it' ? 'Aggiungi Frutta' : 'Add Fruit',
+      },
+      {
+        keywords: ['porzione', 'serving', 'quantità', 'quantity', 'dose'],
+        title: language === 'it' ? 'Controllo Porzioni' : 'Portion Control',
+      },
+      {
+        keywords: ['zucchero', 'sugar', 'dolce', 'sweet'],
+        title: language === 'it' ? 'Riduci Zuccheri' : 'Reduce Sugar',
+      },
+      {
+        keywords: ['sale', 'sodio', 'salt', 'sodium'],
+        title: language === 'it' ? 'Riduci il Sale' : 'Reduce Salt',
+      },
+      {
+        keywords: ['bilanciato', 'balanced', 'equilibrato', 'equilibrium'],
+        title: language === 'it' ? 'Pasto Bilanciato' : 'Balanced Meal',
+      },
+    ],
+    [language],
+  );
+
+  const fallbackRecommendationTitles = useMemo(
+    () =>
+      language === 'it'
+        ? ['Consiglio Nutrizionale', 'Suggerimento Alimentare', 'Raccomandazione']
+        : ['Nutritional Tip', 'Dietary Suggestion', 'Recommendation'],
+    [language],
+  );
+
+  const getRecommendationTitle = useCallback((text: string, index: number) => {
+    if (!text) {
+      return fallbackRecommendationTitles[index % fallbackRecommendationTitles.length];
+    }
+    const lower = text.toLowerCase();
+    const matchedRule = recommendationRules.find((rule) =>
+      rule.keywords.some((keyword) => lower.includes(keyword)),
+    );
+    if (matchedRule) {
+      return matchedRule.title;
+    }
+    return fallbackRecommendationTitles[index % fallbackRecommendationTitles.length];
+  }, [fallbackRecommendationTitles, recommendationRules]);
+
+  // Generate recommendations (not actions, just tips)
+  const recommendations = useMemo(() => {
     return results.recommendations.map((rec, index) => ({
       id: `rec-${index}`,
-      title: t('analysis.food.results.recommendationTitle'),
+      title: getRecommendationTitle(rec, index),
       description: rec,
-      category: 'nutrition',
-      priority: index === 0 ? 'high' : 'medium',
-      actionable: true,
-      estimatedTime: '5 min',
+      priority: index === 0 ? 'high' : index === 1 ? 'medium' : 'low',
     }));
-  }, [results.recommendations]);
+  }, [results.recommendations, getRecommendationTitle]);
 
   return (
     <LinearGradient
@@ -251,19 +313,24 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
             </View>
           )}
 
-          {/* Actions / Recommendations */}
-          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
-            {t('analysis.food.results.recommendations') || 'RECOMMENDATIONS'}
-          </Text>
+          {/* Recommendations */}
+          {recommendations.length > 0 && (
+            <>
+              <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
+                {t('analysis.food.results.recommendations') || 'RACCOMANDAZIONI'}
+              </Text>
 
-          {actions.map((action) => (
-            <ActionCard
-              key={action.id}
-              action={action}
-              onComplete={() => { }}
-              onDismiss={() => { }}
-            />
-          ))}
+              {recommendations.map((rec) => (
+                <NutritionRecommendationCard
+                  key={rec.id}
+                  title={rec.title}
+                  description={rec.description}
+                  priority={rec.priority}
+                  index={parseInt(rec.id.split('-')[1])}
+                />
+              ))}
+            </>
+          )}
 
           {/* Bottom spacer for FAB */}
           <View style={{ height: 100 }} />

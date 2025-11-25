@@ -1286,7 +1286,11 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                         setIngredients([{ name: '' }]);
                       }}
                     >
-                      <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
+                      <Text 
+                        style={[styles.secondaryButtonText, { color: colors.text }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
                         {t('analysis.food.fridge.newRecipe')}
                       </Text>
                     </TouchableOpacity>
@@ -1295,7 +1299,11 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                       onPress={openRecipeEditorForGenerated}
                     >
                       <MaterialCommunityIcons name="content-save-outline" size={18} color={colors.primary} />
-                      <Text style={[styles.saveLibraryButtonText, { color: colors.primary }]}>
+                      <Text 
+                        style={[styles.saveLibraryButtonText, { color: colors.primary }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
                         {t('analysis.food.fridge.editAndSave')}
                       </Text>
                     </TouchableOpacity>
@@ -1303,7 +1311,11 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                       style={[styles.primaryButton, { backgroundColor: colors.primary }]}
                       onPress={handleClose}
                     >
-                      <Text style={[styles.primaryButtonText, { color: colors.textInverse }]}>
+                      <Text 
+                        style={[styles.primaryButtonText, { color: colors.textInverse }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
                         {t('common.close')}
                       </Text>
                     </TouchableOpacity>
@@ -1771,40 +1783,49 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     flex: 1,
+    minWidth: 0, // ✅ FIX: Permette al flex di ridursi correttamente
     paddingVertical: 14,
+    paddingHorizontal: 12, // ✅ FIX: Aggiunge padding orizzontale per il testo
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryButtonText: {
-    fontSize: 15,
+    fontSize: 14, // ✅ FIX: Ridotto leggermente per evitare overflow
     fontWeight: '600',
+    textAlign: 'center',
   },
   primaryButton: {
     flex: 1,
+    minWidth: 0, // ✅ FIX: Permette al flex di ridursi correttamente
     paddingVertical: 14,
+    paddingHorizontal: 12, // ✅ FIX: Aggiunge padding orizzontale per il testo
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryButtonText: {
-    fontSize: 15,
+    fontSize: 14, // ✅ FIX: Ridotto leggermente per evitare overflow
     fontWeight: '700',
+    textAlign: 'center',
   },
   saveLibraryButton: {
     flex: 1,
+    minWidth: 0, // ✅ FIX: Permette al flex di ridursi correttamente
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 14,
-    gap: 8,
+    paddingHorizontal: 12, // ✅ FIX: Aggiunge padding orizzontale per il testo
+    gap: 6, // ✅ FIX: Ridotto gap per dare più spazio al testo
   },
   saveLibraryButtonText: {
-    fontSize: 15,
+    fontSize: 14, // ✅ FIX: Ridotto leggermente per evitare overflow
     fontWeight: '600',
+    flexShrink: 1, // ✅ FIX: Permette al testo di ridursi se necessario
   },
   saveRecipeOverlay: {
     flex: 1,

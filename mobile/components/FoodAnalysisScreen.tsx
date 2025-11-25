@@ -908,17 +908,35 @@ export const FoodAnalysisScreen: React.FC = () => {
     let fat = 0;
     mealPlanEntries.forEach((entry) => {
       const servings = entry.servings || 1;
-      if (entry.recipe?.calories_per_serving) {
-        calories += entry.recipe.calories_per_serving * servings;
-      }
-      if (entry.recipe?.macros?.protein) {
-        protein += entry.recipe.macros.protein * servings;
-      }
-      if (entry.recipe?.macros?.carbs) {
-        carbs += entry.recipe.macros.carbs * servings;
-      }
-      if (entry.recipe?.macros?.fat) {
-        fat += entry.recipe.macros.fat * servings;
+      
+      // ✅ FIX: Supporta sia recipe che custom_recipe
+      if (entry.recipe) {
+        if (entry.recipe.calories_per_serving) {
+          calories += entry.recipe.calories_per_serving * servings;
+        }
+        if (entry.recipe.macros?.protein) {
+          protein += entry.recipe.macros.protein * servings;
+        }
+        if (entry.recipe.macros?.carbs) {
+          carbs += entry.recipe.macros.carbs * servings;
+        }
+        if (entry.recipe.macros?.fat) {
+          fat += entry.recipe.macros.fat * servings;
+        }
+      } else if (entry.custom_recipe) {
+        const custom = entry.custom_recipe as any;
+        if (custom.calories) {
+          calories += custom.calories * servings;
+        }
+        if (custom.macros?.protein) {
+          protein += custom.macros.protein * servings;
+        }
+        if (custom.macros?.carbs) {
+          carbs += custom.macros.carbs * servings;
+        }
+        if (custom.macros?.fat) {
+          fat += custom.macros.fat * servings;
+        }
       }
     });
     return { calories, protein, carbs, fat };
@@ -1177,19 +1195,34 @@ export const FoodAnalysisScreen: React.FC = () => {
                   }
 
                   // Sincronizza i dati con lo store locale per i grafici
+                  // ✅ FIX: Assicurati che i valori numerici vengano preservati correttamente
                   const foodSession = {
                     id: savedAnalysis.id,
                     timestamp: new Date(savedAnalysis.created_at),
                     macronutrients: {
-                      carbohydrates: analysisResult.data.macronutrients?.carbohydrates || savedAnalysis.carbohydrates || 0,
-                      proteins: analysisResult.data.macronutrients?.proteins || savedAnalysis.proteins || 0,
-                      fats: analysisResult.data.macronutrients?.fats || savedAnalysis.fats || 0,
-                      fiber: analysisResult.data.macronutrients?.fiber || savedAnalysis.fiber || 0,
-                      calories: analysisResult.data.macronutrients?.calories || savedAnalysis.calories || 0,
+                      carbohydrates: typeof analysisResult.data.macronutrients?.carbohydrates === 'number'
+                        ? analysisResult.data.macronutrients.carbohydrates
+                        : (typeof savedAnalysis.carbohydrates === 'number' ? savedAnalysis.carbohydrates : 0),
+                      proteins: typeof analysisResult.data.macronutrients?.proteins === 'number'
+                        ? analysisResult.data.macronutrients.proteins
+                        : (typeof savedAnalysis.proteins === 'number' ? savedAnalysis.proteins : 0),
+                      fats: typeof analysisResult.data.macronutrients?.fats === 'number'
+                        ? analysisResult.data.macronutrients.fats
+                        : (typeof savedAnalysis.fats === 'number' ? savedAnalysis.fats : 0),
+                      fiber: typeof analysisResult.data.macronutrients?.fiber === 'number'
+                        ? analysisResult.data.macronutrients.fiber
+                        : (typeof savedAnalysis.fiber === 'number' ? savedAnalysis.fiber : 0),
+                      calories: typeof analysisResult.data.macronutrients?.calories === 'number'
+                        ? analysisResult.data.macronutrients.calories
+                        : (typeof savedAnalysis.calories === 'number' ? savedAnalysis.calories : 0),
                     },
                     meal_type: analysisResult.data.meal_type || savedAnalysis.meal_type || 'other',
-                    health_score: analysisResult.data.health_score || savedAnalysis.health_score || 70,
-                    confidence: analysisResult.data.confidence || savedAnalysis.confidence || 0.8,
+                    health_score: typeof analysisResult.data.health_score === 'number'
+                      ? analysisResult.data.health_score
+                      : (typeof savedAnalysis.health_score === 'number' ? savedAnalysis.health_score : 70),
+                    confidence: typeof analysisResult.data.confidence === 'number'
+                      ? analysisResult.data.confidence
+                      : (typeof savedAnalysis.confidence === 'number' ? savedAnalysis.confidence : 0.8),
                     identified_foods: analysisResult.data.identified_foods || savedAnalysis.identified_foods || [],
                   };
 
@@ -1203,6 +1236,49 @@ export const FoodAnalysisScreen: React.FC = () => {
                     }
                   } catch (error) {
                     console.warn('Failed to refresh daily intake after gallery analysis:', error);
+                  }
+
+                  // 🆕 Aggiungi automaticamente al meal planner per tracciare i pasti del giorno
+                  try {
+                    const mealType = analysisResult.data.meal_type || 'other';
+                    // Mappa 'other' a 'dinner' come default
+                    const mappedMealType: MealPlanMealType = 
+                      (mealType === 'breakfast' || mealType === 'lunch' || mealType === 'dinner' || mealType === 'snack')
+                        ? mealType as MealPlanMealType
+                        : 'dinner';
+                    
+                    const todayISO = toISODate(new Date());
+                    
+                    // Crea un custom_recipe con tutte le informazioni dell'analisi
+                    const customRecipe = {
+                      title: analysisResult.data.identified_foods?.join(', ') || 'Pasto analizzato',
+                      source: 'food_analysis',
+                      analysis_id: savedAnalysis.id,
+                      calories: analysisResult.data.macronutrients?.calories || savedAnalysis.calories || 0,
+                      macros: {
+                        protein: analysisResult.data.macronutrients?.proteins || savedAnalysis.proteins || 0,
+                        carbs: analysisResult.data.macronutrients?.carbohydrates || savedAnalysis.carbohydrates || 0,
+                        fat: analysisResult.data.macronutrients?.fats || savedAnalysis.fats || 0,
+                        fiber: analysisResult.data.macronutrients?.fiber || savedAnalysis.fiber || 0,
+                      },
+                      identified_foods: analysisResult.data.identified_foods || [],
+                      health_score: analysisResult.data.health_score || savedAnalysis.health_score || 70,
+                      image_url: asset.uri,
+                    };
+
+                    await mealPlanService.upsertEntry({
+                      plan_date: todayISO,
+                      meal_type: mappedMealType,
+                      custom_recipe: customRecipe,
+                      servings: 1,
+                      notes: `Analisi automatica - ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`,
+                    });
+
+                    // Ricarica il meal plan per mostrare il nuovo entry
+                    await loadMealPlan();
+                  } catch (mealPlanError) {
+                    // Non bloccare l'utente se l'aggiunta al meal planner fallisce
+                    console.warn('Failed to add analysis to meal plan:', mealPlanError);
                   }
                 } else {
                   // 🆕 Nessun errore lanciato ma savedAnalysis è null
@@ -1601,19 +1677,34 @@ export const FoodAnalysisScreen: React.FC = () => {
 
               // ✅ FIX: Sincronizza i dati con lo store locale per i grafici
               // Usa i dati dall'analisi risultato (result.data) invece di savedAnalysis per garantire valori corretti
+              // ✅ FIX: Assicurati che i valori numerici vengano preservati correttamente
               const foodSession = {
                 id: savedAnalysis.id,
                 timestamp: new Date(savedAnalysis.created_at),
                 macronutrients: {
-                  carbohydrates: result.data.macronutrients?.carbohydrates || savedAnalysis.carbohydrates || 0,
-                  proteins: result.data.macronutrients?.proteins || savedAnalysis.proteins || 0,
-                  fats: result.data.macronutrients?.fats || savedAnalysis.fats || 0,
-                  fiber: result.data.macronutrients?.fiber || savedAnalysis.fiber || 0,
-                  calories: result.data.macronutrients?.calories || savedAnalysis.calories || 0, // ✅ Usa result.data per valori corretti
+                  carbohydrates: typeof result.data.macronutrients?.carbohydrates === 'number' 
+                    ? result.data.macronutrients.carbohydrates 
+                    : (typeof savedAnalysis.carbohydrates === 'number' ? savedAnalysis.carbohydrates : 0),
+                  proteins: typeof result.data.macronutrients?.proteins === 'number'
+                    ? result.data.macronutrients.proteins
+                    : (typeof savedAnalysis.proteins === 'number' ? savedAnalysis.proteins : 0),
+                  fats: typeof result.data.macronutrients?.fats === 'number'
+                    ? result.data.macronutrients.fats
+                    : (typeof savedAnalysis.fats === 'number' ? savedAnalysis.fats : 0),
+                  fiber: typeof result.data.macronutrients?.fiber === 'number'
+                    ? result.data.macronutrients.fiber
+                    : (typeof savedAnalysis.fiber === 'number' ? savedAnalysis.fiber : 0),
+                  calories: typeof result.data.macronutrients?.calories === 'number'
+                    ? result.data.macronutrients.calories
+                    : (typeof savedAnalysis.calories === 'number' ? savedAnalysis.calories : 0),
                 },
                 meal_type: result.data.meal_type || savedAnalysis.meal_type || 'other',
-                health_score: result.data.health_score || savedAnalysis.health_score || 70,
-                confidence: result.data.confidence || savedAnalysis.confidence || 0.8,
+                health_score: typeof result.data.health_score === 'number' 
+                  ? result.data.health_score 
+                  : (typeof savedAnalysis.health_score === 'number' ? savedAnalysis.health_score : 70),
+                confidence: typeof result.data.confidence === 'number'
+                  ? result.data.confidence
+                  : (typeof savedAnalysis.confidence === 'number' ? savedAnalysis.confidence : 0.8),
                 identified_foods: result.data.identified_foods || savedAnalysis.identified_foods || [],
               };
 
@@ -1628,6 +1719,49 @@ export const FoodAnalysisScreen: React.FC = () => {
                 }
               } catch (error) {
                 console.warn('Failed to refresh daily intake:', error);
+              }
+
+              // 🆕 Aggiungi automaticamente al meal planner per tracciare i pasti del giorno
+              try {
+                const mealType = result.data.meal_type || 'other';
+                // Mappa 'other' a 'dinner' come default
+                const mappedMealType: MealPlanMealType = 
+                  (mealType === 'breakfast' || mealType === 'lunch' || mealType === 'dinner' || mealType === 'snack')
+                    ? mealType as MealPlanMealType
+                    : 'dinner';
+                
+                const todayISO = toISODate(new Date());
+                
+                // Crea un custom_recipe con tutte le informazioni dell'analisi
+                const customRecipe = {
+                  title: result.data.identified_foods?.join(', ') || 'Pasto analizzato',
+                  source: 'food_analysis',
+                  analysis_id: savedAnalysis.id,
+                  calories: result.data.macronutrients?.calories || savedAnalysis.calories || 0,
+                  macros: {
+                    protein: result.data.macronutrients?.proteins || savedAnalysis.proteins || 0,
+                    carbs: result.data.macronutrients?.carbohydrates || savedAnalysis.carbohydrates || 0,
+                    fat: result.data.macronutrients?.fats || savedAnalysis.fats || 0,
+                    fiber: result.data.macronutrients?.fiber || savedAnalysis.fiber || 0,
+                  },
+                  identified_foods: result.data.identified_foods || [],
+                  health_score: result.data.health_score || savedAnalysis.health_score || 70,
+                  image_url: photo.uri,
+                };
+
+                await mealPlanService.upsertEntry({
+                  plan_date: todayISO,
+                  meal_type: mappedMealType,
+                  custom_recipe: customRecipe,
+                  servings: 1,
+                  notes: `Analisi automatica - ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`,
+                });
+
+                // Ricarica il meal plan per mostrare il nuovo entry
+                await loadMealPlan();
+              } catch (mealPlanError) {
+                // Non bloccare l'utente se l'aggiunta al meal planner fallisce
+                console.warn('Failed to add analysis to meal plan:', mealPlanError);
               }
             } else {
               // 🆕 Nessun errore lanciato ma savedAnalysis è null
@@ -2394,8 +2528,12 @@ export const FoodAnalysisScreen: React.FC = () => {
                       borderColor: colors.border,
                       alignItems: 'center'
                     }}>
-                      {entry.recipe?.image ? (
-                        <Image source={{ uri: entry.recipe.image }} style={{ width: 56, height: 56, borderRadius: 12, marginRight: 12 }} />
+                      {/* Mostra immagine se disponibile (da recipe o custom_recipe) */}
+                      {entry.recipe?.image || (entry.custom_recipe as any)?.image_url ? (
+                        <Image 
+                          source={{ uri: entry.recipe?.image || (entry.custom_recipe as any)?.image_url }} 
+                          style={{ width: 56, height: 56, borderRadius: 12, marginRight: 12 }} 
+                        />
                       ) : (
                         <View style={{ width: 56, height: 56, borderRadius: 12, backgroundColor: colors.surfaceElevated, marginRight: 12, alignItems: 'center', justifyContent: 'center' }}>
                           <MaterialCommunityIcons name="silverware-fork-knife" size={24} color={colors.textSecondary} />
@@ -2403,10 +2541,20 @@ export const FoodAnalysisScreen: React.FC = () => {
                       )}
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }} numberOfLines={1}>
-                          {entry.recipe?.title || 'Custom Meal'}
+                          {entry.recipe?.title || (entry.custom_recipe as any)?.title || 'Custom Meal'}
                         </Text>
                         <Text style={{ fontSize: 12, color: colors.textSecondary }}>
-                          {Math.round(entry.recipe?.calories_per_serving || 0)} kcal • {entry.recipe?.ready_in_minutes || 0} min
+                          {Math.round(
+                            entry.recipe?.calories_per_serving || 
+                            (entry.custom_recipe as any)?.calories || 
+                            0
+                          )} kcal
+                          {entry.recipe?.ready_in_minutes ? ` • ${entry.recipe.ready_in_minutes} min` : ''}
+                          {(entry.custom_recipe as any)?.source === 'food_analysis' && (
+                            <Text style={{ fontSize: 10, color: colors.textTertiary, marginLeft: 4 }}>
+                              • {t('analysis.food.mealPlanner.analyzed') || 'Analizzato'}
+                            </Text>
+                          )}
                         </Text>
                       </View>
                       <TouchableOpacity

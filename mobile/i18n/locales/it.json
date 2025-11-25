@@ -903,7 +903,12 @@
         "minerals": "Minerali",
         "recommendations": "Raccomandazioni",
         "recommendationTitle": "Consiglio alimentare",
-        "observations": "Osservazioni"
+        "observations": "Osservazioni",
+        "priority": {
+          "high": "ALTA",
+          "medium": "MEDIA",
+          "low": "BASSA"
+        }
       },
       "mealType": {
         "breakfast": "Colazione",

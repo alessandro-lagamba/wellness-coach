@@ -208,11 +208,25 @@ export const FoodCaptureCard: React.FC<FoodCaptureCardProps> = ({ session }) => 
 
   // dati per la lista verticale
   const data = useMemo(() => {
+    // ✅ FIX: Assicurati che i valori vengano letti correttamente, senza fallback a 0 se il valore esiste
+    const calories = typeof session.macronutrients?.calories === 'number' 
+      ? session.macronutrients.calories 
+      : 0;
+    const carbohydrates = typeof session.macronutrients?.carbohydrates === 'number'
+      ? session.macronutrients.carbohydrates
+      : 0;
+    const proteins = typeof session.macronutrients?.proteins === 'number'
+      ? session.macronutrients.proteins
+      : 0;
+    const fats = typeof session.macronutrients?.fats === 'number'
+      ? session.macronutrients.fats
+      : 0;
+
     const items: Array<{ key: MetricKey; value: number; maxValue?: number; unit?: string }> = [
-      { key: 'calories', value: session.macronutrients?.calories ?? 0, unit: 'kcal' },
-      { key: 'carbohydrates', value: session.macronutrients?.carbohydrates ?? 0, unit: 'g' },
-      { key: 'proteins', value: session.macronutrients?.proteins ?? 0, unit: 'g' },
-      { key: 'fats', value: session.macronutrients?.fats ?? 0, unit: 'g' },
+      { key: 'calories', value: calories, unit: 'kcal' },
+      { key: 'carbohydrates', value: carbohydrates, unit: 'g' },
+      { key: 'proteins', value: proteins, unit: 'g' },
+      { key: 'fats', value: fats, unit: 'g' },
     ];
     
     if (healthScore > 0) {
@@ -220,7 +234,7 @@ export const FoodCaptureCard: React.FC<FoodCaptureCardProps> = ({ session }) => 
     }
     
     return items;
-  }, [session, healthScore]);
+  }, [session.macronutrients, healthScore]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
