@@ -129,7 +129,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
   const actions = useMemo(() => {
     return results.recommendations.map((rec, index) => ({
       id: `rec-${index}`,
-      title: 'Dietary Recommendation',
+      title: t('analysis.food.results.recommendationTitle'),
       description: rec,
       category: 'nutrition',
       priority: index === 0 ? 'high' : 'medium',
@@ -179,7 +179,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
             <EnhancedMetricTile
               metric="calories"
               value={results.calories}
-              label={t('analysis.food.calories') || 'Calories'}
+              label={t('analysis.food.metrics.calories') || 'Calories'}
               color="#ef4444"
               icon="fire"
               bucket={{
@@ -195,7 +195,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
             <EnhancedMetricTile
               metric="protein"
               value={results.proteins}
-              label={t('analysis.food.protein') || 'Protein'}
+              label={t('analysis.food.metrics.proteins') || 'Protein'}
               color="#3b82f6"
               icon="food-steak"
               bucket={getProteinBucket(results.proteins)}
@@ -205,7 +205,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
             <EnhancedMetricTile
               metric="carbs"
               value={results.carbohydrates}
-              label={t('analysis.food.carbs') || 'Carbs'}
+              label={t('analysis.food.metrics.carbohydrates') || 'Carbs'}
               color="#f97316"
               icon="noodles"
               bucket={getCarbsBucket(results.carbohydrates)}
@@ -215,7 +215,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
             <EnhancedMetricTile
               metric="fats"
               value={results.fats}
-              label={t('analysis.food.fat') || 'Fats'}
+              label={t('analysis.food.metrics.fats') || 'Fats'}
               color="#fbbf24"
               icon="oil"
               bucket={getFatsBucket(results.fats)}
@@ -226,7 +226,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
               <EnhancedMetricTile
                 metric="fiber"
                 value={results.fiber || fullAnalysisResult?.macronutrients?.fiber || 0}
-                label={t('analysis.food.fiber') || 'Fiber'}
+                label={t('analysis.food.metrics.fiber') || 'Fiber'}
                 color="#10b981"
                 icon="leaf"
                 bucket={getFiberBucket(results.fiber || fullAnalysisResult?.macronutrients?.fiber || 0)}
@@ -238,7 +238,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
           {identifiedFoods.length > 0 && (
             <View style={styles.foodsSection}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                {t('analysis.food.identifiedFoods') || 'IDENTIFIED FOODS'}
+                {t('analysis.food.results.identifiedFoods') || 'IDENTIFIED FOODS'}
               </Text>
               <View style={styles.foodsList}>
                 {identifiedFoods.map((food: string, index: number) => (
@@ -253,7 +253,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
 
           {/* Actions / Recommendations */}
           <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
-            {t('analysis.food.recommendations') || 'RECOMMENDATIONS'}
+            {t('analysis.food.results.recommendations') || 'RECOMMENDATIONS'}
           </Text>
 
           {actions.map((action) => (

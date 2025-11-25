@@ -308,14 +308,7 @@ export class ChartDataService {
       // Sincronizza con lo store
       const store = useAnalysisStore.getState();
       if (foodSessions.length > 0) {
-        // Aggiorna latest session
-        store.addFoodSession(foodSessions[0]);
-        
-        // Aggiungi tutte le sessioni alla history (lo store gestisce il limite)
-        foodSessions.forEach((session) => {
-          store.addFoodSession(session);
-        });
-        
+        store.setFoodSessions(foodSessions);
         console.log(`📊 Synced ${foodSessions.length} food sessions to store`);
       }
 

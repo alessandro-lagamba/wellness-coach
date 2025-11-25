@@ -125,7 +125,11 @@ class IntelligentInsightService {
       return analysisResponse;
 
     } catch (error) {
-      console.error('❌ Error generating intelligent insights:', error);
+      if (error instanceof Error && error.message.includes('Backend request failed')) {
+        console.warn('⚠️ Intelligent insights backend unavailable, serving fallback data.', error.message);
+      } else {
+        console.error('❌ Error generating intelligent insights:', error);
+      }
       return this.getFallbackInsights(request.category);
     }
   }
@@ -149,7 +153,7 @@ class IntelligentInsightService {
         userId: userContext.userName !== 'Utente' ? userContext.userName : undefined,
         emotionContext: request.category === 'emotion' ? request.data : undefined,
         skinContext: request.category === 'skin' ? request.data : undefined,
-          foodContext: request.category === 'food' ? request.data : undefined,
+        foodContext: request.category === 'food' ? request.data : undefined,
         userContext: userContext,
         analysisIntent: analysisIntent.confidence > 0.3 ? analysisIntent : undefined,
       }),

@@ -64,6 +64,7 @@ interface AnalysisStore {
   addSkinCapture: (capture: SkinCapture) => void;
   addEmotionSession: (session: EmotionSession) => void;
   addFoodSession: (session: FoodSession) => void;
+  setFoodSessions: (sessions: FoodSession[]) => void;
   clearHistory: () => void;
   
   // ✅ FIX: Add safe getters for empty state handling
@@ -100,9 +101,25 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   
   addFoodSession: (session: FoodSession) => {
     console.log('📊 Adding food session to store:', session.id);
-    set((state) => ({
-      latestFoodSession: session,
-      foodHistory: [session, ...state.foodHistory.slice(0, 29)], // Keep last 30
+    set((state) => {
+      const filteredHistory = state.foodHistory.filter((item) => item.id !== session.id);
+      const updatedHistory = [session, ...filteredHistory].slice(0, 30);
+      const shouldUpdateLatest =
+        !state.latestFoodSession ||
+        new Date(session.timestamp).getTime() >= new Date(state.latestFoodSession.timestamp).getTime();
+
+      return {
+        latestFoodSession: shouldUpdateLatest ? session : state.latestFoodSession,
+        foodHistory: updatedHistory,
+      };
+    });
+  },
+  
+  setFoodSessions: (sessions: FoodSession[]) => {
+    console.log('📊 Setting food sessions in store:', sessions.length);
+    set(() => ({
+      latestFoodSession: sessions.length > 0 ? sessions[0] : null,
+      foodHistory: sessions.slice(0, 30),
     }));
   },
   

@@ -135,7 +135,7 @@ const heroImageUri = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?
 const heroVideoUri = require('../assets/videos/food-analysis-video.mp4');
 
 const MIN_SAFE_CALORIES = 1200;
-const MAX_SAFE_CALORIES = 8000;
+const MAX_SAFE_CALORIES = 4000;
 const MACRO_PERCENT_LIMITS = {
   carbs: { min: 5, max: 70 },
   proteins: { min: 10, max: 40 },
@@ -1119,20 +1119,29 @@ export const FoodAnalysisScreen: React.FC = () => {
                     id: savedAnalysis.id,
                     timestamp: new Date(savedAnalysis.created_at),
                     macronutrients: {
-                      carbohydrates: savedAnalysis.carbohydrates || 0,
-                      proteins: savedAnalysis.proteins || 0,
-                      fats: savedAnalysis.fats || 0,
-                      fiber: savedAnalysis.fiber || 0,
-                      calories: savedAnalysis.calories || 0,
+                      carbohydrates: analysisResult.data.macronutrients?.carbohydrates || savedAnalysis.carbohydrates || 0,
+                      proteins: analysisResult.data.macronutrients?.proteins || savedAnalysis.proteins || 0,
+                      fats: analysisResult.data.macronutrients?.fats || savedAnalysis.fats || 0,
+                      fiber: analysisResult.data.macronutrients?.fiber || savedAnalysis.fiber || 0,
+                      calories: analysisResult.data.macronutrients?.calories || savedAnalysis.calories || 0,
                     },
-                    meal_type: savedAnalysis.meal_type || 'other',
-                    health_score: savedAnalysis.health_score || 70,
-                    confidence: savedAnalysis.confidence || 0.8,
-                    identified_foods: savedAnalysis.identified_foods || [],
+                    meal_type: analysisResult.data.meal_type || savedAnalysis.meal_type || 'other',
+                    health_score: analysisResult.data.health_score || savedAnalysis.health_score || 70,
+                    confidence: analysisResult.data.confidence || savedAnalysis.confidence || 0.8,
+                    identified_foods: analysisResult.data.identified_foods || savedAnalysis.identified_foods || [],
                   };
 
                   const store = useAnalysisStore.getState();
                   store.addFoodSession(foodSession);
+
+                  try {
+                    const intake = await FoodAnalysisService.getDailyIntake(currentUser.id);
+                    if (isMountedRef.current) {
+                      setDailyIntake(intake);
+                    }
+                  } catch (error) {
+                    console.warn('Failed to refresh daily intake after gallery analysis:', error);
+                  }
                 } else {
                   // 🆕 Nessun errore lanciato ma savedAnalysis è null
                   if (isMountedRef.current) {

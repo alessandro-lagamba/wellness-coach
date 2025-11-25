@@ -895,6 +895,7 @@
         "vitamins": "Vitamins",
         "minerals": "Minerals",
         "recommendations": "Recommendations",
+        "recommendationTitle": "Dietary Recommendation",
         "observations": "Observations"
       },
       "mealType": {
