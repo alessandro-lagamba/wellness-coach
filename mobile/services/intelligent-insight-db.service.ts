@@ -5,7 +5,7 @@ interface InsightRecord {
   id: string;
   user_id: string;
   analysis_date: string;
-  category: 'emotion' | 'skin';
+  category: 'emotion' | 'skin' | 'food';
   insights: IntelligentInsight[];
   trend_summary: string;
   overall_score?: number;
@@ -18,7 +18,7 @@ interface InsightHistoryRecord {
   id: string;
   user_id: string;
   analysis_date: string;
-  category: 'emotion' | 'skin';
+  category: 'emotion' | 'skin' | 'food';
   insights_count: number;
   trend_summary: string;
   overall_score?: number;
@@ -41,7 +41,7 @@ class IntelligentInsightDBService {
    */
   async saveIntelligentInsights(
     userId: string, 
-    category: 'emotion' | 'skin',
+    category: 'emotion' | 'skin' | 'food',
     insightsData: InsightAnalysisResponse
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -102,7 +102,7 @@ class IntelligentInsightDBService {
    */
   async getIntelligentInsights(
     userId: string,
-    category: 'emotion' | 'skin',
+    category: 'emotion' | 'skin' | 'food',
     date?: string
   ): Promise<{ success: boolean; data?: InsightRecord; error?: string }> {
     try {
@@ -137,7 +137,7 @@ class IntelligentInsightDBService {
    */
   async getIntelligentInsightsHistory(
     userId: string,
-    category: 'emotion' | 'skin',
+    category: 'emotion' | 'skin' | 'food',
     limit: number = 30
   ): Promise<{ success: boolean; data?: InsightHistoryRecord[]; error?: string }> {
     try {
@@ -179,7 +179,7 @@ class IntelligentInsightDBService {
    */
   async getInsightsTrendData(
     userId: string,
-    category: 'emotion' | 'skin',
+    category: 'emotion' | 'skin' | 'food',
     days: number = 30
   ): Promise<{ success: boolean; data?: any[]; error?: string }> {
     try {
@@ -224,7 +224,7 @@ class IntelligentInsightDBService {
    */
   async deleteOldInsights(
     userId: string,
-    category: 'emotion' | 'skin',
+    category: 'emotion' | 'skin' | 'food',
     daysToKeep: number = 90
   ): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
     try {

@@ -11,7 +11,7 @@ export interface IntelligentInsight {
   actionType: 'routine' | 'reminder' | 'tracking';
   estimatedTime?: string;
   priority: 'low' | 'medium' | 'high';
-  category: 'emotion' | 'skin';
+  category: 'emotion' | 'skin' | 'food';
   actionable: boolean;
   detailedExplanation?: string;
   correlations?: string[];
@@ -19,7 +19,7 @@ export interface IntelligentInsight {
 }
 
 export interface InsightAnalysisRequest {
-  category: 'emotion' | 'skin';
+  category: 'emotion' | 'skin' | 'food';
   data: any;
   userContext?: any;
 }
@@ -149,6 +149,7 @@ class IntelligentInsightService {
         userId: userContext.userName !== 'Utente' ? userContext.userName : undefined,
         emotionContext: request.category === 'emotion' ? request.data : undefined,
         skinContext: request.category === 'skin' ? request.data : undefined,
+          foodContext: request.category === 'food' ? request.data : undefined,
         userContext: userContext,
         analysisIntent: analysisIntent.confidence > 0.3 ? analysisIntent : undefined,
       }),
@@ -169,13 +170,18 @@ class IntelligentInsightService {
   }
 
   /**
-   * Build specialized prompt for emotion or skin insights
+   * Build specialized prompt for emotion, skin or food insights
    */
   private buildPrompt(request: InsightAnalysisRequest): string {
-    if (request.category === 'emotion') {
-      return this.buildEmotionPrompt(request.data);
-    } else {
-      return this.buildSkinPrompt(request.data);
+    switch (request.category) {
+      case 'emotion':
+        return this.buildEmotionPrompt(request.data);
+      case 'skin':
+        return this.buildSkinPrompt(request.data);
+      case 'food':
+        return this.buildFoodPrompt(request.data);
+      default:
+        return this.buildEmotionPrompt(request.data);
     }
   }
 
@@ -242,6 +248,35 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
    * Build skin analysis prompt
    */
   private buildSkinPrompt(skinData: any): string {
+  /**
+   * Build food analysis prompt
+   */
+  private buildFoodPrompt(foodData: any): string {
+    const identifiedFoods = foodData?.identified_foods || foodData?.identifiedFoods || [];
+    const macronutrients = foodData?.macronutrients || {};
+    const healthScore = foodData?.health_score ?? foodData?.healthScore ?? 70;
+    const recommendations = foodData?.recommendations || [];
+    const observations = foodData?.observations || [];
+
+    return `Sei un nutrizionista digitale specializzato in alimentazione equilibrata.
+Analizza gli ultimi dati nutrizionali del pasto e genera insight pratici per aiutare l'utente a migliorare la qualità della propria alimentazione quotidiana.
+
+Dati disponibili:
+- Alimenti identificati: ${identifiedFoods.length ? identifiedFoods.join(', ') : 'non specificati'}
+- Macronutrienti stimati: ${JSON.stringify(macronutrients)}
+- Punteggio salute pasto: ${healthScore}
+- Osservazioni AI: ${observations.length ? observations.join('; ') : 'nessuna osservazione specifica'}
+- Suggerimenti AI iniziali: ${recommendations.length ? recommendations.join('; ') : 'nessun suggerimento iniziale'}
+
+Istruzioni:
+1. Analizza equilibrio tra carboidrati, proteine e grassi rispetto ai range consigliati (Carb 35-65%, Prot 15-35%, Grassi 15-35%).
+2. Evidenzia eventuali eccessi o carenze nutrizionali e suggerisci modifiche concrete per il prossimo pasto.
+3. Includi consigli su porzioni, abbinamenti alimentari o timing (es. integrare fibre, aumentare proteine magre, idratazione).
+4. Mantieni un tono positivo e orientato all'azione, con massimo tre insight numerati.
+
+Rispondi in italiano nella lingua dell'utente e limita la lunghezza a poche frasi per insight.`;
+  }
+
     return `Sei un assistente wellness specializzato in skincare. 
 Analizza i dati storici dell'utente relativi alla pelle e fornisci insight pratici e personalizzati.
 
@@ -407,7 +442,7 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
   /**
    * Get fallback insights when AI fails
    */
-  private getFallbackInsights(category: 'emotion' | 'skin'): InsightAnalysisResponse {
+  private getFallbackInsights(category: 'emotion' | 'skin' | 'food'): InsightAnalysisResponse {
     if (category === 'emotion') {
       return {
         insights: [
@@ -429,7 +464,7 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
         overallScore: 65,
         focus: 'Gestione dello stress'
       };
-    } else {
+    } else if (category === 'skin') {
       return {
         insights: [
           {
@@ -449,6 +484,45 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
         trendSummary: 'Condizione cutanea stabile con potenziale di miglioramento.',
         overallScore: 70,
         focus: 'Idratazione e cura quotidiana'
+      };
+    } else {
+      return {
+        insights: [
+          {
+            id: 'food-fallback-1',
+            title: 'Componi il piatto bilanciato',
+            description: 'Riempi metà piatto con verdure, un quarto con proteine magre e un quarto con carboidrati integrali.',
+            actionType: 'routine',
+            estimatedTime: '10 min',
+            priority: 'medium',
+            category: 'food',
+            actionable: true,
+            expectedBenefits: ['Energia stabile', 'Maggiore sazietà'],
+          },
+          {
+            id: 'food-fallback-2',
+            title: 'Fibra ad ogni pasto',
+            description: 'Aggiungi una fonte di fibre (legumi, frutta, semi) per supportare digestione e microbiota.',
+            actionType: 'tracking',
+            estimatedTime: '5 min',
+            priority: 'low',
+            category: 'food',
+            actionable: true,
+          },
+          {
+            id: 'food-fallback-3',
+            title: 'Idratazione consapevole',
+            description: 'Bevi un bicchiere d’acqua prima dei pasti per migliorare digestione e controllare la fame.',
+            actionType: 'reminder',
+            estimatedTime: '2 min',
+            priority: 'low',
+            category: 'food',
+            actionable: true,
+          },
+        ],
+        trendSummary: 'Suggerimenti base per mantenere il pasto equilibrato.',
+        overallScore: 70,
+        focus: 'Alimentazione consapevole'
       };
     }
   }

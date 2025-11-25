@@ -6,6 +6,37 @@ import { OperationLockService } from './operation-lock.service';
 import { DatabaseVerificationService } from './database-verification.service';
 import { EnhancedLoggingService } from './enhanced-logging.service';
 
+type AllowedMealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other';
+const MEAL_TYPE_ALIASES: Record<string, AllowedMealType> = {
+  breakfast: 'breakfast',
+  colazione: 'breakfast',
+  lunch: 'lunch',
+  pranzo: 'lunch',
+  dinner: 'dinner',
+  supper: 'dinner',
+  cena: 'dinner',
+  snack: 'snack',
+  merenda: 'snack',
+};
+
+const normalizeMealType = (value?: string | null): AllowedMealType => {
+  if (!value) {
+    return 'other';
+  }
+
+  const normalized = value.toLowerCase().trim();
+  if (MEAL_TYPE_ALIASES[normalized]) {
+    return MEAL_TYPE_ALIASES[normalized];
+  }
+
+  if (normalized.includes('break')) return 'breakfast';
+  if (normalized.includes('lunch') || normalized.includes('pranzo')) return 'lunch';
+  if (normalized.includes('dinner') || normalized.includes('supper') || normalized.includes('cena')) return 'dinner';
+  if (normalized.includes('snack') || normalized.includes('merenda')) return 'snack';
+
+  return 'other';
+};
+
 export class FoodAnalysisService {
   /**
    * Salva una nuova analisi del cibo nel database
@@ -48,6 +79,8 @@ export class FoodAnalysisService {
         return RetryService.withRetry(
           async () => {
             try {
+              const normalizedMealType = normalizeMealType(analysis.mealType);
+
               // Check duplicati recenti: analisi simili negli ultimi 2 minuti
               const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
               const { data: recentAnalysis, error: checkError } = await supabase
@@ -71,7 +104,7 @@ export class FoodAnalysisService {
                   const { data: updated, error: updateError } = await supabase
                     .from(Tables.FOOD_ANALYSES)
                     .update({
-                      meal_type: analysis.mealType,
+                      meal_type: normalizedMealType,
                       identified_foods: analysis.identifiedFoods,
                       calories: analysis.calories,
                       carbohydrates: analysis.carbohydrates,
@@ -120,7 +153,7 @@ export class FoodAnalysisService {
                 .from(Tables.FOOD_ANALYSES)
                 .insert({
                   user_id: userId,
-                  meal_type: analysis.mealType,
+                  meal_type: normalizedMealType,
                   identified_foods: analysis.identifiedFoods,
                   calories: analysis.calories,
                   carbohydrates: analysis.carbohydrates,
