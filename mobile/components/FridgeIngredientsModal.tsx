@@ -27,6 +27,7 @@ import {
   CuisinePreference,
 } from '../services/nutrition-preferences.service';
 import recipeLibraryService, { MealType, UserRecipe } from '../services/recipe-library.service';
+import RecipeEditorModal from './RecipeEditorModal';
 
 const MIN_INGREDIENTS_FOR_GENERATION = 3;
 interface IngredientRow {
@@ -86,16 +87,8 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   const [newFavorite, setNewFavorite] = useState('');
   const [newAllergy, setNewAllergy] = useState('');
   const [excludedIngredientIds, setExcludedIngredientIds] = useState<Record<string, boolean>>({});
-  const [saveRecipeModalVisible, setSaveRecipeModalVisible] = useState(false);
-  const [savingRecipe, setSavingRecipe] = useState(false);
-  const [saveRecipeForm, setSaveRecipeForm] = useState({
-    title: '',
-    mealType: 'dinner' as MealType,
-    tags: '',
-    favorite: false,
-    notes: '',
-    cuisine: '',
-  });
+  const [recipeEditorVisible, setRecipeEditorVisible] = useState(false);
+  const [recipeDraft, setRecipeDraft] = useState<Partial<UserRecipe> | null>(null);
 
   const addIngredient = () => {
     setIngredients([...ingredients, { name: '' }]);
@@ -124,6 +117,47 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
     if (minutes > 0 && minutes <= 15) return 'snack';
     if (minutes > 15 && minutes <= 25) return 'lunch';
     return 'dinner';
+  };
+
+  const buildDraftFromGenerated = (recipe: any): Partial<UserRecipe> => {
+    const ingredients = Array.isArray(recipe?.ingredients)
+      ? recipe.ingredients.map((ing: any) => ({
+          name: ing.name || ing.title || '',
+          quantity: ing.quantity,
+          unit: ing.unit,
+          optional: ing.optional,
+        }))
+      : [];
+
+    return {
+      title: recipe?.title || '',
+      description: recipe?.description,
+      servings: recipe?.servings ?? 1,
+      ready_in_minutes: recipe?.readyInMinutes || recipe?.ready_in_minutes,
+      meal_types: recipe?.meal_type ? [recipe.meal_type] : recipe?.meal_types || [],
+      favorite: false,
+      notes: recipe?.notes,
+      tags: recipe?.tags || [],
+      ingredients,
+      steps: Array.isArray(recipe?.steps) ? recipe.steps : [],
+    };
+  };
+
+  const openRecipeEditorForGenerated = () => {
+    if (!generatedRecipe) return;
+    const draft = buildDraftFromGenerated(generatedRecipe);
+    if (!draft.meal_types || draft.meal_types.length === 0) {
+      draft.meal_types = [inferMealTypeFromRecipe(generatedRecipe)];
+    }
+    setRecipeDraft(draft);
+    setRecipeEditorVisible(true);
+  };
+
+  const handleRecipeEditorSavedFromFridge = (recipe: UserRecipe) => {
+    setRecipeEditorVisible(false);
+    setRecipeDraft(null);
+    Alert.alert(t('analysis.food.fridge.recipeSavedTitle'), t('analysis.food.fridge.recipeSavedMessage'));
+    onRecipeSaved?.(recipe);
   };
 
   const updateIngredient = (index: number, field: 'name' | 'expiry', value: string) => {
@@ -708,57 +742,6 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
     onClose();
   };
 
-  const openSaveRecipeModal = () => {
-    if (!generatedRecipe) return;
-    setSaveRecipeForm({
-      title: generatedRecipe.title || '',
-      mealType: inferMealTypeFromRecipe(generatedRecipe),
-      tags: Array.isArray(generatedRecipe.tags) ? generatedRecipe.tags.join(', ') : '',
-      favorite: false,
-      notes: '',
-      cuisine:
-        generatedRecipe.cuisine ||
-        (preferences?.cuisinePreference && preferences.cuisinePreference !== 'none'
-          ? preferences.cuisinePreference
-          : ''),
-    });
-    setSaveRecipeModalVisible(true);
-  };
-
-  const handleConfirmSaveRecipe = async () => {
-    if (!generatedRecipe) return;
-    if (!saveRecipeForm.title.trim()) {
-      Alert.alert(t('common.error'), t('analysis.food.fridge.recipeNameRequired'));
-      return;
-    }
-
-    try {
-      setSavingRecipe(true);
-      const tags = saveRecipeForm.tags
-        .split(',')
-        .map((tag) => tag.trim())
-        .filter(Boolean);
-
-      const savedRecipe = await recipeLibraryService.saveGeneratedRecipe(generatedRecipe, {
-        title: saveRecipeForm.title.trim(),
-        cuisine: saveRecipeForm.cuisine || undefined,
-        meal_types: saveRecipeForm.mealType ? [saveRecipeForm.mealType] : [],
-        tags,
-        favorite: saveRecipeForm.favorite,
-        notes: saveRecipeForm.notes?.trim() || undefined,
-      });
-
-      setSaveRecipeModalVisible(false);
-      Alert.alert(t('analysis.food.fridge.recipeSavedTitle'), t('analysis.food.fridge.recipeSavedMessage'));
-      onRecipeSaved?.(savedRecipe);
-    } catch (error) {
-      console.error('[FridgeIngredientsModal] save recipe error', error);
-      Alert.alert(t('common.error'), t('analysis.food.fridge.recipeSaveError'));
-    } finally {
-      setSavingRecipe(false);
-    }
-  };
-
   return (
     <>
     <Modal
@@ -1300,11 +1283,11 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.saveLibraryButton, { borderColor: colors.primary }]}
-                      onPress={openSaveRecipeModal}
+                      onPress={openRecipeEditorForGenerated}
                     >
                       <MaterialCommunityIcons name="content-save-outline" size={18} color={colors.primary} />
                       <Text style={[styles.saveLibraryButtonText, { color: colors.primary }]}>
-                        {t('analysis.food.fridge.saveToLibrary')}
+                        {t('analysis.food.fridge.editAndSave')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -1324,140 +1307,17 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
       </KeyboardAvoidingView>
     </Modal>
 
-    <Modal
-      visible={saveRecipeModalVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setSaveRecipeModalVisible(false)}
-    >
-      <View style={styles.saveRecipeOverlay}>
-        <View style={[styles.saveRecipeCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.saveRecipeTitle, { color: colors.text }]}>
-            {t('analysis.food.fridge.saveRecipeTitle')}
-          </Text>
-          <Text style={[styles.saveRecipeSubtitle, { color: colors.textSecondary }]}>
-            {t('analysis.food.fridge.saveRecipeDescription')}
-          </Text>
-
-          <View style={[styles.saveRecipeField, { borderColor: colors.border }]}>
-            <Text style={[styles.saveRecipeLabel, { color: colors.textSecondary }]}>
-              {t('analysis.food.fridge.recipeNameLabel')}
-            </Text>
-            <TextInput
-              value={saveRecipeForm.title}
-              onChangeText={(value) => setSaveRecipeForm((prev) => ({ ...prev, title: value }))}
-              placeholder={t('analysis.food.fridge.recipeNamePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              style={[styles.saveRecipeInput, { color: colors.text }]}
-            />
-          </View>
-
-          <View style={styles.saveRecipeChipsRow}>
-            {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((type) => {
-              const active = saveRecipeForm.mealType === type;
-              return (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.saveRecipeChip,
-                    {
-                      backgroundColor: active ? colors.primary : colors.surfaceElevated,
-                      borderColor: active ? colors.primary : colors.border,
-                    },
-                  ]}
-                  onPress={() => setSaveRecipeForm((prev) => ({ ...prev, mealType: type }))}
-                >
-                  <Text
-                    style={[
-                      styles.saveRecipeChipText,
-                      { color: active ? colors.textInverse : colors.text },
-                    ]}
-                  >
-                    {t(`analysis.food.mealTypes.${type}`)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <View style={[styles.saveRecipeField, { borderColor: colors.border }]}>
-            <Text style={[styles.saveRecipeLabel, { color: colors.textSecondary }]}>
-              {t('analysis.food.fridge.tagsLabel')}
-            </Text>
-            <TextInput
-              value={saveRecipeForm.tags}
-              onChangeText={(value) => setSaveRecipeForm((prev) => ({ ...prev, tags: value }))}
-              placeholder={t('analysis.food.fridge.tagsPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              style={[styles.saveRecipeInput, { color: colors.text }]}
-            />
-          </View>
-
-          <View style={[styles.saveRecipeField, { borderColor: colors.border }]}>
-            <Text style={[styles.saveRecipeLabel, { color: colors.textSecondary }]}>
-              {t('analysis.food.fridge.notesLabel')}
-            </Text>
-            <TextInput
-              value={saveRecipeForm.notes}
-              onChangeText={(value) => setSaveRecipeForm((prev) => ({ ...prev, notes: value }))}
-              placeholder={t('analysis.food.fridge.notesPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              style={[styles.saveRecipeInput, styles.saveRecipeTextarea, { color: colors.text }]}
-              multiline
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[
-              styles.favoriteToggle,
-              {
-                backgroundColor: saveRecipeForm.favorite ? colors.primary + '22' : colors.surfaceElevated,
-                borderColor: saveRecipeForm.favorite ? colors.primary : colors.border,
-              },
-            ]}
-            onPress={() => setSaveRecipeForm((prev) => ({ ...prev, favorite: !prev.favorite }))}
-          >
-            <MaterialCommunityIcons
-              name={saveRecipeForm.favorite ? 'star' : 'star-outline'}
-              size={18}
-              color={saveRecipeForm.favorite ? colors.primary : colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.favoriteToggleText,
-                { color: saveRecipeForm.favorite ? colors.primary : colors.text },
-              ]}
-            >
-              {t('analysis.food.fridge.favoriteToggle')}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.saveRecipeActions}>
-            <TouchableOpacity
-              style={[styles.secondaryButton, { borderColor: colors.border }]}
-              onPress={() => setSaveRecipeModalVisible(false)}
-            >
-              <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-                {t('common.cancel')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-              onPress={handleConfirmSaveRecipe}
-              disabled={savingRecipe}
-            >
-              {savingRecipe ? (
-                <ActivityIndicator size="small" color={colors.textInverse} />
-              ) : (
-                <Text style={[styles.primaryButtonText, { color: colors.textInverse }]}>
-                  {t('analysis.food.fridge.saveRecipe')}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
+    <RecipeEditorModal
+      visible={recipeEditorVisible}
+      mode="create"
+      recipe={null}
+      initialDraft={recipeDraft}
+      onClose={() => {
+        setRecipeEditorVisible(false);
+        setRecipeDraft(null);
+      }}
+      onSaved={handleRecipeEditorSavedFromFridge}
+    />
     </>
   );
 };

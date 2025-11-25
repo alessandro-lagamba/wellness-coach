@@ -21,6 +21,8 @@ interface RecipeEditorModalProps {
   onClose: () => void;
   onSaved: (recipe: UserRecipe) => void;
   onDeleted?: (recipeId: string) => void;
+  mode?: 'edit' | 'create';
+  initialDraft?: Partial<UserRecipe> | null;
 }
 
 const mealTypes: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -31,9 +33,12 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
   onClose,
   onSaved,
   onDeleted,
+  mode = 'edit',
+  initialDraft = null,
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const isCreateMode = mode === 'create';
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -48,28 +53,52 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
   });
   const [saving, setSaving] = useState(false);
 
+  const hydrateForm = (source?: Partial<UserRecipe> | null) => {
+    const mealTypesValue =
+      source?.meal_types && source.meal_types.length
+        ? (source.meal_types as MealType[])
+        : ['dinner'];
+    const ingredientsValue = Array.isArray(source?.ingredients)
+      ? source!.ingredients
+          .map((ing) => {
+            const quantity = ing.quantity ? `${ing.quantity} ` : '';
+            const unit = ing.unit ? `${ing.unit} ` : '';
+            return `${quantity}${unit}${ing.name}`.trim();
+          })
+          .join('\n')
+      : '';
+    const stepsValue = Array.isArray(source?.steps) ? source!.steps.join('\n') : '';
+
+    setForm({
+      title: source?.title || '',
+      description: source?.description || '',
+      servings: source?.servings || 1,
+      readyMinutes: source?.ready_in_minutes
+        ? String(source.ready_in_minutes)
+        : source?.total_minutes
+        ? String(source.total_minutes)
+        : '',
+      mealTypes: new Set<MealType>(mealTypesValue),
+      favorite: source?.favorite ?? false,
+      tags: source?.tags?.join(', ') || '',
+      notes: source?.notes || '',
+      ingredients: ingredientsValue,
+      steps: stepsValue,
+    });
+  };
+
   useEffect(() => {
-    if (recipe && visible) {
-      setForm({
-        title: recipe.title || '',
-        description: recipe.description || '',
-        servings: recipe.servings || 1,
-        readyMinutes: recipe.ready_in_minutes ? String(recipe.ready_in_minutes) : '',
-        mealTypes: new Set<MealType>(
-          recipe.meal_types?.length ? (recipe.meal_types as MealType[]) : ['dinner'],
-        ),
-        favorite: recipe.favorite,
-        tags: recipe.tags?.join(', ') || '',
-        notes: recipe.notes || '',
-        ingredients: Array.isArray(recipe.ingredients)
-          ? recipe.ingredients.map((ing) => ing.name).join('\n')
-          : '',
-        steps: Array.isArray(recipe.steps) ? recipe.steps.join('\n') : '',
-      });
-    } else if (!visible) {
+    if (!visible) {
       setSaving(false);
+      return;
     }
-  }, [recipe, visible]);
+
+    if (isCreateMode) {
+      hydrateForm(initialDraft);
+    } else if (recipe) {
+      hydrateForm(recipe);
+    }
+  }, [visible, recipe, initialDraft, isCreateMode]);
 
   const handleToggleMealType = (type: MealType) => {
     setForm((prev) => {
@@ -86,42 +115,51 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
     });
   };
 
+  const buildPayload = () => {
+    const ingredients = form.ingredients
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((name) => ({ name }));
+    const steps = form.steps
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const mealTypeArray = Array.from(form.mealTypes);
+
+    return {
+      title: form.title.trim(),
+      description: form.description?.trim(),
+      servings: form.servings,
+      ready_in_minutes: form.readyMinutes ? Number(form.readyMinutes) : undefined,
+      meal_types: mealTypeArray,
+      favorite: form.favorite,
+      tags: form.tags
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+      notes: form.notes?.trim(),
+      ingredients,
+      steps,
+    };
+  };
+
   const handleSave = async () => {
-    if (!recipe) return;
     if (!form.title.trim()) {
       Alert.alert(t('common.error'), t('analysis.food.recipes.editor.titleRequired'));
       return;
     }
     try {
       setSaving(true);
-      const ingredients = form.ingredients
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((name) => ({ name }));
-      const steps = form.steps
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean);
-      const mealTypeArray = Array.from(form.mealTypes);
+      const payload = buildPayload();
 
-      const updated = await recipeLibraryService.update(recipe.id, {
-        title: form.title.trim(),
-        description: form.description?.trim(),
-        servings: form.servings,
-        ready_in_minutes: form.readyMinutes ? Number(form.readyMinutes) : undefined,
-        meal_types: mealTypeArray,
-        favorite: form.favorite,
-        tags: form.tags
-          .split(',')
-          .map((tag) => tag.trim())
-          .filter(Boolean),
-        notes: form.notes?.trim(),
-        ingredients,
-        steps,
-      });
-
-      onSaved(updated);
+      if (isCreateMode) {
+        const created = await recipeLibraryService.save(payload);
+        onSaved(created);
+      } else if (recipe) {
+        const updated = await recipeLibraryService.update(recipe.id, payload);
+        onSaved(updated);
+      }
     } catch (error) {
       console.error('[RecipeEditorModal] save error', error);
       Alert.alert(t('common.error'), t('analysis.food.recipes.editor.saveError'));
@@ -165,7 +203,10 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
             <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {t('analysis.food.recipes.editor.title')}
+            {isCreateMode
+              ? t('analysis.food.recipes.editor.createTitle') ||
+                t('analysis.food.recipes.editor.title')
+              : t('analysis.food.recipes.editor.title')}
           </Text>
           <View style={styles.headerButton} />
         </View>
@@ -338,14 +379,16 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
         </ScrollView>
 
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          <TouchableOpacity
-            style={[styles.deleteButton, { borderColor: colors.error }]}
-            onPress={confirmDelete}
-          >
-            <Text style={[styles.deleteButtonText, { color: colors.error }]}>
-              {t('common.delete')}
-            </Text>
-          </TouchableOpacity>
+          {!isCreateMode && (
+            <TouchableOpacity
+              style={[styles.deleteButton, { borderColor: colors.error }]}
+              onPress={confirmDelete}
+            >
+              <Text style={[styles.deleteButtonText, { color: colors.error }]}>
+                {t('common.delete')}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={[styles.saveButton, { backgroundColor: colors.primary }]}

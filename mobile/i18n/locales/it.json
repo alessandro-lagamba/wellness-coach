@@ -23,7 +23,8 @@
     "done": "Fatto",
     "retake": "Ripeti",
     "recommendation": "Raccomandazione",
-    "markAsDone": "Segna come Completato"
+    "markAsDone": "Segna come Completato",
+    "view": "Vedi"
   },
   "settings": {
     "title": "Impostazioni",
@@ -928,6 +929,12 @@
       "recipes": {
         "title": "Suggerimenti Ricette AI",
         "subtitle": "Ricette personalizzate in base alle tue preferenze e obiettivi",
+        "hubTitle": "Ricettario",
+        "hubSubtitle": "Gestisci libreria, pianificazione dei pasti e suggerimenti AI in un unico posto.",
+        "openHubTitle": "Apri il Ricettario",
+        "openHubSubtitle": "Filtra, salva e pianifica ricette in base ai tuoi gusti e obiettivi nutrizionali.",
+        "hubTag": "Tutto-in-Uno",
+        "suggestions": "Tutte le ricette",
         "tapForRecipe": "Tocca per la ricetta >",
         "loading": "Caricamento ricetta...",
         "generating": "Generazione ricetta in corso...",
@@ -960,6 +967,9 @@
           "searchPlaceholder": "Cerca per nome ricetta",
           "ingredientsPlaceholder": "Filtra per ingrediente",
           "favorites": "Preferite",
+          "mealTypeLabel": "Momento del pasto",
+          "timeLabel": "Tempo di preparazione",
+          "mealAll": "Tutti i pasti",
           "time": {
             "all": "Tutti i tempi",
             "quick": "Veloce (<20 min)",
@@ -967,8 +977,10 @@
             "slow": "Lenta (>40 min)"
           }
         },
+        "addManual": "Nuova ricetta",
         "editor": {
           "title": "Modifica ricetta",
+          "createTitle": "Nuova ricetta",
           "recipeName": "Nome ricetta",
           "recipeNamePlaceholder": "Es. Bowl di quinoa proteica",
           "description": "Descrizione",
@@ -993,6 +1005,7 @@
         "title": "Pianificazione pasti",
         "subtitle": "Organizza i pasti della settimana e tieni traccia dei macronutrienti.",
         "customRecipe": "Ricetta personalizzata",
+        "add": "Aggiungi",
         "addToPlan": "Pianifica",
         "assignTitle": "Assegna {{meal}} al {{date}}",
         "assignFallback": "Assegna ricetta",
@@ -1024,6 +1037,7 @@
         "subtitle": "Ottieni suggerimenti di ricette personalizzati in base ai tuoi ingredienti",
         "cardTitle": "Ricerca Ricette Intelligente",
         "cardDesc": "Indicaci quali ingredienti hai, e ti suggeriremo ricette deliziose personalizzate in base alle tue preferenze e obiettivi nutrizionali.",
+        "openButton": "Apri il Frigo e genera",
         "addIngredients": "Aggiungi Ingredienti",
         "modalDesc": "Inserisci gli ingredienti che hai disponibili nel tuo frigo o nella dispensa. L'AI genererà una ricetta personalizzata per te!",
         "ingredientsList": "Ingredienti Disponibili",
@@ -1047,6 +1061,7 @@
         "ambiguousMessage": "Intendevi: {{suggestions}}",
         "generateRecipe": "Genera Ricetta",
         "recipeGenerated": "Ricetta Generata",
+        "editAndSave": "Modifica e salva",
         "noIngredients": "Inserisci almeno un ingrediente",
         "needMoreIngredients": "Aggiungi almeno {{count}} ingredienti prima di generare una ricetta",
         "generateError": "Errore durante la generazione della ricetta",

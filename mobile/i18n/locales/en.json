@@ -23,7 +23,8 @@
     "done": "Done",
     "retake": "Retake",
     "recommendation": "Recommendation",
-    "markAsDone": "Mark as Done"
+    "markAsDone": "Mark as Done",
+    "view": "View"
   },
   "settings": {
     "title": "Settings",
@@ -922,6 +923,12 @@
       "recipes": {
         "title": "AI Recipe Suggestions",
         "subtitle": "Personalized recipes based on your preferences and goals",
+        "suggestions": "All Recipes",
+        "hubTitle": "Recipe Book",
+        "hubSubtitle": "Manage your library, weekly planner, and AI suggestions from one place.",
+        "openHubTitle": "Open Recipe Book",
+        "openHubSubtitle": "Filter, save, and schedule recipes tailored to your taste and nutrition goals.",
+        "hubTag": "All-in-One",
         "tapForRecipe": "Tap for recipe >",
         "loading": "Loading recipe...",
         "generating": "Generating recipe...",
@@ -954,6 +961,9 @@
           "searchPlaceholder": "Search by recipe name",
           "ingredientsPlaceholder": "Filter by ingredient",
           "favorites": "Favorites",
+          "mealTypeLabel": "Meal type",
+          "timeLabel": "Prep time",
+          "mealAll": "All meals",
           "time": {
             "all": "All times",
             "quick": "Quick (<20 min)",
@@ -961,8 +971,10 @@
             "slow": "Slow (>40 min)"
           }
         },
+        "addManual": "Add recipe",
         "editor": {
           "title": "Edit recipe",
+          "createTitle": "New recipe",
           "recipeName": "Recipe name",
           "recipeNamePlaceholder": "e.g. Protein quinoa bowl",
           "description": "Description",
@@ -987,6 +999,7 @@
         "title": "Meal planning",
         "subtitle": "Organize your weekly meals and keep macros on track.",
         "customRecipe": "Custom recipe",
+        "add": "Add",
         "addToPlan": "Plan",
         "assignTitle": "Assign {{meal}} on {{date}}",
         "assignFallback": "Assign recipe",
@@ -1018,6 +1031,7 @@
         "subtitle": "Get personalized recipe suggestions based on your ingredients",
         "cardTitle": "Smart Recipe Finder",
         "cardDesc": "Tell us what ingredients you have, and we'll suggest delicious recipes tailored to your preferences and nutritional goals.",
+        "openButton": "Open Fridge & Generate",
         "addIngredients": "Add Ingredients",
         "modalDesc": "Enter the ingredients you have available in your fridge or pantry. The AI will generate a personalized recipe for you!",
         "ingredientsList": "Available Ingredients",
@@ -1041,6 +1055,7 @@
         "ambiguousMessage": "Did you mean: {{suggestions}}",
         "generateRecipe": "Generate Recipe",
         "recipeGenerated": "Recipe Generated",
+        "editAndSave": "Edit & Save",
         "noIngredients": "Enter at least one ingredient",
         "needMoreIngredients": "Add at least {{count}} ingredients before generating a recipe",
         "generateError": "Error generating recipe",
