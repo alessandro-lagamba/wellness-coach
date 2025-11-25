@@ -2520,6 +2520,10 @@ export const FoodAnalysisScreen: React.FC = () => {
           filteredRecipes={filteredRecipes}
           handleRecipeFavoriteToggle={handleRecipeFavoriteToggle}
           setSelectedRecipe={setSelectedRecipe}
+          onViewRecipe={(recipe) => {
+            setSelectedRecipe(recipe);
+            setShowRecipeModal(true);
+          }}
           onEditRecipe={openRecipeEditor}
           onCreateRecipe={() => openManualRecipeEditor()}
           openSlotPicker={openSlotPicker}

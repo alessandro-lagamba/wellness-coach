@@ -109,28 +109,54 @@ export const recipeFromIngredientsPrompt = (body: {
   prefs?: string[];
   allergies?: string[];
   cuisineHint?: string;
+  cuisinePreference?: string;
+  favoriteIngredients?: string[];
+  avoidIngredients?: string[];
   maxReadyInMinutes?: number;
-}): string => `
-Crea una ricetta con gli ingredienti disponibili, rispettando preferenze/allergie.
+}): string => {
+  const allergiesList = body.allergies && body.allergies.length > 0 
+    ? body.allergies.join(", ") 
+    : "nessuna";
+  const avoidList = body.avoidIngredients && body.avoidIngredients.length > 0
+    ? body.avoidIngredients.join(", ")
+    : "nessuno";
+  const cuisine = body.cuisinePreference || body.cuisineHint || "Mediterranea";
+  const favoriteIngredientsList = body.favoriteIngredients && body.favoriteIngredients.length > 0
+    ? body.favoriteIngredients.join(", ")
+    : "nessuna preferenza specifica";
+
+  return `
+Crea una ricetta con gli ingredienti disponibili, rispettando STRICTAMENTE preferenze e allergie.
 
 Ingredienti disponibili: ${body.ingredients.join(", ")}
 
+VINCOLI OBBLIGATORI:
+- ALLERGIE/INTOLLERANZE (NON USARE MAI): ${allergiesList}
+- INGREDIENTI DA EVITARE: ${avoidList}
+- Se un ingrediente disponibile contiene o deriva da allergeni, ESCLUDILO completamente o proponi una sostituzione sicura.
+
+PREFERENZE:
+- Tipo di cucina: ${cuisine}
+- Ingredienti preferiti (da privilegiare se possibile): ${favoriteIngredientsList}
+- Preferenze dietetiche: ${body.prefs?.join(", ") || "nessuna"}
+
 Target (opzionali): kcal/serv=${body.targetCaloriesPerServing ?? "flex"}, macros=${JSON.stringify(body.targetMacros || {})}
 
-Servings: ${body.servings ?? 2}, Cucina: ${body.cuisineHint ?? "Mediterranea"}, Max tempo: ${body.maxReadyInMinutes ?? 25} min
+Servings: ${body.servings ?? 2}, Max tempo: ${body.maxReadyInMinutes ?? 25} min
 
 Regole:
 
+- ⚠️ CRITICO: NON includere MAI ingredienti che contengono o derivano da: ${allergiesList}. Se necessario, proponi alternative sicure.
 - Se mancano ingredienti critici, elencali in "shoppingGaps" e proponi sostituzioni pratiche.
-
+- Privilegia lo stile culinario: ${cuisine}
 - Macro per porzione vicine al target (±20%); se non c'è target, mantenere profilo equilibrato (30/40/30).
-
 - Passi chiari e brevi; dosi in g/ml quando possibile.
 
 ${styleHints}
 
 Output JSON secondo schema.
 `;
+};
 
 /**
  * Coach User Prompt

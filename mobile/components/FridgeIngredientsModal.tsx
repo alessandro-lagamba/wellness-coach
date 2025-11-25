@@ -140,6 +140,15 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
       tags: recipe?.tags || [],
       ingredients,
       steps: Array.isArray(recipe?.steps) ? recipe.steps : [],
+      // ✅ Aggiungi informazioni nutrizionali
+      calories_per_serving: recipe?.caloriesPerServing || recipe?.calories_per_serving || null,
+      macros: recipe?.macrosPerServing ? {
+        protein: recipe.macrosPerServing.protein,
+        carbs: recipe.macrosPerServing.carbs,
+        fat: recipe.macrosPerServing.fat,
+        fiber: recipe.macrosPerServing.fiber,
+        sugar: recipe.macrosPerServing.sugar,
+      } : null,
     };
   };
 

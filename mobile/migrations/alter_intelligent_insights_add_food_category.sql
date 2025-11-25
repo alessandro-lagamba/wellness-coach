@@ -6,3 +6,4 @@ ALTER TABLE intelligent_insights
   ADD CONSTRAINT intelligent_insights_category_check
   CHECK (category IN ('emotion', 'skin', 'food'));
 
+

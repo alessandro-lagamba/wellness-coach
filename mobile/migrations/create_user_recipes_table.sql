@@ -43,3 +43,4 @@ CREATE POLICY "Users can delete their recipes" ON user_recipes
   FOR DELETE USING (auth.uid() = user_id);
 
 
+

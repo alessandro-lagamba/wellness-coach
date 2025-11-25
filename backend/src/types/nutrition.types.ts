@@ -117,6 +117,9 @@ export interface GenerateRecipeBody {
   prefs?: DietPref[];
   allergies?: Allergy[];
   cuisineHint?: string; // "Italian", "Mediterranean", ...
+  cuisinePreference?: string; // Preferenza cucina esplicita
+  favoriteIngredients?: string[]; // Ingredienti preferiti
+  avoidIngredients?: string[]; // Ingredienti da evitare
   maxReadyInMinutes?: number;
 }
 

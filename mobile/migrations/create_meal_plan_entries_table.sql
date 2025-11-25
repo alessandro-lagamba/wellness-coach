@@ -30,3 +30,4 @@ CREATE POLICY "Users can delete their meal plans" ON meal_plan_entries
   FOR DELETE USING (auth.uid() = user_id);
 
 
+

@@ -43,6 +43,7 @@ interface RecipeHubModalProps {
     filteredRecipes: UserRecipe[];
     handleRecipeFavoriteToggle: (recipe: UserRecipe) => void;
     setSelectedRecipe: (recipe: UserRecipe) => void;
+    onViewRecipe: (recipe: UserRecipe) => void;
     onEditRecipe: (recipe: UserRecipe) => void;
     onCreateRecipe: () => void;
 
@@ -56,6 +57,45 @@ interface RecipeHubModalProps {
 }
 
 const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+
+// Helper per generare URL immagine Unsplash basato su titolo/ingredienti
+const getRecipeImageUrl = (recipe: UserRecipe, mealType?: MealType): string => {
+    // Se la ricetta ha già un'immagine salvata, usala (quando implementeremo il campo image)
+    // Per ora generiamo un URL basato su ingredienti principali o titolo
+    
+    const searchTerms: string[] = [];
+    
+    // Aggiungi ingredienti principali (primi 2-3)
+    if (recipe.ingredients && recipe.ingredients.length > 0) {
+        const mainIngredients = recipe.ingredients.slice(0, 3).map(ing => ing.name).join(' ');
+        searchTerms.push(mainIngredients);
+    }
+    
+    // Aggiungi tipo di cucina se presente
+    if (recipe.cuisine) {
+        searchTerms.push(recipe.cuisine);
+    }
+    
+    // Fallback al titolo
+    if (searchTerms.length === 0) {
+        searchTerms.push(recipe.title);
+    }
+    
+    // Fallback al tipo di pasto
+    const mealTypeFallback: Record<MealType, string> = {
+        breakfast: 'breakfast food',
+        lunch: 'lunch meal',
+        dinner: 'dinner food',
+        snack: 'healthy snack',
+    };
+    
+    const query = searchTerms.length > 0 
+        ? encodeURIComponent(searchTerms.join(' '))
+        : encodeURIComponent(mealType ? mealTypeFallback[mealType] : 'food');
+    
+    // Usa Unsplash Source API per immagini di cibo
+    return `https://source.unsplash.com/400x300/?${query}&food`;
+};
 
 export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
     visible,
@@ -75,6 +115,7 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
     filteredRecipes,
     handleRecipeFavoriteToggle,
     setSelectedRecipe,
+    onViewRecipe,
     onEditRecipe,
     onCreateRecipe,
     onOpenFridge,
@@ -252,7 +293,7 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
                             <View style={styles.recipeActionsRow}>
                                 <TouchableOpacity
                                     style={[styles.recipeActionButton, { borderColor: colors.border }]}
-                                    onPress={() => setSelectedRecipe(recipe)}
+                                    onPress={() => onViewRecipe(recipe)}
                                 >
                                     <MaterialCommunityIcons name="eye-outline" size={16} color={colors.textSecondary} />
                                     <Text style={[styles.recipeActionText, { color: colors.text }]}>
@@ -295,52 +336,163 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
 
 
 
-    const renderSuggestions = () => (
-        <View style={styles.insightList}>
-            {[
-                {
-                    id: 'breakfast',
-                    title: t('analysis.food.recipes.breakfast.title'),
-                    description: t('analysis.food.recipes.breakfast.description'),
-                    image: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=1200&q=80',
-                },
-                {
-                    id: 'lunch',
-                    title: t('analysis.food.recipes.lunch.title'),
-                    description: t('analysis.food.recipes.lunch.description'),
-                    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80',
-                },
-                {
-                    id: 'dinner',
-                    title: t('analysis.food.recipes.dinner.title'),
-                    description: t('analysis.food.recipes.dinner.description'),
-                    image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=1200&q=80',
-                },
-                {
-                    id: 'snack',
-                    title: t('analysis.food.recipes.snack.title'),
-                    description: t('analysis.food.recipes.snack.description'),
-                    image: 'https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?auto=format&fit=crop&w=1200&q=80',
-                },
-            ].map((item) => (
-                <TouchableOpacity key={item.id} style={[styles.insightCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <Image source={{ uri: item.image }} style={styles.insightImage} />
-                    <View style={styles.insightContent}>
-                        <Text style={[styles.insightTitle, { color: colors.text }]}>{item.title}</Text>
-                        <Text style={[styles.insightDescription, { color: colors.textSecondary }]}>
-                            {item.description}
-                        </Text>
-                        <View style={[styles.insightAction, { backgroundColor: colors.primary + '15' }]}>
-                            <Text style={[styles.insightActionText, { color: colors.primary }]}>
-                                {t('common.view')}
+    const renderSuggestions = () => {
+        // Raggruppa le ricette per tipo di pasto
+        const recipesByMealType: Record<MealType, UserRecipe[]> = {
+            breakfast: [],
+            lunch: [],
+            dinner: [],
+            snack: [],
+        };
+
+        recipes.forEach((recipe) => {
+            if (recipe.meal_types && recipe.meal_types.length > 0) {
+                recipe.meal_types.forEach((mealType) => {
+                    if (MEAL_TYPES.includes(mealType as MealType)) {
+                        recipesByMealType[mealType as MealType].push(recipe);
+                    }
+                });
+            }
+        });
+
+        // Crea le card per ogni tipo di pasto che ha ricette
+        const mealTypeCards = MEAL_TYPES.map((mealType) => {
+            const mealRecipes = recipesByMealType[mealType];
+            if (mealRecipes.length === 0) return null;
+
+            const defaultImages: Record<MealType, string> = {
+                breakfast: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=1200&q=80',
+                lunch: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80',
+                dinner: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=1200&q=80',
+                snack: 'https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?auto=format&fit=crop&w=1200&q=80',
+            };
+
+            return {
+                id: mealType as MealType,
+                mealType,
+                title: t(`analysis.food.recipes.${mealType}.title`) || t(`analysis.food.mealTypes.${mealType}`),
+                description: t(`analysis.food.recipes.${mealType}.description`) || `${mealRecipes.length} ${t('analysis.food.recipes.available') || 'ricette disponibili'}`,
+                image: defaultImages[mealType],
+                recipeCount: mealRecipes.length,
+                recipes: mealRecipes,
+            };
+        }).filter((card): card is NonNullable<typeof card> => card !== null);
+
+        // Se non ci sono ricette, mostra le card di default
+        if (mealTypeCards.length === 0) {
+            return (
+                <View style={styles.insightList}>
+                    {[
+                        {
+                            id: 'breakfast',
+                            title: t('analysis.food.recipes.breakfast.title'),
+                            description: t('analysis.food.recipes.breakfast.description'),
+                            image: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=1200&q=80',
+                        },
+                        {
+                            id: 'lunch',
+                            title: t('analysis.food.recipes.lunch.title'),
+                            description: t('analysis.food.recipes.lunch.description'),
+                            image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80',
+                        },
+                        {
+                            id: 'dinner',
+                            title: t('analysis.food.recipes.dinner.title'),
+                            description: t('analysis.food.recipes.dinner.description'),
+                            image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=1200&q=80',
+                        },
+                        {
+                            id: 'snack',
+                            title: t('analysis.food.recipes.snack.title'),
+                            description: t('analysis.food.recipes.snack.description'),
+                            image: 'https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?auto=format&fit=crop&w=1200&q=80',
+                        },
+                    ].map((item) => (
+                        <TouchableOpacity 
+                            key={item.id} 
+                            style={[styles.insightCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                            onPress={() => {
+                                // Quando non ci sono ricette, passa alla tab library
+                                setActiveTab('library');
+                            }}
+                        >
+                            <Image source={{ uri: item.image }} style={styles.insightImage} />
+                            <View style={styles.insightContent}>
+                                <Text style={[styles.insightTitle, { color: colors.text }]}>{item.title}</Text>
+                                <Text style={[styles.insightDescription, { color: colors.textSecondary }]}>
+                                    {item.description}
+                                </Text>
+                                <View style={[styles.insightAction, { backgroundColor: colors.primary + '15' }]}>
+                                    <Text style={[styles.insightActionText, { color: colors.primary }]}>
+                                        {t('common.view')}
+                                    </Text>
+                                    <MaterialCommunityIcons name="arrow-right" size={16} color={colors.primary} />
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            );
+        }
+
+        return (
+            <View style={styles.insightList}>
+                {mealTypeCards.map((card) => (
+                    <View key={card.id} style={styles.mealTypeSection}>
+                        <View style={[styles.mealTypeHeader, { borderBottomColor: colors.border }]}>
+                            <Text style={[styles.mealTypeTitle, { color: colors.text }]}>{card.title}</Text>
+                            <Text style={[styles.mealTypeCount, { color: colors.textSecondary }]}>
+                                {card.recipeCount} {card.recipeCount === 1 
+                                    ? (t('analysis.food.recipes.recipe') || 'ricetta')
+                                    : (t('analysis.food.recipes.recipes') || 'ricette')}
                             </Text>
-                            <MaterialCommunityIcons name="arrow-right" size={16} color={colors.primary} />
                         </View>
+                        <ScrollView 
+                            horizontal 
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.recipeScrollContent}
+                        >
+                            {card.recipes.map((recipe) => {
+                                const imageUrl = getRecipeImageUrl(recipe, card.mealType);
+                                return (
+                                <TouchableOpacity
+                                    key={recipe.id}
+                                    style={[styles.suggestionRecipeCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                                    onPress={() => onViewRecipe(recipe)}
+                                >
+                                    <Image 
+                                        source={{ uri: imageUrl }} 
+                                        style={styles.suggestionRecipeImage}
+                                        resizeMode="cover"
+                                    />
+                                    <View style={styles.suggestionRecipeContent}>
+                                        <Text style={[styles.suggestionRecipeTitle, { color: colors.text }]} numberOfLines={2}>
+                                            {recipe.title}
+                                        </Text>
+                                        <Text style={[styles.suggestionRecipeMeta, { color: colors.textSecondary }]}>
+                                            {(recipe.ready_in_minutes || recipe.total_minutes || 0) > 0
+                                                ? `${recipe.ready_in_minutes || recipe.total_minutes} ${t('analysis.food.fridge.minutes')}`
+                                                : t('analysis.food.recipes.timeUnknown')}
+                                        </Text>
+                                        {recipe.tags && recipe.tags.length > 0 && (
+                                            <View style={styles.suggestionRecipeTags}>
+                                                {recipe.tags.slice(0, 2).map((tag, idx) => (
+                                                    <View key={idx} style={[styles.suggestionRecipeTag, { backgroundColor: colors.surfaceElevated }]}>
+                                                        <Text style={[styles.suggestionRecipeTagText, { color: colors.textSecondary }]}>{tag}</Text>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        )}
+                                    </View>
+                                </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
                     </View>
-                </TouchableOpacity>
-            ))}
-        </View>
-    );
+                ))}
+            </View>
+        );
+    };
 
     return (
         <>
@@ -922,5 +1074,72 @@ const styles = StyleSheet.create({
     selectorDoneText: {
         fontSize: 13,
         fontWeight: '700',
+    },
+    // Suggestions styles
+    mealTypeSection: {
+        marginBottom: 24,
+    },
+    mealTypeHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingBottom: 12,
+        marginBottom: 12,
+        borderBottomWidth: 1,
+    },
+    mealTypeTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+    },
+    mealTypeCount: {
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    recipeScrollContent: {
+        paddingRight: 16,
+        gap: 12,
+    },
+    suggestionRecipeCard: {
+        width: 200,
+        borderRadius: 16,
+        borderWidth: 1,
+        overflow: 'hidden',
+        marginRight: 12,
+    },
+    suggestionRecipeImage: {
+        width: '100%',
+        height: 120,
+    },
+    suggestionRecipeImagePlaceholder: {
+        width: '100%',
+        height: 120,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    suggestionRecipeContent: {
+        padding: 12,
+    },
+    suggestionRecipeTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        marginBottom: 4,
+    },
+    suggestionRecipeMeta: {
+        fontSize: 11,
+        marginBottom: 8,
+    },
+    suggestionRecipeTags: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 4,
+    },
+    suggestionRecipeTag: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+    },
+    suggestionRecipeTagText: {
+        fontSize: 9,
+        fontWeight: '500',
     },
 });
