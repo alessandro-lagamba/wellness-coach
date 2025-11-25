@@ -248,35 +248,6 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
    * Build skin analysis prompt
    */
   private buildSkinPrompt(skinData: any): string {
-  /**
-   * Build food analysis prompt
-   */
-  private buildFoodPrompt(foodData: any): string {
-    const identifiedFoods = foodData?.identified_foods || foodData?.identifiedFoods || [];
-    const macronutrients = foodData?.macronutrients || {};
-    const healthScore = foodData?.health_score ?? foodData?.healthScore ?? 70;
-    const recommendations = foodData?.recommendations || [];
-    const observations = foodData?.observations || [];
-
-    return `Sei un nutrizionista digitale specializzato in alimentazione equilibrata.
-Analizza gli ultimi dati nutrizionali del pasto e genera insight pratici per aiutare l'utente a migliorare la qualità della propria alimentazione quotidiana.
-
-Dati disponibili:
-- Alimenti identificati: ${identifiedFoods.length ? identifiedFoods.join(', ') : 'non specificati'}
-- Macronutrienti stimati: ${JSON.stringify(macronutrients)}
-- Punteggio salute pasto: ${healthScore}
-- Osservazioni AI: ${observations.length ? observations.join('; ') : 'nessuna osservazione specifica'}
-- Suggerimenti AI iniziali: ${recommendations.length ? recommendations.join('; ') : 'nessun suggerimento iniziale'}
-
-Istruzioni:
-1. Analizza equilibrio tra carboidrati, proteine e grassi rispetto ai range consigliati (Carb 35-65%, Prot 15-35%, Grassi 15-35%).
-2. Evidenzia eventuali eccessi o carenze nutrizionali e suggerisci modifiche concrete per il prossimo pasto.
-3. Includi consigli su porzioni, abbinamenti alimentari o timing (es. integrare fibre, aumentare proteine magre, idratazione).
-4. Mantieni un tono positivo e orientato all'azione, con massimo tre insight numerati.
-
-Rispondi in italiano nella lingua dell'utente e limita la lunghezza a poche frasi per insight.`;
-  }
-
     return `Sei un assistente wellness specializzato in skincare. 
 Analizza i dati storici dell'utente relativi alla pelle e fornisci insight pratici e personalizzati.
 
@@ -322,6 +293,35 @@ IMPORTANTE: Rispondi SOLO con un JSON valido nel seguente formato:
 }
 
 Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
+  }
+
+  /**
+   * Build food analysis prompt
+   */
+  buildFoodPrompt(foodData: any): string {
+    const identifiedFoods = foodData?.identified_foods || foodData?.identifiedFoods || [];
+    const macronutrients = foodData?.macronutrients || {};
+    const healthScore = foodData?.health_score ?? foodData?.healthScore ?? 70;
+    const recommendations = foodData?.recommendations || [];
+    const observations = foodData?.observations || [];
+
+    return `Sei un nutrizionista digitale specializzato in alimentazione equilibrata.
+Analizza gli ultimi dati nutrizionali del pasto e genera insight pratici per aiutare l'utente a migliorare la qualità della propria alimentazione quotidiana.
+
+Dati disponibili:
+- Alimenti identificati: ${identifiedFoods.length ? identifiedFoods.join(', ') : 'non specificati'}
+- Macronutrienti stimati: ${JSON.stringify(macronutrients)}
+- Punteggio salute pasto: ${healthScore}
+- Osservazioni AI: ${observations.length ? observations.join('; ') : 'nessuna osservazione specifica'}
+- Suggerimenti AI iniziali: ${recommendations.length ? recommendations.join('; ') : 'nessun suggerimento iniziale'}
+
+Istruzioni:
+1. Analizza equilibrio tra carboidrati, proteine e grassi rispetto ai range consigliati (Carb 35-65%, Prot 15-35%, Grassi 15-35%).
+2. Evidenzia eventuali eccessi o carenze nutrizionali e suggerisci modifiche concrete per il prossimo pasto.
+3. Includi consigli su porzioni, abbinamenti alimentari o timing (es. integrare fibre, aumentare proteine magre, idratazione).
+4. Mantieni un tono positivo e orientato all'azione, con massimo tre insight numerati.
+
+Rispondi in italiano nella lingua dell'utente e limita la lunghezza a poche frasi per insight.`;
   }
 
   /**
