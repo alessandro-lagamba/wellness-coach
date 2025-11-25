@@ -15,6 +15,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
 import recipeLibraryService, { MealType, UserRecipe } from '../services/recipe-library.service';
 
+import { SafeAreaView } from 'react-native-safe-area-context';
 interface RecipeEditorModalProps {
   visible: boolean;
   recipe: UserRecipe | null;
@@ -197,7 +198,7 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={onClose} style={styles.headerButton}>
             <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
@@ -255,7 +256,7 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
             </View>
             <View style={[styles.smallField, { borderColor: colors.border }]}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>
-                {t('analysis.food.fridge.minutes')}
+                {t('analysis.food.recipes.editor.readyMinutes') || t('analysis.food.fridge.minutes')}
               </Text>
               <TextInput
                 value={form.readyMinutes}
@@ -404,7 +405,7 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 };
@@ -432,7 +433,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: {
-    padding: 16,
+    paddingTop: 24,
+    paddingHorizontal: 16,
     paddingBottom: 60,
   },
   field: {

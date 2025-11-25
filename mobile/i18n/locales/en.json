@@ -975,6 +975,7 @@
         "editor": {
           "title": "Edit recipe",
           "createTitle": "New recipe",
+          "readyMinutes": "Prep time (min)",
           "recipeName": "Recipe name",
           "recipeNamePlaceholder": "e.g. Protein quinoa bowl",
           "description": "Description",

@@ -202,17 +202,6 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.filterActions}>
-                    <TouchableOpacity
-                        style={[styles.addManualButton, { borderColor: colors.primary }]}
-                        onPress={onCreateRecipe}
-                    >
-                        <MaterialCommunityIcons name="plus-circle-outline" size={18} color={colors.primary} />
-                        <Text style={[styles.addManualButtonText, { color: colors.primary }]}>
-                            {t('analysis.food.recipes.addManual')}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
             </View>
 
             {/* Recipe List */}
@@ -402,6 +391,20 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
                             {activeTab === 'library' && renderLibrary()}
                             {activeTab === 'suggestions' && renderSuggestions()}
                         </ScrollView>
+                        {activeTab === 'library' && (
+                            <TouchableOpacity
+                                style={styles.fabContainer}
+                                onPress={onCreateRecipe}
+                                activeOpacity={0.9}
+                            >
+                                <View style={[styles.fabButton, { backgroundColor: colors.primary, shadowColor: colors.primary }]}>
+                                    <MaterialCommunityIcons name="plus" size={30} color={colors.textInverse} />
+                                </View>
+                                <Text style={[styles.fabLabel, { color: colors.text }]}>
+                                    {t('analysis.food.recipes.addManual')}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </SafeAreaView>
             </View>
@@ -581,7 +584,7 @@ const styles = StyleSheet.create({
     },
     scrollViewContent: {
         padding: 16,
-        paddingBottom: 40,
+        paddingBottom: 120,
     },
 
     // Filters
@@ -663,21 +666,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    filterActions: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginTop: 12,
-    },
-    addManualButton: {
-        flexDirection: 'row',
+    fabContainer: {
+        position: 'absolute',
+        bottom: 24,
+        alignSelf: 'center',
         alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 999,
-        borderWidth: 1,
     },
-    addManualButtonText: {
+    fabButton: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 6,
+    },
+    fabLabel: {
+        marginTop: 8,
         fontSize: 12,
         fontWeight: '700',
     },

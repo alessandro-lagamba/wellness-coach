@@ -981,6 +981,7 @@
         "editor": {
           "title": "Modifica ricetta",
           "createTitle": "Nuova ricetta",
+          "readyMinutes": "Tempo di preparazione (min)",
           "recipeName": "Nome ricetta",
           "recipeNamePlaceholder": "Es. Bowl di quinoa proteica",
           "description": "Descrizione",
