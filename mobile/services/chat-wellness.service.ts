@@ -1,4 +1,6 @@
 import { supabase, Tables, ChatSession, ChatMessage, WellnessSuggestion, UserWellnessSuggestion } from '../lib/supabase';
+import { encryptText, decryptText } from './encryption.service';
+import { logReadEvent, logWriteEvent, logDecryptionEvent, logEncryptionEvent } from './audit-log.service';
 
 export class ChatService {
   /**
@@ -47,13 +49,30 @@ export class ChatService {
     wellnessSuggestionId?: string
   ): Promise<ChatMessage | null> {
     try {
+      // Cifra il contenuto prima di salvare (solo per messaggi utente e assistant)
+      let encryptedContent: string | null = null;
+      if (role === 'user' || role === 'assistant') {
+        try {
+          encryptedContent = await encryptText(content, userId);
+          if (encryptedContent) {
+            await logEncryptionEvent('chat');
+          }
+        } catch (encError) {
+          console.warn('[Chat] ⚠️ Encryption failed, saving as plaintext (fallback):', encError);
+          encryptedContent = content; // Fallback
+        }
+      } else {
+        // I messaggi di sistema non vengono cifrati
+        encryptedContent = content;
+      }
+
       const { data, error } = await supabase
         .from(Tables.CHAT_MESSAGES)
         .insert({
           session_id: sessionId,
           user_id: userId,
           role,
-          content,
+          content: encryptedContent || content,
           emotion_context: emotionContext || {},
           wellness_suggestion_id: wellnessSuggestionId,
         })
@@ -65,7 +84,20 @@ export class ChatService {
         return null;
       }
 
-      return data;
+      // Decifra il contenuto prima di restituire
+      const message = data as ChatMessage;
+      if (message.content && (role === 'user' || role === 'assistant')) {
+        const decrypted = await decryptText(message.content, userId);
+        if (decrypted !== null) {
+          message.content = decrypted;
+          await logDecryptionEvent('chat', message.id);
+        }
+      }
+
+      // Log scrittura
+      await logWriteEvent('chat', message.id);
+
+      return message;
     } catch (error) {
       console.error('Error in saveChatMessage:', error);
       return null;
@@ -88,7 +120,21 @@ export class ChatService {
         return [];
       }
 
-      return data || [];
+      // Decifra i contenuti dei messaggi
+      const messages = (data || []) as ChatMessage[];
+      for (const message of messages) {
+        if (message.content && (message.role === 'user' || message.role === 'assistant')) {
+          const decrypted = await decryptText(message.content, message.user_id || '');
+          if (decrypted !== null) {
+            message.content = decrypted;
+            await logDecryptionEvent('chat', message.id);
+          }
+        }
+        // Log accesso in lettura per ogni messaggio
+        await logReadEvent('chat', message.id);
+      }
+
+      return messages;
     } catch (error) {
       console.error('Error in getChatMessages:', error);
       return [];
@@ -137,9 +183,20 @@ export class ChatService {
 
         // Solo se c'è almeno un messaggio utente
         if (messages && messages.length > 0) {
+          // Decifra il primo messaggio utente
+          let firstMessage = messages[0].content;
+          try {
+            const decrypted = await decryptText(firstMessage, userId);
+            if (decrypted !== null) {
+              firstMessage = decrypted;
+            }
+          } catch (err) {
+            // Se fallisce la decifratura, usa il testo originale (backward compatibility)
+          }
+          
           sessionsWithMessages.push({
             ...session,
-            firstUserMessage: messages[0].content
+            firstUserMessage: firstMessage
           });
         }
 

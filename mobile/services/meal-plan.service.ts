@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { AuthService } from './auth.service';
 import { UserRecipe } from './recipe-library.service';
+import { encryptText, decryptText } from './encryption.service';
 
 export type MealPlanMealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
@@ -54,12 +55,35 @@ class MealPlanService {
       throw error;
     }
 
-    return (data || []).map((row) => this.mapRow(row));
+    const entries = (data || []).map((row) => this.mapRow(row));
+    
+    // Decifra le note se presenti
+    for (const entry of entries) {
+      if (entry.notes) {
+        const decrypted = await decryptText(entry.notes, user.id);
+        if (decrypted !== null) {
+          entry.notes = decrypted;
+        }
+      }
+    }
+    
+    return entries;
   }
 
   async upsertEntry(input: UpsertMealPlanInput): Promise<MealPlanEntry> {
     const user = await AuthService.getCurrentUser();
     if (!user) throw new Error('User not authenticated');
+
+    // Cifra le note prima di salvare
+    let encryptedNotes: string | null = null;
+    if (input.notes) {
+      try {
+        encryptedNotes = await encryptText(input.notes, user.id);
+      } catch (encError) {
+        console.warn('[MealPlan] ⚠️ Encryption failed, saving as plaintext (fallback):', encError);
+        encryptedNotes = input.notes; // Fallback
+      }
+    }
 
     const payload = {
       user_id: user.id,
@@ -68,7 +92,7 @@ class MealPlanService {
       recipe_id: input.recipe_id || null,
       custom_recipe: input.custom_recipe || null,
       servings: input.servings ?? 1,
-      notes: input.notes ?? null,
+      notes: encryptedNotes,
       updated_at: new Date().toISOString(),
     };
 
@@ -83,7 +107,17 @@ class MealPlanService {
       throw error;
     }
 
-    return this.mapRow(data);
+    const entry = this.mapRow(data);
+    
+    // Decifra le note prima di restituire
+    if (entry.notes) {
+      const decrypted = await decryptText(entry.notes, user.id);
+      if (decrypted !== null) {
+        entry.notes = decrypted;
+      }
+    }
+    
+    return entry;
   }
 
   async removeEntry(planDate: string, mealType: MealPlanMealType): Promise<void> {

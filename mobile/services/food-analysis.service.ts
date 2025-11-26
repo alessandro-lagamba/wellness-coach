@@ -1,4 +1,5 @@
 import { supabase, Tables, FoodAnalysis } from '../lib/supabase';
+import { encryptText, decryptText, encryptStringArray, decryptStringArray } from './encryption.service';
 import cacheService from './cache.service';
 import { DataValidationService } from './data-validation.service';
 import { RetryService } from './retry.service';
@@ -101,6 +102,21 @@ export class FoodAnalysisService {
                 if (isSimilar) {
                   EnhancedLoggingService.logDatabaseOperation('update', 'food_analysis', true);
                   
+                  // Cifra observations prima di salvare
+                  let encryptedObservations: string[] | null = null;
+                  if (analysis.observations && analysis.observations.length > 0) {
+                    try {
+                      const encrypted = await encryptStringArray(analysis.observations, userId);
+                      if (encrypted) {
+                        // Salva come array con un singolo elemento cifrato (per compatibilità con tipo array)
+                        encryptedObservations = [encrypted];
+                      }
+                    } catch (encError) {
+                      console.warn('[FoodAnalysis] ⚠️ Encryption failed for observations, saving as plaintext (fallback):', encError);
+                      encryptedObservations = analysis.observations; // Fallback
+                    }
+                  }
+                  
                   const { data: updated, error: updateError } = await supabase
                     .from(Tables.FOOD_ANALYSES)
                     .update({
@@ -115,7 +131,7 @@ export class FoodAnalysisService {
                       minerals: analysis.minerals || {},
                       health_score: analysis.healthScore,
                       recommendations: analysis.recommendations,
-                      observations: analysis.observations,
+                      observations: encryptedObservations || analysis.observations,
                       confidence: analysis.confidence,
                       analysis_data: analysis.analysisData || {},
                       image_url: analysis.imageUrl || recentAnalysis.image_url,
@@ -144,7 +160,31 @@ export class FoodAnalysisService {
                     }
                   }
                   
-                  return updated;
+                  // Decifra observations prima di restituire
+                  const result = updated as FoodAnalysis;
+                  if (result.observations && result.observations.length > 0) {
+                    const decrypted = await decryptStringArray(result.observations[0], userId);
+                    if (decrypted !== null) {
+                      result.observations = decrypted;
+                    }
+                  }
+                  
+                  return result;
+                }
+              }
+
+              // Cifra observations prima di salvare
+              let encryptedObservations: string[] | null = null;
+              if (analysis.observations && analysis.observations.length > 0) {
+                try {
+                  const encrypted = await encryptStringArray(analysis.observations, userId);
+                  if (encrypted) {
+                    // Salva come array con un singolo elemento cifrato (per compatibilità con tipo array)
+                    encryptedObservations = [encrypted];
+                  }
+                } catch (encError) {
+                  console.warn('[FoodAnalysis] ⚠️ Encryption failed for observations, saving as plaintext (fallback):', encError);
+                  encryptedObservations = analysis.observations; // Fallback
                 }
               }
 
@@ -164,7 +204,7 @@ export class FoodAnalysisService {
                   minerals: analysis.minerals || {},
                   health_score: analysis.healthScore,
                   recommendations: analysis.recommendations,
-                  observations: analysis.observations,
+                  observations: encryptedObservations || analysis.observations,
                   confidence: analysis.confidence,
                   analysis_data: analysis.analysisData || {},
                   image_url: analysis.imageUrl,
@@ -192,7 +232,16 @@ export class FoodAnalysisService {
                 }
               }
               
-              return data;
+              // Decifra observations prima di restituire
+              const result = data as FoodAnalysis;
+              if (result.observations && result.observations.length > 0) {
+                const decrypted = await decryptStringArray(result.observations[0], userId);
+                if (decrypted !== null) {
+                  result.observations = decrypted;
+                }
+              }
+              
+              return result;
             } catch (error) {
               const err = error instanceof Error ? error : new Error('Unknown error');
               EnhancedLoggingService.logSaveOperation('food_analysis', userId, false, err);
@@ -240,8 +289,16 @@ export class FoodAnalysisService {
         return null;
       }
 
-      // Cache per 5 minuti
+      // Decifra observations prima di restituire
       if (data) {
+        if (data.observations && data.observations.length > 0) {
+          const decrypted = await decryptStringArray(data.observations[0], userId);
+          if (decrypted !== null) {
+            data.observations = decrypted;
+          }
+        }
+        
+        // Cache per 5 minuti (dopo decifratura)
         await cacheService.set(cacheKey, data, 5 * 60 * 1000);
       }
 
@@ -269,7 +326,18 @@ export class FoodAnalysisService {
         return [];
       }
 
-      return data || [];
+      // Decifra observations per tutti i record
+      const analyses = (data || []) as FoodAnalysis[];
+      for (const analysis of analyses) {
+        if (analysis.observations && analysis.observations.length > 0) {
+          const decrypted = await decryptStringArray(analysis.observations[0], userId);
+          if (decrypted !== null) {
+            analysis.observations = decrypted;
+          }
+        }
+      }
+
+      return analyses;
     } catch (error) {
       console.error('Error in getFoodHistory:', error);
       return [];

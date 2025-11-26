@@ -410,7 +410,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     stepsGoal: number,
     hydrationGoal: number,
     meditationGoal: number,
-    sleepGoal: number
+    sleepGoal: number,
+    cycle?: { day: number; phase: string; phaseName: string; nextPeriodDays: number; cycleLength: number } | null
   ): WidgetData[] => {
     const normalizeHrv = (value?: number | null) => {
       if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) return 0;
@@ -471,8 +472,60 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         id: 'analyses', title: t('widgets.analyses'), icon: '📊', color: '#10b981', backgroundColor: '#f0fdf4', category: 'analysis',
         analyses: { completed: true, emotionAnalysis: true, skinAnalysis: true, lastCheckIn: t('home.analyses.today'), streak: 0 }
       },
+      // 🆕 Aggiungi widget ciclo solo se l'utente è di genere femminile E ci sono dati disponibili
+      ...(userGender === 'female' && cycle ? [{
+        id: 'cycle', title: t('widgets.cycle'), icon: '🌸', color: '#ec4899', backgroundColor: '#fdf2f8', category: 'health' as const,
+        cycle: {
+          day: cycle.day,
+          phase: cycle.phase,
+          phaseName: cycle.phaseName,
+          nextPeriodDays: cycle.nextPeriodDays,
+          cycleLength: cycle.cycleLength,
+        }
+      }] : []),
     ];
   };
+
+  // 🆕 Stato per i dati del ciclo mestruale
+  const [cycleData, setCycleData] = useState<{ day: number; phase: string; phaseName: string; nextPeriodDays: number; cycleLength: number } | null>(null);
+  // 🆕 Stato per il genere dell'utente (per filtrare il widget ciclo)
+  const [userGender, setUserGender] = useState<'male' | 'female' | 'other' | 'prefer_not_to_say' | null>(null);
+  
+  // 🆕 Funzione per caricare genere e dati del ciclo
+  const loadUserGenderAndCycle = useCallback(async () => {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (currentUser?.id) {
+        const userProfile = await AuthService.getUserProfile(currentUser.id);
+        const gender = userProfile?.gender || null;
+        setUserGender(gender);
+        
+        // Carica i dati del ciclo solo se l'utente è di genere femminile
+        if (gender === 'female') {
+          const { menstrualCycleService } = await import('../services/menstrual-cycle.service');
+          const cycle = await menstrualCycleService.getCycleData();
+          setCycleData(cycle);
+        } else {
+          setCycleData(null);
+        }
+      }
+    } catch (error) {
+      console.warn('[HomeScreen] Failed to load user gender/cycle data:', error);
+      setCycleData(null);
+    }
+  }, []);
+
+  // 🆕 Carica il genere dell'utente e i dati del ciclo mestruale all'avvio
+  useEffect(() => {
+    loadUserGenderAndCycle();
+  }, [loadUserGenderAndCycle]);
+
+  // 🆕 Ricarica genere e ciclo quando la schermata torna in focus (es. dopo aver cambiato il genere nelle impostazioni)
+  useFocusEffect(
+    useCallback(() => {
+      loadUserGenderAndCycle();
+    }, [loadUserGenderAndCycle])
+  );
 
   // 🔥 FIX: Helper function per tradurre widget title (evita duplicazione)
   const translateWidgetTitle = useCallback((widgetId: string): string => {
@@ -483,6 +536,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       case 'sleep': return t('widgets.sleep');
       case 'hrv': return t('widgets.hrv');
       case 'analyses': return t('widgets.analyses');
+      case 'cycle': return t('widgets.cycle');
       default: return widgetId;
     }
   }, [t]);
@@ -535,8 +589,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     }
 
     const hd = healthData;
-    return buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoal, meditationGoal, sleepGoal);
-  }, [healthData, healthStatus, placeholderMessages, translateWidgetTitle]);
+    // 🆕 Passa cycleData solo se l'utente è di genere femminile
+    const cycleForWidget = userGender === 'female' ? cycleData : null;
+    return buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoal, meditationGoal, sleepGoal, cycleForWidget);
+  }, [healthData, healthStatus, placeholderMessages, translateWidgetTitle, cycleData, userGender, t]);
 
   // Load today glance data
   // 🔥 FIX: Memoizziamo la funzione con useCallback per evitare ricreazioni ad ogni render
@@ -711,6 +767,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       }
       case 'analyses':
         return info.analyses?.completed ? t('home.status.complete') : t('home.status.pending');
+      case 'cycle':
+        return info.cycle ? t('home.cycle.day', { day: info.cycle.day }) : '—';
       default:
         return info.value ?? '--';
     }
@@ -728,6 +786,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       }
       case 'analyses':
         return info.analyses?.lastCheckIn ?? t('home.analyses.today');
+      case 'cycle':
+        if (!info.cycle) return '';
+        const phaseKey = `home.cycle.phases.${info.cycle.phase}`;
+        return t(phaseKey, { defaultValue: info.cycle.phaseName });
       default:
         return info.subtitle ?? '';
     }
@@ -750,6 +812,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       }
       case 'analyses':
         return info.analyses?.completed ? '✓' : '!';
+      case 'cycle':
+        if (!info.cycle) return undefined;
+        // Mostra i giorni fino al prossimo periodo come trend
+        if (info.cycle.nextPeriodDays <= 3) return '!';
+        if (info.cycle.nextPeriodDays <= 7) return '⚠';
+        return '✓';
       default:
         return undefined;
     }
@@ -787,6 +855,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         return [
           { icon: '🔥', label: t('home.analyses.streak'), value: t('home.analyses.days', { count: info.analyses?.streak ?? 0 }) },
           { icon: info.analyses?.completed ? '✅' : '🕒', label: t('home.analyses.status'), value: info.analyses?.completed ? t('home.status.loggedToday') : t('home.status.completeCheckIns') },
+        ];
+      case 'cycle':
+        if (!info.cycle) return undefined;
+        return [
+          { icon: '📅', label: t('home.cycle.nextPeriod'), value: t('home.cycle.days', { count: info.cycle.nextPeriodDays }) },
+          { icon: '🔄', label: t('home.cycle.cycleLength'), value: t('home.cycle.days', { count: info.cycle.cycleLength }) },
         ];
       default:
         return undefined;
@@ -884,7 +958,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             }
 
             if (existingCheckin.mood_note) {
-              setMoodNote(existingCheckin.mood_note);
+              // Decifra mood_note prima di mostrarlo
+              try {
+                const { decryptText } = await import('../services/encryption.service');
+                const decrypted = await decryptText(existingCheckin.mood_note, currentUser.id);
+                if (decrypted !== null) {
+                  setMoodNote(decrypted);
+                } else {
+                  setMoodNote(existingCheckin.mood_note); // Fallback per dati vecchi non cifrati
+                }
+              } catch (err) {
+                setMoodNote(existingCheckin.mood_note); // Fallback
+              }
             }
 
             if (existingCheckin.sleep_quality !== null && existingCheckin.sleep_quality !== undefined && existingCheckin.sleep_quality > 0) {
@@ -900,7 +985,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             }
 
             if (existingCheckin.sleep_note) {
-              setSleepNote(existingCheckin.sleep_note);
+              // Decifra sleep_note prima di mostrarlo
+              try {
+                const { decryptText } = await import('../services/encryption.service');
+                const decrypted = await decryptText(existingCheckin.sleep_note, currentUser.id);
+                if (decrypted !== null) {
+                  setSleepNote(decrypted);
+                } else {
+                  setSleepNote(existingCheckin.sleep_note); // Fallback per dati vecchi non cifrati
+                }
+              } catch (err) {
+                setSleepNote(existingCheckin.sleep_note); // Fallback
+              }
             }
           } else {
             // 🔥 FIX: Se non esiste un check-in nel database, usa AsyncStorage come fallback
@@ -1019,11 +1115,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 }
               }
 
+              // Cifra mood_note prima di salvare
+              let encryptedMoodNote: string | null = null;
+              if (note) {
+                try {
+                  const { encryptText } = await import('../services/encryption.service');
+                  encryptedMoodNote = await encryptText(note, currentUser.id);
+                } catch (encError) {
+                  console.warn('[HomeScreen] ⚠️ Encryption failed for mood_note, saving as plaintext (fallback):', encError);
+                  encryptedMoodNote = note; // Fallback
+                }
+              }
+
               const upsertData = {
                 user_id: currentUser.id,
                 date: dk,
                 mood: value,
-                mood_note: note || null, // Salva la nota (o null se vuota)
+                mood_note: encryptedMoodNote || null, // Salva la nota cifrata (o null se vuota)
                 updated_at: new Date().toISOString(),
                 // Preserva i valori esistenti per sleep e altri campi se esistono
                 ...(existing ? {
@@ -1158,12 +1266,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 }
               }
 
+              // Cifra sleep_note prima di salvare
+              let encryptedSleepNote: string | null = null;
+              if (note) {
+                try {
+                  const { encryptText } = await import('../services/encryption.service');
+                  encryptedSleepNote = await encryptText(note, currentUser.id);
+                } catch (encError) {
+                  console.warn('[HomeScreen] ⚠️ Encryption failed for sleep_note, saving as plaintext (fallback):', encError);
+                  encryptedSleepNote = note; // Fallback
+                }
+              }
+
               const upsertData = {
                 user_id: currentUser.id,
                 date: dk,
                 sleep_quality: quality,
                 sleep_hours: sleepHours,
-                sleep_note: note || null, // Salva la nota (o null se vuota)
+                sleep_note: encryptedSleepNote || null, // Salva la nota cifrata (o null se vuota)
                 updated_at: new Date().toISOString(),
                 // Preserva i valori esistenti per mood e altri campi se esistono
                 ...(existing ? {
@@ -1262,6 +1382,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       case 'analyses':
         router.push('/(tabs)/emotion' as any);
         break;
+      case 'cycle':
+        // 🆕 Apri modal per configurare/visualizzare il ciclo mestruale
+        // Per ora, mostra un alert informativo (in futuro si può creare un modal dedicato)
+        const cycleInfo = widgetData.find(w => w.id === 'cycle')?.cycle;
+        if (cycleInfo) {
+          Alert.alert(
+            t('widgets.cycle'),
+            `${t('home.cycle.day', { day: cycleInfo.day })}\n${t('home.cycle.phases.' + cycleInfo.phase, { defaultValue: cycleInfo.phaseName })}\n${t('home.cycle.nextPeriod')}: ${t('home.cycle.days', { count: cycleInfo.nextPeriodDays })}`,
+            [{ text: t('common.ok') }]
+          );
+        } else {
+          Alert.alert(
+            t('widgets.cycle'),
+            t('home.cycle.notConfigured') || 'Configura il tuo ciclo mestruale nelle impostazioni per vedere le informazioni qui.',
+            [{ text: t('common.ok') }]
+          );
+        }
+        break;
     }
   };
 
@@ -1280,8 +1418,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     setWidgetSelectionModal({ visible: true, position });
   };
 
-  // 🔥 Lista di tutti i widget disponibili
-  const ALL_AVAILABLE_WIDGETS = ['steps', 'meditation', 'hydration', 'sleep', 'hrv', 'analyses'];
+  // 🔥 Lista di tutti i widget disponibili (filtra 'cycle' se l'utente non è di genere femminile)
+  const ALL_AVAILABLE_WIDGETS = useMemo(() => {
+    const baseWidgets = ['steps', 'meditation', 'hydration', 'sleep', 'hrv', 'analyses'];
+    // Aggiungi 'cycle' solo se l'utente è di genere femminile
+    if (userGender === 'female') {
+      baseWidgets.push('cycle');
+    }
+    return baseWidgets;
+  }, [userGender]);
 
   // 🔥 Filtra i widget NON ancora mostrati (non presenti nella config o disabilitati)
   const getAvailableWidgets = (): string[] => {
@@ -1387,7 +1532,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         lastUserIdRef.current = currentUser.id;
         userDataLoadedRef.current = true;
 
-        // Load user profile for first name
+        // Load user profile for first name and gender
         const userProfile = await AuthService.getUserProfile(currentUser.id);
         if (userProfile?.first_name) {
           setUserFirstName(userProfile.first_name);
@@ -1397,6 +1542,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         } else if (currentUser.email) {
           const firstName = currentUser.email.split('@')[0].split('.')[0];
           setUserFirstName(firstName);
+        }
+        
+        // 🆕 Aggiorna il genere dell'utente e carica i dati del ciclo se necessario
+        const gender = userProfile?.gender || null;
+        setUserGender(gender);
+        
+        // Carica i dati del ciclo solo se l'utente è di genere femminile
+        if (gender === 'female') {
+          const { menstrualCycleService } = await import('../services/menstrual-cycle.service');
+          const cycle = await menstrualCycleService.getCycleData();
+          setCycleData(cycle);
+        } else {
+          setCycleData(null);
         }
 
         // Load momentum data (solo se non è già stato caricato)
@@ -2016,12 +2174,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 )
                   .sort((a, b) => a.position - b.position)
                   .map((widget) => {
+                    // 🆕 Filtra il widget 'cycle' se l'utente non è di genere femminile
+                    if (widget.id === 'cycle' && userGender !== 'female') {
+                      return null;
+                    }
+                    
                     // 👇 lascia esattamente il tuo map attuale (non serve cambiare la logica interna)
                     const widgetInfo = widgetData.find(w => w.id === widget.id);
                     if (!widgetInfo) return null;
 
                     const WidgetComponent =
-                      widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'analyses'
+                      widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'analyses' || widget.id === 'cycle'
                         ? MiniInfoCard
                         : MiniGaugeChart;
 
@@ -2103,11 +2266,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 )
                   .sort((a, b) => a.position - b.position)
                   .map((widget) => {
+                    // 🆕 Filtra il widget 'cycle' se l'utente non è di genere femminile
+                    if (widget.id === 'cycle' && userGender !== 'female') {
+                      return null;
+                    }
+                    
                     const widgetInfo = widgetData.find(w => w.id === widget.id);
                     if (!widgetInfo) return null;
 
                     const WidgetComponent =
-                      widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'analyses'
+                      widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'analyses' || widget.id === 'cycle'
                         ? MiniInfoCard
                         : MiniGaugeChart;
 

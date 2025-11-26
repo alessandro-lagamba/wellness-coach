@@ -109,6 +109,16 @@ export class AuthService {
       // Crea il profilo utente
       if (data.user) {
         await this.createUserProfile(data.user.id, email, fullName);
+        
+        // Inizializza la chiave di cifratura E2E per il nuovo utente
+        try {
+          const { initializeEncryptionKey } = await import('./encryption.service');
+          await initializeEncryptionKey(data.user.id, password);
+          console.log('[Auth] ✅ Encryption key initialized for new user');
+        } catch (encError) {
+          console.warn('[Auth] ⚠️ Failed to initialize encryption key (non-critical):', encError);
+          // Non blocchiamo la registrazione se la cifratura fallisce
+        }
       }
 
       return { user: data.user, error: null };
@@ -136,6 +146,17 @@ export class AuthService {
       // Salva i dati di autenticazione per la persistenza
       if (data.user && data.session) {
         await AuthPersistenceService.saveAuthData(data.user, data.session, rememberMe);
+        
+        // Inizializza la chiave di cifratura E2E per questo utente
+        // La chiave viene derivata dalla password e salvata in SecureStore
+        try {
+          const { initializeEncryptionKey } = await import('./encryption.service');
+          await initializeEncryptionKey(data.user.id, password);
+          console.log('[Auth] ✅ Encryption key initialized for user');
+        } catch (encError) {
+          console.warn('[Auth] ⚠️ Failed to initialize encryption key (non-critical):', encError);
+          // Non blocchiamo il login se la cifratura fallisce
+        }
       }
 
       return { user: data.user, error: null };
@@ -159,6 +180,18 @@ export class AuthService {
 
       // Pulisce i dati di persistenza
       await AuthPersistenceService.clearAuthData();
+      
+      // Cancella la chiave di cifratura dalla sessione
+      try {
+        const { clearEncryptionKey } = await import('./encryption.service');
+        const currentUser = await this.getCurrentUser();
+        if (currentUser) {
+          await clearEncryptionKey(currentUser.id);
+          console.log('[Auth] ✅ Encryption key cleared');
+        }
+      } catch (encError) {
+        console.warn('[Auth] ⚠️ Failed to clear encryption key (non-critical):', encError);
+      }
 
       return { error: null };
     } catch (error) {

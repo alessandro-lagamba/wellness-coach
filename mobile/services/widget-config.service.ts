@@ -27,6 +27,7 @@ export interface WidgetData {
   sleep?: { hours: number; quality: number; goal: number; deepSleep: string; remSleep: string; bedtime: string; wakeTime: string };
   hrv?: { value: number; restingHR: number; currentHR?: number; avgHRV: number; recovery: string };
   analyses?: { completed: boolean; emotionAnalysis: boolean; skinAnalysis: boolean; lastCheckIn: string; streak: number };
+  cycle?: { day: number; phase: string; phaseName: string; nextPeriodDays: number; cycleLength: number };
   placeholder?: {
     status: HealthDataStatus;
     message: string;
@@ -61,6 +62,7 @@ class WidgetConfigService {
     { id: 'sleep',       enabled: true, size: 'large',  position: 3 },
     { id: 'hrv',         enabled: true, size: 'small',  position: 4 },
     { id: 'analyses',    enabled: true, size: 'small',  position: 5 },
+    { id: 'cycle',       enabled: false, size: 'small', position: 0 }, // Disabilitato di default, può essere abilitato
   ];
 
   static getInstance(): WidgetConfigService {
@@ -359,6 +361,8 @@ export class WidgetDataService {
         hrv: { value: mock.hrv, restingHR: mock.restingHR, currentHR: 72, avgHRV: 35, recovery: 'Good' } },
       { id: 'analyses', title: 'Check-In', icon: '📊', color: '#10b981', backgroundColor: '#f0fdf4', category: 'analysis',
         analyses: { completed: mock.analysesCompleted > 0, emotionAnalysis: true, skinAnalysis: true, lastCheckIn: 'Today', streak: 5 } },
+      { id: 'cycle', title: 'Cycle', icon: '🌸', color: '#ec4899', backgroundColor: '#fdf2f8', category: 'health',
+        cycle: { day: 5, phase: 'menstrual', phaseName: 'Menstrual', nextPeriodDays: 24, cycleLength: 28 } },
     ];
   }
 }

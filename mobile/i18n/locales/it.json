@@ -298,6 +298,19 @@
       "lastCheckIn": "Ultimo check-in",
       "today": "Oggi"
     },
+    "cycle": {
+      "day": "Giorno {{day}}",
+      "days": "{{count}} giorni",
+      "nextPeriod": "Prossimo periodo",
+      "cycleLength": "Lunghezza ciclo",
+      "notConfigured": "Configura il tuo ciclo mestruale nelle impostazioni per vedere le informazioni qui.",
+      "phases": {
+        "menstrual": "Mestruale",
+        "follicular": "Follicolare",
+        "ovulation": "Ovulazione",
+        "luteal": "Luteale"
+      }
+    },
     "goal": "Obiettivo",
     "bpm": "bpm",
     "stats": {
@@ -1583,6 +1596,7 @@
     "sleep": "Sonno",
     "hrv": "HRV",
     "analyses": "Check-In",
+    "cycle": "Ciclo",
     "checkIn": "Check-In",
     "large": "Grande (65%)",
     "small": "Piccolo (30%)"

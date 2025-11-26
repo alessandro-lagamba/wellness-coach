@@ -328,21 +328,6 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
 
   const recommendations = personalizedRecommendations;
 
-  const mealInsights = useMemo(() => {
-    return personalizedRecommendations.slice(0, 3).map((rec) => ({
-      id: rec.id,
-      title: rec.title,
-      description: rec.description,
-      priority: rec.priority,
-      icon:
-        rec.priority === 'high'
-          ? 'alert-circle'
-          : rec.priority === 'medium'
-          ? 'lightbulb-on'
-          : 'check-circle',
-    }));
-  }, [personalizedRecommendations]);
-
   return (
     <LinearGradient
       colors={isDark ? ['#111827', '#1f2937'] : ['#f8fafc', '#e2e8f0']}
@@ -440,48 +425,6 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
                   </View>
                 ))}
               </View>
-            </View>
-          )}
-
-          {mealInsights.length > 0 && (
-            <View style={styles.mealInsightCard}>
-              <View style={styles.mealInsightHeader}>
-                <View>
-                  <Text style={[styles.mealInsightTitle, { color: colors.text }]}>
-                    {t('analysis.food.results.mealInsights.title') || 'Insight del pasto'}
-                  </Text>
-                  <Text style={[styles.mealInsightSubtitle, { color: colors.textSecondary }]}>
-                    {t('analysis.food.results.mealInsights.subtitle') || 'L’AI ha analizzato il piatto e ti suggerisce come migliorarlo'}
-                  </Text>
-                </View>
-                <View style={[styles.mealInsightBadge, { backgroundColor: colors.primary + '22' }]}>
-                  <MaterialCommunityIcons name="robot-outline" size={16} color={colors.primary} />
-                  <Text style={[styles.mealInsightBadgeText, { color: colors.primary }]}>AI</Text>
-                </View>
-              </View>
-
-              {mealInsights.map((insight, idx) => (
-                <View
-                  key={insight.id}
-                  style={[
-                    styles.mealInsightRow,
-                    { borderColor: colors.border, borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth },
-                  ]}
-                >
-                  <View style={[styles.mealInsightIcon, { backgroundColor: colors.surfaceElevated }]}>
-                    <MaterialCommunityIcons name={insight.icon as any} size={18} color={colors.primary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.mealInsightRowTitle, { color: colors.text }]}>{insight.title}</Text>
-                    <Text style={[styles.mealInsightRowText, { color: colors.textSecondary }]}>{insight.description}</Text>
-                  </View>
-                  <View style={[styles.mealInsightPriority, { borderColor: colors.border }]}>
-                    <Text style={[styles.mealInsightPriorityText, { color: colors.textSecondary }]}>
-                      {t(`analysis.food.recommendations.priority.${insight.priority}`)}
-                    </Text>
-                  </View>
-                </View>
-              ))}
             </View>
           )}
 

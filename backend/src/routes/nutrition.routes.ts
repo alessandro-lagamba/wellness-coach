@@ -10,6 +10,7 @@ import {
   generateRestaurantRecipe,
   parseIngredients,
 } from "../controllers/nutrition.controller";
+import { strictRateLimiter } from "../middleware/rate-limiter";
 
 const router: Router = Router();
 
@@ -20,10 +21,12 @@ router.post("/analyze-image", analyzeImage);
 router.post("/suggest-meal", suggestMeal);
 
 // POST /api/nutrition/generate-recipe - Generate recipe from ingredients
-router.post("/generate-recipe", generateRecipe);
+// Rate limit strict: generazione ricette è costosa e può essere abusata
+router.post("/generate-recipe", strictRateLimiter, generateRecipe);
 
 // POST /api/nutrition/generate-restaurant-recipe - Generate recipe from restaurant meal
-router.post("/generate-restaurant-recipe", generateRestaurantRecipe);
+// Rate limit strict: generazione ricette è costosa e può essere abusata
+router.post("/generate-restaurant-recipe", strictRateLimiter, generateRestaurantRecipe);
 
 // POST /api/nutrition/parse-ingredients - Parse ingredients from voice/text
 router.post("/parse-ingredients", parseIngredients);

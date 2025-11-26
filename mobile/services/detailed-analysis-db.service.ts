@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { encryptText, decryptText } from './encryption.service';
 
 export interface DetailedAnalysisRecord {
   id: string;
@@ -33,12 +34,21 @@ export class DetailedAnalysisDBService {
     try {
       const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
       
+      // Cifra ai_response prima di salvare
+      let encryptedAiResponse: string | null = null;
+      try {
+        encryptedAiResponse = await encryptText(aiResponse, userId);
+      } catch (encError) {
+        console.warn('[DetailedAnalysis] ⚠️ Encryption failed, saving as plaintext (fallback):', encError);
+        encryptedAiResponse = aiResponse; // Fallback
+      }
+      
       const recordData = {
         user_id: userId,
         analysis_type: analysisType,
         analysis_date: date,
         analysis_data: analysisData,
-        ai_response: aiResponse,
+        ai_response: encryptedAiResponse,
         updated_at: new Date().toISOString(),
       };
 
@@ -80,7 +90,17 @@ export class DetailedAnalysisDBService {
       }
 
       console.log('✅ Detailed analysis saved successfully');
-      return { success: true, data: result.data };
+      
+      // Decifra ai_response prima di restituire
+      const record = result.data as DetailedAnalysisRecord;
+      if (record.ai_response) {
+        const decrypted = await decryptText(record.ai_response, userId);
+        if (decrypted !== null) {
+          record.ai_response = decrypted;
+        }
+      }
+      
+      return { success: true, data: record };
     } catch (error) {
       console.error('Error in saveDetailedAnalysis:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -112,7 +132,17 @@ export class DetailedAnalysisDBService {
 
       if (data) {
         console.log(`✅ Found existing detailed analysis for ${analysisType} on ${date}`);
-        return { success: true, data };
+        
+        // Decifra ai_response prima di restituire
+        const record = data as DetailedAnalysisRecord;
+        if (record.ai_response) {
+          const decrypted = await decryptText(record.ai_response, userId);
+          if (decrypted !== null) {
+            record.ai_response = decrypted;
+          }
+        }
+        
+        return { success: true, data: record };
       } else {
         console.log(`ℹ️ No existing detailed analysis found for ${analysisType} on ${date}`);
         return { success: true, data: undefined };
@@ -146,7 +176,19 @@ export class DetailedAnalysisDBService {
       }
 
       console.log(`✅ Fetched ${data?.length || 0} detailed analysis records for ${analysisType}`);
-      return { success: true, data: data || [] };
+      
+      // Decifra ai_response per tutti i record
+      const records = (data || []) as DetailedAnalysisRecord[];
+      for (const record of records) {
+        if (record.ai_response) {
+          const decrypted = await decryptText(record.ai_response, userId);
+          if (decrypted !== null) {
+            record.ai_response = decrypted;
+          }
+        }
+      }
+      
+      return { success: true, data: records };
     } catch (error) {
       console.error('Error in getDetailedAnalysisHistory:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };

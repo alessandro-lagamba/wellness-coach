@@ -5,6 +5,7 @@
 
 import { supabase } from '../lib/supabase';
 import { AuthService } from './auth.service';
+import { encryptText, decryptText } from './encryption.service';
 
 export interface FridgeItem {
   id?: string;
@@ -46,7 +47,18 @@ export class FridgeItemsService {
 
       if (error) throw error;
 
-      return data || [];
+      // Decifra le note se presenti
+      const items = (data || []) as FridgeItem[];
+      for (const item of items) {
+        if (item.notes) {
+          const decrypted = await decryptText(item.notes, currentUser.id);
+          if (decrypted !== null) {
+            item.notes = decrypted;
+          }
+        }
+      }
+
+      return items;
     } catch (error) {
       console.error('[FridgeItems] Error fetching items:', error);
       throw error;
@@ -72,6 +84,18 @@ export class FridgeItemsService {
         .single();
 
       if (existing) {
+        // Cifra le note prima di salvare
+        let encryptedNotes: string | null = null;
+        const notesToSave = item.notes ?? existing.notes;
+        if (notesToSave) {
+          try {
+            encryptedNotes = await encryptText(notesToSave, currentUser.id);
+          } catch (encError) {
+            console.warn('[FridgeItems] ⚠️ Encryption failed, saving as plaintext (fallback):', encError);
+            encryptedNotes = notesToSave; // Fallback
+          }
+        }
+
         // Update existing item
         const { data, error } = await supabase
           .from('fridge_items')
@@ -79,15 +103,35 @@ export class FridgeItemsService {
             quantity: item.quantity ?? existing.quantity,
             unit: item.unit ?? existing.unit,
             expiry_date: item.expiry_date ?? existing.expiry_date,
-            notes: item.notes ?? existing.notes,
+            notes: encryptedNotes,
           })
           .eq('id', existing.id)
           .select()
           .single();
 
         if (error) throw error;
-        return data;
+        
+        // Decifra le note prima di restituire
+        const result = data as FridgeItem;
+        if (result.notes) {
+          const decrypted = await decryptText(result.notes, currentUser.id);
+          if (decrypted !== null) {
+            result.notes = decrypted;
+          }
+        }
+        return result;
       } else {
+        // Cifra le note prima di salvare
+        let encryptedNotes: string | null = null;
+        if (item.notes) {
+          try {
+            encryptedNotes = await encryptText(item.notes, currentUser.id);
+          } catch (encError) {
+            console.warn('[FridgeItems] ⚠️ Encryption failed, saving as plaintext (fallback):', encError);
+            encryptedNotes = item.notes; // Fallback
+          }
+        }
+
         // Insert new item
         const { data, error } = await supabase
           .from('fridge_items')
@@ -97,13 +141,22 @@ export class FridgeItemsService {
             quantity: item.quantity,
             unit: item.unit,
             expiry_date: item.expiry_date,
-            notes: item.notes,
+            notes: encryptedNotes,
           })
           .select()
           .single();
 
         if (error) throw error;
-        return data;
+        
+        // Decifra le note prima di restituire
+        const result = data as FridgeItem;
+        if (result.notes) {
+          const decrypted = await decryptText(result.notes, currentUser.id);
+          if (decrypted !== null) {
+            result.notes = decrypted;
+          }
+        }
+        return result;
       }
     } catch (error) {
       console.error('[FridgeItems] Error upserting item:', error);
@@ -182,7 +235,18 @@ export class FridgeItemsService {
 
       if (error) throw error;
 
-      return data || [];
+      // Decifra le note se presenti
+      const items = (data || []) as FridgeItem[];
+      for (const item of items) {
+        if (item.notes) {
+          const decrypted = await decryptText(item.notes, currentUser.id);
+          if (decrypted !== null) {
+            item.notes = decrypted;
+          }
+        }
+      }
+
+      return items;
     } catch (error) {
       console.error('[FridgeItems] Error fetching expiring items:', error);
       throw error;
