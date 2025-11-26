@@ -38,20 +38,31 @@ IMPORTANTE: Per ogni ingrediente identificato, devi:
 3. Calcolare le calorie totali del pasto
 
 - Tipo pasto: ${params.mealType ?? "unknown"}
-
 - Preferenze: ${params.prefs?.join(", ") || "none"}
-
 - Allergie: ${params.allergies?.join(", ") || "none"}
 
-Calcola e includi nel JSON:
+Nel JSON di output (schema "meal_draft") DEVI includere, in modo coerente con lo schema:
+- items: lista degli alimenti con quantità, unità e confidence
 - macrosEstimate: macronutrienti totali del pasto (proteine, carboidrati, grassi, fibre, zuccheri in grammi)
-- caloriesEstimate: calorie totali del pasto
+- caloriesEstimate: calorie totali del pasto (kcal)
+- qualityTags: array di etichette sintetiche sulla qualità del pasto, scegli solo tra:
+  - "high_protein" (alto contenuto proteico)
+  - "whole_grain" (cereali integrali prevalenti)
+  - "vegetable_rich" (molte verdure)
+  - "ultra_processed" (cibi molto processati / industriali)
+  - "high_sugar" (molto zucchero semplice)
+  - "balanced" (profilo complessivamente equilibrato)
+  Usa solo le etichette che descrivono DAVVERO il piatto, senza inventare.
+- suggestions: 2–4 frasi brevi e pratiche (nella lingua dell'utente) su come:
+  - migliorare l'equilibrio del piatto,
+  - abbinarlo al resto della giornata,
+  - oppure confermare che è già ben bilanciato.
 
-Usa valori nutrizionali standard per alimenti comuni. Se incerto sulla quantità, abbassa la confidence.
+Usa valori nutrizionali standard per alimenti comuni. Se incerto sulla quantità o su qualche alimento, abbassa la confidence e spiega l'incertezza in modo sintetico.
 
 ${styleHints}
 
-Output JSON secondo schema. Niente testo extra.
+Output JSON secondo schema. NIENTE testo extra, niente spiegazioni fuori dal JSON.
 
 Locale: ${params.locale ?? "it-IT"}.
 `;

@@ -102,9 +102,9 @@ Return a JSON object with the following fields:
 
 - ai_analysis (text, 150-250 words):
     A personalized, actionable analysis. Structure it as:
-    - Brief acknowledgment of their specific situation (1-2 sentences)
+    - Brief acknowledgment of their specific situation (1 sentence max)
     - Interpretation of what might be causing their feelings/issues (1-2 sentences)
-    - 2-3 SPECIFIC, CONCRETE solutions or actions they can take (this is the most important part - be detailed and practical)
+    - 2-3 SPECIFIC, CONCRETE solutions or actions they can take (this is the most important part - be detailed, and practical)
     - One immediate action they can do today (be very specific)
 
 Additional context to consider:

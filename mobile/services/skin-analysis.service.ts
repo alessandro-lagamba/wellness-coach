@@ -162,8 +162,7 @@ export class SkinAnalysisService {
             shouldRetry: RetryService.isRetryableError,
           }
         );
-      },
-      `skin_analysis_${userId}`
+      }
     );
   }
 

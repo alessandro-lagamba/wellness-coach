@@ -148,8 +148,7 @@ export class EmotionAnalysisService {
             shouldRetry: RetryService.isRetryableError,
           }
         );
-      },
-      `emotion_analysis_${userId}`
+      }
     );
   }
 
