@@ -22,7 +22,11 @@ type DailyPromptOptions = {
 
 export class DailyJournalService {
   static todayKey(date = new Date()) {
-    return date.toISOString().slice(0, 10); // YYYY-MM-DD
+    // ✅ FIX: Use local timezone for "today" to avoid timezone issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   static async getLocalEntry(dayKey: string) {

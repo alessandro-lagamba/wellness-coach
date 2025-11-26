@@ -54,7 +54,9 @@ class DailyCopilotDBService {
     copilotData: DailyCopilotData
   ): Promise<{ success: boolean; error?: string; data?: DailyCopilotRecord }> {
     try {
-      const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      // ✅ FIX: Use local timezone for "today" to avoid timezone issues
+      const now = new Date();
+      const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       
       const recordData = {
         user_id: userId,
@@ -125,7 +127,10 @@ class DailyCopilotDBService {
     date?: string
   ): Promise<{ success: boolean; data?: DailyCopilotRecord; error?: string }> {
     try {
-      const targetDate = date || new Date().toISOString().slice(0, 10);
+      // ✅ FIX: Use local timezone for "today" to avoid timezone issues
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const targetDate = date || today;
       
       const { data, error } = await supabase
         .from('daily_copilot_analyses')

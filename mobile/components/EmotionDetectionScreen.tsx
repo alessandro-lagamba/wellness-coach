@@ -41,6 +41,7 @@ import { useAnalysisStore } from '../stores/analysis.store';
 import { LoadingScreen } from './LoadingScreen';
 import { EmotionTrendChart } from './charts/EmotionTrendChart';
 import { GaugeChart } from './charts/GaugeChart';
+import { EmotionTrendDetailModal } from './EmotionTrendDetailModal';
 import { AnalysisLoader } from './shared/AnalysisLoader';
 import { EmotionResultsScreen } from './EmotionResultsScreen';
 import { EnhancedMetricTile } from './EnhancedMetricTile';
@@ -129,6 +130,7 @@ export const EmotionDetectionScreen: React.FC = () => {
   // Enhanced components states
   const [nextBestActions, setNextBestActions] = useState<any[]>([]);
   const [insights, setInsights] = useState<any[]>([]);
+  const [showTrendDetailModal, setShowTrendDetailModal] = useState(false);
   const [qualityInfo, setQualityInfo] = useState<any>(null);
 
   // Intelligent insights are now handled by IntelligentInsightsSection component
@@ -1347,16 +1349,24 @@ export const EmotionDetectionScreen: React.FC = () => {
             try {
               const store = useAnalysisStore.getState();
               const emotionHistory = store.getSafeEmotionHistory();
+              
+              // Format date helper function
+              const formatDate = (timestamp: Date) => {
+                const date = new Date(timestamp);
+                return `${date.getDate()}/${date.getMonth() + 1}`;
+              };
+              
               return (
                 <EmotionTrendChart
-                  data={emotionHistory.map((session, index) => ({
-                    date: `${index + 1}`,
+                  data={emotionHistory.map((session) => ({
+                    date: formatDate(session.timestamp),
                     valence: session.avg_valence || 0,
                     arousal: session.avg_arousal || 0,
                     emotion: session.dominant || 'neutral',
                   }))}
                   title={t('analysis.emotion.trends.title')}
                   subtitle={t('analysis.emotion.trends.subtitle')}
+                  onPress={() => setShowTrendDetailModal(true)}
                 />
               );
             } catch (error) {
@@ -1367,6 +1377,7 @@ export const EmotionDetectionScreen: React.FC = () => {
                   data={[]}
                   title={t('analysis.emotion.trends.title')}
                   subtitle={t('analysis.emotion.trends.subtitle')}
+                  onPress={() => setShowTrendDetailModal(true)}
                 />
               );
             }
@@ -1416,6 +1427,12 @@ export const EmotionDetectionScreen: React.FC = () => {
               return null;
             }
           })()}
+        />
+
+        {/* Emotion Trend Detail Modal */}
+        <EmotionTrendDetailModal
+          visible={showTrendDetailModal}
+          onClose={() => setShowTrendDetailModal(false)}
         />
       </SafeAreaView>
     </View>

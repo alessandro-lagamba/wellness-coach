@@ -16,6 +16,7 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HealthPermissionsModal } from './HealthPermissionsModal';
+import { DevicePermissionsModal } from './DevicePermissionsModal';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 
 const { width, height } = Dimensions.get('window');
@@ -98,6 +99,21 @@ const getOnboardingSteps = (t: any): OnboardingStep[] => [
     actionText: t('onboarding.ai.actionText')
   },
   {
+    id: 'food',
+    title: t('onboarding.food.title'),
+    subtitle: t('onboarding.food.subtitle'),
+    description: t('onboarding.food.description'),
+    icon: '🍽️',
+    gradient: ['#ff9a56', '#ff6a88'],
+    features: [
+      t('onboarding.food.features.0'),
+      t('onboarding.food.features.1'),
+      t('onboarding.food.features.2'),
+      t('onboarding.food.features.3')
+    ],
+    actionText: t('onboarding.food.actionText')
+  },
+  {
     id: 'privacy',
     title: t('onboarding.privacy.title'),
     subtitle: t('onboarding.privacy.subtitle'),
@@ -119,6 +135,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [showHealthPermissions, setShowHealthPermissions] = useState(false);
+  const [showDevicePermissions, setShowDevicePermissions] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   
   // 🆕 Costruisci steps dinamicamente con traduzioni
@@ -133,6 +150,12 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
     // Check if this is the health step
     if (currentStepData.id === 'health') {
       setShowHealthPermissions(true);
+      return;
+    }
+
+    // Check if this is the features step (request device permissions)
+    if (currentStepData.id === 'features') {
+      setShowDevicePermissions(true);
       return;
     }
 
@@ -317,6 +340,29 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
         visible={showHealthPermissions}
         onClose={handleHealthPermissionsClose}
         onSuccess={handleHealthPermissionsSuccess}
+      />
+
+      {/* Device Permissions Modal */}
+      <DevicePermissionsModal
+        visible={showDevicePermissions}
+        onClose={() => {
+          setShowDevicePermissions(false);
+          // Continue to next step even if permissions were skipped
+          const nextStep = currentStep + 1;
+          setCurrentStep(nextStep);
+          if (scrollViewRef.current) {
+            scrollViewRef.current.scrollTo({ x: nextStep * width, animated: true });
+          }
+        }}
+        onSuccess={() => {
+          setShowDevicePermissions(false);
+          // Continue to next step
+          const nextStep = currentStep + 1;
+          setCurrentStep(nextStep);
+          if (scrollViewRef.current) {
+            scrollViewRef.current.scrollTo({ x: nextStep * width, animated: true });
+          }
+        }}
       />
     </View>
   );

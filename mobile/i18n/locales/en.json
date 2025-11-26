@@ -53,6 +53,10 @@
     "logout": "Logout",
     "logoutConfirm": "Are you sure you want to logout?",
     "logoutCancel": "Cancel",
+    "resetApp": "Reset App",
+    "resetAppConfirm": "Are you sure you want to completely reset the app? All local data will be deleted. This action cannot be undone.",
+    "resetAppSuccess": "App reset successfully. You will be signed out.",
+    "resetAppError": "Error during reset: {{error}}",
     "version": "App Version",
     "versionValue": "1.0.0",
     "profile": {
@@ -404,7 +408,22 @@
       },
       "recent": { "title": "Recent Session", "subtitle": "Your latest emotion analysis results" },
       "quickStats": { "title": "Quick Stats", "subtitle": "Your emotional wellness overview" },
-      "trends": { "title": "Emotional Trends", "subtitle": "7-day overview of your emotional state" },
+      "trends": {
+        "title": "Emotional Trends",
+        "subtitle": "7-day overview of your emotional state",
+        "detailedView": "Detailed view",
+        "threeMonths": "90 days",
+        "noData": "No data available for this period",
+        "statistics": "Statistics",
+        "improving": "Improving",
+        "declining": "Declining",
+        "stable": "Stable",
+        "increasing": "Increasing",
+        "decreasing": "Decreasing",
+        "summary": "Summary",
+        "totalSessions": "Total sessions",
+        "dominantEmotion": "Dominant emotion"
+      },
       "valenceArousal": { "title": "Valence & Arousal", "subtitle": "Understand emotional positivity and intensity" },
       "metrics": {
         "valence": "Valence",
@@ -1486,6 +1505,18 @@
       },
       "actionText": "Discover AI Copilot"
     },
+    "food": {
+      "title": "Nutrition Analysis",
+      "subtitle": "Discover what you eat",
+      "description": "Analyze your meals with artificial intelligence and receive personalized nutritional recommendations.",
+      "features": {
+        "0": "AI-powered meal photo analysis",
+        "1": "Automatic ingredient recognition",
+        "2": "Calories and macronutrients calculation",
+        "3": "Personalized recipes and meal planning"
+      },
+      "actionText": "Explore Nutrition"
+    },
     "privacy": {
       "title": "Privacy & Security",
       "subtitle": "Your data is safe",
@@ -1497,6 +1528,53 @@
         "3": "Full control over your data"
       },
       "actionText": "Accept & Continue"
+    },
+    "permissions": {
+      "title": "Device Permissions",
+      "subtitle": "Enable camera and microphone",
+      "description": "To use analysis features, we need access to your camera and microphone.",
+      "camera": "Camera",
+      "microphone": "Microphone",
+      "request": "Request",
+      "requestAll": "Request All Permissions",
+      "warningTitle": "Some permissions missing",
+      "warningMessage": "Some permissions were not granted. You can continue and enable them later in settings.",
+      "noPermissionsTitle": "No permissions granted",
+      "noPermissionsMessage": "To use analysis features, we recommend granting permissions. You can continue anyway.",
+      "openSettings": "Open Settings",
+      "requestAgain": "Request Again"
+    }
+  },
+  "emptyStates": {
+    "emotion": {
+      "title": "No emotion analysis",
+      "subtitle": "Start your first analysis",
+      "description": "Take a photo or start a video session to analyze your emotions in real-time.",
+      "action": "Start Emotion Analysis"
+    },
+    "skin": {
+      "title": "No skin analysis",
+      "subtitle": "Take your first photo",
+      "description": "Take a photo in natural light to analyze your skin health and receive personalized recommendations.",
+      "action": "Analyze Skin"
+    },
+    "food": {
+      "title": "No nutrition analysis",
+      "subtitle": "Start tracking your meals",
+      "description": "Take a photo of your meal to analyze calories, macronutrients and receive nutritional recommendations.",
+      "action": "Analyze a Meal"
+    },
+    "journal": {
+      "title": "No journal entries",
+      "subtitle": "Start writing",
+      "description": "Write your daily reflections to track your emotional wellness and receive personalized insights.",
+      "action": "Write in Journal"
+    },
+    "general": {
+      "title": "No data available",
+      "subtitle": "Start using the app",
+      "description": "Complete your first analyses to start seeing your data and personalized insights.",
+      "action": "Get Started"
     }
   },
   "auth": {

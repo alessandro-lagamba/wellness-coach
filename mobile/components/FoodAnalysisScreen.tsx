@@ -2274,7 +2274,7 @@ export const FoodAnalysisScreen: React.FC = () => {
               // Always show the card, with fallback data if no session exists
               const fallbackSession = {
                 id: 'fallback',
-                timestamp: new Date().toISOString(),
+                timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
                 macronutrients: {
                   carbohydrates: 150,
                   proteins: 50,
@@ -2298,7 +2298,7 @@ export const FoodAnalysisScreen: React.FC = () => {
               // Fallback session in case of error
               const fallbackSession = {
                 id: 'error-fallback',
-                timestamp: new Date().toISOString(),
+                timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
                 macronutrients: {
                   carbohydrates: 150,
                   proteins: 50,

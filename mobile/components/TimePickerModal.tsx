@@ -11,6 +11,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { getUserLocale } from '../utils/locale-formatters';
 
 interface TimePickerModalProps {
   visible: boolean;
@@ -28,7 +29,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
   initialTime,
 }) => {
   const { colors } = useTheme();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [selectedTime, setSelectedTime] = useState<Date>(
     initialTime || new Date()
   );
@@ -39,8 +40,25 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
     onClose();
   };
 
+  const locale = getUserLocale(language);
+  
   const formatTime = (date: Date): string => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Intl.DateTimeFormat(locale, { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: undefined, // Let system decide
+    }).format(date);
+  };
+
+  // Detect 24-hour format preference
+  const use24Hour = (): boolean => {
+    try {
+      const testDate = new Date();
+      const testString = testDate.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+      return !testString.match(/AM|PM/i);
+    } catch {
+      return false; // Default to 12-hour
+    }
   };
 
   return (
@@ -66,7 +84,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
               <DateTimePicker
                 value={selectedTime}
                 mode="time"
-                is24Hour={false}
+                is24Hour={use24Hour()}
                 display="spinner"
                 onChange={(event, date) => {
                   if (date) setSelectedTime(date);
@@ -91,7 +109,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                   <DateTimePicker
                     value={selectedTime}
                     mode="time"
-                    is24Hour={false}
+                    is24Hour={use24Hour()}
                     display="default"
                     onChange={(event, date) => {
                       setShowPicker(false);

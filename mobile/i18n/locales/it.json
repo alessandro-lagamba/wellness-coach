@@ -55,6 +55,10 @@
     "logout": "Logout",
     "logoutConfirm": "Sei sicuro di voler effettuare il logout?",
     "logoutCancel": "Annulla",
+    "resetApp": "Reset App",
+    "resetAppConfirm": "Sei sicuro di voler resettare completamente l'app? Tutti i dati locali verranno eliminati. Questa azione non può essere annullata.",
+    "resetAppSuccess": "App resettata con successo. Verrai disconnesso.",
+    "resetAppError": "Errore durante il reset: {{error}}",
     "version": "Versione App",
     "versionValue": "1.0.0",
     "profile": {
@@ -419,7 +423,22 @@
       "noneYet": "Nessuno ancora",
       "recent": { "title": "Ultima sessione", "subtitle": "I risultati più recenti dell'analisi emotiva" },
       "quickStats": { "title": "Statistiche rapide", "subtitle": "Panoramica del tuo benessere emotivo" },
-      "trends": { "title": "Trend Emotivi", "subtitle": "Andamento di 7 giorni del tuo stato emotivo" },
+      "trends": {
+        "title": "Trend Emotivi",
+        "subtitle": "Andamento di 7 giorni del tuo stato emotivo",
+        "detailedView": "Visualizzazione dettagliata",
+        "threeMonths": "90 giorni",
+        "noData": "Nessun dato disponibile per questo periodo",
+        "statistics": "Statistiche",
+        "improving": "In miglioramento",
+        "declining": "In calo",
+        "stable": "Stabile",
+        "increasing": "In aumento",
+        "decreasing": "In diminuzione",
+        "summary": "Riepilogo",
+        "totalSessions": "Sessioni totali",
+        "dominantEmotion": "Emozione dominante"
+      },
       "valenceArousal": { "title": "Valence & Arousal", "subtitle": "Comprendi positività e intensità delle emozioni" },
       "metrics": {
         "valence": "Valence",
@@ -1500,6 +1519,18 @@
       },
       "actionText": "Scopri AI Copilot"
     },
+    "food": {
+      "title": "Analisi Nutrizionale",
+      "subtitle": "Scopri cosa mangi",
+      "description": "Analizza i tuoi pasti con l'intelligenza artificiale e ricevi consigli nutrizionali personalizzati.",
+      "features": {
+        "0": "Analisi foto dei pasti con AI",
+        "1": "Riconoscimento automatico ingredienti",
+        "2": "Calcolo calorie e macronutrienti",
+        "3": "Ricette personalizzate e pianificazione pasti"
+      },
+      "actionText": "Esplora Nutrizione"
+    },
     "privacy": {
       "title": "Privacy e Sicurezza",
       "subtitle": "I tuoi dati sono al sicuro",
@@ -1511,6 +1542,53 @@
         "3": "Controllo completo sui tuoi dati"
       },
       "actionText": "Accetta e Continua"
+    },
+    "permissions": {
+      "title": "Permessi Dispositivo",
+      "subtitle": "Abilita camera e microfono",
+      "description": "Per utilizzare le funzionalità di analisi, abbiamo bisogno dell'accesso alla camera e al microfono.",
+      "camera": "Camera",
+      "microphone": "Microfono",
+      "request": "Richiedi",
+      "requestAll": "Richiedi Tutti i Permessi",
+      "warningTitle": "Alcuni permessi mancanti",
+      "warningMessage": "Alcuni permessi non sono stati concessi. Puoi continuare e abilitarli più tardi nelle impostazioni.",
+      "noPermissionsTitle": "Nessun permesso concesso",
+      "noPermissionsMessage": "Per utilizzare le funzionalità di analisi, ti consigliamo di concedere i permessi. Puoi continuare comunque.",
+      "openSettings": "Apri Impostazioni",
+      "requestAgain": "Richiedi di Nuovo"
+    }
+  },
+  "emptyStates": {
+    "emotion": {
+      "title": "Nessuna analisi emotiva",
+      "subtitle": "Inizia la tua prima analisi",
+      "description": "Scatta una foto o avvia una sessione video per analizzare le tue emozioni in tempo reale.",
+      "action": "Inizia Analisi Emozioni"
+    },
+    "skin": {
+      "title": "Nessuna analisi della pelle",
+      "subtitle": "Scatta la tua prima foto",
+      "description": "Scatta una foto in luce naturale per analizzare la salute della tua pelle e ricevere consigli personalizzati.",
+      "action": "Analizza la Pelle"
+    },
+    "food": {
+      "title": "Nessuna analisi nutrizionale",
+      "subtitle": "Inizia a tracciare i tuoi pasti",
+      "description": "Scatta una foto del tuo pasto per analizzare calorie, macronutrienti e ricevere consigli nutrizionali.",
+      "action": "Analizza un Pasto"
+    },
+    "journal": {
+      "title": "Nessuna entry nel diario",
+      "subtitle": "Inizia a scrivere",
+      "description": "Scrivi le tue riflessioni quotidiane per tracciare il tuo benessere emotivo e ricevere insights personalizzati.",
+      "action": "Scrivi nel Diario"
+    },
+    "general": {
+      "title": "Nessun dato disponibile",
+      "subtitle": "Inizia a utilizzare l'app",
+      "description": "Completa le tue prime analisi per iniziare a vedere i tuoi dati e insights personalizzati.",
+      "action": "Inizia"
     }
   },
   "auth": {

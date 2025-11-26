@@ -80,7 +80,9 @@ class DailyCopilotService {
       }
 
       // Check database first for today's analysis
-      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD format
+      // ✅ FIX: Use local timezone for "today" to avoid timezone issues
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const cacheKey = `copilot_${currentUser.id}_${today}`;
       
       const dbResult = await this.dbService.getDailyCopilotData(currentUser.id, today);
@@ -216,7 +218,9 @@ class DailyCopilotService {
       }
 
       const { supabase } = await import('../lib/supabase');
-      const today = new Date().toISOString().slice(0, 10);
+      // ✅ FIX: Use local timezone for "today" to avoid timezone issues
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       
       // 🔥 FIX: Prima prova a leggere i dati di OGGI
       const { data: todayCheckin } = await supabase
@@ -234,7 +238,7 @@ class DailyCopilotService {
       // 🔥 FIX: Se non ci sono dati di oggi, usa i dati di IERI (sera prima)
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayKey = yesterday.toISOString().slice(0, 10);
+      const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
       
       const { data: yesterdayCheckin } = await supabase
         .from('daily_copilot_analyses')

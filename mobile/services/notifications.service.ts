@@ -339,9 +339,10 @@ export const NotificationService = {
   },
 
   async scheduleHydrationReminders() {
-    // Every 2-3 hours during active hours (9:00-21:00)
+    // ✅ OPTIMIZED: Reduced from 6 to 4 reminders per day (less invasive)
+    // Strategic times: morning, lunch, afternoon, evening
     const ids: string[] = [];
-    const hours = [9, 11, 14, 16, 18, 20];
+    const hours = [9, 13, 17, 20]; // Reduced from [9, 11, 14, 16, 18, 20]
     for (const hour of hours) {
       ids.push(
         await this.schedule(
@@ -368,7 +369,8 @@ export const NotificationService = {
   },
 
   async scheduleEveningWinddown() {
-    // Daily at 22:00
+    // ✅ OPTIMIZED: Unified evening winddown and sleep preparation into one notification
+    // Daily at 22:00 - combines journal reminder and sleep preparation
     return this.schedule(
       'evening_winddown',
       'Buona serata 🌙',
@@ -378,8 +380,12 @@ export const NotificationService = {
     );
   },
 
+  // ⚠️ DEPRECATED: scheduleSleepPreparation - now unified with scheduleEveningWinddown
+  // Keeping for backward compatibility but not scheduling by default
   async scheduleSleepPreparation() {
+    // This is now handled by scheduleEveningWinddown to avoid duplicate notifications
     // Daily 1 hour before average bedtime (default 23:00, so 22:00)
+    // ⚠️ NOTE: This is NOT called in scheduleDefaults() anymore
     return this.schedule(
       'sleep_preparation',
       'Preparati per dormire 😴',
@@ -441,7 +447,7 @@ export const NotificationService = {
     ids.push(...(await this.scheduleHydrationReminders()));
     ids.push(await this.scheduleMorningGreeting());
     ids.push(await this.scheduleEveningWinddown());
-    ids.push(await this.scheduleSleepPreparation());
+    // ✅ OPTIMIZED: Removed scheduleSleepPreparation - now unified with scheduleEveningWinddown
     ids.push(await this.scheduleFridgeExpiryCheck()); // Daily check at 18:00
     
     debug('Defaults scheduled:', ids.length, 'notifications');

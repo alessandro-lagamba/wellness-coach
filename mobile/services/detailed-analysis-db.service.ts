@@ -32,7 +32,9 @@ export class DetailedAnalysisDBService {
     aiResponse: string
   ): Promise<{ success: boolean; error?: string; data?: DetailedAnalysisRecord }> {
     try {
-      const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      // ✅ FIX: Use local timezone for "today" to avoid timezone issues
+      const now = new Date();
+      const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       
       // Cifra ai_response prima di salvare
       let encryptedAiResponse: string | null = null;
@@ -115,7 +117,9 @@ export class DetailedAnalysisDBService {
     analysisType: 'emotion' | 'skin'
   ): Promise<{ success: boolean; data?: DetailedAnalysisRecord; error?: string }> {
     try {
-      const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      // ✅ FIX: Use local timezone for "today" to avoid timezone issues
+      const now = new Date();
+      const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       
       const { data, error } = await supabase
         .from('detailed_analysis')

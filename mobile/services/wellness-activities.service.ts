@@ -53,8 +53,10 @@ class WellnessActivitiesService {
         return { success: false, error: 'User not authenticated' };
       }
 
-      const scheduledDate = activity.scheduledTime.toISOString().split('T')[0]; // YYYY-MM-DD
-      const scheduledTime = activity.scheduledTime.toTimeString().slice(0, 5); // HH:mm
+      // ✅ FIX: Use local timezone for scheduled date to avoid timezone issues
+      const scheduledTime = activity.scheduledTime;
+      const scheduledDate = `${scheduledTime.getFullYear()}-${String(scheduledTime.getMonth() + 1).padStart(2, '0')}-${String(scheduledTime.getDate()).padStart(2, '0')}`;
+      const scheduledTimeStr = `${String(scheduledTime.getHours()).padStart(2, '0')}:${String(scheduledTime.getMinutes()).padStart(2, '0')}`; // HH:mm
 
       const { data, error } = await supabase
         .from('wellness_activities')
@@ -64,7 +66,7 @@ class WellnessActivitiesService {
           description: activity.description,
           category: activity.category,
           scheduled_date: scheduledDate,
-          scheduled_time: scheduledTime,
+          scheduled_time: scheduledTimeStr,
           completed: false,
           reminder_id: activity.reminderId || null,
           calendar_event_id: activity.calendarEventId || null,
@@ -100,7 +102,8 @@ class WellnessActivitiesService {
         return [];
       }
 
-      const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+      // ✅ FIX: Use local timezone for date to avoid timezone issues
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
       const { data, error } = await supabase
         .from('wellness_activities')

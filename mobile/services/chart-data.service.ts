@@ -151,6 +151,67 @@ export class ChartDataService {
   }
 
   /**
+   * Carica i dati emotivi per un periodo specifico (per il modal dettagli)
+   */
+  static async loadEmotionDataForPeriod(days: number): Promise<Array<{
+    id: string;
+    timestamp: Date;
+    dominant: string;
+    avg_valence: number;
+    avg_arousal: number;
+    confidence: number;
+    duration: number;
+  }>> {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser) {
+        console.warn('⚠️ No authenticated user found');
+        return [];
+      }
+
+      const dateFrom = new Date();
+      dateFrom.setDate(dateFrom.getDate() - days);
+
+      const result = await this.withRetry(async () => {
+        const { data, error } = await supabase
+          .from(Tables.EMOTION_ANALYSES)
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .gte('created_at', dateFrom.toISOString())
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          throw new Error(`Database query failed: ${error.message}`);
+        }
+
+        return data;
+      }, 'Load Emotion Data for Period');
+
+      if (!result || result.length === 0) {
+        return [];
+      }
+
+      // Valida e mappa i dati
+      const validData = result.filter(analysis => {
+        return analysis.id && analysis.created_at;
+      });
+
+      return validData.map((analysis) => ({
+        id: analysis.id,
+        timestamp: new Date(analysis.created_at),
+        dominant: analysis.dominant_emotion || 'neutral',
+        avg_valence: typeof analysis.valence === 'number' ? analysis.valence : 0,
+        avg_arousal: typeof analysis.arousal === 'number' ? analysis.arousal : 0,
+        confidence: typeof analysis.confidence === 'number' ? analysis.confidence : 0.5,
+        duration: typeof analysis.session_duration === 'number' ? analysis.session_duration : 0,
+      }));
+    } catch (error) {
+      console.error('❌ Error in loadEmotionDataForPeriod:', error);
+      return [];
+    }
+  }
+
+  /**
    * Carica e sincronizza i dati delle analisi della pelle dal database
    */
   static async loadSkinDataForCharts(): Promise<void> {

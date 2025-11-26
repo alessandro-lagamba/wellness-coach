@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -11,9 +11,10 @@ interface EmotionTrendChartProps {
   data: Array<{ date: string; valence: number; arousal: number; emotion: string }>;
   title: string;
   subtitle?: string;
+  onPress?: () => void;
 }
 
-export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, title, subtitle }) => {
+export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, title, subtitle, onPress }) => {
   const { colors } = useTheme();
   // Generate sample data if none provided
   const chartData = data.length > 0 ? data : [
@@ -63,12 +64,17 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[colors.surface, colors.surfaceElevated]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.chartCard, { borderColor: colors.border }]}
+      <TouchableOpacity
+        activeOpacity={onPress ? 0.7 : 1}
+        onPress={onPress}
+        disabled={!onPress}
       >
+        <LinearGradient
+          colors={[colors.surface, colors.surfaceElevated]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.chartCard, { borderColor: colors.border }]}
+        >
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
@@ -192,7 +198,8 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
             <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>Start sessions to see your emotional trends</Text>
           </View>
         )}
-      </LinearGradient>
+        </LinearGradient>
+      </TouchableOpacity>
     </View>
   );
 };

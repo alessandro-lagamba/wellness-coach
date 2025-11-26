@@ -3,7 +3,8 @@
 <plist version="1.0">
   <dict>
     <key>aps-environment</key>
-    <string>development</string>
+    <string>production</string>
+    <!-- ⚠️ NOTE: Change to "development" for local testing, "production" for App Store builds -->
     <key>com.apple.developer.healthkit</key>
     <true/>
     <key>com.apple.developer.healthkit.access</key>

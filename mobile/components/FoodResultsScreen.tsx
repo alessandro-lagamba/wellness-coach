@@ -352,7 +352,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
 
         <View style={styles.contentContainer}>
           {/* Metrics Grid */}
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={2} ellipsizeMode="tail">
             {t('analysis.food.nutritionalBreakdown') || 'NUTRITIONAL BREAKDOWN'}
           </Text>
 
@@ -414,14 +414,14 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
           {/* Identified Foods */}
           {identifiedFoods.length > 0 && (
             <View style={styles.foodsSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={2} ellipsizeMode="tail">
                 {t('analysis.food.results.identifiedFoods') || 'IDENTIFIED FOODS'}
               </Text>
               <View style={styles.foodsList}>
                 {identifiedFoods.map((food: string, index: number) => (
                   <View key={index} style={[styles.foodChip, { backgroundColor: colors.surface }]}>
                     <MaterialCommunityIcons name="check-circle" size={16} color={colors.primary} />
-                    <Text style={[styles.foodText, { color: colors.text }]}>{food}</Text>
+                    <Text style={[styles.foodText, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{food}</Text>
                   </View>
                 ))}
               </View>
@@ -440,7 +440,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
           {/* Recommendations */}
           {recommendations.length > 0 && (
             <>
-          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]} numberOfLines={2} ellipsizeMode="tail">
                 {t('analysis.food.results.recommendations') || 'RACCOMANDAZIONI'}
           </Text>
 

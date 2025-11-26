@@ -106,7 +106,10 @@ class IntelligentInsightDBService {
     date?: string
   ): Promise<{ success: boolean; data?: InsightRecord; error?: string }> {
     try {
-      const targetDate = date || new Date().toISOString().slice(0, 10);
+      // ✅ FIX: Use local timezone for "today" to avoid timezone issues
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const targetDate = date || today;
       
       const { data, error } = await supabase
         .from('intelligent_insights')

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import Animated, { useAnimatedStyle, withDelay, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from './Avatar';
@@ -876,7 +876,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const displayedSleepQuality = sleepStats?.quality ?? sleepQuality;
 
   // chiavi giornaliere
-  const dayKey = () => new Date().toISOString().slice(0, 10);
+  const dayKey = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
   const STORAGE_KEYS = {
     mood: (d: string) => `checkin:mood:${d}`,
     sleep: (d: string) => `checkin:sleep:${d}`,
@@ -1052,7 +1058,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // nuove funzioni di salvataggio con note
   async function saveMoodCheckin(value: number, note: string) {
     const dk = dayKey();
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     // 🔥 FIX: Verifica che la data sia quella di oggi (non permettere salvataggi per giorni passati/futuri)
     if (dk !== today) {
@@ -1200,7 +1207,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   async function saveSleepCheckin(quality: number, note: string, restLevel: number) {
     const dk = dayKey();
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     // 🔥 FIX: Verifica che la data sia quella di oggi (non permettere salvataggi per giorni passati/futuri)
     if (dk !== today) {
@@ -1593,59 +1601,60 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     loadUserData();
   }, []); // 🔥 FIX: Rimuoviamo translateWidgetTitle dalle dipendenze - viene caricato solo al mount
 
+  // 🆕 Funzione per caricare le attività (esportata per essere riutilizzata)
+  const loadWellnessActivities = useCallback(async () => {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) return;
+
+      const WellnessActivitiesService = (await import('../services/wellness-activities.service')).default;
+      const activities = await WellnessActivitiesService.getTodayActivities();
+
+      // Mappa le attività dal database a DailyActivity
+      const mappedActivities: DailyActivity[] = activities.map((activity) => {
+        // Determina l'icona in base alla categoria
+        const iconMap: Record<string, string> = {
+          mindfulness: 'leaf',
+          movement: 'road',
+          nutrition: 'tint',
+          recovery: 'moon-o',
+        };
+
+        // Formatta l'orario
+        const timeStr = activity.scheduled_time || '12:00';
+        const [hours, minutes] = timeStr.split(':');
+        const hour = parseInt(hours, 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+        const formattedTime = `${displayHour}:${minutes} ${ampm}`;
+
+        return {
+          id: activity.id,
+          title: activity.title,
+          description: activity.description,
+          icon: iconMap[activity.category] || 'heart',
+          completed: activity.completed,
+          time: formattedTime,
+          category: activity.category,
+          syncedToCalendar: !!activity.calendar_event_id,
+          syncedToReminders: !!activity.reminder_id,
+        };
+      });
+
+      setWellnessActivities(mappedActivities);
+    } catch (error) {
+      console.error('Error loading wellness activities:', error);
+    }
+  }, []);
+
   // 🆕 Carica le attività wellness dal database
   useEffect(() => {
-    const loadWellnessActivities = async () => {
-      try {
-        const currentUser = await AuthService.getCurrentUser();
-        if (!currentUser?.id) return;
-
-        const WellnessActivitiesService = (await import('../services/wellness-activities.service')).default;
-        const activities = await WellnessActivitiesService.getTodayActivities();
-
-        // Mappa le attività dal database a DailyActivity
-        const mappedActivities: DailyActivity[] = activities.map((activity) => {
-          // Determina l'icona in base alla categoria
-          const iconMap: Record<string, string> = {
-            mindfulness: 'leaf',
-            movement: 'road',
-            nutrition: 'tint',
-            recovery: 'moon-o',
-          };
-
-          // Formatta l'orario
-          const timeStr = activity.scheduled_time || '12:00';
-          const [hours, minutes] = timeStr.split(':');
-          const hour = parseInt(hours, 10);
-          const ampm = hour >= 12 ? 'PM' : 'AM';
-          const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-          const formattedTime = `${displayHour}:${minutes} ${ampm}`;
-
-          return {
-            id: activity.id,
-            title: activity.title,
-            description: activity.description,
-            icon: iconMap[activity.category] || 'heart',
-            completed: activity.completed,
-            time: formattedTime,
-            category: activity.category,
-            syncedToCalendar: !!activity.calendar_event_id,
-            syncedToReminders: !!activity.reminder_id,
-          };
-        });
-
-        setWellnessActivities(mappedActivities);
-      } catch (error) {
-        console.error('Error loading wellness activities:', error);
-      }
-    };
-
     loadWellnessActivities();
 
     // Ricarica ogni minuto per aggiornare le attività
     const interval = setInterval(loadWellnessActivities, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadWellnessActivities]);
 
   // 🔥 Rimuoviamo useEffect non necessario - usiamo direttamente todaysActivities che è già memoizzato
 
@@ -2401,6 +2410,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               index={index}
               onSync={syncActivityToCalendar}
               permissions={permissions}
+              onActivityUpdated={loadWellnessActivities}
             />
           ))}
         </View>
@@ -3243,11 +3253,18 @@ const ActivityItem: React.FC<{
   index: number;
   onSync: (a: DailyActivity) => void;
   permissions: { calendar: boolean; notifications: boolean };
-}> = ({ activity, index, onSync, permissions }) => {
+  onActivityUpdated?: () => void;
+}> = ({ activity, index, onSync, permissions, onActivityUpdated }) => {
   const { colors: themeColors } = useTheme();
+  const [isCompleting, setIsCompleting] = React.useState(false);
+  const scale = useSharedValue(1);
+  
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: withDelay(index * 80, withTiming(1, { duration: 320 })),
-    transform: [{ translateY: withDelay(index * 80, withTiming(0, { duration: 320 })) }],
+    transform: [
+      { translateY: withDelay(index * 80, withTiming(0, { duration: 320 })) },
+      { scale: scale.value },
+    ] as const,
   }));
 
   const colors = (() => {
@@ -3260,60 +3277,132 @@ const ActivityItem: React.FC<{
     }
   })();
 
+  const handleToggleComplete = async () => {
+    if (isCompleting) return;
+    
+    setIsCompleting(true);
+    scale.value = withTiming(0.95, { duration: 100 }, () => {
+      scale.value = withTiming(1, { duration: 100 });
+    });
+
+    try {
+      const WellnessActivitiesService = (await import('../services/wellness-activities.service')).default;
+      const result = await WellnessActivitiesService.markActivityCompleted(activity.id, !activity.completed);
+      
+      if (result.success) {
+        // Ricarica le attività dopo un breve delay per permettere l'animazione
+        setTimeout(() => {
+          onActivityUpdated?.();
+        }, 300);
+      }
+    } catch (error) {
+      console.error('Error toggling activity completion:', error);
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   return (
     <Animated.View style={[styles.activityCard, animatedStyle, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-      <TouchableOpacity activeOpacity={0.85}>
+      <TouchableOpacity 
+        activeOpacity={0.9}
+        onPress={handleToggleComplete}
+        disabled={isCompleting}
+      >
         <View style={styles.activityContent}>
+          {/* Left side with icon and text */}
           <View style={styles.activityLeft}>
-            <View style={[styles.activityIcon, { backgroundColor: activity.completed ? '#10b981' : `${colors[0]}20` }]}>
-              <FontAwesome
-                name={activity.completed ? 'check' : (activity.icon as any)}
-                size={16}
-                color={activity.completed ? '#ffffff' : colors[0]}
-              />
+            <View style={[styles.activityIconContainer, { backgroundColor: activity.completed ? `${colors[0]}15` : `${colors[0]}10` }]}>
+              {activity.completed ? (
+                <LinearGradient
+                  colors={[colors[0], colors[1]]}
+                  style={styles.activityIconGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <FontAwesome name="check" size={18} color="#ffffff" />
+                </LinearGradient>
+              ) : (
+                <FontAwesome
+                  name={activity.icon as any}
+                  size={18}
+                  color={colors[0]}
+                />
+              )}
             </View>
             <View style={styles.activityText}>
-              <Text style={[styles.activityTitle, { color: themeColors.text }, activity.completed && styles.activityCompleted]}>
+              <Text style={[
+                styles.activityTitle, 
+                { color: activity.completed ? themeColors.textSecondary : themeColors.text },
+                activity.completed && styles.activityCompleted
+              ]}>
                 {activity.title}
               </Text>
-              <Text style={[styles.activityDescription, { color: themeColors.textSecondary }]}>{activity.description}</Text>
-              <Text style={[styles.activityTime, { color: themeColors.textTertiary }]}>{activity.time}</Text>
+              <Text style={[styles.activityDescription, { color: themeColors.textSecondary }]}>
+                {activity.description}
+              </Text>
+              <View style={styles.activityMeta}>
+                <FontAwesome name="clock-o" size={10} color={themeColors.textTertiary} />
+                <Text style={[styles.activityTime, { color: themeColors.textTertiary }]}>
+                  {activity.time}
+                </Text>
+              </View>
             </View>
           </View>
 
+          {/* Right side with status and actions */}
           <View style={styles.activityRight}>
-            <View style={styles.statusContainer}>
-              {activity.completed ? (
-                <View style={styles.completedBadge}>
-                  <FontAwesome name="check-circle" size={20} color="#10b981" />
+            {activity.completed ? (
+              <View style={styles.completedIndicator}>
+                <LinearGradient
+                  colors={['#10b981', '#34d399']}
+                  style={styles.completedBadgeGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <FontAwesome name="check-circle" size={20} color="#ffffff" />
+                </LinearGradient>
+              </View>
+            ) : activity.progress ? (
+              <View style={styles.progressContainer}>
+                <View style={[styles.progressBar, { backgroundColor: `${colors[0]}20` }]}>
+                  <Animated.View 
+                    style={[
+                      styles.progressFill, 
+                      { 
+                        width: `${activity.progress}%`,
+                        backgroundColor: colors[0]
+                      }
+                    ]} 
+                  />
                 </View>
-              ) : activity.progress ? (
-                <View style={styles.progressContainer}>
-                  <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: `${activity.progress}%`, backgroundColor: colors[0] }]} />
-                  </View>
-                  <Text style={styles.progressText}>{activity.progress}%</Text>
-                </View>
-              ) : (
-                <View style={styles.pendingBadge}>
-                  <FontAwesome name="clock-o" size={16} color="#6b7280" />
-                </View>
-              )}
-            </View>
+                <Text style={[styles.progressText, { color: colors[0] }]}>
+                  {activity.progress}%
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.pendingIndicator, { backgroundColor: `${themeColors.textTertiary}15` }]}>
+                <FontAwesome name="clock-o" size={16} color={themeColors.textTertiary} />
+              </View>
+            )}
 
+            {/* Sync button */}
             <View style={styles.syncButtons}>
               {!activity.syncedToCalendar && permissions.calendar && (
                 <TouchableOpacity
-                  style={styles.syncButton}
-                  onPress={() => onSync(activity)}
+                  style={[styles.syncButton, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onSync(activity);
+                  }}
                   activeOpacity={0.7}
                 >
-                  <FontAwesome name="calendar-plus-o" size={14} color="#6366f1" />
+                  <FontAwesome name="calendar-plus-o" size={12} color={themeColors.primary} />
                 </TouchableOpacity>
               )}
               {activity.syncedToCalendar && (
-                <View style={styles.syncedBadge}>
-                  <FontAwesome name="calendar-check-o" size={14} color="#10b981" />
+                <View style={[styles.syncedBadge, { backgroundColor: `${themeColors.primary}15` }]}>
+                  <FontAwesome name="calendar-check-o" size={12} color={themeColors.primary} />
                 </View>
               )}
             </View>
@@ -3616,91 +3705,143 @@ const styles = StyleSheet.create({
   activityContainer: {
     paddingHorizontal: 20,
     marginBottom: 24,
+    gap: 12,
   },
   activityCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    marginBottom: 12,
+    borderRadius: 20,
+    marginBottom: 0,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#f1f5f9',
   },
   activityContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 18,
+    backgroundColor: 'transparent',
   },
   activityLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    gap: 14,
   },
-  activityIcon: {
+  activityIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  activityIconGradient: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityText: {
+    flex: 1,
+    gap: 4,
+  },
+  activityTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    lineHeight: 22,
+    marginBottom: 2,
+  },
+  activityCompleted: {
+    textDecorationLine: 'line-through',
+    opacity: 0.6,
+  },
+  activityDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  activityMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  activityTime: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  activityRight: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginLeft: 12,
+  },
+  statusContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completedIndicator: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completedBadgeGradient: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pendingIndicator: {
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
-  activityText: {
-    flex: 1,
+  progressContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minWidth: 60,
   },
-  activityTitle: {
-    fontSize: 16,
+  progressBar: {
+    width: 60,
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: 11,
     fontWeight: '600',
-    // Colore gestito inline con themeColors.text
-    marginBottom: 2,
-  },
-  activityCompleted: {
-    textDecorationLine: 'line-through',
-    // Colore gestito inline con themeColors.textSecondary
-  },
-  activityDescription: {
-    fontSize: 14,
-    // Colore gestito inline con themeColors.textSecondary
-    marginBottom: 2,
-  },
-  activityTime: {
-    fontSize: 12,
-    // Colore gestito inline con themeColors.textTertiary
-  },
-  activityRight: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  statusContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   syncButtons: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   syncButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#f1f5f9',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderWidth: 1.5,
   },
   syncedBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#f0fdf4',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#10b981',
   },
   completedBadge: {
     width: 32,
@@ -3710,26 +3851,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  progressContainer: {
-    alignItems: 'center',
-    minWidth: 60,
-  },
-  progressBar: {
-    width: 60,
-    height: 6,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 3,
-    marginBottom: 4,
-  },
-  progressFill: {
-    height: 6,
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748b',
-  },
   pendingBadge: {
     width: 32,
     height: 32,
@@ -3737,6 +3858,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  activityIcon: {
+    width: 24,
+    height: 24,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   emptySlot: {
     height: 140,
@@ -4275,11 +4405,6 @@ const styles = StyleSheet.create({
   },
 
   // Tutorial and Header Buttons
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
   tutorialButton: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -89,7 +89,9 @@ class PushNotificationService {
     try {
       // 🆕 Controlla se abbiamo già inviato una notifica oggi (throttling)
       const lastNotification = await AsyncStorage.getItem(`${LAST_MOOD_NOTIFICATION_KEY}:${userId}`);
-      const today = new Date().toISOString().slice(0, 10);
+      // ✅ FIX: Use local timezone for "today" to avoid timezone issues
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       if (lastNotification === today) {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
         return false;

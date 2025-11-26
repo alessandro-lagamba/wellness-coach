@@ -9,6 +9,30 @@ import { registerGlobals } from '@livekit/react-native';
 // Do required setup for LiveKit React-Native
 registerGlobals();
 
+// 🆕 Initialize Sentry (crash reporting)
+try {
+  const { initializeSentry } = require('../services/sentry.service');
+  initializeSentry();
+} catch (error) {
+  // Sentry not installed or not configured, ignore
+  if (__DEV__) {
+    console.log('[Sentry] Not initialized (optional dependency)');
+  }
+}
+
+// 🆕 Initialize Analytics
+try {
+  const { AnalyticsService } = require('../services/analytics.service');
+  AnalyticsService.initialize().catch(() => {
+    // Analytics initialization failed, continue anyway
+  });
+} catch (error) {
+  // Analytics not available, ignore
+  if (__DEV__) {
+    console.log('[Analytics] Not initialized (optional dependency)');
+  }
+}
+
 // Add polyfill for navigator.mediaDevices.addEventListener
 if (typeof globalThis.navigator === 'undefined') {
   globalThis.navigator = {} as any;

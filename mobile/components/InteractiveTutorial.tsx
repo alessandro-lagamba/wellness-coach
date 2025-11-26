@@ -32,7 +32,7 @@ interface InteractiveTutorialProps {
 const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome',
-    title: 'Benvenuto in NeuroTracer',
+    title: 'Benvenuto in Wellness Coach',
     description: 'La tua app di benessere completa, alimentata da AI. Scopri come monitorare salute, emozioni e bellezza in un unico posto.',
     icon: '🎯',
     color: ['#667eea', '#764ba2'],
@@ -152,7 +152,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'completato',
     title: 'Sei Pronto a Iniziare!',
-    description: 'Hai imparato tutte le funzionalità principali. Ora inizia il tuo viaggio verso il benessere con NeuroTracer.',
+    description: 'Hai imparato tutte le funzionalità principali. Ora inizia il tuo viaggio verso il benessere con Wellness Coach.',
     icon: '🎉',
     color: ['#667eea', '#764ba2', '#f093fb'],
     features: [

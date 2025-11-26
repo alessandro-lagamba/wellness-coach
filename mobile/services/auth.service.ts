@@ -90,6 +90,13 @@ export class AuthService {
    * Registra un nuovo utente
    */
   static async signUp(email: string, password: string, fullName?: string): Promise<{ user: User | null; error: any }> {
+    // 🆕 Track signup attempt
+    try {
+      const { AnalyticsService } = require('./analytics.service');
+      await AnalyticsService.trackEvent('onboarding_started', { feature: 'signup' });
+    } catch (error) {
+      // Analytics not available, ignore
+    }
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -119,6 +126,14 @@ export class AuthService {
           console.warn('[Auth] ⚠️ Failed to initialize encryption key (non-critical):', encError);
           // Non blocchiamo la registrazione se la cifratura fallisce
         }
+
+        // 🆕 Gestisci multi-device login
+        try {
+          const { MultiDeviceAuthService } = await import('./multi-device-auth.service');
+          await MultiDeviceAuthService.handleLogin();
+        } catch (error) {
+          // Non critico, ignora
+        }
       }
 
       return { user: data.user, error: null };
@@ -132,6 +147,13 @@ export class AuthService {
    * Effettua il login
    */
   static async signIn(email: string, password: string, rememberMe: boolean = true): Promise<{ user: User | null; error: any }> {
+    // 🆕 Track login attempt
+    try {
+      const { AnalyticsService } = require('./analytics.service');
+      await AnalyticsService.trackEvent('screen_viewed', { feature: 'login' });
+    } catch (error) {
+      // Analytics not available, ignore
+    }
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -156,6 +178,14 @@ export class AuthService {
         } catch (encError) {
           console.warn('[Auth] ⚠️ Failed to initialize encryption key (non-critical):', encError);
           // Non blocchiamo il login se la cifratura fallisce
+        }
+
+        // 🆕 Gestisci multi-device login
+        try {
+          const { MultiDeviceAuthService } = await import('./multi-device-auth.service');
+          await MultiDeviceAuthService.handleLogin();
+        } catch (error) {
+          // Non critico, ignora
         }
       }
 
@@ -191,6 +221,30 @@ export class AuthService {
         }
       } catch (encError) {
         console.warn('[Auth] ⚠️ Failed to clear encryption key (non-critical):', encError);
+      }
+
+      // 🆕 Update analytics user context (clear user)
+      try {
+        const { AnalyticsService } = require('./analytics.service');
+        AnalyticsService.updateUserContext();
+      } catch (error) {
+        // Analytics not available, ignore
+      }
+
+      // 🆕 Clear Sentry user context
+      try {
+        const { clearUserContext } = require('./sentry.service');
+        clearUserContext();
+      } catch (error) {
+        // Sentry not available, ignore
+      }
+
+      // 🆕 Clear multi-device info
+      try {
+        const { MultiDeviceAuthService } = require('./multi-device-auth.service');
+        await MultiDeviceAuthService.clearDeviceInfo();
+      } catch (error) {
+        // Multi-device service not available, ignore
       }
 
       return { error: null };

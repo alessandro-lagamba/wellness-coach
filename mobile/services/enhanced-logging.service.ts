@@ -262,6 +262,10 @@ export class EnhancedLoggingService {
       case 'error':
       case 'critical':
         console.error(logMessage, entry.data || '', entry.error || '');
+        // Send to Sentry for crash reporting
+        this.sendToSentry(entry);
+        // Send to Analytics for error tracking
+        this.sendToAnalytics(entry);
         break;
       case 'warn':
         console.warn(logMessage, entry.data || '');
@@ -274,6 +278,57 @@ export class EnhancedLoggingService {
           console.log(logMessage, entry.data || '');
         }
         break;
+    }
+  }
+
+  /**
+   * Send error to Sentry
+   */
+  private static sendToSentry(entry: LogEntry): void {
+    try {
+      // Dynamic import to avoid errors if Sentry is not installed
+      const { captureException, captureMessage } = require('./sentry.service');
+      
+      if (entry.error) {
+        captureException(entry.error, {
+          category: entry.category,
+          operation: entry.operation,
+          data: entry.data,
+        });
+      } else {
+        captureMessage(entry.message, 'error');
+      }
+    } catch (error) {
+      // Sentry not available or not configured, ignore
+    }
+  }
+
+  /**
+   * Send error to Analytics
+   */
+  private static sendToAnalytics(entry: LogEntry): void {
+    try {
+      // Dynamic import to avoid errors if Analytics is not initialized
+      const { AnalyticsService } = require('./analytics.service');
+      
+      // Determine error type from category
+      let errorType: 'api_error' | 'database_error' | 'network_error' = 'api_error';
+      if (entry.category === 'database') {
+        errorType = 'database_error';
+      } else if (entry.category === 'network' || entry.message.includes('network') || entry.message.includes('fetch')) {
+        errorType = 'network_error';
+      }
+
+      AnalyticsService.trackError(
+        errorType,
+        entry.error?.message || entry.message,
+        {
+          category: entry.category,
+          operation: entry.operation,
+        }
+      );
+    } catch (error) {
+      // Analytics not available, ignore
     }
   }
 

@@ -367,6 +367,54 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       ]
     );
   };
+
+  // 🆕 Handler per reset app
+  const handleResetApp = () => {
+    Alert.alert(
+      t('settings.resetApp'),
+      t('settings.resetAppConfirm'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { 
+          text: t('settings.resetApp'), 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              const { ResetAppService } = await import('../services/reset-app.service');
+              const result = await ResetAppService.resetApp();
+              
+              if (result.success) {
+                Alert.alert(
+                  t('common.success'),
+                  t('settings.resetAppSuccess'),
+                  [
+                    {
+                      text: t('common.ok'),
+                      onPress: () => {
+                        // Logout dopo reset
+                        onLogout();
+                      }
+                    }
+                  ]
+                );
+              } else {
+                Alert.alert(
+                  t('common.error'),
+                  t('settings.resetAppError', { error: result.error || 'Unknown error' })
+                );
+              }
+            } catch (error) {
+              console.error('Error resetting app:', error);
+              Alert.alert(
+                t('common.error'),
+                t('settings.resetAppError', { error: error instanceof Error ? error.message : 'Unknown error' })
+              );
+            }
+          }
+        }
+      ]
+    );
+  };
   
   // 🆕 Handler per cambio lingua
   const handleLanguageChange = async (newLang: 'it' | 'en') => {
@@ -476,6 +524,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
             colors={colors}
             darkModeValue={mode === 'dark'} // 🆕 Pass dark mode value
           />
+
+          {/* Reset App Button */}
+          <TouchableOpacity 
+            style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: '#f59e0b' + '40' }]} 
+            onPress={handleResetApp}
+          >
+            <MaterialCommunityIcons name="refresh" size={16} color="#f59e0b" />
+            <Text style={[styles.logoutText, { color: '#f59e0b' }]}>{t('settings.resetApp')}</Text>
+          </TouchableOpacity>
 
           {/* Logout Button */}
           <TouchableOpacity 
