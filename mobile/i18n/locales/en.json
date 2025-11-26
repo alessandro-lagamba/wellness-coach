@@ -904,6 +904,17 @@
           "low": "LOW"
         }
       },
+      "mealInsights": {
+        "title": "Meal insights",
+        "subtitle": "AI analysed this dish and suggests how to balance it better"
+      },
+      "recommendations": {
+        "priority": {
+          "high": "HIGH",
+          "medium": "MEDIUM",
+          "low": "LOW"
+        }
+      },
       "mealType": {
         "breakfast": "Breakfast",
         "lunch": "Lunch",

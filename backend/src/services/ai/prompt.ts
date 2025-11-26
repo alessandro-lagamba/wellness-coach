@@ -133,7 +133,7 @@ Ingredienti disponibili: ${body.ingredients.join(", ")}
 VINCOLI OBBLIGATORI:
 - ALLERGIE/INTOLLERANZE (NON USARE MAI): ${allergiesList}
 - INGREDIENTI DA EVITARE: ${avoidList}
-- Se un ingrediente disponibile contiene o deriva da allergeni, ESCLUDILO completamente o proponi una sostituzione sicura.
+- Se un ingrediente disponibile contiene o deriva da allergeni/intolleranze dichiarate, devi specificare quale variante SICURA usare (es. latte → latte senza lattosio, pasta → pasta gluten-free). Se non esiste alternativa sicura, escludilo.
 
 PREFERENZE (da privilegiare quando possibile, ma non obbligatorie):
 - Tipo di cucina: ${cuisine} (stile culinario da seguire)
@@ -146,7 +146,8 @@ Servings: ${body.servings ?? 2}, Max tempo: ${body.maxReadyInMinutes ?? 25} min
 
 Regole:
 
-- ⚠️ CRITICO: NON includere MAI ingredienti che contengono o derivano da: ${allergiesList}. Se necessario, proponi alternative sicure.
+- ⚠️ CRITICO: NON includere MAI ingredienti che contengono o derivano da: ${allergiesList}. Se necessario, proponi alternative sicure usando solo ingredienti disponibili o le loro varianti sicure (esplicita sempre la variante).
+- Vietato citare ingredienti non presenti nella lista degli ingredienti selezionati per la ricetta. Se serve una consistenza simile, usa solo ciò che è disponibile o descrivi come ottenere la variante sicura dello stesso ingrediente.
 - Se mancano ingredienti critici, elencali in "shoppingGaps" e proponi sostituzioni pratiche.
 - Privilegia lo stile culinario: ${cuisine} (usa tecniche, spezie e combinazioni tipiche di questa cucina).
 - Ingredienti preferiti: quando possibile e appropriato, cerca di includere ${favoriteIngredientsList} nella ricetta, ma solo se hanno senso nel contesto e sono disponibili. Non forzare l'inclusione se non sono compatibili.

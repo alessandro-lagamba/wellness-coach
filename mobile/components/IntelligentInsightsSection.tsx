@@ -179,24 +179,35 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
   };
 
   const categoryInfo = getCategoryInfo();
-  const sectionTitle = (categoryInfo.title || '').toUpperCase();
+  // ✅ FIX: Capitalizza solo la prima lettera invece di tutto maiuscolo
+  const capitalizeFirst = (str: string) => {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  };
+  const sectionTitle = capitalizeFirst(categoryInfo.title || '');
+
+  const titleColor = colors.text;
+  const subtitleColor = colors.textSecondary;
+  const cardBackground = colors.surface;
+  const cardBorder = colors.border;
+  const accentColor = categoryInfo.colors[0];
 
   if (loading) {
     return (
       <View style={styles.container}>
         {showTitle && (
           <View style={styles.header}>
-            <Text style={styles.title}>{sectionTitle}</Text>
-            <Text style={styles.subtitle}>{categoryInfo.subtitle}</Text>
+            <Text style={[styles.title, { color: titleColor }]}>{sectionTitle}</Text>
+            <Text style={[styles.subtitle, { color: subtitleColor }]}>{categoryInfo.subtitle}</Text>
           </View>
         )}
         
-        <View style={[styles.loadingCard, { backgroundColor: categoryInfo.bgColors[0] }]}>
-          <ActivityIndicator size="large" color={categoryInfo.colors[0]} />
-          <Text style={[styles.loadingText, { color: categoryInfo.colors[0] }]}>
+        <View style={[styles.loadingCard, { backgroundColor: cardBackground, borderColor: cardBorder }]}>
+          <ActivityIndicator size="large" color={accentColor} />
+          <Text style={[styles.loadingText, { color: titleColor }]}>
             Generando insight intelligenti...
           </Text>
-          <Text style={styles.loadingSubtext}>
+          <Text style={[styles.loadingSubtext, { color: subtitleColor }]}>
             L'AI sta analizzando i tuoi dati
           </Text>
         </View>
@@ -209,17 +220,17 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
       <View style={styles.container}>
         {showTitle && (
           <View style={styles.header}>
-            <Text style={styles.title}>{sectionTitle}</Text>
-            <Text style={styles.subtitle}>{categoryInfo.subtitle}</Text>
+            <Text style={[styles.title, { color: titleColor }]}>{sectionTitle}</Text>
+            <Text style={[styles.subtitle, { color: subtitleColor }]}>{categoryInfo.subtitle}</Text>
           </View>
         )}
         
-        <View style={[styles.errorCard, { backgroundColor: categoryInfo.bgColors[0] }]}>
+        <View style={[styles.errorCard, { backgroundColor: cardBackground, borderColor: cardBorder }]}>
           <MaterialCommunityIcons name="alert-circle" size={32} color="#ef4444" />
-          <Text style={styles.errorTitle}>Errore</Text>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={[styles.errorTitle, { color: titleColor }]}>Errore</Text>
+          <Text style={[styles.errorText, { color: subtitleColor }]}>{error}</Text>
           <TouchableOpacity 
-            style={[styles.retryButton, { backgroundColor: categoryInfo.colors[0] }]}
+            style={[styles.retryButton, { backgroundColor: accentColor }]}
             onPress={loadIntelligentInsights}
           >
             <Text style={styles.retryButtonText}>Riprova</Text>
@@ -234,15 +245,15 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
       <View style={styles.container}>
         {showTitle && (
           <View style={styles.header}>
-            <Text style={styles.title}>{sectionTitle}</Text>
-            <Text style={styles.subtitle}>{categoryInfo.subtitle}</Text>
+            <Text style={[styles.title, { color: titleColor }]}>{sectionTitle}</Text>
+            <Text style={[styles.subtitle, { color: subtitleColor }]}>{categoryInfo.subtitle}</Text>
           </View>
         )}
         
-        <View style={[styles.emptyCard, { backgroundColor: categoryInfo.bgColors[0] }]}>
-          <MaterialCommunityIcons name="lightbulb-outline" size={32} color={categoryInfo.colors[0]} />
-          <Text style={styles.emptyTitle}>Nessun insight disponibile</Text>
-          <Text style={styles.emptyText}>
+        <View style={[styles.emptyCard, { backgroundColor: cardBackground, borderColor: cardBorder }]}>
+          <MaterialCommunityIcons name="lightbulb-outline" size={32} color={accentColor} />
+          <Text style={[styles.emptyTitle, { color: titleColor }]}>Nessun insight disponibile</Text>
+          <Text style={[styles.emptyText, { color: subtitleColor }]}>
             Completa più analisi per ricevere insight personalizzati
           </Text>
         </View>
@@ -256,14 +267,14 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
         <View style={styles.header}>
           <View style={styles.titleRow}>
             <View style={styles.titleContainer}>
-              <Text style={[styles.title, { color: colors.text }]}>{sectionTitle}</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{categoryInfo.subtitle}</Text>
+              <Text style={[styles.title, { color: titleColor }]}>{sectionTitle}</Text>
+              <Text style={[styles.subtitle, { color: subtitleColor }]}>{categoryInfo.subtitle}</Text>
             </View>
             <TouchableOpacity 
-              style={[styles.refreshButton, { backgroundColor: `${categoryInfo.colors[0]}22` }]}
+              style={[styles.refreshButton, { backgroundColor: `${accentColor}22` }]}
               onPress={loadIntelligentInsights}
             >
-              <MaterialCommunityIcons name="refresh" size={20} color={categoryInfo.colors[0]} />
+              <MaterialCommunityIcons name="refresh" size={20} color={accentColor} />
             </TouchableOpacity>
           </View>
         </View>
@@ -271,7 +282,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
 
       {/* Trend Summary Card */}
       {trendSummary && (
-        <View style={[styles.trendCard, { backgroundColor: categoryInfo.bgColors[1] }]}>
+        <View style={[styles.trendCard, { backgroundColor: categoryInfo.bgColors[1], borderColor: cardBorder }]}>
           <LinearGradient
             colors={categoryInfo.colors}
             start={{ x: 0, y: 0 }}

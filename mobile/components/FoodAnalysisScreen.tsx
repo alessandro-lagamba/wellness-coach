@@ -105,7 +105,20 @@ const formatShortDate = (date: Date, language: string) =>
     day: 'numeric',
   }).format(date);
 
-const toISODate = (date: Date) => date.toISOString().split('T')[0];
+const toISODate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const fromISODate = (iso: string) => {
+  const [year, month, day] = iso.split('-').map(Number);
+  const date = new Date();
+  date.setFullYear(year || date.getFullYear(), (month || 1) - 1, day || 1);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
 
 const classifyTimeBucket = (minutes?: number | null): TimeFilter => {
   if (!minutes || minutes <= 0) return 'balanced';
@@ -2470,7 +2483,7 @@ export const FoodAnalysisScreen: React.FC = () => {
               return (
                 <TouchableOpacity
                   key={day.iso}
-                  onPress={() => setSelectedPlannerDate(new Date(day.iso))}
+                onPress={() => setSelectedPlannerDate(fromISODate(day.iso))}
                   style={{
                     alignItems: 'center',
                     justifyContent: 'center',

@@ -910,6 +910,17 @@
           "low": "BASSA"
         }
       },
+      "mealInsights": {
+        "title": "Insight del pasto",
+        "subtitle": "L'AI ha analizzato il piatto e ti suggerisce come migliorarlo"
+      },
+      "recommendations": {
+        "priority": {
+          "high": "ALTA",
+          "medium": "MEDIA",
+          "low": "BASSA"
+        }
+      },
       "mealType": {
         "breakfast": "Colazione",
         "lunch": "Pranzo",

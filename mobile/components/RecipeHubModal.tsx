@@ -381,33 +381,33 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
         // Se non ci sono ricette, mostra le card di default
         if (mealTypeCards.length === 0) {
             return (
-                <View style={styles.insightList}>
-                    {[
-                        {
-                            id: 'breakfast',
-                            title: t('analysis.food.recipes.breakfast.title'),
-                            description: t('analysis.food.recipes.breakfast.description'),
-                            image: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=1200&q=80',
-                        },
-                        {
-                            id: 'lunch',
-                            title: t('analysis.food.recipes.lunch.title'),
-                            description: t('analysis.food.recipes.lunch.description'),
-                            image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80',
-                        },
-                        {
-                            id: 'dinner',
-                            title: t('analysis.food.recipes.dinner.title'),
-                            description: t('analysis.food.recipes.dinner.description'),
-                            image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=1200&q=80',
-                        },
-                        {
-                            id: 'snack',
-                            title: t('analysis.food.recipes.snack.title'),
-                            description: t('analysis.food.recipes.snack.description'),
-                            image: 'https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?auto=format&fit=crop&w=1200&q=80',
-                        },
-                    ].map((item) => (
+        <View style={styles.insightList}>
+            {[
+                {
+                    id: 'breakfast',
+                    title: t('analysis.food.recipes.breakfast.title'),
+                    description: t('analysis.food.recipes.breakfast.description'),
+                    image: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=1200&q=80',
+                },
+                {
+                    id: 'lunch',
+                    title: t('analysis.food.recipes.lunch.title'),
+                    description: t('analysis.food.recipes.lunch.description'),
+                    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80',
+                },
+                {
+                    id: 'dinner',
+                    title: t('analysis.food.recipes.dinner.title'),
+                    description: t('analysis.food.recipes.dinner.description'),
+                    image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=1200&q=80',
+                },
+                {
+                    id: 'snack',
+                    title: t('analysis.food.recipes.snack.title'),
+                    description: t('analysis.food.recipes.snack.description'),
+                    image: 'https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?auto=format&fit=crop&w=1200&q=80',
+                },
+            ].map((item) => (
                         <TouchableOpacity 
                             key={item.id} 
                             style={[styles.insightCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -416,23 +416,23 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
                                 setActiveTab('library');
                             }}
                         >
-                            <Image source={{ uri: item.image }} style={styles.insightImage} />
-                            <View style={styles.insightContent}>
-                                <Text style={[styles.insightTitle, { color: colors.text }]}>{item.title}</Text>
-                                <Text style={[styles.insightDescription, { color: colors.textSecondary }]}>
-                                    {item.description}
-                                </Text>
-                                <View style={[styles.insightAction, { backgroundColor: colors.primary + '15' }]}>
-                                    <Text style={[styles.insightActionText, { color: colors.primary }]}>
-                                        {t('common.view')}
-                                    </Text>
-                                    <MaterialCommunityIcons name="arrow-right" size={16} color={colors.primary} />
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            );
+                    <Image source={{ uri: item.image }} style={styles.insightImage} />
+                    <View style={styles.insightContent}>
+                        <Text style={[styles.insightTitle, { color: colors.text }]}>{item.title}</Text>
+                        <Text style={[styles.insightDescription, { color: colors.textSecondary }]}>
+                            {item.description}
+                        </Text>
+                        <View style={[styles.insightAction, { backgroundColor: colors.primary + '15' }]}>
+                            <Text style={[styles.insightActionText, { color: colors.primary }]}>
+                                {t('common.view')}
+                            </Text>
+                            <MaterialCommunityIcons name="arrow-right" size={16} color={colors.primary} />
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            ))}
+        </View>
+    );
         }
 
         return (

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,6 @@ import { ResultHero } from './ResultHero';
 import { EnhancedMetricTile } from './EnhancedMetricTile';
 import { IntelligentInsightsSection } from './IntelligentInsightsSection';
 import { NutritionRecommendationCard } from './NutritionRecommendationCard';
-import { MetricsService } from '../services/metrics.service';
 
 const { width } = Dimensions.get('window');
 
@@ -79,37 +78,121 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
     fiber: 25,
   };
 
+  const macroGoals = useMemo(() => ({
+    protein: dailyGoals.proteins,
+    carbs: dailyGoals.carbohydrates,
+    fats: dailyGoals.fats,
+    fiber: dailyGoals.fiber,
+  }), []);
+
+  const macroEnergyFactors = {
+    protein: 4,
+    carbs: 4,
+    fats: 9,
+    fiber: 2,
+  };
+
+  const metricNames = language === 'it'
+    ? { protein: 'proteine', carbs: 'carboidrati', fats: 'grassi', fiber: 'fibre' }
+    : { protein: 'protein', carbs: 'carbs', fats: 'fat', fiber: 'fiber' };
+
+  const statusLabels = language === 'it'
+    ? { low: 'BASSO', moderate: 'MEDIO', good: 'ADEGUATO', high: 'ALTO' }
+    : { low: 'LOW', moderate: 'MODERATE', good: 'BALANCED', high: 'HIGH' };
+
+  const metricSuggestions = language === 'it'
+    ? {
+        protein: {
+          low: 'Aggiungi legumi, pesce o carne bianca per bilanciare il piatto.',
+          moderate: 'Una piccola porzione di proteine magre completerà il pasto.',
+          good: 'Quota proteica in linea con l’obiettivo giornaliero.',
+          high: 'Le proteine sono già abbondanti, accompagna con verdure o cereali integrali.',
+        },
+        carbs: {
+          low: 'Integra cereali integrali o pane per avere energia a rilascio lento.',
+          moderate: 'Apporto di carboidrati discreto, abbinalo a fibre per stabilizzare la glicemia.',
+          good: 'Energia ben distribuita, continua così.',
+          high: 'Molti carboidrati: aggiungi proteine o verdure per bilanciare il piatto.',
+        },
+        fats: {
+          low: 'Grassi molto bassi: usa olio extravergine o frutta secca per assorbire vitamine.',
+          moderate: 'Grassi nella norma, ottimo per un pasto leggero.',
+          good: 'Grassi equilibrati rispetto all’obiettivo.',
+          high: 'Grassi elevati: riduci condimenti o salumi e aggiungi verdure fresche.',
+        },
+        fiber: {
+          low: 'Abbina insalata, verdure o legumi per supportare digestione e sazietà.',
+          moderate: 'Puoi aumentare ancora la fibra con frutta o cereali integrali.',
+          good: 'Ottimo apporto di fibre per un pasto completo.',
+          high: 'Fibra abbondante: bevi acqua per favorire la digestione.',
+        },
+      }
+    : {
+        protein: {
+          low: 'Add lean protein (fish, legumes, chicken) to balance the plate.',
+          moderate: 'A small protein side will complete the meal.',
+          good: 'Protein intake is aligned with your daily target.',
+          high: 'Protein load is already high, pair with veggies or whole grains.',
+        },
+        carbs: {
+          low: 'Add whole grains or bread to keep energy stable.',
+          moderate: 'Decent carb intake, pair with fiber to stabilise glucose.',
+          good: 'Energy is well distributed across carbs.',
+          high: 'High carbs: add proteins or veggies to balance the plate.',
+        },
+        fats: {
+          low: 'Very low fat: add olive oil or nuts to absorb fat-soluble vitamins.',
+          moderate: 'Fats are within a good range for a light meal.',
+          good: 'Fat intake is balanced with your target.',
+          high: 'High fat: reduce dressings or cured meats and add fresh veggies.',
+        },
+        fiber: {
+          low: 'Pair with salad, veggies or legumes to support digestion and satiety.',
+          moderate: 'You can boost fiber further with fruit or whole grains.',
+          good: 'Great fiber intake for a complete meal.',
+          high: 'Fiber is high: remember to drink water to aid digestion.',
+        },
+      };
+
+  const buildMacroBucket = (metricKey: 'protein' | 'carbs' | 'fats' | 'fiber', value: number) => {
+    const goal = macroGoals[metricKey] || 1;
+    const ratio = goal > 0 ? value / goal : 0;
+    const ratioPercent = Math.round(ratio * 100);
+    const energyFactor = macroEnergyFactors[metricKey] || 4;
+    const mealShare = results.calories > 0
+      ? Math.round(((value * energyFactor) / results.calories) * 100)
+      : null;
+
+    let status: 'low' | 'moderate' | 'good' | 'high';
+    if (ratio < 0.35) status = 'low';
+    else if (ratio < 0.75) status = 'moderate';
+    else if (ratio <= 1.2) status = 'good';
+    else status = 'high';
+
+    const colors = {
+      low: '#ef4444',
+      moderate: '#f59e0b',
+      good: '#10b981',
+      high: '#3b82f6',
+    };
+
+    const baseText = language === 'it'
+      ? `Questo piatto copre circa il ${ratioPercent}% del tuo obiettivo giornaliero di ${metricNames[metricKey]}${mealShare !== null ? ` (${mealShare}% delle calorie del pasto).` : '.'}`
+      : `This meal covers about ${ratioPercent}% of your daily ${metricNames[metricKey]} target${mealShare !== null ? ` (${mealShare}% of the meal calories).` : '.'}`;
+
+    const suggestion = metricSuggestions[metricKey][status];
+
+    return {
+      label: statusLabels[status],
+      color: colors[status],
+      icon: '',
+      description: `${baseText} ${suggestion}`,
+      status,
+    };
+  };
+
+
   // Calculate buckets for metrics
-  const getProteinBucket = (value: number) => {
-    const pct = (value / dailyGoals.proteins) * 100;
-    if (pct < 50) return { label: 'Low', color: '#ef4444', icon: '⚠️', description: 'Below recommended' };
-    if (pct < 80) return { label: 'Moderate', color: '#f59e0b', icon: '📊', description: 'Getting there' };
-    if (pct < 120) return { label: 'Optimal', color: '#10b981', icon: '✅', description: 'Good protein balance' };
-    return { label: 'High', color: '#3b82f6', icon: '💪', description: 'Excellent protein intake' };
-  };
-
-  const getCarbsBucket = (value: number) => {
-    const pct = (value / dailyGoals.carbohydrates) * 100;
-    if (pct < 50) return { label: 'Low', color: '#f59e0b', icon: '📉', description: 'Low carb intake' };
-    if (pct < 100) return { label: 'Moderate', color: '#10b981', icon: '📊', description: 'Balanced carbs' };
-    return { label: 'High', color: '#3b82f6', icon: '⚡', description: 'High energy source' };
-  };
-
-  const getFatsBucket = (value: number) => {
-    const pct = (value / dailyGoals.fats) * 100;
-    if (pct < 50) return { label: 'Low', color: '#f59e0b', icon: '📉', description: 'Low fat intake' };
-    if (pct < 100) return { label: 'Moderate', color: '#10b981', icon: '📊', description: 'Balanced fats' };
-    return { label: 'High', color: '#3b82f6', icon: '🥑', description: 'Good fat content' };
-  };
-
-  const getFiberBucket = (value: number) => {
-    if (!value) return { label: 'N/A', color: '#6b7280', icon: '—', description: 'Not detected' };
-    const pct = (value / dailyGoals.fiber) * 100;
-    if (pct < 50) return { label: 'Low', color: '#ef4444', icon: '⚠️', description: 'Eat more fiber' };
-    if (pct < 100) return { label: 'Moderate', color: '#f59e0b', icon: '📊', description: 'Getting there' };
-    return { label: 'Optimal', color: '#10b981', icon: '✅', description: 'Good fiber intake' };
-  };
-
   // Prepare data for IntelligentInsightsSection
   const insightsData = useMemo(() => ({
     healthScore: results.healthScore,
@@ -125,80 +208,140 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
     observations: fullAnalysisResult?.observations || [],
   }), [results, fullAnalysisResult, identifiedFoods]);
 
-  // Recommendation title rules (similar to EmotionResultsScreen)
-  const recommendationRules = useMemo(
-    () => [
-      {
-        keywords: ['insalata', 'verdura', 'vegetable', 'salad', 'verdure'],
-        title: language === 'it' ? 'Aggiungi Verdure' : 'Add Vegetables',
-      },
-      {
-        keywords: ['acqua', 'bevanda', 'water', 'drink', 'idrata'],
-        title: language === 'it' ? 'Idratazione' : 'Hydration',
-      },
-      {
-        keywords: ['proteina', 'protein', 'carne', 'pesce', 'meat', 'fish'],
-        title: language === 'it' ? 'Bilanciamento Proteico' : 'Protein Balance',
-      },
-      {
-        keywords: ['fibra', 'fiber', 'cereali', 'grain', 'integrale', 'whole'],
-        title: language === 'it' ? 'Aumenta le Fibre' : 'Increase Fiber',
-      },
-      {
-        keywords: ['frutta', 'fruit', 'vitamine', 'vitamin'],
-        title: language === 'it' ? 'Aggiungi Frutta' : 'Add Fruit',
-      },
-      {
-        keywords: ['porzione', 'serving', 'quantità', 'quantity', 'dose'],
-        title: language === 'it' ? 'Controllo Porzioni' : 'Portion Control',
-      },
-      {
-        keywords: ['zucchero', 'sugar', 'dolce', 'sweet'],
-        title: language === 'it' ? 'Riduci Zuccheri' : 'Reduce Sugar',
-      },
-      {
-        keywords: ['sale', 'sodio', 'salt', 'sodium'],
-        title: language === 'it' ? 'Riduci il Sale' : 'Reduce Salt',
-      },
-      {
-        keywords: ['bilanciato', 'balanced', 'equilibrato', 'equilibrium'],
-        title: language === 'it' ? 'Pasto Bilanciato' : 'Balanced Meal',
-      },
-    ],
-    [language],
+  const fiberValue = results.fiber || fullAnalysisResult?.macronutrients?.fiber || 0;
+
+  const proteinBucket = useMemo(
+    () => buildMacroBucket('protein', results.proteins),
+    [results.proteins, results.calories, language],
   );
 
-  const fallbackRecommendationTitles = useMemo(
-    () =>
-      language === 'it'
-        ? ['Consiglio Nutrizionale', 'Suggerimento Alimentare', 'Raccomandazione']
-        : ['Nutritional Tip', 'Dietary Suggestion', 'Recommendation'],
-    [language],
+  const carbsBucket = useMemo(
+    () => buildMacroBucket('carbs', results.carbohydrates),
+    [results.carbohydrates, results.calories, language],
   );
 
-  const getRecommendationTitle = useCallback((text: string, index: number) => {
-    if (!text) {
-      return fallbackRecommendationTitles[index % fallbackRecommendationTitles.length];
-    }
-    const lower = text.toLowerCase();
-    const matchedRule = recommendationRules.find((rule) =>
-      rule.keywords.some((keyword) => lower.includes(keyword)),
-    );
-    if (matchedRule) {
-      return matchedRule.title;
-    }
-    return fallbackRecommendationTitles[index % fallbackRecommendationTitles.length];
-  }, [fallbackRecommendationTitles, recommendationRules]);
+  const fatsBucket = useMemo(
+    () => buildMacroBucket('fats', results.fats),
+    [results.fats, results.calories, language],
+  );
 
-  // Generate recommendations (not actions, just tips)
-  const recommendations = useMemo(() => {
-    return results.recommendations.map((rec, index) => ({
-      id: `rec-${index}`,
-      title: getRecommendationTitle(rec, index),
-      description: rec,
-      priority: index === 0 ? 'high' : index === 1 ? 'medium' : 'low',
+  const fiberBucket = useMemo(
+    () => buildMacroBucket('fiber', fiberValue),
+    [fiberValue, results.calories, language],
+  );
+
+  const caloriesBucket = useMemo(() => {
+    const percent = Math.round((results.calories / dailyGoals.calories) * 100);
+    return {
+      label: language === 'it' ? 'APPORTO' : 'INTAKE',
+      color: '#ef4444',
+      icon: '🔥',
+      description: language === 'it'
+        ? `Questo pasto copre circa il ${percent}% del tuo obiettivo calorico quotidiano.`
+        : `This meal provides roughly ${percent}% of your daily calorie goal.`,
+    };
+  }, [results.calories, language]);
+
+  const personalizedRecommendations = useMemo(() => {
+    const tips: { id: string; title: string; description: string; priority: 'high' | 'medium' | 'low' }[] = [];
+    const mainDish = identifiedFoods[0] || (language === 'it' ? 'questo pasto' : 'this meal');
+
+    const pushTip = (priority: 'high' | 'medium' | 'low', titleIt: string, titleEn: string, descIt: string, descEn: string) => {
+      tips.push({
+        id: `rec-${tips.length}`,
+        title: language === 'it' ? titleIt : titleEn,
+        description: language === 'it' ? descIt : descEn,
+        priority,
+      });
+    };
+
+    if (proteinBucket.status === 'low') {
+      pushTip(
+        'high',
+        'Alza le proteine',
+        'Boost protein',
+        `Aggiungi legumi, pesce o carni bianche per rendere ${mainDish} più saziante e bilanciato.`,
+        `Add legumes, fish or lean meat to make ${mainDish} more filling and balanced.`,
+      );
+    }
+
+    if (fiberBucket.status === 'low') {
+      pushTip(
+        'high',
+        'Aggiungi Verdure',
+        'Add vegetables',
+        `Abbina ${mainDish} a insalata, verdure cotte o legumi per aumentare la fibra e migliorare la digestione.`,
+        `Pair ${mainDish} with salad, cooked veggies or legumes to boost fiber and digestion.`,
+      );
+    }
+
+    if (fatsBucket.status === 'high') {
+      pushTip(
+        'medium',
+        'Alleggerisci i condimenti',
+        'Lighten dressings',
+        `Riduci salse e formaggi e aggiungi verdure fresche per equilibrare i grassi del piatto.`,
+        `Reduce sauces and cheese and add fresh veggies to balance the fat load of this dish.`,
+      );
+    }
+
+    if (carbsBucket.status === 'high') {
+      pushTip(
+        'medium',
+        'Porzioni di carboidrati',
+        'Carb portions',
+        `Dividi la porzione di carboidrati e completa con proteine magre per un rilascio energetico più stabile.`,
+        `Split the carb portion and add lean proteins for steadier energy.`,
+      );
+    }
+
+    if (results.calories > 750) {
+      pushTip(
+        'medium',
+        'Pasto Sostanzioso',
+        'Hearty meal',
+        'Considera di spezzare il piatto in due momenti o aggiungi una fonte proteica più leggera per evitare picchi energetici.',
+        'Consider splitting this meal in two moments or adding a lighter protein to avoid energy peaks.',
+      );
+    }
+
+    if (tips.length === 0) {
+      pushTip(
+        'low',
+        'Mantieni l’equilibrio',
+        'Keep the balance',
+        'Il profilo nutrizionale è già ben distribuito. Mantieni idratazione e abbina verdure per un pasto completo.',
+        'The nutritional profile is already well distributed. Stay hydrated and add veggies for a complete meal.',
+      );
+    }
+
+    return tips;
+  }, [
+    identifiedFoods,
+    language,
+    proteinBucket.status,
+    fiberBucket.status,
+    fatsBucket.status,
+    carbsBucket.status,
+    results.calories,
+  ]);
+
+  const recommendations = personalizedRecommendations;
+
+  const mealInsights = useMemo(() => {
+    return personalizedRecommendations.slice(0, 3).map((rec) => ({
+      id: rec.id,
+      title: rec.title,
+      description: rec.description,
+      priority: rec.priority,
+      icon:
+        rec.priority === 'high'
+          ? 'alert-circle'
+          : rec.priority === 'medium'
+          ? 'lightbulb-on'
+          : 'check-circle',
     }));
-  }, [results.recommendations, getRecommendationTitle]);
+  }, [personalizedRecommendations]);
 
   return (
     <LinearGradient
@@ -223,14 +366,6 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
         />
 
         <View style={styles.contentContainer}>
-          {/* Intelligent Insights */}
-          <IntelligentInsightsSection
-            category="food"
-            data={insightsData}
-            showTitle={true}
-            maxInsights={2}
-          />
-
           {/* Metrics Grid */}
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {t('analysis.food.nutritionalBreakdown') || 'NUTRITIONAL BREAKDOWN'}
@@ -244,12 +379,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
               label={t('analysis.food.metrics.calories') || 'Calories'}
               color="#ef4444"
               icon="fire"
-              bucket={{
-                label: 'Intake',
-                color: '#ef4444',
-                icon: '🔥',
-                description: `${Math.round((results.calories / dailyGoals.calories) * 100)}% of daily goal`
-              }}
+              bucket={caloriesBucket}
               expanded={true}
             />
 
@@ -260,7 +390,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
               label={t('analysis.food.metrics.proteins') || 'Protein'}
               color="#3b82f6"
               icon="food-steak"
-              bucket={getProteinBucket(results.proteins)}
+              bucket={proteinBucket}
             />
 
             {/* Carbs */}
@@ -270,7 +400,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
               label={t('analysis.food.metrics.carbohydrates') || 'Carbs'}
               color="#f97316"
               icon="noodles"
-              bucket={getCarbsBucket(results.carbohydrates)}
+              bucket={carbsBucket}
             />
 
             {/* Fats */}
@@ -280,18 +410,18 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
               label={t('analysis.food.metrics.fats') || 'Fats'}
               color="#fbbf24"
               icon="oil"
-              bucket={getFatsBucket(results.fats)}
+              bucket={fatsBucket}
             />
 
             {/* Fiber (if available) */}
             {(results.fiber !== undefined || fullAnalysisResult?.macronutrients?.fiber) && (
               <EnhancedMetricTile
                 metric="fiber"
-                value={results.fiber || fullAnalysisResult?.macronutrients?.fiber || 0}
+                value={fiberValue}
                 label={t('analysis.food.metrics.fiber') || 'Fiber'}
                 color="#10b981"
                 icon="leaf"
-                bucket={getFiberBucket(results.fiber || fullAnalysisResult?.macronutrients?.fiber || 0)}
+                bucket={fiberBucket}
               />
             )}
           </View>
@@ -313,12 +443,63 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
             </View>
           )}
 
+          {mealInsights.length > 0 && (
+            <View style={styles.mealInsightCard}>
+              <View style={styles.mealInsightHeader}>
+                <View>
+                  <Text style={[styles.mealInsightTitle, { color: colors.text }]}>
+                    {t('analysis.food.results.mealInsights.title') || 'Insight del pasto'}
+                  </Text>
+                  <Text style={[styles.mealInsightSubtitle, { color: colors.textSecondary }]}>
+                    {t('analysis.food.results.mealInsights.subtitle') || 'L’AI ha analizzato il piatto e ti suggerisce come migliorarlo'}
+                  </Text>
+                </View>
+                <View style={[styles.mealInsightBadge, { backgroundColor: colors.primary + '22' }]}>
+                  <MaterialCommunityIcons name="robot-outline" size={16} color={colors.primary} />
+                  <Text style={[styles.mealInsightBadgeText, { color: colors.primary }]}>AI</Text>
+                </View>
+              </View>
+
+              {mealInsights.map((insight, idx) => (
+                <View
+                  key={insight.id}
+                  style={[
+                    styles.mealInsightRow,
+                    { borderColor: colors.border, borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth },
+                  ]}
+                >
+                  <View style={[styles.mealInsightIcon, { backgroundColor: colors.surfaceElevated }]}>
+                    <MaterialCommunityIcons name={insight.icon as any} size={18} color={colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.mealInsightRowTitle, { color: colors.text }]}>{insight.title}</Text>
+                    <Text style={[styles.mealInsightRowText, { color: colors.textSecondary }]}>{insight.description}</Text>
+                  </View>
+                  <View style={[styles.mealInsightPriority, { borderColor: colors.border }]}>
+                    <Text style={[styles.mealInsightPriorityText, { color: colors.textSecondary }]}>
+                      {t(`analysis.food.recommendations.priority.${insight.priority}`)}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Intelligent Insights */}
+          <IntelligentInsightsSection
+            category="food"
+            data={insightsData}
+            showTitle={true}
+            maxInsights={2}
+            compact={false}
+          />
+
           {/* Recommendations */}
           {recommendations.length > 0 && (
             <>
-              <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
                 {t('analysis.food.results.recommendations') || 'RACCOMANDAZIONI'}
-              </Text>
+          </Text>
 
               {recommendations.map((rec) => (
                 <NutritionRecommendationCard
@@ -327,8 +508,8 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
                   description={rec.description}
                   priority={rec.priority}
                   index={parseInt(rec.id.split('-')[1])}
-                />
-              ))}
+            />
+          ))}
             </>
           )}
 
@@ -438,6 +619,78 @@ const styles = StyleSheet.create({
   foodText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  mealInsightCard: {
+    marginTop: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 18,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  mealInsightHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  mealInsightTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  mealInsightSubtitle: {
+    fontSize: 13,
+    marginTop: 4,
+  },
+  mealInsightBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  mealInsightBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  mealInsightRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 12,
+    alignItems: 'flex-start',
+  },
+  mealInsightIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mealInsightRowTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  mealInsightRowText: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  mealInsightPriority: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+  },
+  mealInsightPriorityText: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   bottomBar: {
     position: 'absolute',
