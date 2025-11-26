@@ -127,6 +127,25 @@ export type GenerateRecipeResp =
   | { success: true; recipe: GeneratedRecipe }
   | { success: false; error: string };
 
+// Restaurant meal → home recipe generation
+export interface GenerateRestaurantRecipeBody {
+  dishName?: string;
+  identifiedFoods: string[];
+  macrosEstimate?: {
+    protein?: number;
+    carbs?: number;
+    fat?: number;
+    fiber?: number;
+    sugar?: number;
+    calories?: number;
+  };
+  contextNotes?: string;
+  prefs?: DietPref[];
+  allergies?: Allergy[];
+}
+
+export type GenerateRestaurantRecipeResp = GenerateRecipeResp;
+
 // Parse Ingredients Types
 export interface ParsedIngredient {
   name: string;

@@ -1009,7 +1009,9 @@
           "saveError": "Unable to save the recipe",
           "deleteTitle": "Delete recipe",
           "deleteMessage": "Are you sure you want to delete this recipe?",
-          "deleteError": "Unable to delete the recipe"
+          "deleteError": "Unable to delete the recipe",
+          "aiComplete": "Complete with AI",
+          "aiCompleteError": "Could not complete the recipe with AI. Please try again later."
         }
       },
       "mealPlanner": {
@@ -1021,7 +1023,9 @@
         "assignTitle": "Assign {{meal}} on {{date}}",
         "assignFallback": "Assign recipe",
         "remove": "Remove",
-        "noRecipes": "No recipes match this filter"
+        "noRecipes": "No recipes match this filter",
+        "moveTitle": "Move this meal",
+        "moveSubtitle": "Choose which meal slot you want to assign it to."
       },
       "preferences": {
         "title": "Food Preferences",

@@ -14,6 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
 import recipeLibraryService, { MealType, UserRecipe } from '../services/recipe-library.service';
+import { NutritionService } from '../services/nutrition.service';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 interface RecipeEditorModalProps {
@@ -24,6 +25,18 @@ interface RecipeEditorModalProps {
   onDeleted?: (recipeId: string) => void;
   mode?: 'edit' | 'create';
   initialDraft?: Partial<UserRecipe> | null;
+  aiContext?: {
+    identifiedFoods: string[];
+    macrosEstimate?: {
+      protein?: number;
+      carbs?: number;
+      fat?: number;
+      fiber?: number;
+      sugar?: number;
+      calories?: number;
+    };
+    contextNotes?: string;
+  } | null;
 }
 
 const mealTypes: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -36,6 +49,7 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
   onDeleted,
   mode = 'edit',
   initialDraft = null,
+  aiContext = null,
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -53,6 +67,7 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
     steps: '',
   });
   const [saving, setSaving] = useState(false);
+  const canUseAiComplete = !!aiContext && mode === 'create';
 
   const hydrateForm = (source?: Partial<UserRecipe> | null) => {
     const mealTypesValue =
@@ -194,6 +209,52 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
         },
       ],
     );
+  };
+
+  const handleAiComplete = async () => {
+    if (!aiContext) return;
+    try {
+      setSaving(true);
+      const response = await NutritionService.generateRestaurantRecipe({
+        dishName: form.title || aiContext.identifiedFoods[0] || 'Pasto analizzato',
+        identifiedFoods: aiContext.identifiedFoods,
+        macrosEstimate: aiContext.macrosEstimate,
+        contextNotes: aiContext.contextNotes,
+      });
+
+      if (!response.success || !response.data) {
+        Alert.alert(t('common.error'), t('analysis.food.recipes.editor.aiCompleteError'));
+        return;
+      }
+
+      const generated = response.data;
+      const ingredientsText = (generated.ingredients || [])
+        .map((ing: any) => {
+          const qty = typeof ing.quantity === 'number' ? `${ing.quantity} ` : '';
+          const unit = ing.unit ? `${ing.unit} ` : '';
+          return `${qty}${unit}${ing.name}`.trim();
+        })
+        .join('\n');
+      const stepsText = (generated.steps || []).join('\n');
+      const tipsText = (generated.tips || []).join('\n');
+
+      setForm((prev) => ({
+        ...prev,
+        title: prev.title || generated.title || prev.title,
+        servings: generated.servings || prev.servings,
+        readyMinutes: generated.readyInMinutes
+          ? String(generated.readyInMinutes)
+          : prev.readyMinutes,
+        ingredients: ingredientsText || prev.ingredients,
+        steps: stepsText || prev.steps,
+        notes: prev.notes || tipsText,
+      }));
+    } catch (error) {
+      console.error('[RecipeEditorModal] ai complete error', error);
+      Alert.alert(t('common.error'), t('analysis.food.recipes.editor.aiCompleteError'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -391,19 +452,32 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity
-            style={[styles.saveButton, { backgroundColor: colors.primary }]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator color={colors.textInverse} />
-            ) : (
-              <Text style={[styles.saveButtonText, { color: colors.textInverse }]}>
-                {t('common.save')}
-              </Text>
+          <View style={{ flexDirection: 'row', gap: 12, flex: 1, justifyContent: 'flex-end' }}>
+            {canUseAiComplete && (
+              <TouchableOpacity
+                style={[styles.aiButton, { borderColor: colors.primary }]}
+                onPress={handleAiComplete}
+                disabled={saving}
+              >
+                <Text style={[styles.aiButtonText, { color: colors.primary }]}>
+                  {t('analysis.food.recipes.editor.aiComplete')}
+                </Text>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.saveButton, { backgroundColor: colors.primary }]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator color={colors.textInverse} />
+              ) : (
+                <Text style={[styles.saveButtonText, { color: colors.textInverse }]}>
+                  {t('common.save')}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     </Modal>
@@ -529,6 +603,16 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 15,
+    fontWeight: '700',
+  },
+  aiButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 999,
+    borderWidth: 1.5,
+  },
+  aiButtonText: {
+    fontSize: 13,
     fontWeight: '700',
   },
 });

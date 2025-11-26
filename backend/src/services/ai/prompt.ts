@@ -172,6 +172,84 @@ Output JSON secondo schema.
 };
 
 /**
+ * Restaurant Meal → Home Recipe Prompt
+ */
+export const restaurantMealRecipePrompt = (params: {
+  dishName?: string;
+  identifiedFoods: string[];
+  macrosEstimate?: {
+    protein?: number;
+    carbs?: number;
+    fat?: number;
+    fiber?: number;
+    sugar?: number;
+    calories?: number;
+  };
+  contextNotes?: string;
+  prefs?: string[];
+  allergies?: string[];
+}): string => {
+  const name = params.dishName || "questo piatto";
+  const foods =
+    params.identifiedFoods && params.identifiedFoods.length
+      ? params.identifiedFoods.join(", ")
+      : "ingredienti non meglio specificati";
+  const macros = params.macrosEstimate || {};
+  const caloriesInfo =
+    typeof macros.calories === "number"
+      ? `circa ${Math.round(macros.calories)} kcal per porzione stimata`
+      : "un apporto calorico non perfettamente noto";
+
+  return `
+Contesto: l'utente ha mangiato ${name} al ristorante. L'AI ha analizzato una foto del piatto e ha identificato questi elementi:
+- Ingredienti/elementi principali: ${foods}
+- Stima nutrizionale: ${caloriesInfo}
+- Note di contesto: ${params.contextNotes || "nessuna nota aggiuntiva"}
+
+Obiettivo:
+- Ricostruire una ricetta casalinga realistica che si avvicini il più possibile al piatto visto al ristorante.
+- Permettere all'utente di rifarla a casa, con dosi chiare e passaggi semplici.
+
+Preferenze e vincoli:
+- Preferenze dell'utente: ${params.prefs?.join(", ") || "nessuna preferenza specifica dichiarata"}.
+- Allergie/intolleranze: ${params.allergies?.join(", ") || "nessuna dichiarata"}.
+
+Istruzioni:
+
+1. Parti SEMPRE dagli ingredienti identificati (${foods}) e usa il buon senso culinario per:
+   - Separare ingredienti composti (es. "pizza margherita con salame" → impasto pizza, salsa di pomodoro, mozzarella, salame, olio, sale, basilico).
+   - Aggiungere SOLO ingredienti tecnici di base necessari (acqua, sale, pepe, olio, farina, lievito, ecc.), evitando ingredienti speciali non giustificati.
+
+2. Rispetta rigorosamente allergie/intolleranze:
+   - Non utilizzare ingredienti che violano le allergie dichiarate.
+   - Quando necessario, proponi VARIANTI SICURE (es. mozzarella senza lattosio, impasto gluten-free) e segna chiaramente queste varianti.
+
+3. Obiettivo nutrizionale:
+   - Mantieni un profilo nutrizionale in linea con ${caloriesInfo}, ma puoi alleggerire leggermente il piatto (meno grassi saturi, cotture più leggere) se è coerente con la ricetta.
+   - Non serve replicare al grammo i macronutrienti: è più importante che la ricetta sia realistica e fedele al piatto visto.
+
+4. Struttura dell'output (schema "generated_recipe"):
+   - title: nome della ricetta, chiaro e sintetico (es. "Pizza margherita con salame (versione casalinga)").
+   - servings: porzioni realistiche (di default 1–2 per piatti da ristorante).
+   - readyInMinutes: tempo totale stimato, onesto ma non irrealistico.
+   - ingredients: elenco dettagliato con quantità (g/ml/porzioni) e unità chiare.
+     - Usa il campo "optional" per ingredienti facoltativi (es. extra topping, spezie opzionali).
+   - steps: passaggi numerati, chiari e sequenziali (preparazione, cottura, impiattamento).
+   - tips: 2–5 consigli pratici, ad esempio:
+     - come adattare la ricetta a versioni più leggere o più ricche,
+     - come gestire le varianti per allergie/intolleranze,
+     - come regolare cotture o consistenze per avvicinarsi al piatto del ristorante.
+   - macrosPerServing + caloriesPerServing: stima coerente con gli ingredienti e il tipo di piatto (usa valori nutrizionali standard, plausibili ma non perfetti).
+   - shoppingGaps: SOLO se servono ingredienti non presenti implicitamente nel piatto (es. lievito di birra, farina 00). Mantienili pochi e realistici.
+
+Regole:
+- Non inventare ingredienti esotici o introvabili: resta su materie prime realistiche per un supermercato europeo.
+- Evita termini troppo tecnici: spiega i passaggi in modo che un utente domestico medio possa seguirli.
+- Output esclusivamente in JSON conforme allo schema "generated_recipe". Nessun testo extra, nessun markdown, nessun code fence.
+`;
+};
+
+/**
  * Coach User Prompt
  */
 export const coachPrompt = (state: {

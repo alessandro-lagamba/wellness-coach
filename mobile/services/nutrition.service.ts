@@ -193,6 +193,66 @@ export class NutritionServiceClass {
       };
     }
   }
+
+  /**
+   * Generate home recipe from a restaurant-style meal (photo analysis)
+   */
+  async generateRestaurantRecipe(request: {
+    dishName?: string;
+    identifiedFoods: string[];
+    macrosEstimate?: {
+      protein?: number;
+      carbs?: number;
+      fat?: number;
+      fiber?: number;
+      sugar?: number;
+      calories?: number;
+    };
+    contextNotes?: string;
+    prefs?: string[];
+    allergies?: string[];
+  }): Promise<GenerateRecipeResponse> {
+    try {
+      const backendURL = await getBackendURL();
+
+      const response = await fetch(
+        `${backendURL}/api/nutrition/generate-restaurant-recipe`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(request),
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          `Backend request failed: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`,
+        );
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        return {
+          success: false,
+          error: data.error || 'Failed to generate restaurant recipe',
+        };
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      };
+    }
+  }
   /**
    * Parse ingredients from voice/text input
    */

@@ -137,8 +137,12 @@ const ScoreTile: React.FC<{
 
   const toggle = () => setIsExpanded((v) => !v);
 
-  const safeValue = Math.max(0, Math.min(maxValue, Number.isFinite(value) ? value : 0));
-  const percentage = maxValue > 0 ? (safeValue / maxValue) * 100 : 0;
+  // Usa il valore reale per il testo, senza clamp a maxValue,
+  // e usa maxValue solo per calcolare la percentuale della barra.
+  const rawValue = Number.isFinite(value) ? value : 0;
+  const safeValue = Math.max(0, rawValue);
+  const effectiveMax = maxValue && maxValue > 0 ? maxValue : safeValue || 1;
+  const percentage = effectiveMax > 0 ? Math.min(100, (safeValue / effectiveMax) * 100) : 0;
 
   const chevronStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: withTiming(isExpanded ? '90deg' : '0deg', { duration: 180 }) }],
@@ -196,9 +200,10 @@ const ScoreTile: React.FC<{
 // -----------------------------------------------------
 interface FoodCaptureCardProps {
   session: FoodSession;
+  dailyCaloriesGoal?: number;
 }
 
-export const FoodCaptureCard: React.FC<FoodCaptureCardProps> = ({ session }) => {
+export const FoodCaptureCard: React.FC<FoodCaptureCardProps> = ({ session, dailyCaloriesGoal }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const healthScore = session.health_score ?? 70;
@@ -209,9 +214,10 @@ export const FoodCaptureCard: React.FC<FoodCaptureCardProps> = ({ session }) => 
   // dati per la lista verticale
   const data = useMemo(() => {
     // ✅ FIX: Assicurati che i valori vengano letti correttamente, senza fallback a 0 se il valore esiste
-    const calories = typeof session.macronutrients?.calories === 'number' 
-      ? session.macronutrients.calories 
-      : 0;
+    const calories =
+      typeof session.macronutrients?.calories === 'number'
+        ? session.macronutrients.calories
+        : 0;
     const carbohydrates = typeof session.macronutrients?.carbohydrates === 'number'
       ? session.macronutrients.carbohydrates
       : 0;
@@ -222,8 +228,20 @@ export const FoodCaptureCard: React.FC<FoodCaptureCardProps> = ({ session }) => 
       ? session.macronutrients.fats
       : 0;
 
+    const mealType = session.meal_type || 'other';
+    const dailyGoal = dailyCaloriesGoal && dailyCaloriesGoal > 0 ? dailyCaloriesGoal : 2000;
+    const mealShare =
+      mealType === 'breakfast'
+        ? 0.15
+        : mealType === 'lunch'
+        ? 0.35
+        : mealType === 'snack'
+        ? 0.15
+        : 0.35; // dinner / other
+    const caloriesTarget = Math.max(100, Math.round(dailyGoal * mealShare));
+
     const items: Array<{ key: MetricKey; value: number; maxValue?: number; unit?: string }> = [
-      { key: 'calories', value: calories, unit: 'kcal' },
+      { key: 'calories', value: calories, unit: 'kcal', maxValue: caloriesTarget },
       { key: 'carbohydrates', value: carbohydrates, unit: 'g' },
       { key: 'proteins', value: proteins, unit: 'g' },
       { key: 'fats', value: fats, unit: 'g' },

@@ -1015,7 +1015,9 @@
           "saveError": "Impossibile salvare la ricetta",
           "deleteTitle": "Elimina ricetta",
           "deleteMessage": "Vuoi davvero eliminare questa ricetta?",
-          "deleteError": "Impossibile eliminare la ricetta"
+          "deleteError": "Impossibile eliminare la ricetta",
+          "aiComplete": "Completa con AI",
+          "aiCompleteError": "Impossibile completare la ricetta con l'AI. Riprova più tardi."
         }
       },
       "mealPlanner": {
@@ -1027,7 +1029,9 @@
         "assignTitle": "Assegna {{meal}} al {{date}}",
         "assignFallback": "Assegna ricetta",
         "remove": "Rimuovi",
-        "noRecipes": "Nessuna ricetta disponibile per questo filtro"
+        "noRecipes": "Nessuna ricetta disponibile per questo filtro",
+        "moveTitle": "Sposta questo pasto",
+        "moveSubtitle": "Seleziona il pasto della giornata a cui vuoi assegnarlo."
       },
       "preferences": {
         "title": "Preferenze Alimentari",

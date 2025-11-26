@@ -74,6 +74,7 @@ const { width } = Dimensions.get('window');
 
 type TimeFilter = 'all' | 'quick' | 'balanced' | 'slow';
 const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+
 const getDefaultMealType = (recipe?: UserRecipe): MealPlanMealType => {
   if (recipe?.meal_types?.length) {
     const candidate = recipe.meal_types[0] as MealPlanMealType;
@@ -81,6 +82,15 @@ const getDefaultMealType = (recipe?: UserRecipe): MealPlanMealType => {
       return candidate;
     }
   }
+  return 'dinner';
+};
+
+// Infer meal type from local time when AI result is ambiguous or missing.
+const inferMealTypeFromTime = (date: Date = new Date()): MealPlanMealType => {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 11) return 'breakfast';
+  if (hour >= 11 && hour < 15) return 'lunch';
+  if (hour >= 15 && hour < 18) return 'snack';
   return 'dinner';
 };
 
@@ -431,6 +441,19 @@ export const FoodAnalysisScreen: React.FC = () => {
   }>({ visible: false });
   const [slotSearch, setSlotSearch] = useState('');
   const [loadingRecipe, setLoadingRecipe] = useState(false);
+  const [pendingAttachSlot, setPendingAttachSlot] = useState<{ date: string; mealType: MealPlanMealType } | null>(null);
+  const [recipeAiContext, setRecipeAiContext] = useState<{
+    identifiedFoods: string[];
+    macrosEstimate?: {
+      protein?: number;
+      carbs?: number;
+      fat?: number;
+      fiber?: number;
+      sugar?: number;
+      calories?: number;
+    };
+    contextNotes?: string;
+  } | null>(null);
 
   const analysisServiceRef = useRef(UnifiedAnalysisService.getInstance());
   const isMountedRef = useRef(true);
@@ -797,14 +820,29 @@ export const FoodAnalysisScreen: React.FC = () => {
     setRecipeEditorVisible(true);
   };
 
-  const openManualRecipeEditor = (draft?: Partial<UserRecipe>) => {
+  const openManualRecipeEditor = (
+    draft?: Partial<UserRecipe>,
+    aiContext?: {
+      identifiedFoods: string[];
+      macrosEstimate?: {
+        protein?: number;
+        carbs?: number;
+        fat?: number;
+        fiber?: number;
+        sugar?: number;
+        calories?: number;
+      };
+      contextNotes?: string;
+    },
+  ) => {
     setRecipeEditorMode('create');
     setEditingRecipe(null);
     setRecipeDraft(draft || null);
+    setRecipeAiContext(aiContext || null);
     setRecipeEditorVisible(true);
   };
 
-  const handleRecipeEditorSaved = (saved: UserRecipe) => {
+  const handleRecipeEditorSaved = async (saved: UserRecipe) => {
     setRecipeEditorVisible(false);
     setEditingRecipe(null);
     setRecipeDraft(null);
@@ -815,6 +853,24 @@ export const FoodAnalysisScreen: React.FC = () => {
       }
       return [saved, ...prev];
     });
+    // Se stavamo creando una ricetta a partire da un custom_recipe del planner,
+    // collega lo slot del planner a questa nuova UserRecipe.
+    if (pendingAttachSlot) {
+      try {
+        await mealPlanService.upsertEntry({
+          plan_date: pendingAttachSlot.date,
+          meal_type: pendingAttachSlot.mealType,
+          recipe_id: saved.id,
+          custom_recipe: null,
+          servings: 1,
+        });
+        await loadMealPlan();
+      } catch (error) {
+        console.warn('Failed to attach saved recipe to meal plan slot:', error);
+      } finally {
+        setPendingAttachSlot(null);
+      }
+    }
     loadRecipeLibrary();
   };
 
@@ -830,6 +886,50 @@ export const FoodAnalysisScreen: React.FC = () => {
 
   const shiftWeek = (direction: number) => {
     setWeekStart((prev) => addDays(prev, direction * 7));
+  };
+
+  const [moveModal, setMoveModal] = useState<{
+    visible: boolean;
+    date?: string;
+    fromMealType?: MealPlanMealType;
+  }>({ visible: false });
+
+  const openMoveModal = (dateISO: string, mealType: MealPlanMealType) => {
+    setMoveModal({ visible: true, date: dateISO, fromMealType: mealType });
+  };
+
+  const closeMoveModal = () => setMoveModal({ visible: false });
+
+  const handleMoveEntry = async (targetMealType: MealPlanMealType) => {
+    if (!moveModal.date || !moveModal.fromMealType) return;
+    if (targetMealType === moveModal.fromMealType) {
+      closeMoveModal();
+      return;
+    }
+
+    const existing = getEntryForCell(moveModal.date, moveModal.fromMealType);
+    if (!existing) {
+      closeMoveModal();
+      return;
+    }
+
+    try {
+      await mealPlanService.upsertEntry({
+        plan_date: moveModal.date,
+        meal_type: targetMealType,
+        recipe_id: existing.recipe_id || undefined,
+        custom_recipe: existing.custom_recipe || undefined,
+        servings: existing.servings,
+        notes: existing.notes || undefined,
+      });
+
+      await mealPlanService.removeEntry(moveModal.date, moveModal.fromMealType);
+      await loadMealPlan();
+    } catch (error) {
+      console.warn('Failed to move meal plan entry:', error);
+    } finally {
+      closeMoveModal();
+    }
   };
 
   const openSlotPicker = (dateISO: string, mealType: MealPlanMealType) => {
@@ -1253,12 +1353,10 @@ export const FoodAnalysisScreen: React.FC = () => {
 
                   // 🆕 Aggiungi automaticamente al meal planner per tracciare i pasti del giorno
                   try {
-                    const mealType = analysisResult.data.meal_type || 'other';
-                    // Mappa 'other' a 'dinner' come default
-                    const mappedMealType: MealPlanMealType = 
-                      (mealType === 'breakfast' || mealType === 'lunch' || mealType === 'dinner' || mealType === 'snack')
-                        ? mealType as MealPlanMealType
-                        : 'dinner';
+                    const inferredMealType = inferMealTypeFromTime(new Date(savedAnalysis.created_at));
+                    const mealType = (analysisResult.data.meal_type && analysisResult.data.meal_type !== 'other'
+                      ? analysisResult.data.meal_type
+                      : inferredMealType) as MealPlanMealType;
                     
                     const todayISO = toISODate(new Date());
                     
@@ -1281,7 +1379,7 @@ export const FoodAnalysisScreen: React.FC = () => {
 
                     await mealPlanService.upsertEntry({
                       plan_date: todayISO,
-                      meal_type: mappedMealType,
+                      meal_type: mealType,
                       custom_recipe: customRecipe,
                       servings: 1,
                       notes: `Analisi automatica - ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`,
@@ -1691,6 +1789,12 @@ export const FoodAnalysisScreen: React.FC = () => {
               // ✅ FIX: Sincronizza i dati con lo store locale per i grafici
               // Usa i dati dall'analisi risultato (result.data) invece di savedAnalysis per garantire valori corretti
               // ✅ FIX: Assicurati che i valori numerici vengano preservati correttamente
+              const inferredMealType = inferMealTypeFromTime(new Date(savedAnalysis.created_at));
+              const effectiveMealType =
+                (result.data.meal_type && result.data.meal_type !== 'other'
+                  ? result.data.meal_type
+                  : inferredMealType) as MealPlanMealType;
+
               const foodSession = {
                 id: savedAnalysis.id,
                 timestamp: new Date(savedAnalysis.created_at),
@@ -1707,11 +1811,14 @@ export const FoodAnalysisScreen: React.FC = () => {
                   fiber: typeof result.data.macronutrients?.fiber === 'number'
                     ? result.data.macronutrients.fiber
                     : (typeof savedAnalysis.fiber === 'number' ? savedAnalysis.fiber : 0),
-                  calories: typeof result.data.macronutrients?.calories === 'number'
-                    ? result.data.macronutrients.calories
-                    : (typeof savedAnalysis.calories === 'number' ? savedAnalysis.calories : 0),
+                  calories:
+                    typeof result.data.macronutrients?.calories === 'number'
+                      ? result.data.macronutrients.calories
+                      : typeof savedAnalysis.calories === 'number'
+                      ? savedAnalysis.calories
+                      : 0,
                 },
-                meal_type: result.data.meal_type || savedAnalysis.meal_type || 'other',
+                meal_type: effectiveMealType,
                 health_score: typeof result.data.health_score === 'number' 
                   ? result.data.health_score 
                   : (typeof savedAnalysis.health_score === 'number' ? savedAnalysis.health_score : 70),
@@ -1736,12 +1843,10 @@ export const FoodAnalysisScreen: React.FC = () => {
 
               // 🆕 Aggiungi automaticamente al meal planner per tracciare i pasti del giorno
               try {
-                const mealType = result.data.meal_type || 'other';
-                // Mappa 'other' a 'dinner' come default
-                const mappedMealType: MealPlanMealType = 
-                  (mealType === 'breakfast' || mealType === 'lunch' || mealType === 'dinner' || mealType === 'snack')
-                    ? mealType as MealPlanMealType
-                    : 'dinner';
+                    const inferredMealType = inferMealTypeFromTime(new Date(savedAnalysis.created_at));
+                    const mealType = (result.data.meal_type && result.data.meal_type !== 'other'
+                      ? result.data.meal_type
+                      : inferredMealType) as MealPlanMealType;
                 
                 const todayISO = toISODate(new Date());
                 
@@ -1764,7 +1869,7 @@ export const FoodAnalysisScreen: React.FC = () => {
 
                 await mealPlanService.upsertEntry({
                   plan_date: todayISO,
-                  meal_type: mappedMealType,
+                      meal_type: mealType,
                   custom_recipe: customRecipe,
                   servings: 1,
                   notes: `Analisi automatica - ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`,
@@ -2184,6 +2289,7 @@ export const FoodAnalysisScreen: React.FC = () => {
               return (
                 <FoodCaptureCard
                   session={latestFoodSession || fallbackSession}
+                  dailyCaloriesGoal={dailyGoals.calories}
                 />
               );
             } catch (error) {
@@ -2532,15 +2638,19 @@ export const FoodAnalysisScreen: React.FC = () => {
                   </Text>
 
                   {entry ? (
-                    <View style={{
-                      flexDirection: 'row',
-                      backgroundColor: colors.surface,
-                      borderRadius: 16,
-                      padding: 12,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      alignItems: 'center'
-                    }}>
+                    <TouchableOpacity
+                      activeOpacity={0.9}
+                      onLongPress={() => openMoveModal(dateIso, mealType as MealPlanMealType)}
+                      style={{
+                        flexDirection: 'row',
+                        backgroundColor: colors.surface,
+                        borderRadius: 16,
+                        padding: 12,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        alignItems: 'center',
+                      }}
+                    >
                       {/* Mostra immagine se disponibile (da recipe o custom_recipe) */}
                       {entry.recipe?.image || (entry.custom_recipe as any)?.image_url ? (
                         <Image 
@@ -2571,12 +2681,70 @@ export const FoodAnalysisScreen: React.FC = () => {
                         </Text>
                       </View>
                       <TouchableOpacity
-                        onPress={() => openSlotPicker(dateIso, mealType as MealPlanMealType)}
+                        onPress={() => {
+                          if (entry.recipe) {
+                            // Modifica una ricetta salvata in libreria
+                            setEditingRecipe(entry.recipe);
+                            setRecipeDraft(entry.recipe);
+                            setRecipeEditorMode('edit');
+                            setRecipeEditorVisible(true);
+                          } else if (entry.custom_recipe) {
+                            // Crea un editor partendo da un pasto analizzato / custom
+                            const custom: any = entry.custom_recipe;
+                            const draft: Partial<UserRecipe> = {
+                              title:
+                                custom.title ||
+                                t('analysis.food.mealPlanner.customRecipe') ||
+                                'Pasto analizzato',
+                              servings: 1,
+                              meal_types: [mealType as MealType],
+                              calories_per_serving: custom.calories,
+                              macros: custom.macros || {
+                                protein: custom.macros?.protein,
+                                carbs: custom.macros?.carbs,
+                                fat: custom.macros?.fat,
+                                fiber: custom.macros?.fiber,
+                                sugar: custom.macros?.sugar,
+                              },
+                              ingredients: Array.isArray(custom.identified_foods)
+                                ? custom.identified_foods.map((name: string) => ({
+                                    name,
+                                  }))
+                                : [],
+                              steps: [],
+                              source: custom.source || 'food_analysis',
+                            };
+
+                            setPendingAttachSlot({ date: dateIso, mealType: mealType as MealPlanMealType });
+                            const macrosEstimate =
+                              custom.macros || custom.calories
+                                ? {
+                                    protein: custom.macros?.protein,
+                                    carbs: custom.macros?.carbs,
+                                    fat: custom.macros?.fat,
+                                    fiber: custom.macros?.fiber,
+                                    sugar: custom.macros?.sugar,
+                                    calories: custom.calories,
+                                  }
+                                : undefined;
+
+                            const aiContext = {
+                              identifiedFoods: custom.identified_foods || [],
+                              macrosEstimate,
+                              contextNotes: custom.notes || custom.source || 'Analisi da foto del piatto',
+                            };
+
+                            openManualRecipeEditor(draft, aiContext);
+                          } else {
+                            // Fallback: apri lo slot picker classico
+                            openSlotPicker(dateIso, mealType as MealPlanMealType);
+                          }
+                        }}
                         style={{ padding: 8 }}
                       >
                         <MaterialCommunityIcons name="pencil" size={20} color={colors.textSecondary} />
                       </TouchableOpacity>
-                    </View>
+                    </TouchableOpacity>
                   ) : (
                     <TouchableOpacity
                       onPress={() => openSlotPicker(dateIso, mealType as MealPlanMealType)}
@@ -2715,10 +2883,12 @@ export const FoodAnalysisScreen: React.FC = () => {
           mode={recipeEditorMode}
           recipe={editingRecipe}
           initialDraft={recipeDraft}
+          aiContext={recipeAiContext}
           onClose={() => {
             setRecipeEditorVisible(false);
             setEditingRecipe(null);
             setRecipeDraft(null);
+            setRecipeAiContext(null);
           }}
           onSaved={handleRecipeEditorSaved}
           onDeleted={handleRecipeDeleted}
@@ -2791,6 +2961,53 @@ export const FoodAnalysisScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[styles.secondaryButton, { borderColor: colors.border }]}
                   onPress={closeSlotPicker}
+                >
+                  <Text style={[styles.secondaryButtonText, { color: colors.text }]}>{t('common.close')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Move Meal Modal */}
+        <Modal
+          visible={moveModal.visible}
+          transparent
+          animationType="fade"
+          onRequestClose={closeMoveModal}
+        >
+          <View style={styles.slotModalOverlay}>
+            <View style={[styles.slotModalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.slotModalTitle, { color: colors.text }]}>
+                {t('analysis.food.mealPlanner.moveTitle') || 'Sposta questo pasto'}
+              </Text>
+              <Text style={[styles.emptyMealCellText, { color: colors.textSecondary, marginBottom: 12 }]}>
+                {t('analysis.food.mealPlanner.moveSubtitle') || 'Seleziona il pasto a cui vuoi assegnarlo.'}
+              </Text>
+
+              {MEAL_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.slotRecipeButton,
+                    {
+                      borderColor: colors.border,
+                      opacity: moveModal.fromMealType === type ? 0.4 : 1,
+                    },
+                  ]}
+                  disabled={moveModal.fromMealType === type}
+                  onPress={() => handleMoveEntry(type as MealPlanMealType)}
+                >
+                  <Text style={[styles.recipeCardTitle, { color: colors.text }]}>
+                    {t(`analysis.food.mealTypes.${type}`)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+
+              <View style={styles.slotModalActions}>
+                <TouchableOpacity
+                  style={[styles.secondaryButton, { borderColor: colors.border }]}
+                  onPress={closeMoveModal}
                 >
                   <Text style={[styles.secondaryButtonText, { color: colors.text }]}>{t('common.close')}</Text>
                 </TouchableOpacity>

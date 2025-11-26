@@ -8,12 +8,14 @@ import {
   AnalyzeImageBody,
   SuggestMealBody,
   GenerateRecipeBody,
+  GenerateRestaurantRecipeBody,
   ParseIngredientsBody,
 } from "../types/nutrition.types";
 import {
   analyzeImageHook,
   suggestMealHook,
   generateRecipeFromIngredientsHook,
+  generateRestaurantRecipeHook,
   parseIngredientsHook,
 } from "../services/nutrition.service";
 
@@ -126,6 +128,50 @@ export const generateRecipe = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error("[Nutrition] ❌ generateRecipe controller error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Internal server error",
+    });
+  }
+};
+
+/**
+ * POST /api/nutrition/generate-restaurant-recipe
+ * Generate home recipe from restaurant meal description
+ */
+export const generateRestaurantRecipe = async (req: Request, res: Response) => {
+  try {
+    const body: GenerateRestaurantRecipeBody = req.body;
+
+    if (
+      !body.identifiedFoods ||
+      !Array.isArray(body.identifiedFoods) ||
+      body.identifiedFoods.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "identifiedFoods array is required",
+      });
+    }
+
+    const result = await generateRestaurantRecipeHook(body);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result.recipe,
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+      });
+    }
+  } catch (error: any) {
+    console.error(
+      "[Nutrition] ❌ generateRestaurantRecipe controller error:",
+      error
+    );
     res.status(500).json({
       success: false,
       error: error.message || "Internal server error",

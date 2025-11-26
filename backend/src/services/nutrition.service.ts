@@ -11,6 +11,8 @@ import {
   SuggestMealResp,
   GenerateRecipeBody,
   GenerateRecipeResp,
+  GenerateRestaurantRecipeBody,
+  GenerateRestaurantRecipeResp,
   ParseIngredientsBody,
   ParseIngredientsResp,
   MealDraft,
@@ -23,6 +25,7 @@ import {
   analyzeImageUserPrompt,
   suggestMealUserPrompt,
   recipeFromIngredientsPrompt,
+  restaurantMealRecipePrompt,
   parseIngredientsUserPrompt,
 } from "./ai/prompt";
 import { analyzeImageSchema, suggestMealSchema, generateRecipeSchema } from "./ai/schemas";
@@ -210,6 +213,64 @@ export async function generateRecipeFromIngredientsHook(
     return {
       success: false,
       error: e.message ?? "generateRecipe failed",
+    };
+  }
+}
+
+/**
+ * Generate home recipe starting from a restaurant meal description
+ */
+export async function generateRestaurantRecipeHook(
+  body: GenerateRestaurantRecipeBody
+): Promise<GenerateRestaurantRecipeResp> {
+  try {
+    console.log("[Nutrition] 🍽 Generating restaurant-style recipe...", {
+      dishName: body.dishName,
+      identifiedFoods: body.identifiedFoods?.length ?? 0,
+    });
+
+    const res = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      response_format: {
+        type: "json_schema",
+        json_schema: generateRecipeSchema as any,
+      },
+      messages: [
+        { role: "system", content: systemGuardrails },
+        {
+          role: "user",
+          content: restaurantMealRecipePrompt({
+            dishName: body.dishName,
+            identifiedFoods: body.identifiedFoods,
+            macrosEstimate: body.macrosEstimate,
+            contextNotes: body.contextNotes,
+            prefs: body.prefs as any,
+            allergies: body.allergies as any,
+          }),
+        },
+      ],
+      temperature: 0.5,
+    });
+
+    const content = res.choices[0].message.content;
+    if (!content) {
+      throw new Error("Empty response from OpenAI");
+    }
+
+    const data = JSON.parse(content) as GeneratedRecipe;
+
+    console.log("[Nutrition] ✅ Restaurant recipe generated:", {
+      title: data.title,
+      servings: data.servings,
+      readyInMinutes: data.readyInMinutes,
+    });
+
+    return { success: true, recipe: data };
+  } catch (e: any) {
+    console.error("[Nutrition] ❌ generateRestaurantRecipe failed:", e);
+    return {
+      success: false,
+      error: e.message ?? "generateRestaurantRecipe failed",
     };
   }
 }
