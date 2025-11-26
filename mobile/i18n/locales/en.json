@@ -967,7 +967,7 @@
           "title": "Healthy Snacks",
           "description": "Nutritious snack ideas to keep you energized"
         },
-        "libraryTitle": "Your recipe library",
+        "libraryTitle": "Search and filter",
         "librarySubtitle": "Save, edit, and plan recipes tailored to your taste.",
         "timeUnknown": "Time not available",
         "saveToLibrary": "Save to library",
@@ -1025,7 +1025,8 @@
         "remove": "Remove",
         "noRecipes": "No recipes match this filter",
         "moveTitle": "Move this meal",
-        "moveSubtitle": "Choose which meal slot you want to assign it to."
+        "moveSubtitle": "Choose which meal slot you want to assign it to.",
+        "analyzed": "Analyzed"
       },
       "preferences": {
         "title": "Food Preferences",

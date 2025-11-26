@@ -142,6 +142,7 @@ export const generateRecipeSchema = {
       },
       caloriesPerServing: { type: "number" },
       shoppingGaps: { type: "array", items: { type: "string" } },
+      image: { type: "string" },
     },
     // ✅ FIX: Aggiunto tips e shoppingGaps a required per compatibilità con additionalProperties: false e strict: true
     required: [

@@ -973,7 +973,7 @@
           "title": "Spuntini Sani",
           "description": "Idee per spuntini nutrienti per mantenerti energico"
         },
-        "libraryTitle": "Le tue ricette",
+        "libraryTitle": "Filtra e cerca",
         "librarySubtitle": "Salva, modifica e pianifica ricette personalizzate.",
         "timeUnknown": "Tempo non disponibile",
         "saveToLibrary": "Salva tra le ricette",
@@ -1031,7 +1031,8 @@
         "remove": "Rimuovi",
         "noRecipes": "Nessuna ricetta disponibile per questo filtro",
         "moveTitle": "Sposta questo pasto",
-        "moveSubtitle": "Seleziona il pasto della giornata a cui vuoi assegnarlo."
+        "moveSubtitle": "Seleziona il pasto della giornata a cui vuoi assegnarlo.",
+        "analyzed": "Analizzato"
       },
       "preferences": {
         "title": "Preferenze Alimentari",

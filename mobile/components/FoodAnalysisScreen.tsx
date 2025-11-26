@@ -2668,14 +2668,17 @@ export const FoodAnalysisScreen: React.FC = () => {
                         </Text>
                         <Text style={{ fontSize: 12, color: colors.textSecondary }}>
                           {Math.round(
-                            entry.recipe?.calories_per_serving || 
-                            (entry.custom_recipe as any)?.calories || 
-                            0
-                          )} kcal
-                          {entry.recipe?.ready_in_minutes ? ` • ${entry.recipe.ready_in_minutes} min` : ''}
+                            entry.recipe?.calories_per_serving ||
+                              (entry.custom_recipe as any)?.calories ||
+                              0
+                          )}{' '}
+                          kcal
+                          {entry.recipe?.ready_in_minutes
+                            ? ` • ${entry.recipe.ready_in_minutes} min`
+                            : ''}
                           {(entry.custom_recipe as any)?.source === 'food_analysis' && (
                             <Text style={{ fontSize: 10, color: colors.textTertiary, marginLeft: 4 }}>
-                              • {t('analysis.food.mealPlanner.analyzed') || 'Analizzato'}
+                              • {t('analysis.food.mealPlanner.analyzed')}
                             </Text>
                           )}
                         </Text>

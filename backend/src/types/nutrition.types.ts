@@ -78,6 +78,7 @@ export interface GeneratedRecipe {
   macrosPerServing: Macros;
   caloriesPerServing: number;
   shoppingGaps?: string[]; // missing ingredients
+  image?: string; // optional image URL generated via deAPI
 }
 
 // API Request/Response Types

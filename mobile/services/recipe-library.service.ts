@@ -213,6 +213,9 @@ class RecipeLibraryService {
       favorite: options.favorite,
       notes: options.notes,
       source: 'generated',
+      // se il backend ha generato un URL immagine, propagalo nel payload
+      // @ts-expect-error: "image" è proprietà extra gestita dal backend
+      image: generated?.image,
     };
 
     return this.save(payload);
@@ -247,6 +250,9 @@ class RecipeLibraryService {
     assignIfDefined('favorite', input.favorite);
     assignIfDefined('notes', input.notes);
     assignIfDefined('source', input.source);
+    // campo opzionale per l'immagine della ricetta
+    // @ts-expect-error: proprietà extra consentita a livello di payload DB
+    assignIfDefined('image', (input as any).image);
 
     return base;
   }

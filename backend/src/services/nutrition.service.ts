@@ -29,6 +29,7 @@ import {
   parseIngredientsUserPrompt,
 } from "./ai/prompt";
 import { analyzeImageSchema, suggestMealSchema, generateRecipeSchema } from "./ai/schemas";
+import { generateRecipeImageFromTitle } from "./recipe-image.service";
 
 // TS2305 workaround: in alcuni ambienti (ts-node + nodemon) la cache dei tipi non vede ancora parseIngredientsSchema.
 // Lo carichiamo dinamicamente per evitare il crash del backend durante il watch mode.
@@ -201,6 +202,16 @@ export async function generateRecipeFromIngredientsHook(
 
     const data = JSON.parse(content) as GeneratedRecipe;
 
+    // Generate illustrative image for the recipe title using deAPI (best-effort).
+    try {
+      const imageUrl = await generateRecipeImageFromTitle(data.title);
+      if (imageUrl) {
+        data.image = imageUrl;
+      }
+    } catch (imgError) {
+      console.warn("[Nutrition] ⚠️ Failed to generate image for recipe:", imgError);
+    }
+
     console.log("[Nutrition] ✅ Recipe generated:", {
       title: data.title,
       servings: data.servings,
@@ -258,6 +269,16 @@ export async function generateRestaurantRecipeHook(
     }
 
     const data = JSON.parse(content) as GeneratedRecipe;
+
+    // Generate image from restaurant dish name/title (best-effort).
+    try {
+      const imageUrl = await generateRecipeImageFromTitle(data.title);
+      if (imageUrl) {
+        data.image = imageUrl;
+      }
+    } catch (imgError) {
+      console.warn("[Nutrition] ⚠️ Failed to generate image for restaurant recipe:", imgError);
+    }
 
     console.log("[Nutrition] ✅ Restaurant recipe generated:", {
       title: data.title,
