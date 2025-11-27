@@ -481,6 +481,11 @@
       "detailedAnalysis": {
         "buttonText": "Ricevi ulteriori dettagli della tua analisi"
       },
+      "insights": {
+        "lockedTitle": "Analizza oggi per sbloccare i consigli",
+        "lockedDescription": "Gli insight intelligenti vengono generati solo dopo una nuova analisi emotiva del giorno in corso.",
+        "lockedCta": "Analizza ora"
+      },
       "results": {
         "title": "Analisi Emotiva Completata",
         "subtitle": "Ecco cosa abbiamo rilevato sul tuo stato emotivo",
@@ -686,6 +691,11 @@
       },
       "detailedAnalysis": {
         "buttonText": "Ricevi ulteriori dettagli della tua analisi"
+      },
+      "insights": {
+        "lockedTitle": "Analizza oggi per sbloccare i consigli",
+        "lockedDescription": "Gli insight intelligenti per la pelle vengono creati solo dopo una nuova analisi effettuata nella giornata attuale.",
+        "lockedCta": "Analizza la pelle"
       },
       "retake": "Ripeti analisi",
       "results": {

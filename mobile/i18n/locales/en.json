@@ -466,6 +466,11 @@
       "detailedAnalysis": {
         "buttonText": "Get more details about your analysis"
       },
+      "insights": {
+        "lockedTitle": "Analyze today to unlock insights",
+        "lockedDescription": "Smart insights are generated only after you complete a new emotion analysis on the current day.",
+        "lockedCta": "Analyze now"
+      },
       "results": {
         "title": "Emotion Analysis Complete",
         "subtitle": "Here's what we detected about your emotional state",
@@ -684,6 +689,11 @@
       },
       "detailedAnalysis": {
         "buttonText": "Get more details about your analysis"
+      },
+      "insights": {
+        "lockedTitle": "Analyze today to unlock insights",
+        "lockedDescription": "Skin insights are generated only after you run a new skin analysis on the current day.",
+        "lockedCta": "Analyze skin"
       },
       "retake": "Retake analysis",
       "results": {

@@ -60,6 +60,7 @@ import { VideoHero } from './VideoHero';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
+import { getTodayISODate, toLocalISODate } from '../utils/locale-formatters';
 
 // Removed Colors import - using theme colors instead
 
@@ -147,6 +148,14 @@ export const EmotionDetectionScreen: React.FC = () => {
 
   // 🆕 FIX: Use reactive hook to get latest emotion session (triggers re-render when store updates)
   const latestEmotionSession = useAnalysisStore((state) => state.latestEmotionSession);
+
+  const latestEmotionAnalysisDate = useMemo(() => {
+    if (!latestEmotionSession?.timestamp) {
+      return null;
+    }
+    return toLocalISODate(new Date(latestEmotionSession.timestamp));
+  }, [latestEmotionSession]);
+  const hasTodayEmotionAnalysis = latestEmotionAnalysisDate === getTodayISODate();
 
   const emotionDisplayData = useMemo(() => {
     const mapped = {} as Record<Emotion, EmotionData>;
@@ -1390,33 +1399,49 @@ export const EmotionDetectionScreen: React.FC = () => {
           })()}
 
           {/* Intelligent Insights Section - Emotion Only */}
-          <IntelligentInsightsSection
-            category="emotion"
-            data={(() => {
-              try {
-                const store = useAnalysisStore.getState();
-                return {
-                  latestSession: store.latestEmotionSession,
-                  emotionHistory: store.emotionHistory || [],
-                  trend: store.emotionTrend,
-                  insights: store.insights || []
-                };
-              } catch (error) {
-                return null;
-              }
-            })()}
-            maxInsights={3}
-            showTitle={true}
-            compact={false}
-            onInsightPress={(insight) => {
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
-              // Handle insight press - could navigate to detailed view
-            }}
-            onActionPress={(insight, action) => {
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
-              // Handle action press - could start activity, set reminder, etc.
-            }}
-          />
+          {hasTodayEmotionAnalysis ? (
+            <IntelligentInsightsSection
+              category="emotion"
+              data={(() => {
+                try {
+                  const store = useAnalysisStore.getState();
+                  return {
+                    latestSession: store.latestEmotionSession,
+                    emotionHistory: store.emotionHistory || [],
+                    trend: store.emotionTrend,
+                    insights: store.insights || []
+                  };
+                } catch (error) {
+                  return null;
+                }
+              })()}
+              maxInsights={3}
+              showTitle={true}
+              compact={false}
+              sourceDate={latestEmotionAnalysisDate}
+              onInsightPress={(insight) => {
+                // 🔥 FIX: Rimuoviamo console.log eccessivi
+                // Handle insight press - could navigate to detailed view
+              }}
+              onActionPress={(insight, action) => {
+                // 🔥 FIX: Rimuoviamo console.log eccessivi
+                // Handle action press - could start activity, set reminder, etc.
+              }}
+            />
+          ) : (
+            <View style={[styles.insightLockedCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+              <MaterialCommunityIcons name="lock-clock" size={28} color="#8b5cf6" />
+              <Text style={[styles.insightLockedTitle, { color: themeColors.text }]}>{t('analysis.emotion.insights.lockedTitle')}</Text>
+              <Text style={[styles.insightLockedSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.insights.lockedDescription')}</Text>
+              <TouchableOpacity
+                style={[styles.insightLockedButton, { backgroundColor: '#8b5cf6' }]}
+                onPress={handleStartDetection}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.insightLockedButtonText}>{t('analysis.emotion.insights.lockedCta')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
         </ScrollView>
 
@@ -1800,6 +1825,37 @@ const styles = StyleSheet.create({
   historyIconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   historyLabel: { fontSize: 14, fontWeight: '600', color: '#0f172a' },
   historyMeta: { fontSize: 12, color: '#64748b' },
+
+  insightLockedCard: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    gap: 12,
+  },
+  insightLockedTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  insightLockedSubtitle: {
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  insightLockedButton: {
+    marginTop: 4,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 999,
+  },
+  insightLockedButtonText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
 
   secondaryButton: {
     flexDirection: 'row',

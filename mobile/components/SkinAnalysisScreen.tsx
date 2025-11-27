@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -57,6 +57,7 @@ import { VideoHero } from './VideoHero';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
+import { getTodayISODate, toLocalISODate } from '../utils/locale-formatters';
 // Removed useInsights - now using IntelligentInsightsSection directly
 
 const { width } = Dimensions.get('window');
@@ -363,6 +364,13 @@ const SkinAnalysisScreen: React.FC = () => {
   // Use proper selectors for reactive updates
   const latestSkinCapture = useAnalysisStore(s => s.latestSkinCapture);
   const skinHistory = useAnalysisStore(s => s.skinHistory);
+  const latestSkinAnalysisDate = useMemo(() => {
+    if (!latestSkinCapture?.timestamp) {
+      return null;
+    }
+    return toLocalISODate(new Date(latestSkinCapture.timestamp));
+  }, [latestSkinCapture]);
+  const hasTodaySkinAnalysis = latestSkinAnalysisDate === getTodayISODate();
 
   const startDisabled = permissionChecking || analyzing || !analysisReady || !!analysisError;
   const captureDisabled = !cameraController.ready || cameraController.detecting || permissionChecking || analyzing || cameraSwitching;
@@ -1777,33 +1785,49 @@ const SkinAnalysisScreen: React.FC = () => {
           />
 
           {/* Intelligent Insights Section - Skin Only */}
-          <IntelligentInsightsSection
-            category="skin"
-            data={(() => {
-              try {
-                const store = useAnalysisStore.getState();
-                return {
-                  latestCapture: store.latestSkinCapture,
-                  skinHistory: store.skinHistory || [],
-                  trend: store.skinTrend,
-                  insights: store.insights || []
-                };
-              } catch (error) {
-                return null;
-              }
-            })()}
-            maxInsights={3}
-            showTitle={true}
-            compact={false}
-            onInsightPress={(insight) => {
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
-              // Handle insight press - could navigate to detailed view
-            }}
-            onActionPress={(insight, action) => {
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
-              // Handle action press - could start activity, set reminder, etc.
-            }}
-          />
+          {hasTodaySkinAnalysis ? (
+            <IntelligentInsightsSection
+              category="skin"
+              data={(() => {
+                try {
+                  const store = useAnalysisStore.getState();
+                  return {
+                    latestCapture: store.latestSkinCapture,
+                    skinHistory: store.skinHistory || [],
+                    trend: store.skinTrend,
+                    insights: store.insights || []
+                  };
+                } catch (error) {
+                  return null;
+                }
+              })()}
+              maxInsights={3}
+              showTitle={true}
+              compact={false}
+              sourceDate={latestSkinAnalysisDate}
+              onInsightPress={(insight) => {
+                // 🔥 FIX: Rimuoviamo console.log eccessivi
+                // Handle insight press - could navigate to detailed view
+              }}
+              onActionPress={(insight, action) => {
+                // 🔥 FIX: Rimuoviamo console.log eccessivi
+                // Handle action press - could start activity, set reminder, etc.
+              }}
+            />
+          ) : (
+            <View style={[styles.insightLockedCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <MaterialCommunityIcons name="lock-clock" size={28} color="#22d3ee" />
+              <Text style={[styles.insightLockedTitle, { color: colors.text }]}>{t('analysis.skin.insights.lockedTitle')}</Text>
+              <Text style={[styles.insightLockedSubtitle, { color: colors.textSecondary }]}>{t('analysis.skin.insights.lockedDescription')}</Text>
+              <TouchableOpacity
+                style={[styles.insightLockedButton, { backgroundColor: '#22d3ee' }]}
+                onPress={handleStartAnalysis}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.insightLockedButtonText}>{t('analysis.skin.insights.lockedCta')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.advancedModules.title')}</Text>
@@ -2160,6 +2184,36 @@ const styles = StyleSheet.create({
   insightDescription: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  insightLockedCard: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    gap: 12,
+  },
+  insightLockedTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  insightLockedSubtitle: {
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  insightLockedButton: {
+    marginTop: 4,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 999,
+  },
+  insightLockedButtonText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 14,
   },
   cameraPreview: {
     flex: 1,

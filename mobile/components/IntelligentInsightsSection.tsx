@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { IntelligentInsightCard } from './IntelligentInsightCard';
 import IntelligentInsightService, { IntelligentInsight, InsightAnalysisResponse } from '../services/intelligent-insight.service';
 import IntelligentInsightDBService from '../services/intelligent-insight-db.service';
 import { useTheme } from '../contexts/ThemeContext';
+import { getTodayISODate } from '../utils/locale-formatters';
 
 interface IntelligentInsightsSectionProps {
   category: 'emotion' | 'skin' | 'food';
@@ -22,6 +23,8 @@ interface IntelligentInsightsSectionProps {
   compact?: boolean;
   onInsightPress?: (insight: IntelligentInsight) => void;
   onActionPress?: (insight: IntelligentInsight, action: 'start' | 'remind' | 'track') => void;
+  enabled?: boolean;
+  sourceDate?: string | null;
 }
 
 export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProps> = ({
@@ -32,23 +35,57 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
   compact = false,
   onInsightPress,
   onActionPress,
+  enabled = true,
+  sourceDate = null,
 }) => {
   const { colors } = useTheme();
   const [insights, setInsights] = useState<IntelligentInsight[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
   const [trendSummary, setTrendSummary] = useState<string>('');
   const [overallScore, setOverallScore] = useState<number>(70);
   const [focus, setFocus] = useState<string>('');
+  const [lastGeneratedDate, setLastGeneratedDate] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
 
   const insightService = IntelligentInsightService.getInstance();
   const dbService = IntelligentInsightDBService.getInstance();
 
   useEffect(() => {
-    loadIntelligentInsights();
-  }, [category, data]);
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
-  const loadIntelligentInsights = async () => {
+  useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
+    if (!data) {
+      setLoading(false);
+      setError(null);
+      setInsights([]);
+      return;
+    }
+
+    const analysisDate = sourceDate || getTodayISODate();
+
+    if (lastGeneratedDate === analysisDate) {
+      setLoading(false);
+      return;
+    }
+
+    loadIntelligentInsights(analysisDate);
+  }, [category, data, enabled, sourceDate, lastGeneratedDate]);
+
+  const loadIntelligentInsights = async (analysisDate?: string) => {
+    if (!enabled || !data) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -59,6 +96,10 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
         category,
         data,
       });
+
+      if (!isMountedRef.current) {
+        return;
+      }
 
       setInsights(response.insights.slice(0, maxInsights));
       // Filter out the fallback trend summary text and empty/placeholder messages
@@ -71,6 +112,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
       setTrendSummary(filteredTrendSummary);
       setOverallScore(response.overallScore || 70);
       setFocus(response.focus || 'Miglioramento generale');
+      setLastGeneratedDate(analysisDate || getTodayISODate());
 
       // Note: Database saving is now handled in the service layer
       // to avoid duplicate saves and improve performance
@@ -79,7 +121,9 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
       console.error(`❌ Error loading intelligent insights for ${category}:`, err);
       setError('Impossibile caricare gli insight intelligenti');
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 

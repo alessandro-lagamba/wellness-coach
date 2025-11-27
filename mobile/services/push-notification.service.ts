@@ -98,9 +98,12 @@ class PushNotificationService {
   private async registerDeviceToken(userId: string): Promise<void> {
     try {
       const projectId = this.getProjectId();
-      const expoToken = await Notifications.getExpoPushTokenAsync(
-        projectId ? { projectId } : undefined
-      );
+      if (!projectId) {
+        console.warn('[PushNotifications] ⚠️ Missing EAS projectId, skipping push token registration');
+        return;
+      }
+
+      const expoToken = await Notifications.getExpoPushTokenAsync({ projectId });
       if (!expoToken?.data) {
         return;
       }
@@ -112,7 +115,12 @@ class PushNotificationService {
         appVersion: Constants?.expoConfig?.version || '0.0.0',
         osVersion: Constants.platform?.ios?.systemVersion || Constants.platform?.android?.systemVersion,
       });
-    } catch (error) {
+    } catch (error: any) {
+      const message = error?.message || '';
+      if (message.includes('Default FirebaseApp is not initialized')) {
+        console.warn('[PushNotifications] ⚠️ Firebase app is not configured. Follow https://docs.expo.dev/push-notifications/fcm-credentials/ to enable Android push tokens.');
+        return;
+      }
       console.error('[PushNotifications] ❌ Error registering device token:', error);
     }
   }

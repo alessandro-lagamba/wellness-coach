@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { AIContextService } from './ai-context.service';
 import { AnalysisIntentService } from './analysis-intent.service';
 import { getUserLanguage } from './language.service';
+import { jsonrepair } from 'jsonrepair';
 
 export interface IntelligentInsight {
   id: string;
@@ -344,6 +345,16 @@ Rispondi in italiano nella lingua dell'utente e limita la lunghezza a poche fras
         parsedData = JSON.parse(analysisText);
         console.log('📋 Direct JSON parse successful:', parsedData);
       } catch {
+        // Attempt to repair malformed JSON using jsonrepair
+        try {
+          const repaired = jsonrepair(analysisText);
+          parsedData = JSON.parse(repaired);
+          console.log('🛠️ Repaired malformed JSON successfully');
+        } catch (repairError) {
+          console.log('⚠️ jsonrepair failed, falling back to regex extraction:', repairError);
+        }
+
+        if (!parsedData) {
         // Try to extract JSON from the response with better regex
         const jsonMatch = analysisText.match(/\{[\s\S]*?\}(?=\s*$|\s*[^}])/);
         if (jsonMatch) {
@@ -378,6 +389,7 @@ Rispondi in italiano nella lingua dell'utente e limita la lunghezza a poche fras
             // Try to extract individual insights even if the overall JSON is broken
             parsedData = this.extractPartialInsights(analysisText, request.category);
           }
+        }
         }
       }
 
