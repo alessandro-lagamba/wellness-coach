@@ -333,6 +333,16 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
   const handleOnboardingComplete = async () => {
     setShowOnboarding(false);
+    
+    // Check if tutorial should be shown automatically after onboarding
+    const isTutorialCompleted = await OnboardingService.isTutorialCompleted();
+    if (!isTutorialCompleted) {
+      // Show tutorial automatically after a short delay to allow UI to settle
+      setTimeout(() => {
+        setShowTutorial(true);
+      }, 500);
+    }
+    
     if (user) {
       onAuthSuccessRef.current(user);
     }
@@ -387,8 +397,16 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       {/* Global Tutorial */}
       <InteractiveTutorial
         visible={showTutorial}
-        onClose={() => setShowTutorial(false)}
-        onComplete={() => setShowTutorial(false)}
+        onClose={async () => {
+          setShowTutorial(false);
+          // Mark tutorial as completed even if closed early
+          await OnboardingService.completeTutorial();
+        }}
+        onComplete={async () => {
+          setShowTutorial(false);
+          // Mark tutorial as completed
+          await OnboardingService.completeTutorial();
+        }}
         onNavigateToScreen={(screen) => {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           switch (screen) {

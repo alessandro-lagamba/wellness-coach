@@ -61,6 +61,7 @@ import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 import { ChatSettingsService, ChatTone, ResponseLength } from '../services/chat-settings.service';
 import { JournalSettingsService, JournalTemplate, JOURNAL_TEMPLATES } from '../services/journal-settings.service';
 import { ExportService } from '../services/export.service';
+import { EmptyStateCard } from './EmptyStateCard';
 
 const { width, height } = Dimensions.get('window');
 
@@ -2651,7 +2652,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     </View>
                   ))}
                 </View>
-              ) : null}
+              ) : (
+                // Empty state for journal when no entries exist
+                mode === 'journal' && (
+                  <EmptyStateCard
+                    type="journal"
+                    onAction={() => {
+                      // Focus on journal input
+                      // The input is already visible, so we just need to ensure it's focused
+                      // This will be handled by the TextInput's autoFocus or user interaction
+                    }}
+                  />
+                )
+              )}
             </ScrollView>
           )}
         </View>

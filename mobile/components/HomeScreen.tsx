@@ -32,6 +32,7 @@ import { useTutorial } from '../contexts/TutorialContext';
 import WidgetGoalModal from './WidgetGoalModal';
 import { widgetGoalsService } from '../services/widget-goals.service';
 import { HealthPermissionsModal } from './HealthPermissionsModal';
+import { WelcomeOverlay, shouldShowWelcomeOverlay } from './WelcomeOverlay';
 import { useHealthData } from '../hooks/useHealthData';
 import { useChartConfig, ChartType } from '../services/chart-config.service';
 import { ChartSelectionModal } from './ChartSelectionModal';
@@ -340,6 +341,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [editMode, setEditMode] = useState<boolean>(false);
   const [goalModal, setGoalModal] = useState<{ visible: boolean; widgetId: 'steps' | 'hydration' | 'meditation' | 'sleep' | null }>({ visible: false, widgetId: null });
   const [healthPermissionsModal, setHealthPermissionsModal] = useState<boolean>(false);
+  const [welcomeOverlayVisible, setWelcomeOverlayVisible] = useState<boolean>(false);
   const [recommendationModal, setRecommendationModal] = useState<{ visible: boolean; recommendation: any }>({ visible: false, recommendation: null });
   const [showHistory, setShowHistory] = useState<boolean>(false);
   const [widgetSelectionModal, setWidgetSelectionModal] = useState<{ visible: boolean; position: number }>({ visible: false, position: 0 });
@@ -909,7 +911,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   }, []);
 
   // Show health permissions modal if no health data is available
-  // 🔥 MA solo se non ci sono permessi concessi (steps, heartRate, sleep)
+  // 🔥 FIX: Solo se non ci sono permessi concessi E non è stato già mostrato durante onboarding
   useEffect(() => {
     (async () => {
       if (!isInitialized || healthPermissionsModal) return;
@@ -917,20 +919,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       try {
         const { HealthPermissionsService } = await import('../services/health-permissions.service');
-        const [grantedPermissions, setupCompleted] = await Promise.all([
+        const { OnboardingService } = await import('../services/onboarding.service');
+        
+        const [grantedPermissions, setupCompleted, onboardingCompleted] = await Promise.all([
           HealthPermissionsService.getGrantedPermissions(),
           HealthPermissionsService.isSetupCompleted(),
+          OnboardingService.isOnboardingCompleted(),
         ]);
 
         // Verifica se tutti i permessi richiesti sono concessi
         const requiredPermissions = ['steps', 'heart_rate', 'sleep'];
         const allRequiredGranted = requiredPermissions.every(perm => grantedPermissions.includes(perm));
 
-        // Mostra il modal solo se mancano required e non abbiamo completato il setup
-        if (!allRequiredGranted && !setupCompleted) {
+        // Mostra il modal solo se:
+        // 1. Mancano permessi richiesti
+        // 2. Il setup non è stato completato
+        // 3. L'onboarding è stato completato (per evitare doppia richiesta durante onboarding)
+        // 4. Non ci sono dati health (per evitare di mostrare se l'utente ha già dati)
+        if (!allRequiredGranted && !setupCompleted && onboardingCompleted) {
           const timer = setTimeout(() => {
             setHealthPermissionsModal(true);
-          }, 1200);
+          }, 2000); // Aumentato delay per dare tempo all'onboarding di completare
           return () => clearTimeout(timer);
         }
       } catch { }
@@ -3085,6 +3094,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             console.error('Error syncing after permissions:', error);
           }
           loadTodayGlanceData();
+        }}
+      />
+
+      {/* Welcome Overlay for New Users */}
+      <WelcomeOverlay
+        visible={welcomeOverlayVisible}
+        onClose={() => setWelcomeOverlayVisible(false)}
+        onAction={(action) => {
+          if (action === 'widgets') {
+            // Open widget selection modal
+            setWidgetSelectionModal({ visible: true, position: 0 });
+          }
+          // Other actions (emotion, skin, food) are handled by navigation in WelcomeOverlay
         }}
       />
 

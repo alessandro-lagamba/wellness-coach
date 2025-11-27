@@ -1599,6 +1599,54 @@
       "subtitle": "Start using the app",
       "description": "Complete your first analyses to start seeing your data and personalized insights.",
       "action": "Get Started"
+    },
+    "learnMore": "Learn More"
+  },
+  "welcomeOverlay": {
+    "title": "Welcome to Wellness Coach!",
+    "subtitle": "Start your wellness journey",
+    "description": "Here are some things you can do to get started:",
+    "dismiss": "Dismiss",
+    "suggestions": {
+      "emotion": {
+        "title": "Analyze your emotions",
+        "description": "Discover how you feel in real-time"
+      },
+      "skin": {
+        "title": "Analyze your skin",
+        "description": "Receive personalized skincare recommendations"
+      },
+      "food": {
+        "title": "Track your meals",
+        "description": "Analyze calories and nutrients"
+      },
+      "widgets": {
+        "title": "Customize your dashboard",
+        "description": "Add the widgets you prefer"
+      }
+    }
+  },
+  "firstAnalysis": {
+    "achievement": "First milestone achieved!",
+    "whatsNext": "What you can do now",
+    "continue": "Continue",
+    "emotion": {
+      "title": "🎉 First analysis completed!",
+      "description": "You've just completed your first emotion analysis. Now you can track your emotional wellness over time and receive personalized insights.",
+      "nextStep": "Try a skin analysis to discover your skin health and receive personalized skincare recommendations.",
+      "nextAction": "Analyze Skin"
+    },
+    "skin": {
+      "title": "🎉 First analysis completed!",
+      "description": "You've just completed your first skin analysis. Now you can monitor your skin health and receive personalized recommendations to improve it.",
+      "nextStep": "Try tracking your meals to analyze calories, macronutrients and receive personalized nutritional recommendations.",
+      "nextAction": "Analyze a Meal"
+    },
+    "food": {
+      "title": "🎉 First analysis completed!",
+      "description": "You've just completed your first nutrition analysis. Now you can track your meals and receive recommendations for a more balanced diet.",
+      "nextStep": "Try writing in your journal to reflect on your day and receive personalized insights from your AI Coach.",
+      "nextAction": "Open Journal"
     }
   },
   "auth": {

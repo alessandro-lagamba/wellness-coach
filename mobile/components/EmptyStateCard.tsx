@@ -9,6 +9,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
+import { useRouter } from 'expo-router';
+import { useTutorial } from '../contexts/TutorialContext';
 
 interface EmptyStateCardProps {
   type: 'emotion' | 'skin' | 'food' | 'journal' | 'general';
@@ -17,6 +19,8 @@ interface EmptyStateCardProps {
   customSubtitle?: string;
   customActionText?: string;
   showIllustration?: boolean;
+  showLearnMore?: boolean;
+  onLearnMore?: () => void;
 }
 
 export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({
@@ -26,9 +30,13 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({
   customSubtitle,
   customActionText,
   showIllustration = true,
+  showLearnMore = true,
+  onLearnMore,
 }) => {
   const { t } = useTranslation();
   const { colors, mode } = useTheme();
+  const router = useRouter();
+  const { setShowTutorial } = useTutorial();
 
   const getEmptyStateConfig = () => {
     switch (type) {
@@ -124,6 +132,26 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({
             </LinearGradient>
           </TouchableOpacity>
         )}
+
+        {showLearnMore && (
+          <TouchableOpacity
+            onPress={() => {
+              if (onLearnMore) {
+                onLearnMore();
+              } else {
+                // Default: show tutorial
+                setShowTutorial(true);
+              }
+            }}
+            style={styles.learnMoreButton}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="information-outline" size={16} color="rgba(255, 255, 255, 0.9)" />
+            <Text style={styles.learnMoreText}>
+              {t('emptyStates.learnMore')}
+            </Text>
+          </TouchableOpacity>
+        )}
       </LinearGradient>
     </View>
   );
@@ -193,6 +221,19 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  learnMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  learnMoreText: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textDecorationLine: 'underline',
   },
 });
 

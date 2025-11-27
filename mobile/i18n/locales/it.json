@@ -1613,6 +1613,92 @@
       "subtitle": "Inizia a utilizzare l'app",
       "description": "Completa le tue prime analisi per iniziare a vedere i tuoi dati e insights personalizzati.",
       "action": "Inizia"
+    },
+    "learnMore": "Scopri di più"
+  },
+  "welcomeOverlay": {
+    "title": "Benvenuto in Wellness Coach!",
+    "subtitle": "Inizia il tuo percorso di benessere",
+    "description": "Ecco alcune cose che puoi fare per iniziare:",
+    "dismiss": "Chiudi",
+    "suggestions": {
+      "emotion": {
+        "title": "Analizza le tue emozioni",
+        "description": "Scopri come ti senti in tempo reale"
+      },
+      "skin": {
+        "title": "Analizza la tua pelle",
+        "description": "Ricevi consigli skincare personalizzati"
+      },
+      "food": {
+        "title": "Traccia i tuoi pasti",
+        "description": "Analizza calorie e nutrienti"
+      },
+      "widgets": {
+        "title": "Personalizza la dashboard",
+        "description": "Aggiungi i widget che preferisci"
+      }
+    }
+  },
+  "firstAnalysis": {
+    "achievement": "Primo traguardo raggiunto!",
+    "whatsNext": "Cosa puoi fare ora",
+    "continue": "Continua",
+    "emotion": {
+      "title": "🎉 Prima analisi completata!",
+      "description": "Hai appena completato la tua prima analisi delle emozioni. Ora puoi tracciare il tuo benessere emotivo nel tempo e ricevere insights personalizzati.",
+      "nextStep": "Prova a fare un'analisi della pelle per scoprire la salute della tua cute e ricevere consigli skincare personalizzati.",
+      "nextAction": "Analizza la Pelle"
+    },
+    "skin": {
+      "title": "🎉 Prima analisi completata!",
+      "description": "Hai appena completato la tua prima analisi della pelle. Ora puoi monitorare la salute della tua cute e ricevere consigli personalizzati per migliorarla.",
+      "nextStep": "Prova a tracciare i tuoi pasti per analizzare calorie, macronutrienti e ricevere consigli nutrizionali personalizzati.",
+      "nextAction": "Analizza un Pasto"
+    },
+    "food": {
+      "title": "🎉 Prima analisi completata!",
+      "description": "Hai appena completato la tua prima analisi nutrizionale. Ora puoi tracciare i tuoi pasti e ricevere consigli per una dieta più equilibrata.",
+      "nextStep": "Prova a scrivere nel diario per riflettere sulla tua giornata e ricevere insights personalizzati dal tuo AI Coach.",
+      "nextAction": "Apri il Diario"
+    }
+  },
+  "permissions": {
+    "grant": "Concedi permesso",
+    "notNow": "Non ora",
+    "openSettings": "Apri Impostazioni",
+    "camera": {
+      "emotion": {
+        "title": "Permesso fotocamera necessario",
+        "description": "Per analizzare le tue emozioni in tempo reale, abbiamo bisogno dell'accesso alla fotocamera.",
+        "benefit1": "Analisi delle emozioni in tempo reale",
+        "benefit2": "Tracciamento del benessere emotivo",
+        "benefit3": "Insights personalizzati basati sulle tue espressioni"
+      },
+      "skin": {
+        "title": "Permesso fotocamera necessario",
+        "description": "Per analizzare la salute della tua pelle, abbiamo bisogno dell'accesso alla fotocamera.",
+        "benefit1": "Analisi dettagliata della pelle",
+        "benefit2": "Consigli skincare personalizzati",
+        "benefit3": "Monitoraggio dei miglioramenti nel tempo"
+      },
+      "food": {
+        "title": "Permesso fotocamera necessario",
+        "description": "Per analizzare i tuoi pasti e tracciare le calorie, abbiamo bisogno dell'accesso alla fotocamera.",
+        "benefit1": "Analisi automatica di calorie e nutrienti",
+        "benefit2": "Tracciamento dei pasti",
+        "benefit3": "Consigli nutrizionali personalizzati"
+      },
+      "general": {
+        "title": "Permesso fotocamera necessario",
+        "description": "Per utilizzare questa funzionalità, abbiamo bisogno dell'accesso alla fotocamera."
+      }
+    },
+    "microphone": {
+      "title": "Permesso microfono necessario",
+      "description": "Per utilizzare la chat vocale con il tuo AI Coach, abbiamo bisogno dell'accesso al microfono.",
+      "benefit1": "Chat vocale con l'AI Coach",
+      "benefit2": "Comandi vocali per navigare l'app"
     }
   },
   "auth": {

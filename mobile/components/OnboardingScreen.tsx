@@ -16,7 +16,6 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HealthPermissionsModal } from './HealthPermissionsModal';
-import { DevicePermissionsModal } from './DevicePermissionsModal';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 
 const { width, height } = Dimensions.get('window');
@@ -135,7 +134,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [showHealthPermissions, setShowHealthPermissions] = useState(false);
-  const [showDevicePermissions, setShowDevicePermissions] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   
   // 🆕 Costruisci steps dinamicamente con traduzioni
@@ -153,11 +151,8 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
       return;
     }
 
-    // Check if this is the features step (request device permissions)
-    if (currentStepData.id === 'features') {
-      setShowDevicePermissions(true);
-      return;
-    }
+    // Device permissions are now requested when needed (when user tries to use camera/microphone)
+    // Removed automatic request during onboarding
 
     if (isLastStep) {
       // Complete onboarding
@@ -342,28 +337,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
         onSuccess={handleHealthPermissionsSuccess}
       />
 
-      {/* Device Permissions Modal */}
-      <DevicePermissionsModal
-        visible={showDevicePermissions}
-        onClose={() => {
-          setShowDevicePermissions(false);
-          // Continue to next step even if permissions were skipped
-          const nextStep = currentStep + 1;
-          setCurrentStep(nextStep);
-          if (scrollViewRef.current) {
-            scrollViewRef.current.scrollTo({ x: nextStep * width, animated: true });
-          }
-        }}
-        onSuccess={() => {
-          setShowDevicePermissions(false);
-          // Continue to next step
-          const nextStep = currentStep + 1;
-          setCurrentStep(nextStep);
-          if (scrollViewRef.current) {
-            scrollViewRef.current.scrollTo({ x: nextStep * width, animated: true });
-          }
-        }}
-      />
     </View>
   );
 };

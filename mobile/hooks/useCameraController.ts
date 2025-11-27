@@ -29,6 +29,10 @@ export function useCameraController({ isScreenFocused }: { isScreenFocused: bool
     if (permissionGranted) {
       return true;
     }
+    // If permission was denied, return false immediately (don't request again)
+    if (permission?.status === 'denied') {
+      return false;
+    }
     const res = await requestPermission();
     return !!res?.granted;
   };
@@ -90,6 +94,9 @@ export function useCameraController({ isScreenFocused }: { isScreenFocused: bool
     return true;
   };
 
+  const permissionDenied = permission?.status === 'denied';
+  const needsPermission = !permissionGranted && !permissionLoading;
+
   return {
     ref,
     active,
@@ -105,6 +112,8 @@ export function useCameraController({ isScreenFocused }: { isScreenFocused: bool
     stopCamera,
     permissionLoading,
     permissionGranted,
+    permissionDenied,
+    needsPermission,
     isCameraReady,
     recoverCameraRef,
   };

@@ -55,6 +55,9 @@ import { DetailedAnalysisPopup } from './DetailedAnalysisPopup';
 import { IntelligentInsightsSection } from './IntelligentInsightsSection';
 import { VideoHero } from './VideoHero';
 import { SkinTrendDetailModal } from './SkinTrendDetailModal';
+import { EmptyStateCard } from './EmptyStateCard';
+import { FirstAnalysisCelebration } from './FirstAnalysisCelebration';
+import { OnboardingService } from '../services/onboarding.service';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
@@ -355,6 +358,12 @@ const SkinAnalysisScreen: React.FC = () => {
 
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
+  
+  // First analysis celebration
+  const [showFirstAnalysisCelebration, setShowFirstAnalysisCelebration] = useState(false);
+  
+  // Contextual permission modal
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   // Intelligent insights are now handled by IntelligentInsightsSection component
 
@@ -528,6 +537,14 @@ const SkinAnalysisScreen: React.FC = () => {
   const handleStartAnalysis = async () => {
     // 🔥 FIX: Rimuoviamo console.log eccessivi
 
+    // Check if permission is denied - show contextual modal
+    if (cameraController.permissionDenied || cameraController.needsPermission) {
+      if (isMountedRef.current) {
+        setShowPermissionModal(true);
+      }
+      return;
+    }
+
     // Start camera immediately for better perceived performance
     await cameraController.startCamera();
 
@@ -539,8 +556,10 @@ const SkinAnalysisScreen: React.FC = () => {
 
     // 🔥 FIX: Rimuoviamo console.log eccessivi
     if (!granted) {
-      alert(t('analysis.skin.errors.cameraPermission'));
       cameraController.stopCamera();
+      if (isMountedRef.current) {
+        setShowPermissionModal(true);
+      }
       return;
     }
 
@@ -693,6 +712,20 @@ const SkinAnalysisScreen: React.FC = () => {
 
                   const store = useAnalysisStore.getState();
                   store.addSkinCapture(skinCapture);
+
+                  // 🆕 Check if this is the first analysis and show celebration
+                  if (isMountedRef.current) {
+                    const isFirstTime = await OnboardingService.isFirstTime('skin');
+                    if (isFirstTime) {
+                      await OnboardingService.markFirstTimeCompleted('skin');
+                      // Delay to allow results screen to show first
+                      setTimeout(() => {
+                        if (isMountedRef.current) {
+                          setShowFirstAnalysisCelebration(true);
+                        }
+                      }, 1500);
+                    }
+                  }
                 } else {
                   // 🆕 Nessun errore lanciato ma savedAnalysis è null
                   UserFeedbackService.showSaveError('analisi', async () => {
@@ -1569,7 +1602,17 @@ const SkinAnalysisScreen: React.FC = () => {
 
           </LinearGradient>
 
-          {/* Recent Analysis Section - Always visible */}
+          {/* Empty State - Show when no captures exist */}
+          {!latestSkinCapture && (
+            <EmptyStateCard
+              type="skin"
+              onAction={handleStartAnalysis}
+            />
+          )}
+
+          {/* Recent Analysis Section - Only show if there are captures */}
+          {latestSkinCapture && (
+            <>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.recent.title')}</Text>
             <Text style={styles.sectionSubtitle}>{t('analysis.skin.recent.subtitle')}</Text>
@@ -1651,6 +1694,8 @@ const SkinAnalysisScreen: React.FC = () => {
               <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
             </LinearGradient>
           </TouchableOpacity>
+          </>
+          )}
 
           {/* Quick Stats Section */}
           <View style={styles.sectionHeader}>
@@ -1984,6 +2029,29 @@ const SkinAnalysisScreen: React.FC = () => {
         <SkinTrendDetailModal
           visible={showSkinTrendModal}
           onClose={() => setShowSkinTrendModal(false)}
+        />
+
+        {/* First Analysis Celebration */}
+        <FirstAnalysisCelebration
+          visible={showFirstAnalysisCelebration}
+          type="skin"
+          onClose={() => setShowFirstAnalysisCelebration(false)}
+        />
+
+        {/* Contextual Permission Modal */}
+        <ContextualPermissionModal
+          visible={showPermissionModal}
+          type="camera"
+          context="skin"
+          onClose={() => setShowPermissionModal(false)}
+          onGrant={async () => {
+            setShowPermissionModal(false);
+            // Try to start camera again after granting permission
+            const granted = await cameraController.ensurePermission();
+            if (granted) {
+              await handleStartAnalysis();
+            }
+          }}
         />
       </SafeAreaView>
     </View>

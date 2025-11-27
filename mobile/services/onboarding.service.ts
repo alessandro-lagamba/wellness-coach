@@ -15,6 +15,12 @@ export class OnboardingService {
     SKIPPED: 'onboarding_skipped',
     STEPS: 'onboarding_completed_steps',
     LAST_STEP: 'onboarding_last_step',
+    TUTORIAL_COMPLETED: 'tutorial_completed',
+    TUTORIAL_COMPLETED_AT: 'tutorial_completed_at',
+    FIRST_EMOTION_ANALYSIS: 'first_emotion_analysis_completed',
+    FIRST_SKIN_ANALYSIS: 'first_skin_analysis_completed',
+    FIRST_FOOD_ANALYSIS: 'first_food_analysis_completed',
+    FIRST_JOURNAL_ENTRY: 'first_journal_entry_completed',
   };
 
   /**
@@ -116,6 +122,36 @@ export class OnboardingService {
   }
 
   /**
+   * Verifica se il tutorial interattivo è stato completato
+   */
+  static async isTutorialCompleted(): Promise<boolean> {
+    try {
+      const completed = await AsyncStorage.getItem(this.STORAGE_KEYS.TUTORIAL_COMPLETED);
+      return completed === 'true';
+    } catch (error) {
+      console.error('Error checking tutorial status:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Marca il tutorial come completato
+   */
+  static async completeTutorial(): Promise<void> {
+    try {
+      const now = new Date().toISOString();
+      await Promise.all([
+        AsyncStorage.setItem(this.STORAGE_KEYS.TUTORIAL_COMPLETED, 'true'),
+        AsyncStorage.setItem(this.STORAGE_KEYS.TUTORIAL_COMPLETED_AT, now),
+      ]);
+      console.log('✅ Tutorial completed successfully');
+    } catch (error) {
+      console.error('Error completing tutorial:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Resetta l'onboarding (per testing o reset utente)
    */
   static async resetOnboarding(): Promise<void> {
@@ -126,6 +162,8 @@ export class OnboardingService {
         AsyncStorage.removeItem(this.STORAGE_KEYS.SKIPPED),
         AsyncStorage.removeItem(this.STORAGE_KEYS.STEPS),
         AsyncStorage.removeItem(this.STORAGE_KEYS.LAST_STEP),
+        AsyncStorage.removeItem(this.STORAGE_KEYS.TUTORIAL_COMPLETED),
+        AsyncStorage.removeItem(this.STORAGE_KEYS.TUTORIAL_COMPLETED_AT),
       ]);
       console.log('🔄 Onboarding reset successfully');
     } catch (error) {
@@ -181,6 +219,56 @@ export class OnboardingService {
         averageTimeToComplete: null,
         mostSkippedStep: null,
       };
+    }
+  }
+
+  /**
+   * Verifica se è la prima volta che l'utente completa un'azione
+   */
+  static async isFirstTime(feature: 'emotion' | 'skin' | 'food' | 'journal'): Promise<boolean> {
+    try {
+      const key = this.STORAGE_KEYS[`FIRST_${feature.toUpperCase()}_ANALYSIS` as keyof typeof this.STORAGE_KEYS] || 
+                  this.STORAGE_KEYS[`FIRST_${feature.toUpperCase()}_ENTRY` as keyof typeof this.STORAGE_KEYS];
+      if (!key) return false;
+      
+      const completed = await AsyncStorage.getItem(key);
+      return completed !== 'true';
+    } catch (error) {
+      console.error(`Error checking first time for ${feature}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Marca una feature come completata per la prima volta
+   */
+  static async markFirstTimeCompleted(feature: 'emotion' | 'skin' | 'food' | 'journal'): Promise<void> {
+    try {
+      const key = this.STORAGE_KEYS[`FIRST_${feature.toUpperCase()}_ANALYSIS` as keyof typeof this.STORAGE_KEYS] || 
+                  this.STORAGE_KEYS[`FIRST_${feature.toUpperCase()}_ENTRY` as keyof typeof this.STORAGE_KEYS];
+      if (!key) return;
+      
+      await AsyncStorage.setItem(key, 'true');
+      console.log(`✅ First ${feature} analysis/entry marked as completed`);
+    } catch (error) {
+      console.error(`Error marking first time for ${feature}:`, error);
+    }
+  }
+
+  /**
+   * Resetta il tracking del primo utilizzo (per testing)
+   */
+  static async resetFirstTimeTracking(): Promise<void> {
+    try {
+      await Promise.all([
+        AsyncStorage.removeItem(this.STORAGE_KEYS.FIRST_EMOTION_ANALYSIS),
+        AsyncStorage.removeItem(this.STORAGE_KEYS.FIRST_SKIN_ANALYSIS),
+        AsyncStorage.removeItem(this.STORAGE_KEYS.FIRST_FOOD_ANALYSIS),
+        AsyncStorage.removeItem(this.STORAGE_KEYS.FIRST_JOURNAL_ENTRY),
+      ]);
+      console.log('🔄 First time tracking reset successfully');
+    } catch (error) {
+      console.error('Error resetting first time tracking:', error);
     }
   }
 }

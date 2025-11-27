@@ -57,6 +57,10 @@ import { InsightSection } from './InsightSection';
 import { DetailedAnalysisPopup } from './DetailedAnalysisPopup';
 import { IntelligentInsightsSection } from './IntelligentInsightsSection';
 import { VideoHero } from './VideoHero';
+import { EmptyStateCard } from './EmptyStateCard';
+import { FirstAnalysisCelebration } from './FirstAnalysisCelebration';
+import { ContextualPermissionModal } from './ContextualPermissionModal';
+import { OnboardingService } from '../services/onboarding.service';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
@@ -141,6 +145,12 @@ export const EmotionDetectionScreen: React.FC = () => {
 
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
+  
+  // First analysis celebration
+  const [showFirstAnalysisCelebration, setShowFirstAnalysisCelebration] = useState(false);
+  
+  // Contextual permission modal
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
 
   const analysisServiceRef = useRef(UnifiedAnalysisService.getInstance());
@@ -383,11 +393,19 @@ export const EmotionDetectionScreen: React.FC = () => {
   const handleStartDetection = async () => {
     // 🔥 FIX: Rimuoviamo console.log eccessivi
 
+    // Check if permission is denied - show contextual modal
+    if (cameraController.permissionDenied || cameraController.needsPermission) {
+      if (isMountedRef.current) {
+        setShowPermissionModal(true);
+      }
+      return;
+    }
+
     const granted = await ensureCameraPermission();
     // 🔥 FIX: Rimuoviamo console.log eccessivi
     if (!granted) {
       if (isMountedRef.current) {
-        alert(t('analysis.emotion.errors.cameraPermission'));
+        setShowPermissionModal(true);
       }
       return;
     }
@@ -774,6 +792,20 @@ export const EmotionDetectionScreen: React.FC = () => {
               } catch (reloadError) {
                 console.error('Error reloading emotion data after save:', reloadError);
               }
+
+              // 🆕 Check if this is the first analysis and show celebration
+              if (isMountedRef.current) {
+                const isFirstTime = await OnboardingService.isFirstTime('emotion');
+                if (isFirstTime) {
+                  await OnboardingService.markFirstTimeCompleted('emotion');
+                  // Delay to allow results screen to show first
+                  setTimeout(() => {
+                    if (isMountedRef.current) {
+                      setShowFirstAnalysisCelebration(true);
+                    }
+                  }, 1500);
+                }
+              }
             } else {
               // 🆕 Nessun errore lanciato ma savedAnalysis è null
               if (isMountedRef.current) {
@@ -1151,8 +1183,17 @@ export const EmotionDetectionScreen: React.FC = () => {
 
           </LinearGradient>
 
+          {/* Empty State - Show when no sessions exist */}
+          {!latestEmotionSession && (
+            <EmptyStateCard
+              type="emotion"
+              onAction={handleStartDetection}
+            />
+          )}
 
-          {/* Recent Session Section - Always visible */}
+          {/* Recent Session Section - Only show if there are sessions */}
+          {latestEmotionSession && (
+            <>
           <View style={styles.sectionHeader}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>
@@ -1239,6 +1280,8 @@ export const EmotionDetectionScreen: React.FC = () => {
               <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
             </LinearGradient>
           </TouchableOpacity>
+          </>
+          )}
 
           {/* Quick Stats Section */}
           <View style={styles.sectionHeader}>
@@ -1464,6 +1507,29 @@ export const EmotionDetectionScreen: React.FC = () => {
         <EmotionTrendDetailModal
           visible={showTrendDetailModal}
           onClose={() => setShowTrendDetailModal(false)}
+        />
+
+        {/* First Analysis Celebration */}
+        <FirstAnalysisCelebration
+          visible={showFirstAnalysisCelebration}
+          type="emotion"
+          onClose={() => setShowFirstAnalysisCelebration(false)}
+        />
+
+        {/* Contextual Permission Modal */}
+        <ContextualPermissionModal
+          visible={showPermissionModal}
+          type="camera"
+          context="emotion"
+          onClose={() => setShowPermissionModal(false)}
+          onGrant={async () => {
+            setShowPermissionModal(false);
+            // Try to start camera again after granting permission
+            const granted = await cameraController.ensurePermission();
+            if (granted) {
+              await handleStartDetection();
+            }
+          }}
         />
       </SafeAreaView>
     </View>

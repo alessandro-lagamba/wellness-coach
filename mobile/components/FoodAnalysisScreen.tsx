@@ -58,6 +58,9 @@ import { DetailedAnalysisPopup } from './DetailedAnalysisPopup';
 import { IntelligentInsightsSection } from './IntelligentInsightsSection';
 import { VideoHero } from './VideoHero';
 import { FoodCaptureCard } from './FoodCaptureCard';
+import { EmptyStateCard } from './EmptyStateCard';
+import { FirstAnalysisCelebration } from './FirstAnalysisCelebration';
+import { OnboardingService } from '../services/onboarding.service';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
@@ -407,6 +410,12 @@ export const FoodAnalysisScreen: React.FC = () => {
 
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
+  
+  // First analysis celebration
+  const [showFirstAnalysisCelebration, setShowFirstAnalysisCelebration] = useState(false);
+  
+  // Contextual permission modal
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   // Intelligent insights are now handled by IntelligentInsightsSection component
 
@@ -1173,6 +1182,14 @@ export const FoodAnalysisScreen: React.FC = () => {
   const handleStartAnalysis = async () => {
     // 🔥 FIX: Rimuoviamo console.log eccessivi
 
+    // Check if permission is denied - show contextual modal
+    if (cameraController.permissionDenied || cameraController.needsPermission) {
+      if (isMountedRef.current) {
+        setShowPermissionModal(true);
+      }
+      return;
+    }
+
     // Start camera immediately for better perceived performance
     await cameraController.startCamera();
 
@@ -1184,9 +1201,9 @@ export const FoodAnalysisScreen: React.FC = () => {
 
     // 🔥 FIX: Rimuoviamo console.log eccessivi
     if (!granted) {
+      cameraController.stopCamera();
       if (isMountedRef.current) {
-        alert(t('analysis.food.errors.cameraPermission'));
-        cameraController.stopCamera();
+        setShowPermissionModal(true);
       }
       return;
     }
@@ -1334,6 +1351,20 @@ export const FoodAnalysisScreen: React.FC = () => {
                     UserFeedbackService.showWarning('L\'analisi è stata salvata ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
                   } else {
                     UserFeedbackService.showSaveSuccess('analisi');
+                  }
+
+                  // 🆕 Check if this is the first analysis and show celebration
+                  if (isMountedRef.current) {
+                    const isFirstTime = await OnboardingService.isFirstTime('food');
+                    if (isFirstTime) {
+                      await OnboardingService.markFirstTimeCompleted('food');
+                      // Delay to allow results screen to show first
+                      setTimeout(() => {
+                        if (isMountedRef.current) {
+                          setShowFirstAnalysisCelebration(true);
+                        }
+                      }, 1500);
+                    }
                   }
 
                   // Sincronizza i dati con lo store locale per i grafici
@@ -2294,7 +2325,17 @@ export const FoodAnalysisScreen: React.FC = () => {
 
           </LinearGradient>
 
-          {/* Recent Analysis Section - Always visible */}
+          {/* Empty State - Show when no food analyses exist */}
+          {!latestFoodSession && (
+            <EmptyStateCard
+              type="food"
+              onAction={handleStartAnalysis}
+            />
+          )}
+
+          {/* Recent Analysis Section - Only show if there are analyses */}
+          {latestFoodSession && (
+            <>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.recent.title')}</Text>
             <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.recent.subtitle')}</Text>
@@ -2364,6 +2405,8 @@ export const FoodAnalysisScreen: React.FC = () => {
               <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
             </LinearGradient>
           </TouchableOpacity>
+          </>
+          )}
 
           {/* Nutritional Goals Configuration Section */}
           <LinearGradient
@@ -3050,6 +3093,29 @@ export const FoodAnalysisScreen: React.FC = () => {
             </View>
           </View>
         </Modal>
+
+        {/* First Analysis Celebration */}
+        <FirstAnalysisCelebration
+          visible={showFirstAnalysisCelebration}
+          type="food"
+          onClose={() => setShowFirstAnalysisCelebration(false)}
+        />
+
+        {/* Contextual Permission Modal */}
+        <ContextualPermissionModal
+          visible={showPermissionModal}
+          type="camera"
+          context="food"
+          onClose={() => setShowPermissionModal(false)}
+          onGrant={async () => {
+            setShowPermissionModal(false);
+            // Try to start camera again after granting permission
+            const granted = await cameraController.ensurePermission();
+            if (granted) {
+              await handleStartAnalysis();
+            }
+          }}
+        />
       </SafeAreaView>
     </View>
   );
