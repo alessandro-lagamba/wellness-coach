@@ -63,6 +63,7 @@ import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 import { getTodayISODate, toLocalISODate } from '../utils/locale-formatters';
+import { useFocusEffect } from 'expo-router';
 // Removed useInsights - now using IntelligentInsightsSection directly
 
 const { width } = Dimensions.get('window');
@@ -357,6 +358,9 @@ const SkinAnalysisScreen: React.FC = () => {
   // ✅ ADD: Modal state for skincare guides
   const [selectedGuide, setSelectedGuide] = useState<string | null>(null);
 
+  // Loading state to prevent empty state flash
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
   
@@ -442,6 +446,33 @@ const SkinAnalysisScreen: React.FC = () => {
     ensureAnalysisReady();
   }, [ensureAnalysisReady]);
 
+  // Reload data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      
+      const reloadData = async () => {
+        try {
+          await ChartDataService.loadSkinDataForCharts();
+          if (isMounted) {
+            setIsLoadingData(false);
+          }
+        } catch (error) {
+          console.error('❌ Failed to reload skin data on focus:', error);
+          if (isMounted) {
+            setIsLoadingData(false);
+          }
+        }
+      };
+
+      reloadData();
+
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
+
   // Carica i dati dei grafici dal database quando il componente si monta
   useEffect(() => {
     // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
@@ -452,23 +483,24 @@ const SkinAnalysisScreen: React.FC = () => {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
         await ChartDataService.loadSkinDataForCharts();
         // 🔥 FIX: Rimuoviamo console.log eccessivi
+        
+        if (isMounted) {
+          setIsLoadingData(false); // Data loading complete
+        }
       } catch (error) {
         // 🔥 FIX: Solo errori critici in console
         console.error('❌ Failed to load skin chart data:', error);
+        if (isMounted) {
+          setIsLoadingData(false); // Stop loading even on error
+        }
       }
     };
 
-    // Delay loading to ensure component is fully mounted
-    // 🔥 FIX: Memory leak - salviamo il timeout per cleanup
-    const timer = setTimeout(() => {
-      if (isMounted) {
-        loadChartData();
-      }
-    }, 100);
+    // Load data immediately (no delay) to prevent empty state flash
+    loadChartData();
 
     return () => {
       isMounted = false;
-      clearTimeout(timer);
     };
   }, []);
 
@@ -1603,8 +1635,8 @@ const SkinAnalysisScreen: React.FC = () => {
 
           </LinearGradient>
 
-          {/* Empty State - Show when no captures exist */}
-          {!latestSkinCapture && (
+          {/* Empty State - Show only when data is loaded and no captures exist */}
+          {!isLoadingData && !latestSkinCapture && (
             <EmptyStateCard
               type="skin"
               onAction={handleStartAnalysis}

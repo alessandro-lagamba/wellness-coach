@@ -65,6 +65,7 @@ import { OnboardingService } from '../services/onboarding.service';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
+import { useFocusEffect } from 'expo-router';
 import { NutritionalGoalsModal } from './NutritionalGoalsModal';
 import { FridgeIngredientsModal } from './FridgeIngredientsModal';
 import { RecipeDetailModal } from './RecipeDetailModal';
@@ -409,6 +410,9 @@ export const FoodAnalysisScreen: React.FC = () => {
   const [qualityInfo, setQualityInfo] = useState<any>(null);
 
 
+  // Loading state to prevent empty state flash
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
   
@@ -659,6 +663,33 @@ export const FoodAnalysisScreen: React.FC = () => {
     ensureAnalysisReady();
   }, [ensureAnalysisReady]);
 
+  // Reload data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      
+      const reloadData = async () => {
+        try {
+          await ChartDataService.loadFoodDataForCharts();
+          if (isMounted) {
+            setIsLoadingData(false);
+          }
+        } catch (error) {
+          console.error('❌ Failed to reload food data on focus:', error);
+          if (isMounted) {
+            setIsLoadingData(false);
+          }
+        }
+      };
+
+      reloadData();
+
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
+
   // Carica i dati dei grafici dal database quando il componente si monta
   useEffect(() => {
     // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
@@ -669,23 +700,24 @@ export const FoodAnalysisScreen: React.FC = () => {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
         await ChartDataService.loadFoodDataForCharts();
         // 🔥 FIX: Rimuoviamo console.log eccessivi
+        
+        if (isMounted) {
+          setIsLoadingData(false); // Data loading complete
+        }
       } catch (error) {
         // 🔥 FIX: Solo errori critici in console
         console.error('❌ Failed to load food chart data:', error);
+        if (isMounted) {
+          setIsLoadingData(false); // Stop loading even on error
+        }
       }
     };
 
-    // Delay loading to ensure component is fully mounted
-    // 🔥 FIX: Memory leak - salviamo il timeout per cleanup
-    const timer = setTimeout(() => {
-      if (isMounted) {
-        loadChartData();
-      }
-    }, 100);
+    // Load data immediately (no delay) to prevent empty state flash
+    loadChartData();
 
     return () => {
       isMounted = false;
-      clearTimeout(timer);
     };
   }, []);
 
@@ -2326,8 +2358,8 @@ export const FoodAnalysisScreen: React.FC = () => {
 
           </LinearGradient>
 
-          {/* Empty State - Show when no food analyses exist */}
-          {!latestFoodSession && (
+          {/* Empty State - Show only when data is loaded and no food analyses exist */}
+          {!isLoadingData && !latestFoodSession && (
             <EmptyStateCard
               type="food"
               onAction={handleStartAnalysis}

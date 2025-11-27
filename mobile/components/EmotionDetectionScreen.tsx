@@ -142,6 +142,9 @@ export const EmotionDetectionScreen: React.FC = () => {
 
   // State to force re-render when data is loaded
   const [dataLoaded, setDataLoaded] = useState(false);
+  
+  // Loading state to prevent empty state flash
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
@@ -238,6 +241,34 @@ export const EmotionDetectionScreen: React.FC = () => {
     ensureAnalysisReady();
   }, [ensureAnalysisReady]);
 
+  // Reload data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      
+      const reloadData = async () => {
+        try {
+          await ChartDataService.loadEmotionDataForCharts();
+          if (isMounted) {
+            setDataLoaded(prev => !prev); // Toggle to force re-render
+            setIsLoadingData(false);
+          }
+        } catch (error) {
+          console.error('❌ Failed to reload emotion data on focus:', error);
+          if (isMounted) {
+            setIsLoadingData(false);
+          }
+        }
+      };
+
+      reloadData();
+
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
+
   // Carica i dati dei grafici dal database quando il componente si monta
   useEffect(() => {
     // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
@@ -247,19 +278,20 @@ export const EmotionDetectionScreen: React.FC = () => {
     const loadChartData = async () => {
       try {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-
         await ChartDataService.loadEmotionDataForCharts();
         // 🔥 FIX: Rimuoviamo console.log eccessivi
 
         // Force re-render after data is loaded
         if (isMounted) {
           setDataLoaded(true);
+          setIsLoadingData(false); // Data loading complete
         }
       } catch (error) {
         // 🔥 FIX: Solo errori critici in console
         console.error('❌ Failed to load emotion chart data:', error);
         // 🔥 FIX: Memory leak - salviamo il retry timer per cleanup
         if (isMounted) {
+          setIsLoadingData(false); // Stop loading even on error
           retryTimer = setTimeout(() => {
             if (isMounted) {
               loadChartData();
@@ -269,17 +301,11 @@ export const EmotionDetectionScreen: React.FC = () => {
       }
     };
 
-    // Delay loading to ensure component is fully mounted
-    // 🔥 FIX: Memory leak - salviamo il timeout per cleanup
-    const timer = setTimeout(() => {
-      if (isMounted) {
-        loadChartData();
-      }
-    }, 100);
+    // Load data immediately (no delay) to prevent empty state flash
+    loadChartData();
 
     return () => {
       isMounted = false;
-      clearTimeout(timer);
       if (retryTimer) {
         clearTimeout(retryTimer);
       }
@@ -1183,8 +1209,8 @@ export const EmotionDetectionScreen: React.FC = () => {
 
           </LinearGradient>
 
-          {/* Empty State - Show when no sessions exist */}
-          {!latestEmotionSession && (
+          {/* Empty State - Show only when data is loaded and no sessions exist */}
+          {!isLoadingData && !latestEmotionSession && (
             <EmptyStateCard
               type="emotion"
               onAction={handleStartDetection}
