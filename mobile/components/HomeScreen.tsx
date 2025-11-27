@@ -3101,10 +3101,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <WelcomeOverlay
         visible={welcomeOverlayVisible}
         onClose={() => setWelcomeOverlayVisible(false)}
+        hasAvatar={!!avatarUri}
         onAction={(action) => {
           if (action === 'widgets') {
             // Open widget selection modal
             setWidgetSelectionModal({ visible: true, position: 0 });
+          } else if (action === 'avatar') {
+            // Navigate to avatar capture (handled in WelcomeOverlay)
           }
           // Other actions (emotion, skin, food) are handled by navigation in WelcomeOverlay
         }}

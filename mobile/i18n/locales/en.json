@@ -1608,6 +1608,10 @@
     "description": "Here are some things you can do to get started:",
     "dismiss": "Dismiss",
     "suggestions": {
+      "avatar": {
+        "title": "Create your avatar",
+        "description": "Personalize your AI avatar for a more engaging experience"
+      },
       "emotion": {
         "title": "Analyze your emotions",
         "description": "Discover how you feel in real-time"

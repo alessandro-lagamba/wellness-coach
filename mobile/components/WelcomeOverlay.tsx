@@ -24,7 +24,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 interface WelcomeOverlayProps {
   visible: boolean;
   onClose: () => void;
-  onAction: (action: 'emotion' | 'skin' | 'food' | 'widgets') => void;
+  onAction: (action: 'emotion' | 'skin' | 'food' | 'widgets' | 'avatar') => void;
+  hasAvatar?: boolean;
 }
 
 const WELCOME_DISMISSED_KEY = 'welcome_overlay_dismissed';
@@ -33,6 +34,7 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
   visible,
   onClose,
   onAction,
+  hasAvatar = false,
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -82,7 +84,7 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
     onClose();
   };
 
-  const handleAction = (action: 'emotion' | 'skin' | 'food' | 'widgets') => {
+  const handleAction = (action: 'emotion' | 'skin' | 'food' | 'widgets' | 'avatar') => {
     onAction(action);
     handleDismiss();
   };
@@ -90,6 +92,18 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
   if (!visible) return null;
 
   const suggestions = [
+    {
+      id: 'avatar',
+      icon: 'account-circle',
+      title: t('welcomeOverlay.suggestions.avatar.title'),
+      description: t('welcomeOverlay.suggestions.avatar.description'),
+      gradient: ['#a855f7', '#8b5cf6'],
+      action: () => {
+        router.push('/avatar-capture');
+        handleAction('avatar');
+      },
+      visible: !hasAvatar, // Show only if user doesn't have an avatar
+    },
     {
       id: 'emotion',
       icon: 'emoticon-happy',

@@ -1622,6 +1622,10 @@
     "description": "Ecco alcune cose che puoi fare per iniziare:",
     "dismiss": "Chiudi",
     "suggestions": {
+      "avatar": {
+        "title": "Crea il tuo avatar",
+        "description": "Personalizza il tuo avatar AI per un'esperienza più coinvolgente"
+      },
       "emotion": {
         "title": "Analizza le tue emozioni",
         "description": "Scopri come ti senti in tempo reale"
