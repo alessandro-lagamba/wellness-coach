@@ -18,13 +18,13 @@ export const AnalysisActionButton: React.FC<AnalysisActionButtonProps> = ({
     emotion: {
       icon: 'heart',
       text: '🔍 Analizza Emozioni',
-      colors: ['#ef4444', '#dc2626'],
+      colors: ['#ef4444', '#dc2626'] as const,
       route: '/emotion-detection'
     },
     skin: {
       icon: 'camera',
       text: '📸 Analizza Pelle',
-      colors: ['#3b82f6', '#2563eb'],
+      colors: ['#3b82f6', '#2563eb'] as const,
       route: '/skin-analysis'
     }
   };
@@ -39,7 +39,7 @@ export const AnalysisActionButton: React.FC<AnalysisActionButtonProps> = ({
       activeOpacity={0.8}
     >
       <LinearGradient
-        colors={disabled ? ['#9ca3af', '#6b7280'] : config.colors}
+        colors={disabled ? ['#9ca3af', '#6b7280'] as const : config.colors}
         style={styles.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}

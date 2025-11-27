@@ -16,6 +16,7 @@ export interface ActionInfo {
   actionable: boolean;
   estimatedTime?: string;
   resources?: string[];
+  snoozeUntil?: Date;
 }
 
 export interface UserContext {

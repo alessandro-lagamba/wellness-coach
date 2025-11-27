@@ -14,6 +14,7 @@ import {
   useColorScheme,
   FlatList,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -22,17 +23,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Markdown from 'react-native-markdown-display';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withSpring, 
-  withTiming, 
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
   withRepeat,
   withSequence,
   runOnJS
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AvoidSoftInput, AvoidSoftInputView } from 'react-native-avoid-softinput';
+// import { AvoidSoftInput, AvoidSoftInputView } from 'react-native-avoid-softinput';
 import WellnessSuggestionPopup from './WellnessSuggestionPopup';
 import { TimePickerModal } from './TimePickerModal';
 
@@ -103,7 +104,7 @@ const coachAvatar = 'https://img.heroui.chat/image/avatar?w=320&h=320&u=21';
 // 🔧 Funzione per estrarre suggerimenti specifici dalla risposta IA
 const extractSuggestionFromAIResponse = (aiResponse: string) => {
   const response = aiResponse.toLowerCase();
-  
+
   // Categorie con struttura completa
   const categories = {
     mind_body: {
@@ -131,7 +132,7 @@ const extractSuggestionFromAIResponse = (aiResponse: string) => {
       }
     }
   };
-  
+
   // Mappa dei suggerimenti disponibili con struttura completa
   const suggestions = {
     'gentle stretching': {
@@ -179,14 +180,14 @@ const extractSuggestionFromAIResponse = (aiResponse: string) => {
       content: 'Fai una camminata di 15 minuti all\'aperto per migliorare umore e circolazione.'
     }
   };
-  
+
   // Cerca corrispondenze nella risposta IA
   for (const [key, suggestion] of Object.entries(suggestions)) {
     if (response.includes(key) || response.includes(suggestion.title.toLowerCase())) {
       return suggestion;
     }
   }
-  
+
   return null;
 };
 
@@ -198,20 +199,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const { voiceMode } = useLocalSearchParams(); // 🆕 Rimossa t da qui (era in conflitto)
   const insets = useSafeAreaInsets();
   const surfaceSecondary = (colors as any).surfaceSecondary ?? colors.surface;
-  
+
   useFocusEffect(
     useCallback(() => {
       hideTabBar();
       // 🆕 Configurazione minimale: solo setShouldMimicIOSBehavior se necessario
       // AvoidSoftInputView gestisce tutto a livello di view
-      AvoidSoftInput.setShouldMimicIOSBehavior(true);
+      // AvoidSoftInput.setShouldMimicIOSBehavior(true);
 
       return () => {
         showTabBar();
       };
     }, [hideTabBar, showTabBar]),
   );
-  
+
   // 🆕 Rimossi log per performance
   useEffect(() => {
     if (voiceMode === 'true') {
@@ -219,7 +220,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       voiceInterfaceOpacity.value = withTiming(1, { duration: 300 });
     }
   }, [voiceMode]);
-  
+
   const [mode, setMode] = useState<'chat' | 'journal'>('chat');
   // 🔥 FIX: Inizializziamo messages con un messaggio di default, poi lo aggiorniamo nel useEffect
   const [messages, setMessages] = useState<Message[]>([
@@ -276,7 +277,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     } else if (user?.email) {
       userName = user.email.split('@')[0].split('.')[0];
     }
-    
+
     if (userName) {
       return t('chat.welcomeMessage.withName', { name: userName });
     }
@@ -348,12 +349,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           const summaryData =
             typeof checkinData.summary === 'string'
               ? (() => {
-                  try {
-                    return JSON.parse(checkinData.summary);
-                  } catch {
-                    return null;
-                  }
-                })()
+                try {
+                  return JSON.parse(checkinData.summary);
+                } catch {
+                  return null;
+                }
+              })()
               : checkinData.summary;
           if (summaryData) {
             summaryFocus = summaryData.focus || null;
@@ -509,7 +510,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       // 🔥 FIX: Quando si apre il Journal, usa sempre la data odierna per centrare
       const targetDate = selectedDayKey || today;
       const targetIndex = monthDays.indexOf(targetDate);
-      
+
       // Se il giorno target è nel mese corrente, centrarlo
       if (targetIndex >= 0) {
         // 🔥 FIX: Aumentato il delay e migliorato il calcolo dello scroll
@@ -524,14 +525,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             const totalWidth = pillWidth + gap;
             const offsetRight = 20; // 🆕 Offset per spostare più a destra (in pixel)
             const scrollX = Math.max(0, targetIndex * totalWidth - (width / 2) + (totalWidth / 2) + offsetRight);
-            
-            monthStripScrollRef.current.scrollTo({ 
+
+            monthStripScrollRef.current.scrollTo({
               x: scrollX,
-              animated: true 
+              animated: true
             });
           }
         }, 500); // 🔥 FIX: Aumentato delay per permettere al layout di completarsi completamente
-        
+
         return () => clearTimeout(timer);
       }
     }
@@ -554,7 +555,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           const targetDate = new Date(year, month - 1, day);
           const currentMonthDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
           const targetMonthDate = new Date(year, month - 1, 1);
-          
+
           // Aggiorna solo se il mese è diverso
           if (currentMonthDate.getTime() !== targetMonthDate.getTime()) {
             setCurrentMonth(targetMonthDate);
@@ -571,7 +572,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         const today = new Date();
         const currentMonthDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
         const todayMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        
+
         if (currentMonthDate.getTime() !== todayMonthDate.getTime()) {
           setCurrentMonth(todayMonthDate);
         }
@@ -616,7 +617,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     if (mode === 'journal') {
       // 🆕 Non forzare il reset se l'utente ha già selezionato un giorno specifico
       // Solo centra il giorno selezionato (che potrebbe essere oggi o un giorno passato)
-      
+
       // 🔥 FIX: Forza anche il centraggio dopo un breve delay per assicurarsi che monthDays sia popolato
       const timer = setTimeout(() => {
         if (monthStripScrollRef.current && monthDays.length > 0 && selectedDayKey) {
@@ -627,14 +628,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             const totalWidth = pillWidth + gap;
             const offsetRight = 205; // 🆕 Offset per spostare più a destra (in pixel)
             const scrollX = Math.max(0, selectedIndex * totalWidth - (width / 2) + (totalWidth / 2) - offsetRight);
-            monthStripScrollRef.current.scrollTo({ 
+            monthStripScrollRef.current.scrollTo({
               x: scrollX,
-              animated: true 
+              animated: true
             });
           }
         }
       }, 600); // 🔥 FIX: Delay più lungo per assicurarsi che tutto sia pronto
-      
+
       return () => clearTimeout(timer);
     }
   }, [mode, monthDays, selectedDayKey]); // 🔥 FIX: Esegui quando si cambia modalità, monthDays o selectedDayKey
@@ -669,7 +670,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       restPairs.forEach(([k, v]) => { if (v) restMap[k] = parseInt(v, 10); });
       setMonthMoodMap(moodMap);
       setMonthRestMap(restMap);
-      
+
       // 🆕 Carica journal entries dal DB per il mese corrente
       if (currentUser?.id) {
         try {
@@ -699,7 +700,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [showVoiceInterface, setShowVoiceInterface] = useState(false);
   const [voiceModeDismissed, setVoiceModeDismissed] = useState(false);
-  
+
   useEffect(() => {
     if (voiceMode === 'true') {
       setVoiceModeDismissed(false);
@@ -713,7 +714,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   // 🔧 FIX: Aggiorna currentUser quando user cambia
   // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
   const isMountedRef = useRef(true);
-  
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -724,18 +725,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   // 🔥 FIX: Usiamo useRef per tracciare l'ultimo user.id per evitare loop infiniti
   const lastUserIdRef = useRef<string | null>(null);
   const lastProfileIdRef = useRef<string | null>(null);
-  
+
   useEffect(() => {
     // 🆕 Rimosso log per performance
     // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
     if (!isMountedRef.current) return;
-    
+
     // 🔥 FIX: Evita setState se user.id non è cambiato
     if (user?.id !== lastUserIdRef.current) {
       lastUserIdRef.current = user?.id || null;
       setCurrentUser(user);
     }
-    
+
     // 🔧 Carica il profilo utente per ottenere first_name e last_name
     if (user?.id) {
       // 🔥 FIX: Evita chiamate duplicate se il profilo è già stato caricato
@@ -743,16 +744,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         // Profilo già caricato, non serve fare nulla
         return;
       }
-      
+
       AuthService.getUserProfile(user.id).then(profile => {
         // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
         if (!isMountedRef.current) return;
-        
+
         // 🔥 FIX: Evita setState se il profilo non è cambiato
         if (profile?.id !== lastProfileIdRef.current) {
           lastProfileIdRef.current = profile?.id || null;
           setCurrentUserProfile(profile);
-          
+
           // Aggiorna il messaggio iniziale
           if (user) {
             const personalizedMessage = getInitialMessage();
@@ -762,8 +763,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 if (welcomeMsg?.text === personalizedMessage) {
                   return prev; // Nessun cambiamento necessario
                 }
-                return prev.map(msg => 
-                  msg.id === 'welcome' 
+                return prev.map(msg =>
+                  msg.id === 'welcome'
                     ? { ...msg, text: personalizedMessage }
                     : msg
                 );
@@ -800,7 +801,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       suggestion.id,
       'accepted'
     );
-    
+
     // Mostra il modal per selezionare l'orario
     setPendingSuggestion(suggestion);
     setShowTimePicker(true);
@@ -828,11 +829,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         'sleep': 'recovery',
         'rest': 'recovery',
       };
-      
+
       // 🆕 Normalizza l'ID per gestire varianti (es. 'gentle-stretching' -> 'stretching')
       const normalizedId = pendingSuggestion.id?.toLowerCase() || '';
       let category = categoryMap[normalizedId];
-      
+
       // Se non trovato, prova a cercare per parola chiave
       if (!category) {
         if (normalizedId.includes('stretch') || normalizedId.includes('allungamento')) {
@@ -845,21 +846,21 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           category = 'recovery';
         }
       }
-      
+
       // Fallback: usa category dal suggestion o default
       // 🆕 Assicurati che category sia sempre una stringa valida
       if (!category && pendingSuggestion.category) {
-        const suggestionCategory = typeof pendingSuggestion.category === 'string' 
-          ? pendingSuggestion.category 
+        const suggestionCategory = typeof pendingSuggestion.category === 'string'
+          ? pendingSuggestion.category
           : String(pendingSuggestion.category);
         if (['mindfulness', 'movement', 'nutrition', 'recovery'].includes(suggestionCategory)) {
           category = suggestionCategory as 'mindfulness' | 'movement' | 'nutrition' | 'recovery';
         }
       }
-      
+
       // Fallback finale
       category = category || 'mindfulness';
-      
+
       // 🆕 Verifica finale che category sia valida (safety check)
       if (!['mindfulness', 'movement', 'nutrition', 'recovery'].includes(category)) {
         console.warn(`Invalid category "${category}", defaulting to "mindfulness"`);
@@ -870,7 +871,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       const today = new Date();
       const scheduledTime = new Date(today);
       scheduledTime.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
-      
+
       // Se l'orario è già passato oggi, programma per domani
       if (scheduledTime < new Date()) {
         scheduledTime.setDate(scheduledTime.getDate() + 1);
@@ -908,7 +909,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         // Mostra feedback positivo
         Alert.alert(
           t('chat.activityAdded.title') || 'Attività aggiunta',
-          t('chat.activityAdded.message', { 
+          t('chat.activityAdded.message', {
             time: selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
           }) || `Attività aggiunta per le ${selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}. Riceverai un promemoria 15 minuti prima.`,
           [{ text: t('common.ok') || 'OK' }]
@@ -956,7 +957,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       suggestion.id,
       'accepted'
     );
-    
+
     // Navigate to breathing exercise screen
     if (suggestion.id === 'breathing-exercises') {
       router.push('/breathing-exercise');
@@ -986,7 +987,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
   const getDayColor = async (date: Date) => {
     const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    
+
     // First try to get AI score from database
     try {
       if (currentUser) {
@@ -998,7 +999,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     } catch (e) {
       // Fallback to mood/rest level
     }
-    
+
     // Fallback to mood/rest level from AsyncStorage
     const mood = await AsyncStorage.getItem(`checkin:mood:${dateKey}`);
     const restLevel = await AsyncStorage.getItem(`checkin:rest_level:${dateKey}`);
@@ -1022,16 +1023,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const initializeDatabaseServices = useCallback(async () => {
     try {
       // 🆕 Rimosso log per performance
-      
+
       // Get AI context
       const context = await AIContextService.getCompleteContext(currentUser.id);
       setAiContext(context);
-      
+
       // 🔧 RIMOSSO: Non mostrare banner iniziale automatico
       // Il banner apparirà solo dopo conversazioni contestuali
       // 🆕 Rimosso log per performance
       setWellnessSuggestion(null);
-      
+
       // Create or get current chat session
       // 🔥 FIX: Usa la lingua dell'utente per il formato data
       const dateLocale = language === 'it' ? 'it-IT' : 'en-US';
@@ -1053,12 +1054,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           pigmentationScore: context.currentSkin.pigmentationScore
         } : undefined
       );
-      
+
       if (session) {
         setCurrentSessionId(session.id);
         // 🆕 Rimosso log per performance
       }
-      
+
     } catch (error) {
       console.error('Error initializing database services:', error);
     }
@@ -1070,7 +1071,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       try {
         await tts.initialize();
         // 🆕 Rimosso log per performance
-        
+
         // Initialize database services if user is authenticated
         if (currentUser) {
           await initializeDatabaseServices();
@@ -1086,7 +1087,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   useEffect(() => {
     const loadChatHistory = async () => {
       if (!currentUser?.id || mode !== 'chat') return;
-      
+
       try {
         const sessions = await ChatService.getUserChatSessions(currentUser.id, 20);
         setChatHistory(sessions);
@@ -1094,7 +1095,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         console.error('Error loading chat history:', error);
       }
     };
-    
+
     loadChatHistory();
   }, [currentUser?.id, mode]);
 
@@ -1118,7 +1119,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   useEffect(() => {
     // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare i timeout
     const timeoutRefs: ReturnType<typeof setTimeout>[] = [];
-    
+
     const handleAppStateChange = (nextAppState: string) => {
       // 🆕 Rimosso log per performance
       if (nextAppState === 'active' && voiceMode === 'true' && !showVoiceInterface && !voiceModeDismissed) {
@@ -1154,7 +1155,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const handleVoiceMessage = useCallback(async (voiceText: string) => {
     try {
       // 🆕 Rimossi log per performance
-      
+
       // 🆕 Rileva intent di analisi dal messaggio vocale
       const analysisIntent = AnalysisIntentService.detectAnalysisIntent(voiceText);
       // 🆕 Rimosso log per performance
@@ -1189,11 +1190,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       };
 
       // 🆕 Rimossi log per performance
-      
+
       // 🔧 AUTO-DISCOVERY: Ottieni URL dinamico del backend
       const dynamicBackendURL = await getBackendURL();
       // 🆕 Rimosso log per performance
-      
+
       const response = await fetch(`${dynamicBackendURL}/api/chat/respond`, {
         method: 'POST',
         headers: {
@@ -1220,7 +1221,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       });
 
       const data = response.ok ? await response.json() : null;
-      const reply = data?.text || data?.message || data?.response || 
+      const reply = data?.text || data?.message || data?.response ||
         "I'm processing that—give me just a second and I'll suggest something helpful.";
 
       const aiMessage: Message = {
@@ -1254,7 +1255,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       // Speak the response using TTS
       setIsProcessing(false);
       setIsSpeaking(true);
-      
+
       try {
         // 🔥 FIX: Usa la lingua dell'utente invece di 'it-IT' hardcoded
         const ttsLanguage = language === 'it' ? 'it-IT' : 'en-US';
@@ -1273,7 +1274,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       if (currentUser && aiContext) {
         try {
           // Solo se l'utente ha espresso bisogni specifici o l'IA ha dato consigli
-          const shouldShowSuggestion = 
+          const shouldShowSuggestion =
             analysisIntent.confidence > 0.3 || // Intent di analisi rilevato
             reply.toLowerCase().includes('consiglio') || // IA ha dato consigli
             reply.toLowerCase().includes('prova') || // IA ha suggerito azioni
@@ -1281,11 +1282,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             reply.toLowerCase().includes('camminata') ||
             reply.toLowerCase().includes('stretching') ||
             reply.toLowerCase().includes('green tea');
-          
+
           if (shouldShowSuggestion) {
             // 🔧 NUOVO: Estrai suggerimento specifico dalla risposta IA
             const aiSuggestion = extractSuggestionFromAIResponse(reply);
-            
+
             if (aiSuggestion) {
               // Usa il suggerimento specifico dell'IA
               setWellnessSuggestion({
@@ -1301,7 +1302,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 currentUser.id,
                 aiContext
               );
-              
+
               if (suggestion.shouldShow) {
                 setWellnessSuggestion({
                   ...suggestion,
@@ -1321,7 +1322,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     } catch (error) {
       console.error('Error processing voice message:', error);
       setIsProcessing(false);
-      
+
       // Show error message
       const errorMessage: Message = {
         id: `${Date.now()}-voice-error`,
@@ -1385,7 +1386,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
       // 🔄 Use Traditional Chat System (OpenAI) for all text messages
       // 🆕 Rimossi log per performance
-      
+
       // 🆕 Rileva intent di analisi dal messaggio dell'utente
       const analysisIntent = AnalysisIntentService.detectAnalysisIntent(trimmed);
 
@@ -1423,11 +1424,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       };
 
       // 🆕 Rimossi log per performance
-      
+
       // 🔧 AUTO-DISCOVERY: Ottieni URL dinamico del backend
       const dynamicBackendURL = await getBackendURL();
       // 🆕 Rimosso log per performance
-      
+
       const response = await fetch(`${dynamicBackendURL}/api/chat/respond`, {
         method: 'POST',
         headers: {
@@ -1454,7 +1455,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       });
 
       const data = response.ok ? await response.json() : null;
-      const reply = data?.text || data?.message || data?.response || 
+      const reply = data?.text || data?.message || data?.response ||
         "I'm processing that—give me just a second and I'll suggest something helpful.";
 
       const aiMessage: Message = {
@@ -1507,7 +1508,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       if (currentUser && aiContext) {
         try {
           // Solo se l'utente ha espresso bisogni specifici o l'IA ha dato consigli
-          const shouldShowSuggestion = 
+          const shouldShowSuggestion =
             analysisIntent.confidence > 0.3 || // Intent di analisi rilevato
             reply.toLowerCase().includes('consiglio') || // IA ha dato consigli
             reply.toLowerCase().includes('prova') || // IA ha suggerito azioni
@@ -1515,11 +1516,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             reply.toLowerCase().includes('camminata') ||
             reply.toLowerCase().includes('stretching') ||
             reply.toLowerCase().includes('green tea');
-          
+
           if (shouldShowSuggestion) {
             // 🔧 NUOVO: Estrai suggerimento specifico dalla risposta IA
             const aiSuggestion = extractSuggestionFromAIResponse(reply);
-            
+
             if (aiSuggestion) {
               // Usa il suggerimento specifico dell'IA
               setWellnessSuggestion({
@@ -1535,7 +1536,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 currentUser.id,
                 aiContext
               );
-              
+
               if (suggestion.shouldShow) {
                 setWellnessSuggestion({
                   ...suggestion,
@@ -1612,23 +1613,23 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               if (currentUser?.id) {
                 // Cancella da Supabase
                 await DailyJournalDBService.deleteEntry(currentUser.id, selectedDayKey);
-                
+
                 // Reset tutti gli stati locali
                 setJournalText('');
                 setJournalPrompt('');
                 setAiScore(null);
                 setAiAnalysis(null);
-                
+
                 // Cancella anche da AsyncStorage
                 await DailyJournalService.saveLocalEntry(selectedDayKey, '', '');
-                
+
                 // Aggiorna monthJournalMap per rimuovere l'entry
                 setMonthJournalMap(prev => {
                   const updated = { ...prev };
                   delete updated[selectedDayKey];
                   return updated;
                 });
-                
+
                 // Ricarica la lista delle entry recenti per aggiornare la sezione "Ultime note"
                 try {
                   const recent = await DailyJournalDBService.listRecent(currentUser.id, 10);
@@ -1636,7 +1637,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 } catch (e) {
                   console.error('Error reloading journal history:', e);
                 }
-                
+
                 // Forza il refresh dei dati per il giorno selezionato
                 // Verifica che non ci siano più dati nel database
                 try {
@@ -1651,7 +1652,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   setAiScore(null);
                   setAiAnalysis(null);
                 }
-                
+
                 Alert.alert(t('common.success') || 'Successo', t('journal.clearEntry.success') || 'Entry cancellata');
               }
             } catch (error) {
@@ -1757,20 +1758,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         setIsListening(true);
         setIsVoiceMode(true);
         setTranscript('');
-        
+
         // Import and use Professional Speech Recognition (expo-speech-recognition)
         const ProfessionalSpeechRecognitionService = (await import('../services/professional-speech-recognition.service')).default;
         const speechService = ProfessionalSpeechRecognitionService.getInstance();
-        
+
         await speechService.startListening(
           (result) => {
             // 🔥 FIX: Rimuoviamo console.log eccessivi
             setTranscript(result.transcript);
-            
+
             if (result.isFinal) {
               setIsListening(false);
               setIsProcessing(true);
-              
+
               // Add user message
               const userMessage: Message = {
                 id: `${Date.now()}-voice-user`,
@@ -1779,7 +1780,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 timestamp: new Date(),
               };
               setMessages((prev) => [...prev, userMessage]);
-              
+
               // Send to OpenAI and get real response
               handleVoiceMessage(result.transcript);
             }
@@ -1788,7 +1789,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             console.error('Speech recognition error:', error);
             setIsListening(false);
             setIsProcessing(false);
-            
+
             // Show error message
             // 🔥 FIX: Usa traduzione invece di stringa hardcoded
             const errorMessage: Message = {
@@ -1888,22 +1889,22 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   // 🆕 Funzione helper per salvare l'entry del journal
   const saveJournalEntry = useCallback(async (dayKey: string) => {
     if (!currentUser) return;
-    
+
     await DailyJournalService.saveLocalEntry(dayKey, journalText, journalPrompt);
-    
+
     try {
       // Check if we need to generate AI judgment (only if content changed and no existing score)
       let aiScore = null, aiAnalysis = null;
-      
+
       // Check if we already have AI judgment for this entry
       const hasExistingAI = aiScore || aiAnalysis;
-      
+
       if (journalText.trim().length > 10 && !hasExistingAI) {
         // 🆕 Rimossi log per performance
         // 🔥 FIX: Recupera le note dal database invece che da AsyncStorage
         let moodNote: string | null = null;
         let sleepNote: string | null = null;
-        
+
         try {
           const { supabase } = await import('../lib/supabase');
           const { data: checkinData } = await supabase
@@ -1912,7 +1913,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             .eq('user_id', currentUser.id)
             .eq('date', dayKey)
             .maybeSingle();
-          
+
           if (checkinData) {
             moodNote = checkinData.mood_note || null;
             sleepNote = checkinData.sleep_note || null;
@@ -1922,18 +1923,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           moodNote = await AsyncStorage.getItem(`checkin:mood_note:${dayKey}`);
           sleepNote = await AsyncStorage.getItem(`checkin:sleep_note:${dayKey}`);
         }
-        
+
         const aiJudgment = await DailyJournalService.generateAIJudgment(
-          currentUser.id, 
-          journalText, 
-          moodNote || undefined, 
+          currentUser.id,
+          journalText,
+          moodNote || undefined,
           sleepNote || undefined
         );
-        
+
         if (aiJudgment) {
           aiScore = aiJudgment.ai_score;
           aiAnalysis = aiJudgment.ai_analysis;
-          
+
           // Update local state
           setAiScore(aiScore);
           setAiAnalysis(aiAnalysis);
@@ -1943,7 +1944,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       await DailyJournalService.syncToRemote(currentUser.id, dayKey, journalText, journalPrompt, aiScore, aiAnalysis);
       const recent = await DailyJournalDBService.listRecent(currentUser.id, 10);
       setJournalHistory(recent);
-      
+
       // 🆕 Aggiorna monthJournalMap quando si salva una entry
       setMonthJournalMap(prev => ({
         ...prev,
@@ -1952,7 +1953,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           aiScore: aiScore || undefined
         }
       }));
-      
+
       const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       setLastSavedAt(ts);
       setShowSavedChip(true);
@@ -1966,7 +1967,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       // 🆕 Mostra messaggio più specifico se possibile
       const errorMessage = e instanceof Error ? e.message : 'Errore sconosciuto';
       Alert.alert(
-        'Offline', 
+        'Offline',
         `Journal salvato in locale, verrà sincronizzato. ${errorMessage.includes('network') || errorMessage.includes('fetch') ? '(Problema di connessione)' : ''}`
       );
     }
@@ -1976,7 +1977,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const handleVoiceInput = useCallback(async (text: string) => {
     // ✅ REAL VOICE INPUT - No more simulation!
     // 🆕 Rimosso log per performance
-    
+
     if (mode === 'journal') {
       return;
     }
@@ -1985,7 +1986,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     setIsListening(false);
     setIsProcessing(true);
     setTranscript(text);
-    
+
     // Add user message
     const userMessage: Message = {
       id: `${Date.now()}-voice-user`,
@@ -1994,7 +1995,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);
-    
+
     // Process the real voice input through the same pipeline as text chat
     await handleVoiceMessage(text);
   }, [mode, handleVoiceMessage]);
@@ -2015,64 +2016,60 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     <SafeAreaView
       edges={['top', 'left', 'right']}
       style={[styles.container, dynamicStyles.container, { backgroundColor: safeAreaBackground }]}
-    > 
+    >
       {/* HEADER FISSO - Fuori da AvoidSoftInputView */}
       <View
         style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
       >
-          <TouchableOpacity onPress={() => router.push('/(tabs)')} style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}>
-            <FontAwesome name="chevron-left" size={18} color={colors.text} />
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            {/* Segmented toggle: Chat | Journal */}
-            <View style={[styles.segmentedWrap, { backgroundColor: surfaceSecondary, borderColor: colors.border }]}>
-              <TouchableOpacity
-                style={[styles.segmentBtn, mode === 'chat' && [styles.segmentBtnActive, { backgroundColor: colors.surface }]]}
-                onPress={() => setMode('chat')}
-                accessibilityRole="button"
-                accessibilityState={{ selected: mode === 'chat' }}
-              >
-                <Text style={[styles.segmentText, { color: colors.textSecondary }, mode === 'chat' && [styles.segmentTextActive, { color: colors.text }]]}>{t('chat.title')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.segmentBtn, mode === 'journal' && [styles.segmentBtnActive, { backgroundColor: colors.surface }]]}
-                onPress={() => handleOpenJournal()}
-                accessibilityRole="button"
-                accessibilityState={{ selected: mode === 'journal' }}
-              >
-                <Text style={[styles.segmentText, { color: colors.textSecondary }, mode === 'journal' && [styles.segmentTextActive, { color: colors.text }]]}>{t('journal.title')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {/* Cronologia Chat Button */}
-            {mode === 'chat' && chatHistory.length > 0 && (
-              <TouchableOpacity
-                style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}
-                onPress={() => setShowChatHistory(!showChatHistory)}
-              >
-                <FontAwesome name="history" size={18} color={colors.text} />
-              </TouchableOpacity>
-            )}
-            {/* Impostazioni Button */}
-            <TouchableOpacity 
-              style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}
-              onPress={() => setShowChatMenu(true)}
+        <TouchableOpacity onPress={() => router.push('/(tabs)')} style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}>
+          <FontAwesome name="chevron-left" size={18} color={colors.text} />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          {/* Segmented toggle: Chat | Journal */}
+          <View style={[styles.segmentedWrap, { backgroundColor: surfaceSecondary, borderColor: colors.border }]}>
+            <TouchableOpacity
+              style={[styles.segmentBtn, mode === 'chat' && [styles.segmentBtnActive, { backgroundColor: colors.surface }]]}
+              onPress={() => setMode('chat')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: mode === 'chat' }}
             >
-              <FontAwesome name="cog" size={18} color={colors.text} />
+              <Text style={[styles.segmentText, { color: colors.textSecondary }, mode === 'chat' && [styles.segmentTextActive, { color: colors.text }]]}>{t('chat.title')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.segmentBtn, mode === 'journal' && [styles.segmentBtnActive, { backgroundColor: colors.surface }]]}
+              onPress={() => handleOpenJournal()}
+              accessibilityRole="button"
+              accessibilityState={{ selected: mode === 'journal' }}
+            >
+              <Text style={[styles.segmentText, { color: colors.textSecondary }, mode === 'journal' && [styles.segmentTextActive, { color: colors.text }]]}>{t('journal.title')}</Text>
             </TouchableOpacity>
           </View>
         </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {/* Cronologia Chat Button */}
+          {mode === 'chat' && chatHistory.length > 0 && (
+            <TouchableOpacity
+              style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}
+              onPress={() => setShowChatHistory(!showChatHistory)}
+            >
+              <FontAwesome name="history" size={18} color={colors.text} />
+            </TouchableOpacity>
+          )}
+          {/* Impostazioni Button */}
+          <TouchableOpacity
+            style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}
+            onPress={() => setShowChatMenu(true)}
+          >
+            <FontAwesome name="cog" size={18} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+      </View>
 
-      {/* AREA CHE SI MUOVE CON LA TASTIERA - AvoidSoftInputView */}
-      <AvoidSoftInputView
+      {/* AREA CHE SI MUOVE CON LA TASTIERA - KeyboardAvoidingView */}
+      <KeyboardAvoidingView
         style={styles.flex}
-        avoidOffset={0}
-        showAnimationDelay={0}
-        hideAnimationDelay={0}
-        showAnimationDuration={Platform.OS === 'ios' ? 250 : 100}
-        hideAnimationDuration={Platform.OS === 'ios' ? 250 : 100}
-        easing="easeOut"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // Adjust if needed, usually 0 or header height
       >
         {/* Wellness Suggestion Banner */}
         {wellnessSuggestion?.shouldShowBanner && wellnessSuggestion?.suggestion && (
@@ -2100,7 +2097,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 >
                   <FontAwesome name="arrow-right" size={16} color="#fff" />
                 </TouchableOpacity>
-                
+
                 {/* 🔧 Pulsante per chiudere il banner */}
                 <TouchableOpacity
                   style={styles.wellnessBannerCloseButton}
@@ -2124,17 +2121,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               {showChatHistory && chatHistory.length > 0 && (
                 <View style={styles.chatHistoryContainer}>
                   <View style={[styles.chatHistoryList, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <ScrollView 
-                      horizontal 
+                    <ScrollView
+                      horizontal
                       showsHorizontalScrollIndicator={false}
                       contentContainerStyle={styles.chatHistoryScrollContent}
                     >
                       {chatHistory.map((session: any) => {
                         const firstMessage = session.firstUserMessage || '';
-                        const truncatedMessage = firstMessage.length > 50 
-                          ? firstMessage.substring(0, 50) + '...' 
+                        const truncatedMessage = firstMessage.length > 50
+                          ? firstMessage.substring(0, 50) + '...'
                           : firstMessage;
-                        
+
                         return (
                           <TouchableOpacity
                             key={session.id}
@@ -2153,7 +2150,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                                 timestamp: new Date(msg.created_at),
                                 sessionId: session.id,
                               }));
-                              
+
                               setMessages(formattedMessages.length > 0 ? formattedMessages : [{
                                 id: 'welcome',
                                 text: getInitialMessage(),
@@ -2164,7 +2161,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                               setShowChatHistory(false);
                             }}
                           >
-                            <Text 
+                            <Text
                               style={[styles.chatHistoryItemName, { color: colors.text }]}
                               numberOfLines={2}
                             >
@@ -2194,13 +2191,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       {t('chat.quickStart.toggle') || 'Messaggi suggeriti'}
                     </Text>
                   </View>
-                  <FontAwesome 
-                    name={quickRepliesExpanded ? "chevron-up" : "chevron-down"} 
-                    size={12} 
-                    color={colors.textSecondary} 
+                  <FontAwesome
+                    name={quickRepliesExpanded ? "chevron-up" : "chevron-down"}
+                    size={12}
+                    color={colors.textSecondary}
                   />
                 </TouchableOpacity>
-                
+
                 {quickRepliesExpanded && (
                   <View style={styles.quickRepliesGrid}>
                     {quickReplies.map((reply) => (
@@ -2228,9 +2225,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   styles.messagesContainer,
                   // paddingTop per lasciare spazio in alto, paddingBottom costante per l'input
                   // AvoidSoftInputView gestisce automaticamente lo spazio della tastiera
-                  { 
+                  {
                     paddingTop: 20,
-                    paddingBottom: inputBarHeight + insets.bottom + 20 
+                    paddingBottom: 20
                   },
                 ]}
                 keyboardShouldPersistTaps="handled"
@@ -2290,22 +2287,22 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             >
               {/* Month header + navigation */}
               <View style={styles.monthHeader}>
-                <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth()-1, 1))} style={styles.monthNavBtn}>
+                <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} style={styles.monthNavBtn}>
                   <Text style={styles.monthNavTxt}>{'<'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setShowMonthPicker(true)} style={[styles.monthTitleWrap, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
                   <Text style={[styles.monthTitle, { color: colors.text }]}>{currentMonth.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', { month: 'long', year: 'numeric' })}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth()+1, 1))} style={styles.monthNavBtn}>
+                <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} style={styles.monthNavBtn}>
                   <Text style={styles.monthNavTxt}>{'>'}</Text>
                 </TouchableOpacity>
               </View>
 
               {/* Month day strip */}
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false} 
-                style={styles.monthStrip} 
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.monthStrip}
                 contentContainerStyle={styles.monthStripContent}
                 ref={monthStripScrollRef} // 🆕 Ref per scroll automatico
               >
@@ -2313,7 +2310,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   const mood = monthMoodMap[iso];
                   const rest = monthRestMap[iso];
                   const journal = monthJournalMap[iso]; // 🆕 Journal entry dal DB
-                  
+
                   // 🆕 Priorità: journal entry (ai_score) > mood > rest > grigio
                   let color = '#e2e8f0'; // Default grigio
                   if (journal?.hasEntry && journal.aiScore) {
@@ -2326,16 +2323,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     // 🆕 Giorno con entry ma senza ai_score
                     color = '#6366f1'; // Blu per indicare presenza entry
                   }
-                  
+
                   const active = iso === selectedDayKey;
-                  const dayNum = parseInt(iso.slice(8,10), 10);
+                  const dayNum = parseInt(iso.slice(8, 10), 10);
                   const hasEntry = journal?.hasEntry || false;
                   const isFuture = isFutureDate(iso); // 🆕 Verifica se è una data futura
                   const isPast = isPastDate(iso); // 🆕 Verifica se è una data passata
-                  
+
                   return (
-                    <TouchableOpacity 
-                      key={iso} 
+                    <TouchableOpacity
+                      key={iso}
                       onPress={() => {
                         if (!isFuture) {
                           // Permetti la selezione di giorni passati senza alert - l'alert apparirà solo quando si prova a salvare/modificare
@@ -2344,16 +2341,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       }}
                       disabled={isFuture} // 🆕 Disabilita solo i giorni futuri
                       style={[
-                        styles.dayPill, 
-                        { backgroundColor: colors.surface, borderColor: colors.border }, 
+                        styles.dayPill,
+                        { backgroundColor: colors.surface, borderColor: colors.border },
                         active && { borderColor: '#6366f1', backgroundColor: '#eef2ff' },
                         isFuture && { opacity: 0.4 } // 🆕 Stile visivo per giorni futuri
                       ]}
-                    > 
+                    >
                       {hasEntry && <View style={[styles.colorDot, { backgroundColor: color }]} />}
                       <Text style={[
-                        styles.dayText, 
-                        { color: colors.text }, 
+                        styles.dayText,
+                        { color: colors.text },
                         active && { color: '#3730a3', fontWeight: '800' },
                         isFuture && { color: colors.textTertiary } // 🆕 Testo più chiaro per giorni futuri
                       ]}>
@@ -2369,11 +2366,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   <View style={[styles.monthPickerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                     {/* Modal header with month navigation */}
                     <View style={styles.monthHeaderModal}>
-                      <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth()-1, 1))} style={styles.monthNavBtn}>
+                      <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} style={styles.monthNavBtn}>
                         <Text style={styles.monthNavTxt}>{'<'}</Text>
                       </TouchableOpacity>
                       <Text style={[styles.modalTitle, { color: colors.text }]}>{currentMonth.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', { month: 'long', year: 'numeric' })}</Text>
-                      <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth()+1, 1))} style={styles.monthNavBtn}>
+                      <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} style={styles.monthNavBtn}>
                         <Text style={styles.monthNavTxt}>{'>'}</Text>
                       </TouchableOpacity>
                     </View>
@@ -2385,10 +2382,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                         const year = baseYear - 2 + idx;
                         const active = year === currentMonth.getFullYear();
                         return (
-                          <TouchableOpacity 
-                            key={year} 
+                          <TouchableOpacity
+                            key={year}
                             style={[
-                              styles.yearBtn, 
+                              styles.yearBtn,
                               { backgroundColor: colors.surfaceMuted, borderColor: colors.border },
                               active && { backgroundColor: colors.primaryMuted, borderColor: colors.primary }
                             ]}
@@ -2427,7 +2424,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                         const startOffset = (jsFirst + 6) % 7; // how many blanks before day 1
                         const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
                         const cells: React.ReactNode[] = [];
-                        for (let i=0;i<totalCells;i++){
+                        for (let i = 0; i < totalCells; i++) {
                           const dayNum = i - startOffset + 1;
                           if (dayNum < 1 || dayNum > daysInMonth) {
                             cells.push(<View key={`e-${i}`} style={[styles.calCellEmpty, { backgroundColor: colors.surfaceMuted, borderColor: colors.borderLight }]} />);
@@ -2437,7 +2434,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                             const mood = monthMoodMap[iso];
                             const rest = monthRestMap[iso];
                             const journal = monthJournalMap[iso]; // 🆕 Journal entry dal DB
-                            
+
                             // 🆕 Priorità: journal entry (ai_score) > mood > rest > grigio
                             let color = '#e2e8f0'; // Default grigio
                             if (journal?.hasEntry && journal.aiScore) {
@@ -2450,22 +2447,22 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                               // 🆕 Giorno con entry ma senza ai_score
                               color = '#6366f1'; // Blu per indicare presenza entry
                             }
-                            
+
                             const active = iso === selectedDayKey;
                             const hasEntry = journal?.hasEntry || false; // 🆕 Mostra pallino solo se c'è entry
                             const isFuture = isFutureDate(iso); // 🆕 Verifica se è una data futura
                             const isPast = isPastDate(iso); // 🆕 Verifica se è una data passata
-                            
+
                             cells.push(
-                              <TouchableOpacity 
-                                key={`d-${i}`} 
+                              <TouchableOpacity
+                                key={`d-${i}`}
                                 style={[
-                                  styles.calCell, 
-                                  { backgroundColor: colors.surface, borderColor: colors.border }, 
+                                  styles.calCell,
+                                  { backgroundColor: colors.surface, borderColor: colors.border },
                                   active && { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
                                   isFuture && { opacity: 0.4 } // 🆕 Stile visivo per giorni futuri
-                                ]} 
-                                onPress={() => { 
+                                ]}
+                                onPress={() => {
                                   if (!isFuture) {
                                     // Permetti la selezione di giorni passati senza alert - l'alert apparirà solo quando si prova a salvare/modificare
                                     setSelectedDayKey(iso);
@@ -2475,9 +2472,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                                 disabled={isFuture} // 🆕 Disabilita solo i giorni futuri
                               >
                                 <Text style={[
-                                  styles.calDayTxt, 
-                                  { color: colors.text }, 
-                                  active && { color: colors.primary, fontWeight:'800' },
+                                  styles.calDayTxt,
+                                  { color: colors.text },
+                                  active && { color: colors.primary, fontWeight: '800' },
                                   isFuture && { color: colors.textTertiary } // 🆕 Testo più chiaro per giorni futuri
                                 ]}>
                                   {String(dayNum)}
@@ -2526,8 +2523,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               {/* Journal Editor */}
               <View style={styles.journalEditorWrap}>
                 <BlurView intensity={12} tint="light" style={styles.journalBlur} />
-                  <View style={styles.journalEditorHeader}>
-                  <View style={{ flexDirection:'row', alignItems:'center', gap:8 }}>
+                <View style={styles.journalEditorHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Text style={[styles.editorTitle, { color: colors.text }]}>{t('journal.entryTitle')}</Text>
                     <View style={[styles.dateChip, { backgroundColor: surfaceSecondary }]}>
                       {/* 🔥 FIX: Mostra sempre la data odierna corrente se selectedDayKey è oggi, altrimenti mostra selectedDayKey */}
@@ -2553,11 +2550,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       if (!currentUser) return;
                       // 🔥 FIX: Usa selectedDayKey invece di dayKey (che non esiste più)
                       const dayKey = selectedDayKey;
-                      
+
                       // 🆕 Verifica se si sta salvando per un giorno passato E se il testo è stato modificato
                       const isPast = isPastDate(dayKey);
                       const hasTextChanged = journalText.trim() !== originalJournalText.trim();
-                      
+
                       // Mostra alert solo se è un giorno passato E il testo è stato modificato
                       if (isPast && hasTextChanged) {
                         Alert.alert(
@@ -2585,7 +2582,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                         );
                         return;
                       }
-                      
+
                       // Salva normalmente (giorno odierno o giorno passato senza modifiche)
                       await saveJournalEntry(dayKey);
                       // Aggiorna il testo originale dopo il salvataggio
@@ -2611,7 +2608,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       <Text style={[styles.aiInsightTitle, { color: colors.text }]}>{t('journal.diaryInsight')}</Text>
                     </View>
                   </View>
-                  
+
                   <View style={styles.aiInsightContent}>
                     <Text style={[styles.aiInsightSummary, { color: colors.textSecondary }]}>{aiAnalysis}</Text>
                   </View>
@@ -2624,7 +2621,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('journal.latestNotes')}</Text>
                   {journalHistory.slice(0, 7).map((it) => (
                     <View key={it.id} style={[styles.historyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                        <View style={styles.historyHeader}>
+                      <View style={styles.historyHeader}>
                         <View style={styles.dateChipSm}><Text style={styles.dateChipSmText}>{it.entry_date}</Text></View>
                         <TouchableOpacity
                           onPress={() => {
@@ -2666,53 +2663,53 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
         {/* Input Area (Chat only) - hidden when voice interface is visible */}
         {mode === 'chat' && !showVoiceInterface && (
-        <View 
-          ref={inputContainerRef}
-          onLayout={({ nativeEvent }) => {
-            const { height } = nativeEvent.layout;
-            if (Math.abs(height - inputBarHeight) > 0.5) {
-              setInputBarHeight(height);
-            }
-          }}
-          style={[
-            styles.inputContainer,
-            {
-              backgroundColor: colors.surface,
-              borderTopColor: colors.border,
-              // 🔥 FIX: Padding costante - AvoidSoftInputView gestisce automaticamente lo spazio della tastiera
-              paddingBottom: insets.bottom,
-            },
-          ]}
-        >
-          <View style={[styles.inputWrapper, { backgroundColor: surfaceSecondary, borderColor: colors.border }]}>
-            <TextInput
-              style={[styles.textInput, { color: colors.text }, isVoiceMode && styles.voiceInput]}
-              placeholder={isVoiceMode ? t('chat.voicePlaceholder') : t('chat.placeholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={inputValue}
-              onChangeText={setInputValue}
-              multiline
-              maxLength={500}
-              onFocus={handleInputFocus}
-              onBlur={handleInputBlur}
-            />
-            <TouchableOpacity
-              style={[styles.micButton, !inputValue.trim() && styles.micButtonActive]}
-              onPress={() => setShowVoiceInterface(true)}
-            >
-              <FontAwesome name="microphone" size={18} color="#ffffff" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.sendButton, !inputValue.trim() && styles.sendButtonDisabled]}
-              disabled={!inputValue.trim() || isSending}
-              onPress={handleSendMessage}
-            >
-              <FontAwesome name="send" size={16} color={inputValue.trim() ? '#ffffff' : (themeMode === 'dark' ? '#94a3b8' : '#cbd5f5')} />
-            </TouchableOpacity>
+          <View
+            ref={inputContainerRef}
+            onLayout={({ nativeEvent }) => {
+              const { height } = nativeEvent.layout;
+              if (Math.abs(height - inputBarHeight) > 0.5) {
+                setInputBarHeight(height);
+              }
+            }}
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+                // 🔥 FIX: Padding costante - AvoidSoftInputView gestisce automaticamente lo spazio della tastiera
+                paddingBottom: insets.bottom,
+              },
+            ]}
+          >
+            <View style={[styles.inputWrapper, { backgroundColor: surfaceSecondary, borderColor: colors.border }]}>
+              <TextInput
+                style={[styles.textInput, { color: colors.text }, isVoiceMode && styles.voiceInput]}
+                placeholder={isVoiceMode ? t('chat.voicePlaceholder') : t('chat.placeholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={inputValue}
+                onChangeText={setInputValue}
+                multiline
+                maxLength={500}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
+              />
+              <TouchableOpacity
+                style={[styles.micButton, !inputValue.trim() && styles.micButtonActive]}
+                onPress={() => setShowVoiceInterface(true)}
+              >
+                <FontAwesome name="microphone" size={18} color="#ffffff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sendButton, !inputValue.trim() && styles.sendButtonDisabled]}
+                disabled={!inputValue.trim() || isSending}
+                onPress={handleSendMessage}
+              >
+                <FontAwesome name="send" size={16} color={inputValue.trim() ? '#ffffff' : (themeMode === 'dark' ? '#94a3b8' : '#cbd5f5')} />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
         )}
-      </AvoidSoftInputView>
+      </KeyboardAvoidingView>
 
       {/* Wellness Suggestion Popup */}
       <WellnessSuggestionPopup
@@ -2735,7 +2732,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
       {/* Chat/Journal Menu Modal */}
       <Modal visible={showChatMenu} transparent animationType="fade" onRequestClose={() => setShowChatMenu(false)}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.menuModalBackdrop}
           activeOpacity={1}
           onPress={() => setShowChatMenu(false)}
@@ -2767,7 +2764,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     </Text>
                     <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
                   </TouchableOpacity>
-                  
+
                   {/* Cronologia & Esportazione */}
                   <TouchableOpacity
                     style={[styles.menuOption, { borderBottomColor: colors.border }]}
@@ -2789,7 +2786,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     </Text>
                     <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     style={[styles.menuOption, { borderBottomColor: colors.border }]}
                     onPress={() => {
@@ -2802,7 +2799,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       Cancella cronologia locale
                     </Text>
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     style={[styles.menuOption, styles.menuOptionLast]}
                     onPress={() => {
@@ -2832,7 +2829,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     </Text>
                     <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
                   </TouchableOpacity>
-                  
+
                   {/* Esporta diario */}
                   <TouchableOpacity
                     style={[styles.menuOption, { borderBottomColor: colors.border }]}
@@ -2854,9 +2851,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     </Text>
                     <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
                   </TouchableOpacity>
-                  
-                <TouchableOpacity
-                  style={[styles.menuOption, styles.menuOptionLast]}
+
+                  <TouchableOpacity
+                    style={[styles.menuOption, styles.menuOptionLast]}
                     onPress={() => {
                       setShowChatMenu(false);
                       handleClearJournalEntry();
@@ -3346,14 +3343,14 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 16, fontWeight: '800', marginBottom: 0, textTransform: 'capitalize' }, // Colore gestito dinamicamente con colors.text
   yearRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, marginBottom: 8 },
   yearBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
-  yearBtnActive: { },
+  yearBtnActive: {},
   yearTxt: { fontSize: 13, fontWeight: '700', color: '#334155' },
   yearTxtActive: { color: '#3730a3' },
   weekHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, marginBottom: 6, paddingHorizontal: 6 },
-  weekHeaderTxt: { width: `${100/7}%`, textAlign: 'center', fontSize: 12, fontWeight: '800', color: '#64748b' },
+  weekHeaderTxt: { width: `${100 / 7}%`, textAlign: 'center', fontSize: 12, fontWeight: '800', color: '#64748b' },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 4, paddingBottom: 6 },
-  calCell: { width: `${100/7}%`, height: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  calCellEmpty: { width: `${100/7}%`, height: 52, borderWidth: 1 },
+  calCell: { width: `${100 / 7}%`, height: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  calCellEmpty: { width: `${100 / 7}%`, height: 52, borderWidth: 1 },
   calDayTxt: { fontSize: 13, marginBottom: 8 }, // Colore gestito dinamicamente con colors.text
   calDot: { width: 10, height: 10, borderRadius: 5 },
   modalCloseBtn: { alignSelf: 'flex-end', marginTop: 12, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: '#e0e7ff' },
@@ -3429,12 +3426,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   // AI Insight Card - New Design
-  aiInsightCard: { 
-    marginTop: 16, 
-    marginHorizontal: 20, 
-    backgroundColor: '#fff', 
-    borderRadius: 16, 
-    borderWidth: 1, 
+  aiInsightCard: {
+    marginTop: 16,
+    marginHorizontal: 20,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
     borderColor: '#e2e8f0',
     shadowColor: '#0f172a',
     shadowOpacity: 0.08,
@@ -3442,9 +3439,9 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
   },
-  aiInsightHeader: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+  aiInsightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 16,
@@ -3452,52 +3449,52 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
-  aiInsightTitleRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+  aiInsightTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
   },
-  aiInsightIcon: { 
-    width: 28, 
-    height: 28, 
-    borderRadius: 14, 
-    backgroundColor: '#f0f9ff', 
-    alignItems: 'center', 
+  aiInsightIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#f0f9ff',
+    alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#e0f2fe',
   },
-  aiInsightIconText: { 
+  aiInsightIconText: {
     fontSize: 14,
   },
-  aiInsightTitle: { 
-    fontSize: 16, 
+  aiInsightTitle: {
+    fontSize: 16,
     fontWeight: '800',
     letterSpacing: -0.2,
   },
-  aiInsightContent: { 
-    paddingHorizontal: 16, 
-    paddingBottom: 16, 
+  aiInsightContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     paddingTop: 12,
   },
-  aiInsightLabelRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 10, 
+  aiInsightLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     marginBottom: 12,
   },
-  aiInsightLabel: { 
-    fontSize: 14, 
+  aiInsightLabel: {
+    fontSize: 14,
     fontWeight: '700',
   },
-  aiInsightSummary: { 
+  aiInsightSummary: {
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 16,
   },
-  aiInsightButton: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+  aiInsightButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -3507,14 +3504,14 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
     gap: 8,
   },
-  aiInsightButtonText: { 
-    fontSize: 14, 
-    fontWeight: '600', 
+  aiInsightButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#3b82f6',
   },
-  aiInsightButtonIcon: { 
-    fontSize: 14, 
-    fontWeight: '600', 
+  aiInsightButtonIcon: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#3b82f6',
   },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
