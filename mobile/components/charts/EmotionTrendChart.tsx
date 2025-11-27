@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const { width } = Dimensions.get('window');
 
@@ -12,10 +13,31 @@ interface EmotionTrendChartProps {
   title: string;
   subtitle?: string;
   onPress?: () => void;
+  visibleMetrics?: Array<'valence' | 'arousal'>;
+  metricLabels?: Partial<Record<'valence' | 'arousal', string>>;
 }
 
-export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, title, subtitle, onPress }) => {
+export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
+  data,
+  title,
+  subtitle,
+  onPress,
+  visibleMetrics,
+  metricLabels,
+}) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
+  const activeMetrics = useMemo(() => (visibleMetrics && visibleMetrics.length > 0
+    ? visibleMetrics
+    : (['valence', 'arousal'] as Array<'valence' | 'arousal'>)
+  ), [visibleMetrics]);
+  const showValence = activeMetrics.includes('valence');
+  const showArousal = activeMetrics.includes('arousal');
+  const labels = {
+    valence: metricLabels?.valence || t('analysis.emotion.metrics.valence'),
+    arousal: metricLabels?.arousal || t('analysis.emotion.metrics.arousal'),
+  };
+
   // Generate sample data if none provided
   const chartData = data.length > 0 ? data : [
     { date: '1/1', valence: 0.2, arousal: 0.6, emotion: 'neutral' },
@@ -28,8 +50,9 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
   ];
 
   const hasData = data.length > 0;
-  const latestValence = chartData[chartData.length - 1]?.valence || 0;
-  const latestArousal = chartData[chartData.length - 1]?.arousal || 0;
+  const latestDataPoint = chartData[chartData.length - 1];
+  const latestValence = latestDataPoint?.valence || 0;
+  const latestArousal = latestDataPoint?.arousal || 0;
 
   // Calculate SVG path for the lines
   const chartWidth = width - 120;
@@ -59,8 +82,8 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
     return points;
   };
 
-  const valencePath = createPath(chartData.map(d => d.valence), '#10b981');
-  const arousalPath = createPath(chartData.map(d => d.arousal), '#ef4444');
+  const valencePath = showValence ? createPath(chartData.map(d => d.valence), '#10b981') : '';
+  const arousalPath = showArousal ? createPath(chartData.map(d => d.arousal), '#ef4444') : '';
 
   return (
     <View style={styles.container}>
@@ -137,7 +160,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
             )}
             
             {/* Data points for valence */}
-            {chartData.length > 0 && chartData.map((point, index) => {
+            {showValence && chartData.length > 0 && chartData.map((point, index) => {
               const x = chartData.length === 1 
                 ? padding + (chartWidth - 2 * padding) / 2  // Center for single point
                 : padding + (index * (chartWidth - 2 * padding)) / (chartData.length - 1);
@@ -157,7 +180,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
             })}
             
             {/* Data points for arousal */}
-            {chartData.length > 0 && chartData.map((point, index) => {
+            {showArousal && chartData.length > 0 && chartData.map((point, index) => {
               const x = chartData.length === 1 
                 ? padding + (chartWidth - 2 * padding) / 2  // Center for single point
                 : padding + (index * (chartWidth - 2 * padding)) / (chartData.length - 1);
@@ -179,23 +202,29 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({ data, titl
         </View>
 
         <View style={[styles.metricsRow, { borderTopColor: colors.border }]}>
-          <View style={styles.metricItem}>
-            <View style={[styles.metricDot, { backgroundColor: '#10b981' }]} />
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Valence</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{latestValence.toFixed(2)}</Text>
-          </View>
+          {showValence && (
+            <View style={styles.metricItem}>
+              <View style={[styles.metricDot, { backgroundColor: '#10b981' }]} />
+              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{labels.valence}</Text>
+              <Text style={[styles.metricValue, { color: colors.text }]}>{latestValence.toFixed(2)}</Text>
+            </View>
+          )}
           
-          <View style={styles.metricItem}>
-            <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Arousal</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{latestArousal.toFixed(2)}</Text>
-          </View>
+          {showArousal && (
+            <View style={styles.metricItem}>
+              <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
+              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{labels.arousal}</Text>
+              <Text style={[styles.metricValue, { color: colors.text }]}>{latestArousal.toFixed(2)}</Text>
+            </View>
+          )}
         </View>
 
         {!hasData && (
           <View style={styles.placeholderContainer}>
             <FontAwesome name="heart" size={24} color={colors.textTertiary} />
-            <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>Start sessions to see your emotional trends</Text>
+            <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
+              {t('analysis.emotion.trends.emptyState') || 'Inizia a registrare sessioni per vedere l’andamento emotivo'}
+            </Text>
           </View>
         )}
         </LinearGradient>

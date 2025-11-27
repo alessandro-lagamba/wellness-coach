@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -37,6 +37,7 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
   }>>([]);
   const [loading, setLoading] = useState(false);
   const [days, setDays] = useState<7 | 30 | 90>(7);
+  const [selectedMetrics, setSelectedMetrics] = useState<Array<'valence' | 'arousal'>>(['valence', 'arousal']);
 
   useEffect(() => {
     if (visible) {
@@ -74,6 +75,23 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
     } finally {
       setLoading(false);
     }
+  };
+
+  const metricFilters = useMemo(() => ([
+    { key: 'valence' as const, color: '#10b981', label: t('analysis.emotion.metrics.valence') },
+    { key: 'arousal' as const, color: '#ef4444', label: t('analysis.emotion.metrics.arousal') },
+  ]), [t]);
+
+  const toggleMetric = (metric: 'valence' | 'arousal') => {
+    setSelectedMetrics((prev) => {
+      if (prev.includes(metric)) {
+        if (prev.length === 1) {
+          return prev;
+        }
+        return prev.filter((m) => m !== metric);
+      }
+      return [...prev, metric];
+    });
   };
 
   // Calcola statistiche
@@ -218,6 +236,31 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
               </TouchableOpacity>
             </View>
 
+            {/* Metric filters */}
+            <View style={styles.metricFilterRow}>
+              {metricFilters.map((metric) => {
+                const isActive = selectedMetrics.includes(metric.key);
+                return (
+                  <TouchableOpacity
+                    key={metric.key}
+                    style={[
+                      styles.metricFilterChip,
+                      {
+                        borderColor: isActive ? metric.color : themeColors.border,
+                        backgroundColor: isActive ? `${metric.color}20` : themeColors.surfaceMuted,
+                      },
+                    ]}
+                    onPress={() => toggleMetric(metric.key)}
+                  >
+                    <View style={[styles.metricFilterDot, { backgroundColor: metric.color }]} />
+                    <Text style={[styles.metricFilterText, { color: isActive ? metric.color : themeColors.textSecondary }]}>
+                      {metric.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
             {/* Chart */}
             {loading ? (
               <View style={styles.loadingContainer}>
@@ -239,6 +282,11 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
                   data={data}
                   title={t('analysis.emotion.trends.title')}
                   subtitle={t('analysis.emotion.trends.subtitle')}
+                  visibleMetrics={selectedMetrics}
+                  metricLabels={{
+                    valence: t('analysis.emotion.metrics.valence'),
+                    arousal: t('analysis.emotion.metrics.arousal'),
+                  }}
                 />
               </View>
             )}
@@ -251,6 +299,7 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
                 </Text>
 
                 {/* Valence Stats */}
+                {selectedMetrics.includes('valence') && (
                 <View style={styles.metricSection}>
                   <View style={styles.metricHeader}>
                     <View style={[styles.metricDot, { backgroundColor: '#10b981' }]} />
@@ -297,8 +346,10 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
                     </Text>
                   </View>
                 </View>
+                )}
 
                 {/* Arousal Stats */}
+                {selectedMetrics.includes('arousal') && (
                 <View style={styles.metricSection}>
                   <View style={styles.metricHeader}>
                     <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
@@ -345,6 +396,7 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
                     </Text>
                   </View>
                 </View>
+                )}
 
                 {/* Summary */}
                 <View style={[styles.summaryCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
@@ -480,6 +532,30 @@ const styles = StyleSheet.create({
   },
   chartContainer: {
     marginBottom: 24,
+  },
+  metricFilterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 16,
+  },
+  metricFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    gap: 6,
+  },
+  metricFilterDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  metricFilterText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   statsSection: {
     marginTop: 8,

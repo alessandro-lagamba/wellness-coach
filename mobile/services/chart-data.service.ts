@@ -300,6 +300,71 @@ export class ChartDataService {
   }
 
   /**
+   * Carica i dati della pelle per un periodo specifico (utilizzato nel modal dettagliato)
+   */
+  static async loadSkinDataForPeriod(days: number): Promise<Array<{
+    id: string;
+    timestamp: Date;
+    texture: number;
+    redness: number;
+    hydration: number;
+    oiliness: number;
+    overall: number;
+  }>> {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser) {
+        console.warn('⚠️ No authenticated user found');
+        return [];
+      }
+
+      const dateFrom = new Date();
+      dateFrom.setDate(dateFrom.getDate() - days);
+
+      const data = await this.withRetry(async () => {
+        const { data, error } = await supabase
+          .from(Tables.SKIN_ANALYSES)
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .gte('created_at', dateFrom.toISOString())
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          throw new Error(`Database query failed: ${error.message}`);
+        }
+
+        return data;
+      }, 'Load Skin Data for Period');
+
+      if (!data || data.length === 0) {
+        return [];
+      }
+
+      const validData = data.filter((analysis) => analysis.id && analysis.created_at);
+
+      return validData.map((analysis) => ({
+        id: analysis.id,
+        timestamp: new Date(analysis.created_at),
+        texture: typeof analysis.texture_score === 'number' ? analysis.texture_score : 0,
+        redness: typeof analysis.redness_score === 'number' ? analysis.redness_score : 0,
+        hydration: typeof analysis.hydration_score === 'number' ? analysis.hydration_score : 0,
+        oiliness: typeof analysis.oiliness_score === 'number' ? analysis.oiliness_score : 0,
+        overall: typeof analysis.overall_score === 'number'
+          ? analysis.overall_score
+          : Math.round((
+              (analysis.texture_score || 0) +
+              (analysis.redness_score || 0) +
+              (analysis.oiliness_score || 0) +
+              (analysis.hydration_score || 0)
+            ) / 4),
+      }));
+    } catch (error) {
+      console.error('❌ Error in loadSkinDataForPeriod:', error);
+      return [];
+    }
+  }
+
+  /**
    * Carica e sincronizza i dati delle analisi del cibo dal database
    */
   static async loadFoodDataForCharts(): Promise<void> {

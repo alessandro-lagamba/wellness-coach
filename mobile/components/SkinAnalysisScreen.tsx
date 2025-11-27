@@ -54,6 +54,7 @@ import { InsightService } from '../services/insight.service';
 import { DetailedAnalysisPopup } from './DetailedAnalysisPopup';
 import { IntelligentInsightsSection } from './IntelligentInsightsSection';
 import { VideoHero } from './VideoHero';
+import { SkinTrendDetailModal } from './SkinTrendDetailModal';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
@@ -342,6 +343,7 @@ const SkinAnalysisScreen: React.FC = () => {
   const [permissionChecking, setPermissionChecking] = useState(false);
   const [analysisReady, setAnalysisReady] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [showSkinTrendModal, setShowSkinTrendModal] = useState(false);
 
   // Enhanced components states
   const [nextBestActions, setNextBestActions] = useState<any[]>([]);
@@ -1782,6 +1784,7 @@ const SkinAnalysisScreen: React.FC = () => {
             }))}
             title={t('analysis.skin.trends.title')}
             subtitle={t('analysis.skin.trends.subtitle')}
+            onPress={() => setShowSkinTrendModal(true)}
           />
 
           {/* Intelligent Insights Section - Skin Only */}
@@ -1977,6 +1980,11 @@ const SkinAnalysisScreen: React.FC = () => {
             </View>
           </Modal>
         )}
+
+        <SkinTrendDetailModal
+          visible={showSkinTrendModal}
+          onClose={() => setShowSkinTrendModal(false)}
+        />
       </SafeAreaView>
     </View>
   );

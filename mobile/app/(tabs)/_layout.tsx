@@ -173,6 +173,7 @@ function TabNavigator() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor },
+        tabBarHideOnKeyboard: true,
 
         tabBarActiveTintColor: primaryColor,
         tabBarInactiveTintColor: inactiveTintColor,

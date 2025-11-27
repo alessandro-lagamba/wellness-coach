@@ -4,11 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AuthService } from '../services/auth.service';
-import { BiometricAuthService } from '../services/biometric-auth.service';
 import { UserProfile } from '../lib/supabase';
 import { PersonalInformationScreen } from './settings/PersonalInformationScreen';
 import { HealthPermissionsModal } from './HealthPermissionsModal';
-import { BiometricSecurityModal } from './BiometricSecurityModal';
 import { useHealthData } from '../hooks/useHealthData';
 import { useTranslation } from '../hooks/useTranslation';
 import { saveLanguage } from '../i18n';
@@ -310,7 +308,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   const [isLoading, setIsLoading] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<'main' | 'personal-info' | 'notifications'>('main');
   const [healthPermissionsModal, setHealthPermissionsModal] = useState<boolean>(false);
-  const [biometricSecurityModal, setBiometricSecurityModal] = useState<boolean>(false);
   
   // Health data hook
   const { permissions: healthPermissions, hasData: hasHealthData, isInitialized } = useHealthData();
@@ -323,7 +320,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
 
   const appItems: SettingsItem[] = [
     { id: 'health-permissions', label: t('settings.healthPermissions'), description: t('settings.healthPermissionsDescription'), icon: 'heart' },
-    { id: 'biometric-security', label: t('settings.biometricSecurity'), description: t('settings.biometricSecurityDescription'), icon: 'shield' },
     { id: 'language', label: t('settings.language'), description: t('settings.languageDescription'), icon: 'globe' },
     { id: 'dark-mode', label: t('settings.darkMode'), description: t('settings.darkModeDescription'), icon: 'moon-o' }, // 🆕 Dark mode toggle
     { id: 'app-config', label: t('settings.appConfig'), description: t('settings.appConfigDescription'), icon: 'wrench' },
@@ -434,9 +430,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
         break;
       case 'health-permissions':
         setHealthPermissionsModal(true);
-        break;
-      case 'biometric-security':
-        setBiometricSecurityModal(true);
         break;
       case 'language':
         // 🆕 Mostra dialog per selezione lingua
@@ -565,12 +558,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
         }}
       />
 
-      {/* Biometric Security Modal */}
-      <BiometricSecurityModal
-        visible={biometricSecurityModal}
-        onClose={() => setBiometricSecurityModal(false)}
-        userEmail={userProfile?.email || user?.email || ''}
-      />
     </SafeAreaView>
   );
 };

@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const { width } = Dimensions.get('window');
 
@@ -11,10 +12,12 @@ interface SkinHealthChartProps {
   data: Array<{ date: string; texture: number; redness: number; hydration: number; overall: number }>;
   title: string;
   subtitle?: string;
+  onPress?: () => void;
 }
 
-export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, subtitle }) => {
+export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, subtitle, onPress }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   // Generate sample data if none provided
   const chartData = data.length > 0 ? data : [
     { date: '1/1', texture: 65, redness: 25, hydration: 40, overall: 55 },
@@ -67,12 +70,17 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[colors.surface, colors.surfaceElevated]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.chartCard, { borderColor: colors.border }]}
+      <TouchableOpacity
+        activeOpacity={onPress ? 0.8 : 1}
+        disabled={!onPress}
+        onPress={onPress}
       >
+        <LinearGradient
+          colors={[colors.surface, colors.surfaceElevated]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.chartCard, { borderColor: colors.border }]}
+        >
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
@@ -160,19 +168,19 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
         <View style={[styles.metricsRow, { borderTopColor: colors.border }]}>
           <View style={styles.metricItem}>
             <View style={[styles.metricDot, { backgroundColor: '#8b5cf6' }]} />
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Texture</Text>
+              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{t('analysis.skin.metrics.texture')}</Text>
             <Text style={[styles.metricValue, { color: colors.text }]}>{chartData[chartData.length - 1]?.texture || 0}</Text>
           </View>
           
           <View style={styles.metricItem}>
             <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Redness</Text>
+              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{t('analysis.skin.metrics.redness')}</Text>
             <Text style={[styles.metricValue, { color: colors.text }]}>{chartData[chartData.length - 1]?.redness || 0}</Text>
           </View>
           
           <View style={styles.metricItem}>
             <View style={[styles.metricDot, { backgroundColor: '#f59e0b' }]} />
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Hydration</Text>
+              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{t('analysis.skin.metrics.hydration')}</Text>
             <Text style={[styles.metricValue, { color: colors.text }]}>{chartData[chartData.length - 1]?.hydration || 0}</Text>
           </View>
         </View>
@@ -180,10 +188,13 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
         {!hasData && (
           <View style={styles.placeholderContainer}>
             <FontAwesome name="line-chart" size={24} color={colors.textTertiary} />
-            <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>Start scanning to see your trends</Text>
+              <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
+                {t('analysis.skin.trends.emptyState') || 'Inizia un’analisi per vedere i trend'}
+              </Text>
           </View>
         )}
-      </LinearGradient>
+        </LinearGradient>
+      </TouchableOpacity>
     </View>
   );
 };
