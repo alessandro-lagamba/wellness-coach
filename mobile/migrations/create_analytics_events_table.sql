@@ -58,3 +58,4 @@ COMMENT ON TABLE analytics_events IS 'Stores anonymized analytics events. user_i
 COMMENT ON COLUMN analytics_events.user_id_hash IS 'SHA-256 hash of user_id (first 16 chars). Used for anonymization.';
 COMMENT ON COLUMN analytics_events.properties IS 'Event properties (JSONB). No PII allowed.';
 
+

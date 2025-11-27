@@ -5,7 +5,10 @@
 
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import { EmotionAnalysisService } from './emotion-analysis.service';
+import { AuthService } from './auth.service';
 
 const NOTIFICATION_STORAGE_KEY = '@wellness:push_notifications';
 const LAST_MOOD_NOTIFICATION_KEY = '@wellness:last_mood_notification';
@@ -32,6 +35,7 @@ interface NotificationRule {
 class PushNotificationService {
   private static instance: PushNotificationService;
   private notificationPermissionGranted: boolean = false;
+  private expoPushToken: string | null = null;
 
   static getInstance(): PushNotificationService {
     if (!PushNotificationService.instance) {
@@ -75,10 +79,41 @@ class PushNotificationService {
       });
 
       // 🔥 FIX: Rimuoviamo console.log eccessivi
+      await this.registerDeviceToken(userId);
       return true;
     } catch (error) {
       console.error('[PushNotifications] ❌ Error initializing:', error);
       return false;
+    }
+  }
+
+  private getProjectId(): string | undefined {
+    return (
+      Constants?.expoConfig?.extra?.eas?.projectId ||
+      (Constants as any)?.easConfig?.projectId ||
+      process.env.EXPO_PUBLIC_EAS_PROJECT_ID
+    );
+  }
+
+  private async registerDeviceToken(userId: string): Promise<void> {
+    try {
+      const projectId = this.getProjectId();
+      const expoToken = await Notifications.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined
+      );
+      if (!expoToken?.data) {
+        return;
+      }
+
+      this.expoPushToken = expoToken.data;
+
+      await AuthService.savePushToken(expoToken.data, {
+        deviceType: Platform.OS,
+        appVersion: Constants?.expoConfig?.version || '0.0.0',
+        osVersion: Constants.platform?.ios?.systemVersion || Constants.platform?.android?.systemVersion,
+      });
+    } catch (error) {
+      console.error('[PushNotifications] ❌ Error registering device token:', error);
     }
   }
 

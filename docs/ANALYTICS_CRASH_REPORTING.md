@@ -210,3 +210,4 @@ pnpm add @sentry/react-native
 - [ ] Configurare remote logging on/off
 - [ ] Documentare eventi tracciati
 
+

@@ -116,3 +116,4 @@ export async function logWriteEvent(
   await logAuditEvent('write', resourceType, resourceId);
 }
 
+

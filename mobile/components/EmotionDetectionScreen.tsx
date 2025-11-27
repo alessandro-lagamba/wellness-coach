@@ -466,7 +466,8 @@ export const EmotionDetectionScreen: React.FC = () => {
         const result = await analysisServiceRef.current.analyzeEmotion(
           asset.uri,
           sessionId,
-          i18n?.language || 'en' // Pass current language with fallback
+          i18n?.language || 'en',
+          { source: 'gallery' }
         );
         if (result.success && result.data) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
@@ -694,7 +695,12 @@ export const EmotionDetectionScreen: React.FC = () => {
       const dataUrl = `data:image/jpeg;base64,${photo.base64}`;
       // 🔥 FIX: Rimuoviamo console.log eccessivi
 
-      const analysisResult = await analysisServiceRef.current.analyzeEmotion(dataUrl, 'emotion-analysis-session', i18n?.language || 'en');
+      const analysisResult = await analysisServiceRef.current.analyzeEmotion(
+        dataUrl,
+        'emotion-analysis-session',
+        i18n?.language || 'en',
+        { source: 'camera' }
+      );
       if (!analysisResult.success || !analysisResult.data) {
         throw new Error(analysisResult.error || 'Analysis failed.');
       }

@@ -408,6 +408,43 @@ export class AuthService {
   }
 
   /**
+   * Salva o aggiorna il push token dell'utente nelle preferenze
+   */
+  static async savePushToken(
+    token: string,
+    metadata?: { deviceType?: string; appVersion?: string; osVersion?: string }
+  ): Promise<void> {
+    try {
+      const profile = await this.getUserProfile();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user?.id) {
+        return;
+      }
+
+      const existingPreferences = (profile?.preferences || {}) as Record<string, any>;
+      const updatedPreferences = {
+        ...existingPreferences,
+        notifications: {
+          ...(existingPreferences.notifications || {}),
+          pushToken: token,
+          pushTokenUpdatedAt: new Date().toISOString(),
+          deviceType: metadata?.deviceType,
+          appVersion: metadata?.appVersion,
+          osVersion: metadata?.osVersion,
+        },
+      };
+
+      await supabase
+        .from(Tables.USER_PROFILES)
+        .update({ preferences: updatedPreferences })
+        .eq('id', user.id);
+    } catch (error) {
+      console.error('[Auth] Error saving push token:', error);
+    }
+  }
+
+  /**
    * Resetta la password
    */
   static async resetPassword(email: string): Promise<{ error: any }> {

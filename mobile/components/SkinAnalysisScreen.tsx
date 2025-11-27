@@ -601,7 +601,12 @@ const SkinAnalysisScreen: React.FC = () => {
 
         // Analyze the selected image
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        const analysisResult = await analysisServiceRef.current.analyzeSkin(dataUrl, undefined, i18n?.language || 'en');
+        const analysisResult = await analysisServiceRef.current.analyzeSkin(
+          dataUrl,
+          undefined,
+          i18n?.language || 'en',
+          { source: 'gallery' }
+        );
 
         if (analysisResult.success && analysisResult.data) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
@@ -1049,7 +1054,12 @@ const SkinAnalysisScreen: React.FC = () => {
       const dataUrl = `data:image/jpeg;base64,${photo.base64}`;
       // 🔥 FIX: Rimuoviamo console.log eccessivi
 
-      const result = await analysisServiceRef.current.analyzeSkin(dataUrl, 'skin-analysis-session', i18n?.language || 'en');
+      const result = await analysisServiceRef.current.analyzeSkin(
+        dataUrl,
+        'skin-analysis-session',
+        i18n?.language || 'en',
+        { source: 'camera' }
+      );
       if (!result.success || !result.data) {
         throw new Error(result.error || 'Skin analysis failed.');
       }

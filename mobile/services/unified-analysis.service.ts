@@ -9,6 +9,11 @@ import {
   FoodAnalysisResult,
   AnalysisHistory
 } from '../types/analysis.types';
+import { traceAnalysis, AnalysisSource } from './performance-monitor.service';
+
+interface AnalysisOptions {
+  source?: AnalysisSource;
+}
 
 export class UnifiedAnalysisService {
   private static instance: UnifiedAnalysisService;
@@ -64,49 +69,54 @@ export class UnifiedAnalysisService {
   async analyzeEmotion(
     imageUri: string,
     sessionId?: string,
-    language?: string
+    language?: string,
+    options?: AnalysisOptions
   ): Promise<AnalysisResponse<EmotionAnalysisResult>> {
-    try {
-      const request: AnalysisRequest = {
-        imageUri,
-        analysisType: 'emotion',
-        sessionId,
-        timestamp: new Date(),
-        language,
-      };
-
-      // Perform analysis
-      const result = await this.openaiService.analyzeEmotion(request);
-
-      // Save to storage if successful
-      if (result.success && result.data) {
+    return traceAnalysis<EmotionAnalysisResult>(
+      'emotion',
+      async () => {
         try {
-          await this.storageService.saveAnalysis(
-            'emotion',
-            result.data,
+          const request: AnalysisRequest = {
             imageUri,
-            sessionId
-          );
-        } catch (storageError) {
-          console.warn('Failed to save emotion analysis to storage:', storageError);
-          // If storage fails due to corruption, try emergency cleanup
-          if (storageError.message?.includes('Row too big')) {
-            console.log('Attempting emergency storage cleanup...');
-            await this.storageService.emergencyCleanup();
-          }
-          // Don't fail the whole operation if storage fails
-        }
-      }
+            analysisType: 'emotion',
+            sessionId,
+            timestamp: new Date(),
+            language,
+          };
 
-      return result;
-    } catch (error) {
-      console.error('Unified emotion analysis failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-        timestamp: new Date(),
-      };
-    }
+          const result = await this.openaiService.analyzeEmotion(request);
+
+          if (result.success && result.data) {
+            try {
+              await this.storageService.saveAnalysis(
+                'emotion',
+                result.data,
+                imageUri,
+                sessionId
+              );
+            } catch (storageError: any) {
+              console.warn('Failed to save emotion analysis to storage:', storageError);
+              if (storageError.message?.includes('Row too big')) {
+                await this.storageService.emergencyCleanup();
+              }
+            }
+          }
+
+          return result;
+        } catch (error) {
+          console.error('Unified emotion analysis failed:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
+            timestamp: new Date(),
+          };
+        }
+      },
+      {
+        source: options?.source || 'camera',
+        featureName: 'emotion_analysis',
+      }
+    );
   }
 
   /**
@@ -115,44 +125,51 @@ export class UnifiedAnalysisService {
   async analyzeSkin(
     imageUri: string,
     sessionId?: string,
-    language?: string
+    language?: string,
+    options?: AnalysisOptions
   ): Promise<AnalysisResponse<SkinAnalysisResult>> {
-    try {
-      const request: AnalysisRequest = {
-        imageUri,
-        analysisType: 'skin',
-        sessionId,
-        timestamp: new Date(),
-        language,
-      };
-
-      // Perform analysis
-      const result = await this.openaiService.analyzeSkin(request);
-
-      // Save to storage if successful
-      if (result.success && result.data) {
+    return traceAnalysis<SkinAnalysisResult>(
+      'skin',
+      async () => {
         try {
-          await this.storageService.saveAnalysis(
-            'skin',
-            result.data,
+          const request: AnalysisRequest = {
             imageUri,
-            sessionId
-          );
-        } catch (storageError) {
-          console.warn('Failed to save skin analysis to storage:', storageError);
-          // Don't fail the whole operation if storage fails
-        }
-      }
+            analysisType: 'skin',
+            sessionId,
+            timestamp: new Date(),
+            language,
+          };
 
-      return result;
-    } catch (error) {
-      console.error('Unified skin analysis failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-        timestamp: new Date(),
-      };
-    }
+          const result = await this.openaiService.analyzeSkin(request);
+
+          if (result.success && result.data) {
+            try {
+              await this.storageService.saveAnalysis(
+                'skin',
+                result.data,
+                imageUri,
+                sessionId
+              );
+            } catch (storageError) {
+              console.warn('Failed to save skin analysis to storage:', storageError);
+            }
+          }
+
+          return result;
+        } catch (error) {
+          console.error('Unified skin analysis failed:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
+            timestamp: new Date(),
+          };
+        }
+      },
+      {
+        source: options?.source || 'camera',
+        featureName: 'skin_analysis',
+      }
+    );
   }
 
   /**
@@ -160,43 +177,51 @@ export class UnifiedAnalysisService {
    */
   async analyzeFood(
     imageUri: string,
-    sessionId?: string
+    sessionId?: string,
+    options?: AnalysisOptions
   ): Promise<AnalysisResponse<FoodAnalysisResult>> {
-    try {
-      const request: AnalysisRequest = {
-        imageUri,
-        analysisType: 'food',
-        sessionId,
-        timestamp: new Date(),
-      };
-
-      // Perform analysis
-      const result = await this.openaiService.analyzeFood(request);
-
-      // Save to storage if successful
-      if (result.success && result.data) {
+    return traceAnalysis<FoodAnalysisResult>(
+      'food',
+      async () => {
         try {
-          await this.storageService.saveAnalysis(
-            'food',
-            result.data,
+          const request: AnalysisRequest = {
             imageUri,
-            sessionId
-          );
-        } catch (storageError) {
-          console.warn('Failed to save food analysis to storage:', storageError);
-          // Don't fail the whole operation if storage fails
-        }
-      }
+            analysisType: 'food',
+            sessionId,
+            timestamp: new Date(),
+          };
 
-      return result;
-    } catch (error) {
-      console.error('Unified food analysis failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-        timestamp: new Date(),
-      };
-    }
+          const result = await this.openaiService.analyzeFood(request);
+
+          if (result.success && result.data) {
+            try {
+              await this.storageService.saveAnalysis(
+                'food',
+                result.data,
+                imageUri,
+                sessionId
+              );
+            } catch (storageError) {
+              console.warn('Failed to save food analysis to storage:', storageError);
+            }
+          }
+
+          return result;
+        } catch (error) {
+          console.error('Unified food analysis failed:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
+            timestamp: new Date(),
+          };
+        }
+      },
+      {
+        source: options?.source || 'camera',
+        featureName: 'food_analysis',
+        thresholdMs: 7000,
+      }
+    );
   }
 
   /**

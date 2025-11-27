@@ -71,8 +71,8 @@ class IntelligentInsightService {
       // Check cache as fallback
       // ✅ FIX: Use local timezone for "today" to avoid timezone issues
       const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const cacheKey = `insights_${currentUser.id}_${request.category}_${today}`;
+      const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const cacheKey = `insights_${currentUser.id}_${request.category}_${localToday}`;
       const cached = this.getCachedInsights(cacheKey);
       if (cached) {
         console.log('📋 Using cached intelligent insights for today');

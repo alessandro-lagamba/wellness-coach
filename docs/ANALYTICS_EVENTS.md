@@ -435,3 +435,4 @@ ORDER BY usage_count DESC;
 - [ ] Verificare eventi in Supabase
 - [ ] Creare dashboard Supabase per visualizzare analytics
 
+

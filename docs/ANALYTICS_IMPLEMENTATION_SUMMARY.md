@@ -229,3 +229,4 @@ L'app ora ha un sistema completo di analytics e crash reporting:
 
 **L'app è pronta per il tracking analytics e crash reporting!** 🚀
 
+

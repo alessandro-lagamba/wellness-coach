@@ -129,3 +129,4 @@ const fromLocalISODate = (iso: string): Date => {
 
 **L'app è ora completamente timezone-aware!** 🌍
 
+

@@ -305,3 +305,4 @@ try {
 3. **Alerting**: Configura alert Sentry per errori critici
 4. **Performance**: Monitora performance con Sentry Performance Monitoring
 
+

@@ -1246,7 +1246,9 @@ export const FoodAnalysisScreen: React.FC = () => {
 
         // Analyze the selected image
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        const analysisResult = await analysisServiceRef.current.analyzeFood(dataUrl);
+        const analysisResult = await analysisServiceRef.current.analyzeFood(dataUrl, undefined, {
+          source: 'gallery',
+        });
 
         if (analysisResult.success && analysisResult.data) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
@@ -1738,7 +1740,9 @@ export const FoodAnalysisScreen: React.FC = () => {
       const dataUrl = `data:image/jpeg;base64,${photo.base64}`;
       // 🔥 FIX: Rimuoviamo console.log eccessivi
 
-      const result = await analysisServiceRef.current.analyzeFood(dataUrl, 'food-analysis-session');
+      const result = await analysisServiceRef.current.analyzeFood(dataUrl, 'food-analysis-session', {
+        source: 'camera',
+      });
       if (!result.success || !result.data) {
         throw new Error(result.error || 'Food analysis failed.');
       }
