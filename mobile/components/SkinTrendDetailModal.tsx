@@ -364,11 +364,30 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
                 <Text style={[styles.summaryLabel, { color: themeColors.textSecondary }]}>{t('analysis.skin.trends.totalSessions') || 'Analisi totali'}</Text>
                 <Text style={[styles.summaryValue, { color: themeColors.text }]}>{totalSessions}</Text>
               </View>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: themeColors.textSecondary }]}>{t('analysis.skin.trends.metricsShown') || 'Metriche visualizzate'}</Text>
-                <Text style={[styles.summaryValue, { color: themeColors.text }]} numberOfLines={1} ellipsizeMode="tail">
-                  {selectedMetrics.map((metric) => metricConfig[metric].label).join(', ')}
-                </Text>
+              <View style={styles.summaryMetricsContainer}>
+                <Text style={[styles.summaryLabel, { color: themeColors.textSecondary, marginBottom: 8 }]}>{t('analysis.skin.trends.metricsShown') || 'Metriche visualizzate'}</Text>
+                <View style={styles.summaryMetricsRow}>
+                  {selectedMetrics.map((metric) => {
+                    const config = metricConfig[metric];
+                    return (
+                      <View
+                        key={metric}
+                        style={[
+                          styles.summaryMetricChip,
+                          {
+                            backgroundColor: `${config.color}20`,
+                            borderColor: config.color,
+                          },
+                        ]}
+                      >
+                        <View style={[styles.summaryMetricDot, { backgroundColor: config.color }]} />
+                        <Text style={[styles.summaryMetricText, { color: themeColors.text }]} numberOfLines={1}>
+                          {config.label}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
               </View>
             </View>
           </ScrollView>
@@ -576,6 +595,32 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  summaryMetricsContainer: {
+    marginTop: 4,
+  },
+  summaryMetricsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  summaryMetricChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    gap: 6,
+  },
+  summaryMetricDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  summaryMetricText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
 

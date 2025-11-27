@@ -82,7 +82,7 @@ import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
-import { useColorScheme, Platform, View } from 'react-native';
+import { useColorScheme, Platform, View, LogBox } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import * as NavigationBar from 'expo-navigation-bar';
@@ -95,6 +95,16 @@ import { TabBarVisibilityProvider } from '../contexts/TabBarVisibilityContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete
 SplashScreen.preventAutoHideAsync();
+
+// 🆕 Sopprimi warning noti e non critici
+if (__DEV__) {
+  LogBox.ignoreLogs([
+    // expo-av Video component deprecation warning (noto, non critico - usiamo ancora expo-av per Audio)
+    /Video component from `expo-av` is deprecated/,
+    // AvoidSoftInput warning con react-native-edge-to-edge (noto, gestito da KeyboardAvoidingView)
+    /shouldMimic value is ignored when using react-native-edge-to-edge/,
+  ]);
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({

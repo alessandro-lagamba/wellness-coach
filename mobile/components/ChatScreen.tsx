@@ -13,6 +13,7 @@ import {
   Switch,
   useColorScheme,
   FlatList,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -201,11 +202,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   useFocusEffect(
     useCallback(() => {
       hideTabBar();
-      AvoidSoftInput.setEnabled(true);
+      // 🆕 Configurazione minimale: solo setShouldMimicIOSBehavior se necessario
+      // AvoidSoftInputView gestisce tutto a livello di view
       AvoidSoftInput.setShouldMimicIOSBehavior(true);
 
       return () => {
-        AvoidSoftInput.setEnabled(false);
         showTabBar();
       };
     }, [hideTabBar, showTabBar]),
@@ -787,7 +788,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [showWellnessPopup, setShowWellnessPopup] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [inputBarHeight, setInputBarHeight] = useState(0);
-  const [headerHeight, setHeaderHeight] = useState(0);
 
   // Wellness popup handlers
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -967,7 +967,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
   // Keyboard management states - 🔧 SPOSTATO PRIMA DEGLI useEffect CHE LI USANO
   const inputContainerRef = useRef<View>(null);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false); // 🔥 FIX: Solo per sapere se tastiera è aperta (per UI state)
 
   // 🆕 Rimossi log debug per performance
 
@@ -1140,18 +1139,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     };
   }, [voiceMode, showVoiceInterface, voiceModeDismissed, voiceInterfaceOpacity]);
 
-  // Keyboard management via AvoidSoftInput events
-  useEffect(() => {
-    const showSubscription = AvoidSoftInput.onSoftInputShown(() => setIsKeyboardVisible(true));
-    const hideSubscription = AvoidSoftInput.onSoftInputHidden(() => setIsKeyboardVisible(false));
-    const offsetSubscription = AvoidSoftInput.onSoftInputAppliedOffsetChange(() => {});
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-      offsetSubscription.remove();
-    };
-  }, []);
+  // 🆕 Rimossi listener manuali della tastiera - AvoidSoftInputView gestisce tutto nativamente
 
   // 🆕 Funzioni per navigazione alle analisi
   const handleEmotionAnalysis = useCallback(() => {
@@ -1345,13 +1333,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     }
   }, [aiContext, currentUser, currentUserProfile, currentSessionId, messages, setMessages, setIsProcessing, setWellnessSuggestion]);
 
-  // Keyboard management functions (non più necessari con FlatList invertita)
+  // Keyboard management functions - scroll automatico quando l'input riceve il focus
   const handleInputFocus = useCallback(() => {
-    // FlatList invertita gestisce automaticamente lo scroll
-  }, []);
+    // Scroll automatico quando l'input riceve il focus (comportamento chat-like)
+    setTimeout(() => {
+      if (messagesListRef.current && messages.length > 0) {
+        messagesListRef.current.scrollToEnd({ animated: true });
+      }
+    }, Platform.OS === 'ios' ? 300 : 100);
+  }, [messages.length]);
 
   const handleInputBlur = useCallback(() => {
-    // FlatList invertita gestisce automaticamente lo scroll
+    // Nessuna azione necessaria quando l'input perde il focus
   }, []);
 
   const handleSendMessage = async () => {
@@ -2023,25 +2016,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       edges={['top', 'left', 'right']}
       style={[styles.container, dynamicStyles.container, { backgroundColor: safeAreaBackground }]}
     > 
-      <AvoidSoftInputView
-        style={styles.flex}
-        avoidOffset={42}
-        showAnimationDelay={0}
-        hideAnimationDelay={0}
-        showAnimationDuration={100}
-        hideAnimationDuration={100}
-        easing="easeOut"
+      {/* HEADER FISSO - Fuori da AvoidSoftInputView */}
+      <View
+        style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
       >
-        {/* Header */}
-        <View
-          style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
-          onLayout={({ nativeEvent }) => {
-            const { height } = nativeEvent.layout;
-            if (Math.abs(height - headerHeight) > 0.5) {
-              setHeaderHeight(height);
-            }
-          }}
-        >
           <TouchableOpacity onPress={() => router.push('/(tabs)')} style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}>
             <FontAwesome name="chevron-left" size={18} color={colors.text} />
           </TouchableOpacity>
@@ -2086,6 +2064,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           </View>
         </View>
 
+      {/* AREA CHE SI MUOVE CON LA TASTIERA - AvoidSoftInputView */}
+      <AvoidSoftInputView
+        style={styles.flex}
+        avoidOffset={0}
+        showAnimationDelay={0}
+        hideAnimationDelay={0}
+        showAnimationDuration={Platform.OS === 'ios' ? 250 : 100}
+        hideAnimationDuration={Platform.OS === 'ios' ? 250 : 100}
+        easing="easeOut"
+      >
         {/* Wellness Suggestion Banner */}
         {wellnessSuggestion?.shouldShowBanner && wellnessSuggestion?.suggestion && (
           <View style={styles.wellnessBanner}>
@@ -2238,10 +2226,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={[
                   styles.messagesContainer,
-                  // paddingTop per lasciare spazio in alto, paddingBottom per l'input
+                  // paddingTop per lasciare spazio in alto, paddingBottom costante per l'input
+                  // AvoidSoftInputView gestisce automaticamente lo spazio della tastiera
                   { 
                     paddingTop: 20,
-                    paddingBottom: inputBarHeight + (isKeyboardVisible ? 0 : insets.bottom) + 20 
+                    paddingBottom: inputBarHeight + insets.bottom + 20 
                   },
                 ]}
                 keyboardShouldPersistTaps="handled"
@@ -2690,9 +2679,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             {
               backgroundColor: colors.surface,
               borderTopColor: colors.border,
-              // 🔥 FIX: Quando la tastiera è aperta, non aggiungere padding extra (KAV gestisce già lo spazio)
-              // Quando la tastiera è chiusa, usa solo insets.bottom per rispettare safe area
-              paddingBottom: isKeyboardVisible ? 0 : insets.bottom,
+              // 🔥 FIX: Padding costante - AvoidSoftInputView gestisce automaticamente lo spazio della tastiera
+              paddingBottom: insets.bottom,
             },
           ]}
         >

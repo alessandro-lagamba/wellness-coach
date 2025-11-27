@@ -198,7 +198,7 @@ async function getEncryptionKey(userId: string): Promise<Uint8Array | null> {
     
     return keyBytes;
   } catch (error) {
-    console.error('[Encryption] Failed to get encryption key:', error);
+    // Solo loggare errori critici, non warning per chiave non trovata (caso normale se utente non loggato)
     return null;
   }
 }
@@ -221,7 +221,8 @@ export async function encryptText(
     
     const key = await getEncryptionKey(userId);
     if (!key) {
-      console.warn('[Encryption] No encryption key found, cannot encrypt');
+      // Non loggare warning - è normale se l'utente non è ancora autenticato
+      // Il chiamante gestirà il caso null
       return null;
     }
     
@@ -271,19 +272,22 @@ export async function decryptText(
       return null;
     }
     
-    const key = await getEncryptionKey(userId);
-    if (!key) {
-      console.warn('[Encryption] No encryption key found, cannot decrypt');
-      return null;
-    }
+    // Parse dei dati cifrati per verificare se sono effettivamente criptati
+    let data: { ciphertext: string; iv: string; hmac?: string; tag?: string; algorithm?: string } | null = null;
+    let isEncrypted = false;
     
-    // Parse dei dati cifrati
-    let data: { ciphertext: string; iv: string; hmac?: string; tag?: string; algorithm?: string };
     try {
       data = JSON.parse(encryptedData);
+      // Se ha algoritmo, è sicuramente criptato
+      isEncrypted = !!(data.algorithm && (data.algorithm === 'AES-CBC-256-HMAC' || data.algorithm === 'AES-GCM-256'));
     } catch {
-      // Se non è JSON, potrebbe essere testo vecchio non cifrato (backward compatibility)
+      // Se non è JSON, è testo non cifrato (backward compatibility)
       return encryptedData;
+    }
+    
+    // Se non ha algoritmo, assume formato vecchio (backward compatibility) - testo non cifrato
+    if (!data.algorithm) {
+      return encryptedData; // Testo non cifrato
     }
     
     // Verifica algoritmo (supporta sia vecchio che nuovo formato)
@@ -292,9 +296,17 @@ export async function decryptText(
       return null;
     }
     
-    // Se non ha algoritmo, assume formato vecchio (backward compatibility)
-    if (!data.algorithm) {
-      return encryptedData; // Testo non cifrato
+    // Solo ora controlliamo la chiave - se i dati sono criptati ma la chiave non c'è, è un problema
+    const key = await getEncryptionKey(userId);
+    if (!key) {
+      // Loggare warning solo se i dati sono effettivamente criptati
+      if (isEncrypted) {
+        // Questo è un vero problema: dati criptati ma chiave non disponibile
+        // Potrebbe essere un utente loggato che ha perso la sessione
+        console.warn('[Encryption] Encrypted data found but no encryption key available for user:', userId);
+      }
+      // Se i dati non sono criptati, è normale (backward compatibility)
+      return null;
     }
     
     // Converti Uint8Array key in WordArray per crypto-js

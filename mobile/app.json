@@ -31,6 +31,7 @@
       "bitcode": false
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icona.png",
         "backgroundColor": "#6366f1"
