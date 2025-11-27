@@ -16,17 +16,10 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useTheme } from '../../contexts/ThemeContext';
-import {
-  TabBarVisibilityProvider,
-  useTabBarVisibility,
-} from '../../contexts/TabBarVisibilityContext';
+import { useTabBarVisibility } from '../../contexts/TabBarVisibilityContext';
 
 export default function TabLayout() {
-  return (
-    <TabBarVisibilityProvider>
-      <TabNavigator />
-    </TabBarVisibilityProvider>
-  );
+  return <TabNavigator />;
 }
 
 function TabNavigator() {

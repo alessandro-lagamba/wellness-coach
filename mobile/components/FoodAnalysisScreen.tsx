@@ -85,6 +85,33 @@ const getDefaultMealType = (recipe?: UserRecipe): MealPlanMealType => {
   return 'dinner';
 };
 
+const MEAL_TYPE_ALIASES: Record<MealPlanMealType, string[]> = {
+  breakfast: ['breakfast', 'colazione', 'mattina', 'morning', 'brunch'],
+  lunch: ['lunch', 'pranzo', 'midday', 'mezzogiorno'],
+  dinner: ['dinner', 'cena', 'evening', 'notte', 'supper'],
+  snack: ['snack', 'spuntino', 'merenda', 'break', 'spuntini'],
+};
+
+const normalizeMealType = (
+  rawValue?: string | null,
+  fallback?: MealPlanMealType
+): MealPlanMealType => {
+  if (rawValue) {
+    const normalized = rawValue.trim().toLowerCase();
+    if (MEAL_TYPES.includes(normalized as MealPlanMealType)) {
+      return normalized as MealPlanMealType;
+    }
+
+    for (const [type, keywords] of Object.entries(MEAL_TYPE_ALIASES) as Array<[MealPlanMealType, string[]]>) {
+      if (keywords.some((keyword) => normalized.includes(keyword))) {
+        return type;
+      }
+    }
+  }
+
+  return fallback ?? inferMealTypeFromTime();
+};
+
 // Infer meal type from local time when AI result is ambiguous or missing.
 const inferMealTypeFromTime = (date: Date = new Date()): MealPlanMealType => {
   const hour = date.getHours();
@@ -1356,12 +1383,12 @@ export const FoodAnalysisScreen: React.FC = () => {
                   // 🆕 Aggiungi automaticamente al meal planner per tracciare i pasti del giorno
                   try {
                     const inferredMealType = inferMealTypeFromTime(new Date(savedAnalysis.created_at));
-                    const mealType = (analysisResult.data.meal_type && analysisResult.data.meal_type !== 'other'
-                      ? analysisResult.data.meal_type
-                      : inferredMealType) as MealPlanMealType;
-                    
+                    const mealType = normalizeMealType(
+                      analysisResult.data.meal_type || savedAnalysis?.meal_type,
+                      inferredMealType
+                    );
                     const todayISO = toISODate(new Date());
-                    
+
                     // Crea un custom_recipe con tutte le informazioni dell'analisi
                     const customRecipe = {
                       title: analysisResult.data.identified_foods?.join(', ') || 'Pasto analizzato',
@@ -1847,11 +1874,12 @@ export const FoodAnalysisScreen: React.FC = () => {
 
               // 🆕 Aggiungi automaticamente al meal planner per tracciare i pasti del giorno
               try {
-                    const inferredMealType = inferMealTypeFromTime(new Date(savedAnalysis.created_at));
-                    const mealType = (result.data.meal_type && result.data.meal_type !== 'other'
-                      ? result.data.meal_type
-                      : inferredMealType) as MealPlanMealType;
-                
+                const inferredMealType = inferMealTypeFromTime(new Date(savedAnalysis.created_at));
+                const mealType = normalizeMealType(
+                  result.data.meal_type || savedAnalysis?.meal_type,
+                  inferredMealType
+                );
+
                 const todayISO = toISODate(new Date());
                 
                 // Crea un custom_recipe con tutte le informazioni dell'analisi

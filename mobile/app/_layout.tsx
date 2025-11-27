@@ -91,6 +91,7 @@ import { ThemeProvider as CustomThemeProvider, useTheme } from '../contexts/Them
 import { StatusBarProvider, useStatusBarColor } from '../contexts/StatusBarContext'; // 🆕 StatusBar override context
 import * as Notifications from 'expo-notifications'; // 🆕 Local notifications
 import { useRouter } from 'expo-router'; // 🆕 Navigation
+import { TabBarVisibilityProvider } from '../contexts/TabBarVisibilityContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete
 SplashScreen.preventAutoHideAsync();
@@ -209,20 +210,22 @@ function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => v
   return (
     <StatusBarProvider>
       <StatusBarWrapper>
-        <AuthWrapper onAuthSuccess={onAuthSuccess}>
-          <NavThemeProvider value={navTheme}>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                // 🔥 FIX: Usa backgroundColor con fallback per evitare flash bianco
-                contentStyle: { backgroundColor },
-              }}
-            >
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="breathing-exercise" options={{ headerShown: false }} />
-            </Stack>
-          </NavThemeProvider>
-        </AuthWrapper>
+    <AuthWrapper onAuthSuccess={onAuthSuccess}>
+      <TabBarVisibilityProvider>
+        <NavThemeProvider value={navTheme}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              // 🔥 FIX: Usa backgroundColor con fallback per evitare flash bianco
+              contentStyle: { backgroundColor },
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="breathing-exercise" options={{ headerShown: false }} />
+          </Stack>
+        </NavThemeProvider>
+      </TabBarVisibilityProvider>
+    </AuthWrapper>
       </StatusBarWrapper>
     </StatusBarProvider>
   );

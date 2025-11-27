@@ -433,7 +433,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
             category="food"
             data={insightsData}
             showTitle={true}
-            maxInsights={2}
+            maxInsights={3}
             compact={false}
           />
 

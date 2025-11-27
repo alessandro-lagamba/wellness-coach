@@ -164,7 +164,11 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
             </View>
           </LinearGradient>
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Period selector */}
             <View style={styles.periodSelector}>
               <TouchableOpacity
@@ -431,6 +435,9 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+  },
+  contentContainer: {
+    paddingBottom: 50,
   },
   periodSelector: {
     flexDirection: 'row',
