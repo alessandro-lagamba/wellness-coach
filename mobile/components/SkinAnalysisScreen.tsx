@@ -57,6 +57,7 @@ import { VideoHero } from './VideoHero';
 import { SkinTrendDetailModal } from './SkinTrendDetailModal';
 import { EmptyStateCard } from './EmptyStateCard';
 import { FirstAnalysisCelebration } from './FirstAnalysisCelebration';
+import { ContextualPermissionModal } from './ContextualPermissionModal';
 import { OnboardingService } from '../services/onboarding.service';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
