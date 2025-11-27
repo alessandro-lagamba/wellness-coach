@@ -26,6 +26,14 @@ const ENCRYPTION_KEYS = {
   KEY_SALT: 'user_key_salt', // Salt per derivazione chiave
 };
 
+const SECURE_STORE_KEY_REGEX = /[^A-Za-z0-9._-]/g;
+
+function buildSecureStoreKey(base: string, userId: string): string {
+  const safeBase = base.replace(SECURE_STORE_KEY_REGEX, '_');
+  const safeUserId = (userId || '').replace(SECURE_STORE_KEY_REGEX, '_');
+  return `${safeBase}_${safeUserId}`;
+}
+
 // Parametri per PBKDF2 (derivazione chiave da password)
 const PBKDF2_ITERATIONS = 100000; // Alto numero per sicurezza
 const PBKDF2_KEY_LENGTH = 32; // 256 bit per AES-256
@@ -129,7 +137,7 @@ export async function initializeEncryptionKey(
       if (updateError) {
         console.error('[Encryption] Failed to save salt to Supabase:', updateError);
         // Fallback: salva in SecureStore locale (ma non funzionerà su altri device)
-        const saltKey = `${ENCRYPTION_KEYS.KEY_SALT}:${userId}`;
+        const saltKey = buildSecureStoreKey(ENCRYPTION_KEYS.KEY_SALT, userId);
         await SecureStore.setItemAsync(saltKey, salt);
         console.warn('[Encryption] Salt saved locally as fallback (multi-device will not work)');
       } else {
@@ -147,7 +155,7 @@ export async function initializeEncryptionKey(
       .join('');
     
     await SecureStore.setItemAsync(
-      `${ENCRYPTION_KEYS.USER_ENCRYPTION_KEY}:${userId}`,
+      buildSecureStoreKey(ENCRYPTION_KEYS.USER_ENCRYPTION_KEY, userId),
       keyHex
     );
     
@@ -175,7 +183,7 @@ export async function initializeEncryptionKey(
 async function getEncryptionKey(userId: string): Promise<Uint8Array | null> {
   try {
     const keyHex = await SecureStore.getItemAsync(
-      `${ENCRYPTION_KEYS.USER_ENCRYPTION_KEY}:${userId}`
+      buildSecureStoreKey(ENCRYPTION_KEYS.USER_ENCRYPTION_KEY, userId)
     );
     
     if (!keyHex) {
@@ -340,7 +348,7 @@ export async function decryptText(
 export async function clearEncryptionKey(userId: string): Promise<void> {
   try {
     await SecureStore.deleteItemAsync(
-      `${ENCRYPTION_KEYS.USER_ENCRYPTION_KEY}:${userId}`
+      buildSecureStoreKey(ENCRYPTION_KEYS.USER_ENCRYPTION_KEY, userId)
     );
   } catch (error) {
     console.error('[Encryption] Failed to clear encryption key:', error);

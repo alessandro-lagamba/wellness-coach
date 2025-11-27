@@ -21,13 +21,14 @@
       "bundleIdentifier": "com.wellnesscoach.app",
       "infoPlist": {
         "NSCameraUsageDescription": "This app uses the camera to analyze your skin and detect emotions for personalized wellness coaching.",
-        "NSMicrophoneUsageDescription": "This app uses the microphone for voice interactions with your wellness coach.",
-        "NSSpeechRecognitionUsageDescription": "This app uses speech recognition to understand your voice commands and provide personalized wellness coaching.",
+        "NSMicrophoneUsageDescription": "Allow Wellness Coach to access your microphone for voice interactions.",
+        "NSSpeechRecognitionUsageDescription": "Allow Wellness Coach to use speech recognition for voice commands.",
         "NSHealthShareUsageDescription": "This app accesses health data to provide personalized wellness recommendations.",
         "NSHealthUpdateUsageDescription": "This app writes wellness data to Apple Health for comprehensive health tracking.",
         "NSCalendarsUsageDescription": "This app needs access to your calendar to sync wellness activities and reminders.",
         "NSRemindersUsageDescription": "This app needs access to your reminders to set wellness activity notifications."
-      }
+      },
+      "bitcode": false
     },
     "android": {
       "adaptiveIcon": {
@@ -61,7 +62,17 @@
         "android.permission.BODY_SENSORS",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MICROPHONE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.INTERNET",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.ACCESS_MEDIA_LOCATION",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO"
       ]
     },
     "web": {
@@ -133,6 +144,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "156857d0-adfa-4211-8446-1e79c690446b"
+      }
+    },
+    "owner": "lbp_manager"
   }
 }
