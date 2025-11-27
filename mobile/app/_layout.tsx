@@ -49,17 +49,17 @@ if (!('mediaDevices' in globalThis.navigator) || !globalThis.navigator.mediaDevi
 
 if (!globalThis.navigator.mediaDevices.addEventListener) {
   console.log('[LiveKit] Adding addEventListener polyfill to navigator.mediaDevices');
-  
+
   const mediaDevices = globalThis.navigator.mediaDevices as any;
-  
-  mediaDevices.addEventListener = function(type: string, listener: EventListener) {
+
+  mediaDevices.addEventListener = function (type: string, listener: EventListener) {
     if (typeof listener !== 'function') return;
-    
+
     // Use the existing on* handlers
     const handlerProp = `on${type}`;
     const original = mediaDevices[handlerProp];
-    
-    mediaDevices[handlerProp] = function(event: any) {
+
+    mediaDevices[handlerProp] = function (event: any) {
       if (original && typeof original === 'function') {
         original.call(mediaDevices, event);
       }
@@ -68,12 +68,12 @@ if (!globalThis.navigator.mediaDevices.addEventListener) {
       }
     };
   };
-  
-  mediaDevices.removeEventListener = function(type: string, listener: EventListener) {
+
+  mediaDevices.removeEventListener = function (type: string, listener: EventListener) {
     const handlerProp = `on${type}`;
     mediaDevices[handlerProp] = null;
   };
-  
+
   console.log('[LiveKit] ✅ navigator.mediaDevices polyfill added');
 }
 import { DarkTheme as RNDark, DefaultTheme as RNLight, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
@@ -92,6 +92,7 @@ import { StatusBarProvider, useStatusBarColor } from '../contexts/StatusBarConte
 import * as Notifications from 'expo-notifications'; // 🆕 Local notifications
 import { useRouter } from 'expo-router'; // 🆕 Navigation
 import { TabBarVisibilityProvider } from '../contexts/TabBarVisibilityContext';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete
 SplashScreen.preventAutoHideAsync();
@@ -153,7 +154,9 @@ function RootLayoutNav() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <CustomThemeProvider> {/* 🆕 Our custom theme provider (dark mode) */}
-        <RootLayoutNavInner onAuthSuccess={handleAuthSuccess} />
+        <KeyboardProvider>
+          <RootLayoutNavInner onAuthSuccess={handleAuthSuccess} />
+        </KeyboardProvider>
       </CustomThemeProvider>
     </GestureHandlerRootView>
   );
@@ -220,22 +223,22 @@ function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => v
   return (
     <StatusBarProvider>
       <StatusBarWrapper>
-    <AuthWrapper onAuthSuccess={onAuthSuccess}>
-      <TabBarVisibilityProvider>
-        <NavThemeProvider value={navTheme}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              // 🔥 FIX: Usa backgroundColor con fallback per evitare flash bianco
-              contentStyle: { backgroundColor },
-            }}
-          >
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="breathing-exercise" options={{ headerShown: false }} />
-          </Stack>
-        </NavThemeProvider>
-      </TabBarVisibilityProvider>
-    </AuthWrapper>
+        <AuthWrapper onAuthSuccess={onAuthSuccess}>
+          <TabBarVisibilityProvider>
+            <NavThemeProvider value={navTheme}>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  // 🔥 FIX: Usa backgroundColor con fallback per evitare flash bianco
+                  contentStyle: { backgroundColor },
+                }}
+              >
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="breathing-exercise" options={{ headerShown: false }} />
+              </Stack>
+            </NavThemeProvider>
+          </TabBarVisibilityProvider>
+        </AuthWrapper>
       </StatusBarWrapper>
     </StatusBarProvider>
   );
@@ -248,27 +251,27 @@ function StatusBarWrapper({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
   // 🔥 FIX: Fallback color basato su useColorScheme per evitare flash bianco
   const fallbackBackground = systemColorScheme === 'dark' ? '#1a1625' : '#f8fafc';
-  
+
   // Usa il colore override se disponibile, altrimenti usa il colore del tema, altrimenti fallback
   const effectiveStatusBarColor = statusBarColor || colors?.background || fallbackBackground;
-  
+
   // 🆕 Fix StatusBar e NavigationBar: edge-to-edge con fondo tematizzato
   useEffect(() => {
     // Colora il "dietro" della status bar con il colore override o il tema
     // Questo evita la banda nera/bianca dietro le icone della status bar
-    SystemUI.setBackgroundColorAsync(effectiveStatusBarColor).catch(() => {});
-    
+    SystemUI.setBackgroundColorAsync(effectiveStatusBarColor).catch(() => { });
+
     if (Platform.OS === 'android') {
       // Colora la navigation bar in basso
-      NavigationBar.setBackgroundColorAsync(effectiveStatusBarColor).catch(() => {});
-      NavigationBar.setButtonStyleAsync(mode === 'dark' ? 'light' : 'dark').catch(() => {});
+      NavigationBar.setBackgroundColorAsync(effectiveStatusBarColor).catch(() => { });
+      NavigationBar.setButtonStyleAsync(mode === 'dark' ? 'light' : 'dark').catch(() => { });
       // Rimuovi la riga di separazione
-      NavigationBar.setBorderColorAsync('transparent').catch(() => {});
+      NavigationBar.setBorderColorAsync('transparent').catch(() => { });
       // Opzionale: per edge-to-edge completo sotto la gesture bar (se necessario)
       // NavigationBar.setBehaviorAsync('overlay-swipe').catch(() => {});
     }
   }, [mode, effectiveStatusBarColor, statusBarColor, colors.background]);
-  
+
   return (
     <>
       {/* View assoluto per coprire tutto lo schermo con il colore di background */}

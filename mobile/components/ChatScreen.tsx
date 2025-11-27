@@ -14,7 +14,7 @@ import {
   useColorScheme,
   FlatList,
   Platform,
-  KeyboardAvoidingView,
+  // KeyboardAvoidingView, // Removed
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -30,9 +30,10 @@ import Animated, {
   withTiming,
   withRepeat,
   withSequence,
-  runOnJS
+  runOnJS,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useKeyboardHandler } from 'react-native-keyboard-controller';
 // import { AvoidSoftInput, AvoidSoftInputView } from 'react-native-avoid-softinput';
 import WellnessSuggestionPopup from './WellnessSuggestionPopup';
 import { TimePickerModal } from './TimePickerModal';
@@ -788,7 +789,24 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [wellnessSuggestion, setWellnessSuggestion] = useState<any>(null);
   const [showWellnessPopup, setShowWellnessPopup] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [inputBarHeight, setInputBarHeight] = useState(0);
+
+  // Keyboard Handler for smooth animation
+  const keyboardHeight = useSharedValue(0);
+  useKeyboardHandler(
+    {
+      onMove: (event) => {
+        'worklet';
+        keyboardHeight.value = event.height;
+      },
+    },
+    []
+  );
+
+  const fakeViewStyle = useAnimatedStyle(() => {
+    return {
+      height: Math.abs(keyboardHeight.value),
+    };
+  });
 
   // Wellness popup handlers
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -2065,12 +2083,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         </View>
       </View>
 
-      {/* AREA CHE SI MUOVE CON LA TASTIERA - KeyboardAvoidingView */}
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // Adjust if needed, usually 0 or header height
-      >
+      {/* AREA CHE SI MUOVE CON LA TASTIERA - KeyboardController */}
+      <View style={styles.flex}>
         {/* Wellness Suggestion Banner */}
         {wellnessSuggestion?.shouldShowBanner && wellnessSuggestion?.suggestion && (
           <View style={styles.wellnessBanner}>
@@ -2665,12 +2679,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         {mode === 'chat' && !showVoiceInterface && (
           <View
             ref={inputContainerRef}
-            onLayout={({ nativeEvent }) => {
-              const { height } = nativeEvent.layout;
-              if (Math.abs(height - inputBarHeight) > 0.5) {
-                setInputBarHeight(height);
-              }
-            }}
             style={[
               styles.inputContainer,
               {
@@ -2709,7 +2717,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             </View>
           </View>
         )}
-      </KeyboardAvoidingView>
+        {/* Fake View for Keyboard Animation */}
+        <Animated.View style={fakeViewStyle} />
+      </View>
 
       {/* Wellness Suggestion Popup */}
       <WellnessSuggestionPopup
