@@ -38,11 +38,8 @@ export default function SettingsTabScreen() {
     }
   };
 
-  // 🔥 FIX: Mostra un componente con backgroundColor invece di null per evitare flash bianco
-  if (isLoading || !user) {
-    return <View style={[styles.loadingContainer, { backgroundColor }]} />;
-  }
-
+  // 🔥 FIX: Passa sempre SettingsScreen, anche se user è null
+  // SettingsScreen gestirà internamente il caso in cui user è null
   return <SettingsScreen user={user} onLogout={handleLogout} />;
 }
 

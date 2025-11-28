@@ -74,6 +74,9 @@
       "preferNotToSay": "Prefer not to say",
       "notSpecified": "Not specified"
     },
+    "profileUnavailableTitle": "Profile Unavailable",
+    "profileUnavailableSubtitle": "We couldn't load your data. Check your connection and try again.",
+    "profileLoadingSubtitle": "We're retrieving your information, please wait...",
     "healthPermissionsUpdated": "Permissions Updated",
     "healthPermissionsUpdatedMessage": "Your health data permissions have been updated successfully.",
     "comingSoon": "Coming Soon",

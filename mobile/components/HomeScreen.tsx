@@ -2118,10 +2118,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                 <TouchableOpacity
                   style={styles.heroHealthButton}
                   onPress={async () => {
-                    // Mostra un alert per confermare il reset dell'onboarding
+                    // Mostra un alert per confermare il reset del tutorial
                     Alert.alert(
-                      t('home.onboarding.resetTitle') || 'Rivisualizza Onboarding',
-                      t('home.onboarding.resetMessage') || 'Vuoi rivisualizzare l\'onboarding?',
+                      t('home.onboarding.resetTitle') || 'Rivisualizza Tutorial',
+                      t('home.onboarding.resetMessage') || 'Vuoi rivisualizzare il tutorial?',
                       [
                         {
                           text: t('common.cancel') || 'Annulla',
@@ -2132,22 +2132,19 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                           style: 'default',
                           onPress: async () => {
                             try {
-                              // Usa il metodo globale per forzare la visualizzazione dell'onboarding
-                              if ((global as any).forceShowOnboarding) {
-                                await (global as any).forceShowOnboarding();
+                              // Usa il metodo globale per forzare la visualizzazione del tutorial
+                              if ((global as any).forceShowTutorial) {
+                                await (global as any).forceShowTutorial();
                               } else {
-                                // Fallback: reset onboarding e mostra messaggio
+                                // Fallback: reset tutorial e mostra messaggio
                                 await OnboardingService.resetOnboarding();
-                                Alert.alert(
-                                  t('home.onboarding.resetSuccess') || 'Onboarding resettato',
-                                  t('home.onboarding.restartMessage') || 'Chiudi e riapri l\'app per vedere l\'onboarding.'
-                                );
+                                setShowTutorial(true);
                               }
                             } catch (error) {
-                              console.error('Error resetting onboarding:', error);
+                              console.error('Error resetting tutorial:', error);
                               Alert.alert(
                                 t('common.error') || 'Errore',
-                                t('home.onboarding.resetError') || 'Impossibile resettare l\'onboarding. Riprova più tardi.'
+                                t('home.onboarding.resetError') || 'Impossibile resettare il tutorial. Riprova più tardi.'
                               );
                             }
                           },

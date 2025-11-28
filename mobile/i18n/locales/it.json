@@ -76,6 +76,9 @@
       "preferNotToSay": "Preferisco non dirlo",
       "notSpecified": "Non specificato"
     },
+    "profileUnavailableTitle": "Profilo non disponibile",
+    "profileUnavailableSubtitle": "Non riusciamo a caricare i tuoi dati. Controlla la connessione e riprova.",
+    "profileLoadingSubtitle": "Stiamo recuperando le tue informazioni, un attimo...",
     "healthPermissionsUpdated": "Permessi Aggiornati",
     "healthPermissionsUpdatedMessage": "I tuoi permessi per i dati di salute sono stati aggiornati con successo.",
     "comingSoon": "In arrivo",

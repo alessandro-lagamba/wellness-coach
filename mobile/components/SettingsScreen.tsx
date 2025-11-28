@@ -609,11 +609,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
           ) : (
             <EmptyStateCard
               type="general"
-              customTitle={t('settings.profileUnavailableTitle') || 'Profilo non disponibile'}
+              customTitle={t('settings.profileUnavailableTitle')}
               customSubtitle={
                 userResolutionError
-                  ? t('settings.profileUnavailableSubtitle') || 'Non riusciamo a caricare i tuoi dati. Controlla la connessione e riprova.'
-                  : t('settings.profileLoadingSubtitle') || 'Stiamo recuperando le tue informazioni, un attimo...'
+                  ? t('settings.profileUnavailableSubtitle')
+                  : t('settings.profileLoadingSubtitle')
               }
               customActionText={t('common.retry')}
               onAction={handleRetryLoad}
