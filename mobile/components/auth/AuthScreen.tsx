@@ -130,6 +130,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
           onAuthSuccess(user);
         }
       } else {
+        // 🔥 FIX: Quando un utente si registra, resettiamo sempre onboarding e tutorial
+        // Questo garantisce che ogni nuovo utente veda l'onboarding, anche se i flag sono già salvati in AsyncStorage
+        const { OnboardingService } = await import('../../services/onboarding.service');
+        await OnboardingService.resetOnboarding();
+        console.log('🔄 Onboarding and tutorial reset for new signup');
+
         const { user, error } = await AuthService.signUp(email, password, `${firstName} ${lastName}`);
         if (error) {
           Alert.alert(t('auth.signupError'), error.message || t('auth.signupFailed'));
