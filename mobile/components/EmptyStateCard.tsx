@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { useTutorial } from '../contexts/TutorialContext';
 
 interface EmptyStateCardProps {
-  type: 'emotion' | 'skin' | 'food' | 'journal' | 'general';
+  type: 'emotion' | 'skin' | 'food' | 'journal' | 'general' | 'copilot';
   onAction?: () => void;
   customTitle?: string;
   customSubtitle?: string;
@@ -75,6 +75,15 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({
           subtitle: customSubtitle || t('emptyStates.journal.subtitle'),
           actionText: customActionText || t('emptyStates.journal.action'),
           description: t('emptyStates.journal.description'),
+        };
+      case 'copilot':
+        return {
+          icon: 'head-cog',
+          gradient: ['#8b5cf6', '#a855f7'],
+          title: customTitle || t('emptyStates.copilot.title'),
+          subtitle: customSubtitle || t('emptyStates.copilot.subtitle'),
+          actionText: customActionText || t('emptyStates.copilot.action'),
+          description: t('emptyStates.copilot.description'),
         };
       default:
         return {

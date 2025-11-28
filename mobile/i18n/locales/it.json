@@ -1608,6 +1608,12 @@
       "description": "Scrivi le tue riflessioni quotidiane per tracciare il tuo benessere emotivo e ricevere insights personalizzati.",
       "action": "Scrivi nel Diario"
     },
+    "copilot": {
+      "title": "Coach personale in arrivo",
+      "subtitle": "Completa il check-in per sbloccare i consigli",
+      "description": "Sincronizza i dati salute o aggiorna l'umore e il sonno di oggi per ricevere raccomandazioni dell'AI su misura per la tua giornata.",
+      "action": "Apri il check-in"
+    },
     "general": {
       "title": "Nessun dato disponibile",
       "subtitle": "Inizia a utilizzare l'app",

@@ -23,6 +23,7 @@ import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 're
 import { useDailyCopilot } from '../hooks/useDailyCopilot';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
+import { EmptyStateCard } from './EmptyStateCard';
 
 const { width } = Dimensions.get('window');
 
@@ -141,7 +142,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
     );
   }
 
-  if (error || !copilotData) {
+  if (error) {
     return (
       <View style={[styles.container, compact && styles.compactContainer]}>
         <View style={styles.errorContainer}>
@@ -149,6 +150,29 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
           <Text style={styles.errorText}>{error || 'Errore nel caricamento'}</Text>
           <Text style={styles.errorSubtext}>L'analisi verrà generata automaticamente al prossimo avvio</Text>
         </View>
+      </View>
+    );
+  }
+
+  if (!copilotData) {
+    if (compact) {
+      return (
+        <View style={[styles.compactContainer, styles.compactEmptyState]}>
+          <MaterialCommunityIcons name="head-cog" size={28} color="#8b5cf6" />
+          <Text style={styles.compactEmptyTitle}>{t('emptyStates.copilot.title')}</Text>
+          <Text style={styles.compactEmptySubtitle}>
+            {t('emptyStates.copilot.subtitle')}
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={[styles.container, compact && styles.compactContainer]}>
+        <EmptyStateCard
+          type="copilot"
+          showLearnMore={false}
+        />
       </View>
     );
   }
@@ -580,6 +604,27 @@ const styles = StyleSheet.create({
   compactContainer: {
     marginHorizontal: 20,
     marginBottom: 16,
+  },
+  compactEmptyState: {
+    borderRadius: 16,
+    padding: 20,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  compactEmptyTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  compactEmptySubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+    textAlign: 'center',
   },
   card: {
     borderRadius: 24,

@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { AIContextService } from './ai-context.service';
 import { AnalysisIntentService } from './analysis-intent.service';
 import { getUserLanguage } from './language.service';
+import IntelligentInsightDBService from './intelligent-insight-db.service';
 import { jsonrepair } from 'jsonrepair';
 
 export interface IntelligentInsight {
@@ -48,36 +49,44 @@ class IntelligentInsightService {
    * Generate intelligent insights for emotion or skin analysis
    */
   async generateIntelligentInsights(request: InsightAnalysisRequest): Promise<InsightAnalysisResponse> {
+    const shouldPersistDaily = request.category !== 'food';
+
     try {
       const currentUser = await AuthService.getCurrentUser();
       if (!currentUser) {
         throw new Error('User not authenticated');
       }
 
-      // Check database first for today's insights
-      const dbService = (await import('./intelligent-insight-db.service')).default.getInstance();
-      const today = new Date().toISOString().split('T')[0];
+      let dbService: IntelligentInsightDBService | null = null;
+      let cacheKey: string | null = null;
 
-      const { success: dbSuccess, data: existingInsights } = await dbService.getIntelligentInsights(
-        currentUser.id,
-        request.category,
-        today
-      );
+      if (shouldPersistDaily) {
+        // Check database first for today's insights
+        dbService = IntelligentInsightDBService.getInstance();
+        const today = new Date().toISOString().split('T')[0];
 
-      if (dbSuccess && existingInsights) {
-        console.log(`📋 Using existing insights from database for ${request.category} on ${today}`);
-        return dbService.convertDBRecordToInsightsData(existingInsights);
-      }
+        const { success: dbSuccess, data: existingInsights } = await dbService.getIntelligentInsights(
+          currentUser.id,
+          request.category,
+          today
+        );
 
-      // Check cache as fallback
-      // ✅ FIX: Use local timezone for "today" to avoid timezone issues
-      const now = new Date();
-      const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const cacheKey = `insights_${currentUser.id}_${request.category}_${localToday}`;
-      const cached = this.getCachedInsights(cacheKey);
-      if (cached) {
-        console.log('📋 Using cached intelligent insights for today');
-        return cached;
+        if (dbSuccess && existingInsights) {
+          console.log(`📋 Using existing insights from database for ${request.category} on ${today}`);
+          return dbService.convertDBRecordToInsightsData(existingInsights);
+        }
+
+        // Check cache as fallback
+        const now = new Date();
+        const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        cacheKey = `insights_${currentUser.id}_${request.category}_${localToday}`;
+        const cached = this.getCachedInsights(cacheKey);
+        if (cached) {
+          console.log('📋 Using cached intelligent insights for today');
+          return cached;
+        }
+      } else {
+        console.log('🧠 Food insights: skipping daily cache to allow per-meal generation');
       }
 
       console.log(`🧠 Generating new intelligent insights for ${request.category}...`);
@@ -114,16 +123,20 @@ class IntelligentInsightService {
       // Generate AI analysis
       const analysisResponse = await this.generateAIAnalysis(request, userContext);
 
-      // Save to database
-      try {
-        await dbService.saveIntelligentInsights(currentUser.id, request.category, analysisResponse);
-        console.log(`✅ Intelligent insights saved to database for ${request.category}`);
-      } catch (dbError) {
-        console.warn('⚠️ Failed to save intelligent insights to database:', dbError);
+      // Save to database only for categories that should persist daily
+      if (shouldPersistDaily && dbService) {
+        try {
+          await dbService.saveIntelligentInsights(currentUser.id, request.category, analysisResponse);
+          console.log(`✅ Intelligent insights saved to database for ${request.category}`);
+        } catch (dbError) {
+          console.warn('⚠️ Failed to save intelligent insights to database:', dbError);
+        }
       }
 
-      // Cache the result
-      this.setCachedInsights(cacheKey, analysisResponse);
+      // Cache the result only for daily categories
+      if (cacheKey) {
+        this.setCachedInsights(cacheKey, analysisResponse);
+      }
 
       console.log(`✅ Generated ${analysisResponse.insights.length} intelligent insights for ${request.category}`);
       return analysisResponse;

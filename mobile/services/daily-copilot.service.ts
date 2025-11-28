@@ -79,8 +79,6 @@ class DailyCopilotService {
         return null;
       }
 
-      // Check database first for today's analysis
-      // ✅ FIX: Use local timezone for "today" to avoid timezone issues
       const now = new Date();
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const cacheKey = `copilot_${currentUser.id}_${today}`;
@@ -106,16 +104,10 @@ class DailyCopilotService {
         return cached;
       }
 
-      // Generating analysis (logging handled by backend)
-
-      // 🔥 LOGICA: Raccoglie tutti i dati necessari per l'analisi
-      // Se apri l'app al mattino, usa i dati di ieri (sera prima)
-      // Se apri l'app durante il giorno, usa i dati di oggi se disponibili
       console.log('🔄 Daily Copilot: Collecting analysis data...');
       const analysisData = await this.collectAnalysisData(currentUser.id);
       if (!analysisData) {
         console.warn('⚠️ Daily Copilot: No data available for analysis, using fallback');
-        // 🔥 FIX: Non ritornare null, usa dati di fallback per generare comunque un'analisi
         const fallbackData: CopilotAnalysisRequest = {
           mood: 3,
           sleep: { hours: 7.5, quality: 80 },
@@ -541,6 +533,8 @@ IMPORTANT RULES:
 
 - DO NOT add disclaimers, warnings, or medical advice language.
 
+- The JSON template below is ONLY an example of the structure. Generate completely new content each day and never reuse the sample action text verbatim.
+
 ${languageInstruction}
 
 OUTPUT FORMAT (return ONLY valid JSON):
@@ -556,7 +550,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
       "id": "morning-activation",
       "priority": "high",
       "category": "movement",
-      "action": "Take a 10–15 minute brisk walk early in the day.",
+      "action": "[Replace with a personalized movement action derived from today's data]",
       "reason": "Your sleep quality is lower than usual and steps are behind your normal pattern.",
       "estimatedTime": "15 min",
       "detailedExplanation": "Morning movement activates the sympathetic nervous system, increasing blood flow and oxygen delivery to tissues. This helps reset circadian rhythms disrupted by poor sleep and boosts daytime energy by enhancing mitochondrial function. Regular light exercise also improves HRV by training the autonomic nervous system to recover more efficiently.",

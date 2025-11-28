@@ -1594,6 +1594,12 @@
       "description": "Write your daily reflections to track your emotional wellness and receive personalized insights.",
       "action": "Write in Journal"
     },
+    "copilot": {
+      "title": "Personal coach unlocking soon",
+      "subtitle": "Complete your check-in to get tailored advice",
+      "description": "Sync your health data or log today’s mood and sleep to receive AI-powered recommendations designed for your day.",
+      "action": "Open daily check-in"
+    },
     "general": {
       "title": "No data available",
       "subtitle": "Start using the app",
