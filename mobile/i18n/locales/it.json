@@ -373,6 +373,15 @@
       "sampleDataDescription": "Questi sono dati di esempio. I tuoi dati reali verranno mostrati qui una volta sincronizzati.",
       "sampleChartDescription": "Questo grafico mostra dati di esempio. I tuoi dati reali verranno visualizzati qui una volta disponibili."
     },
+    "onboarding": {
+      "resetTitle": "Rivisualizza Onboarding",
+      "resetMessage": "Vuoi rivisualizzare l'onboarding?",
+      "resetSuccess": "Onboarding resettato",
+      "restartMessage": "L'onboarding verrà mostrato al prossimo avvio dell'app.",
+      "resetError": "Impossibile resettare l'onboarding. Riprova più tardi.",
+      "manualRestart": "Riavvia manualmente",
+      "manualRestartMessage": "Chiudi e riapri l'app per vedere l'onboarding."
+    },
     "calendar": {
       "synced": "Sincronizzato con Calendario",
       "addedMessage": "{{title}} è stato aggiunto al tuo calendario!",

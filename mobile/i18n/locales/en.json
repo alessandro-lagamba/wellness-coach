@@ -371,6 +371,15 @@
       "sampleDataDescription": "These are sample data. Your real data will be shown here once synced.",
       "sampleChartDescription": "This chart shows sample data. Your real data will be displayed here once available."
     },
+    "onboarding": {
+      "resetTitle": "Replay Onboarding",
+      "resetMessage": "Do you want to replay the onboarding?",
+      "resetSuccess": "Onboarding reset",
+      "restartMessage": "The onboarding will be shown on the next app launch.",
+      "resetError": "Unable to reset onboarding. Please try again later.",
+      "manualRestart": "Restart manually",
+      "manualRestartMessage": "Close and reopen the app to see the onboarding."
+    },
     "calendar": {
       "synced": "Synced to Calendar",
       "addedMessage": "{{title}} has been added to your calendar!",

@@ -28,6 +28,24 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   const router = useRouter();
   const { colors, mode } = useTheme(); // 🆕 Theme colors
 
+  // 🔥 FIX: Esponiamo un metodo per forzare la visualizzazione dell'onboarding
+  // Questo permette di rivisualizzare l'onboarding da altre schermate (es. HomeScreen)
+  const forceShowOnboarding = useCallback(async () => {
+    console.log('🔄 Forcing onboarding to show...');
+    // Reset onboarding state
+    await OnboardingService.resetOnboarding();
+    // Force show onboarding
+    setShowOnboarding(true);
+  }, []);
+
+  // Esponiamo forceShowOnboarding tramite un ref globale (per accesso da HomeScreen)
+  useEffect(() => {
+    (global as any).forceShowOnboarding = forceShowOnboarding;
+    return () => {
+      delete (global as any).forceShowOnboarding;
+    };
+  }, [forceShowOnboarding]);
+
   // 🔥 FIX: Usiamo useRef per onAuthSuccess per evitare loop infiniti
   const onAuthSuccessRef = useRef(onAuthSuccess);
   useEffect(() => {
@@ -46,6 +64,33 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   useEffect(() => {
     isAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated]);
+
+  // 🔥 FIX: useEffect per controllare e mostrare il tutorial quando l'app è pronta
+  useEffect(() => {
+    const checkAndShowTutorial = async () => {
+      // Solo se l'utente è autenticato, l'onboarding è completato, e l'app è renderizzata
+      if (!isAuthenticated || !user || showOnboarding) {
+        return;
+      }
+
+      const onboardingCompleted = await OnboardingService.isOnboardingCompleted();
+      const tutorialCompleted = await OnboardingService.isTutorialCompleted();
+
+      console.log('🔍 checkAndShowTutorial - onboardingCompleted:', onboardingCompleted, 'tutorialCompleted:', tutorialCompleted);
+
+      if (onboardingCompleted && !tutorialCompleted && !showTutorial) {
+        console.log('🎓 Tutorial should be shown, scheduling in 2s...');
+        setTimeout(() => {
+          console.log('🎓 Showing tutorial now via useEffect');
+          setShowTutorial(true);
+        }, 2000);
+      }
+    };
+
+    // Delay per permettere all'app di renderizzarsi completamente
+    const timer = setTimeout(checkAndShowTutorial, 1000);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, user, showOnboarding, showTutorial, setShowTutorial]);
 
   // 🔥 FIX: Memoizziamo checkAuthStatus per evitare ricreazioni - rimuoviamo onAuthSuccess dalle dipendenze
   const proceedAfterAuthentication = useCallback(async (currentUser: any) => {
@@ -68,19 +113,27 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       setUser(currentUser);
 
       const onboardingCompleted = await OnboardingService.isOnboardingCompleted();
+      console.log('🔍 proceedAfterAuthentication - onboardingCompleted:', onboardingCompleted);
+      
       if (!onboardingCompleted) {
+        console.log('📱 Showing OnboardingScreen...');
         setShowOnboarding(true);
         return;
       }
 
       // Se l'onboarding è completato, controlla se mostrare il tutorial
       const tutorialCompleted = await OnboardingService.isTutorialCompleted();
+      console.log('🔍 proceedAfterAuthentication - tutorialCompleted:', tutorialCompleted);
+      
       if (!tutorialCompleted) {
         // Delay più lungo per permettere all'app di renderizzarsi completamente
+        console.log('🎓 Scheduling tutorial to show in 1.5s after authentication...');
         setTimeout(() => {
           console.log('🎓 Showing InteractiveTutorial after authentication');
           setShowTutorial(true);
-        }, 1000);
+        }, 1500);
+      } else {
+        console.log('⚠️ Tutorial already completed, skipping...');
       }
 
       onAuthSuccessRef.current(currentUser);
@@ -118,7 +171,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
     // Ascolta i cambiamenti di autenticazione
     const { data: { subscription } } = AuthService.onAuthStateChange(
       async (event, session) => {
-        // 🔥 FIX: Rimuoviamo console.log eccessivi
+        console.log('🔄 Auth state changed:', event, 'user:', session?.user?.id);
         if (event === 'SIGNED_IN' && session?.user) {
           // 🔥 FIX: Evita di chiamare proceedAfterAuthentication se già chiamato da handleAuthSuccess
           // Il listener onAuthStateChange viene chiamato automaticamente dopo signIn/signUp
@@ -238,7 +291,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   };
 
   const handleOnboardingComplete = async () => {
-    setShowOnboarding(false);
+    console.log('🔄 handleOnboardingComplete called');
     await OnboardingService.completeOnboarding();
     console.log('✅ Onboarding completed, checking tutorial status...');
 
@@ -246,17 +299,27 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
     const isTutorialCompleted = await OnboardingService.isTutorialCompleted();
     console.log('📚 Tutorial completed?', isTutorialCompleted);
     
-    if (!isTutorialCompleted) {
-      // Delay più lungo per permettere all'app di renderizzarsi completamente dopo l'onboarding
-      console.log('🎓 Scheduling InteractiveTutorial to show in 1.5s...');
-      setTimeout(() => {
-        console.log('🎓 Showing InteractiveTutorial now');
-        setShowTutorial(true);
-      }, 1500);
-    }
-
+    // 🔥 FIX: Prima imposta showOnboarding a false per renderizzare l'app
+    setShowOnboarding(false);
+    
+    // 🔥 FIX: Chiama onAuthSuccess prima di schedulare il tutorial per assicurarsi che l'app sia renderizzata
     if (user) {
       onAuthSuccessRef.current(user);
+    }
+
+    if (!isTutorialCompleted) {
+      // Delay più lungo per permettere all'app di renderizzarsi completamente dopo l'onboarding
+      console.log('🎓 Scheduling InteractiveTutorial to show in 2s...');
+      setTimeout(() => {
+        console.log('🎓 Attempting to show InteractiveTutorial now, showTutorial state:', showTutorial);
+        setShowTutorial(true);
+        // 🔥 FIX: Verifica dopo un breve delay se lo stato è stato aggiornato
+        setTimeout(() => {
+          console.log('🎓 Tutorial state after setShowTutorial(true):', showTutorial);
+        }, 100);
+      }, 2000);
+    } else {
+      console.log('⚠️ Tutorial already completed, skipping...');
     }
   };
 
@@ -288,11 +351,14 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   }
 
   // Renderizza l'app principale con il contesto di autenticazione
+  // 🔥 DEBUG: Log dello stato del tutorial
+  console.log('🔍 AuthWrapper render - showTutorial:', showTutorial, 'showOnboarding:', showOnboarding);
+  
   return (
     <View style={styles.appContainer}>
       {children}
 
-      {/* Global Tutorial */}
+      {/* Global Tutorial - sempre renderizzato, visibilità controllata da showTutorial */}
       <InteractiveTutorial
         visible={showTutorial}
         onClose={async () => {

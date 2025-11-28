@@ -2117,7 +2117,44 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               <View style={styles.heroActions}>
                 <TouchableOpacity
                   style={styles.heroHealthButton}
-                  onPress={() => setShowTutorial(true)}
+                  onPress={async () => {
+                    // Mostra un alert per confermare il reset dell'onboarding
+                    Alert.alert(
+                      t('home.onboarding.resetTitle') || 'Rivisualizza Onboarding',
+                      t('home.onboarding.resetMessage') || 'Vuoi rivisualizzare l\'onboarding?',
+                      [
+                        {
+                          text: t('common.cancel') || 'Annulla',
+                          style: 'cancel',
+                        },
+                        {
+                          text: t('common.confirm') || 'Conferma',
+                          style: 'default',
+                          onPress: async () => {
+                            try {
+                              // Usa il metodo globale per forzare la visualizzazione dell'onboarding
+                              if ((global as any).forceShowOnboarding) {
+                                await (global as any).forceShowOnboarding();
+                              } else {
+                                // Fallback: reset onboarding e mostra messaggio
+                                await OnboardingService.resetOnboarding();
+                                Alert.alert(
+                                  t('home.onboarding.resetSuccess') || 'Onboarding resettato',
+                                  t('home.onboarding.restartMessage') || 'Chiudi e riapri l\'app per vedere l\'onboarding.'
+                                );
+                              }
+                            } catch (error) {
+                              console.error('Error resetting onboarding:', error);
+                              Alert.alert(
+                                t('common.error') || 'Errore',
+                                t('home.onboarding.resetError') || 'Impossibile resettare l\'onboarding. Riprova più tardi.'
+                              );
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  }}
                 >
                   <FontAwesome name="question-circle" size={16} color="#ffffff" />
                 </TouchableOpacity>
