@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { AuthService } from '../services/auth.service';
 import { OnboardingService } from '../services/onboarding.service';
 import { AuthScreen } from './auth/AuthScreen';
 import { OnboardingScreen } from './OnboardingScreen';
 import { InteractiveTutorial } from './InteractiveTutorial';
+import { useTheme } from '../contexts/ThemeContext';
 import { TutorialProvider, useTutorial } from '../contexts/TutorialContext';
 import { useRouter } from 'expo-router';
 import PushNotificationService from '../services/push-notification.service'; // 🆕 Push notifications
-import { useStatusBarColor } from '../contexts/StatusBarContext'; // 🆕 StatusBar override
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -27,56 +26,77 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   const [showOnboarding, setShowOnboarding] = useState(false);
   const { showTutorial, setShowTutorial } = useTutorial();
   const router = useRouter();
-  const { setStatusBarColor } = useStatusBarColor(); // 🆕 Override status bar color
-  
+  const { colors, mode } = useTheme(); // 🆕 Theme colors
+
   // 🔥 FIX: Usiamo useRef per onAuthSuccess per evitare loop infiniti
   const onAuthSuccessRef = useRef(onAuthSuccess);
   useEffect(() => {
     onAuthSuccessRef.current = onAuthSuccess;
   }, [onAuthSuccess]);
-  
-  // 🆕 Imposta il colore della status bar quando viene renderizzato il loading screen o AuthScreen
+
+  // 🆕 Non serve più override del colore status bar - usa il tema
+  // Il StatusBarWrapper userà automaticamente il colore del tema
+
+  // 🔥 FIX: Ref per evitare doppie chiamate a proceedAfterAuthentication
+  const isProcessingAuthRef = useRef(false);
+  const processedUserIdRef = useRef<string | null>(null);
+  const isAuthenticatedRef = useRef(false);
+
+  // 🔥 FIX: Aggiorna ref quando isAuthenticated cambia
   useEffect(() => {
-    // Se siamo in loading o non autenticati, usa il colore del gradiente
-    if (isLoading || !isAuthenticated) {
-      setStatusBarColor('#667eea');
-    } else {
-      // Se siamo autenticati, ripristina il colore del tema
-      setStatusBarColor(null);
-    }
-    
-    // Cleanup: ripristina il colore del tema quando il componente viene smontato
-    return () => {
-      setStatusBarColor(null);
-    };
-  }, [isLoading, isAuthenticated, setStatusBarColor]);
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
 
   // 🔥 FIX: Memoizziamo checkAuthStatus per evitare ricreazioni - rimuoviamo onAuthSuccess dalle dipendenze
   const proceedAfterAuthentication = useCallback(async (currentUser: any) => {
-    setIsAuthenticated(true);
-    setUser(currentUser);
-
-    const onboardingCompleted = await OnboardingService.isOnboardingCompleted();
-    if (!onboardingCompleted) {
-      setShowOnboarding(true);
+    // 🔥 FIX: Evita doppie chiamate per lo stesso utente
+    if (isProcessingAuthRef.current) {
+      console.log('⚠️ Authentication already in progress, skipping...');
       return;
     }
 
-    const tutorialCompleted = await OnboardingService.isTutorialCompleted();
-    if (!tutorialCompleted) {
-      setTimeout(() => {
-        setShowTutorial(true);
-      }, 400);
+    if (processedUserIdRef.current === currentUser?.id && isAuthenticatedRef.current) {
+      console.log('⚠️ User already processed, skipping...');
+      return;
     }
 
-    onAuthSuccessRef.current(currentUser);
+    isProcessingAuthRef.current = true;
+    processedUserIdRef.current = currentUser?.id || null;
+
+    try {
+      setIsAuthenticated(true);
+      setUser(currentUser);
+
+      const onboardingCompleted = await OnboardingService.isOnboardingCompleted();
+      if (!onboardingCompleted) {
+        setShowOnboarding(true);
+        return;
+      }
+
+      // Se l'onboarding è completato, controlla se mostrare il tutorial
+      const tutorialCompleted = await OnboardingService.isTutorialCompleted();
+      if (!tutorialCompleted) {
+        // Delay più lungo per permettere all'app di renderizzarsi completamente
+        setTimeout(() => {
+          console.log('🎓 Showing InteractiveTutorial after authentication');
+          setShowTutorial(true);
+        }, 1000);
+      }
+
+      onAuthSuccessRef.current(currentUser);
+    } finally {
+      // Reset dopo un breve delay per permettere al rendering di completarsi
+      setTimeout(() => {
+        isProcessingAuthRef.current = false;
+      }, 500);
+    }
   }, [setShowTutorial]);
 
   const checkAuthStatus = useCallback(async () => {
     try {
       const isAuth = await AuthService.isAuthenticated();
       const currentUser = await AuthService.getCurrentUser();
-      
+
       if (isAuth && currentUser) {
         await proceedAfterAuthentication(currentUser);
       } else {
@@ -94,16 +114,27 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
   useEffect(() => {
     checkAuthStatus();
-    
+
     // Ascolta i cambiamenti di autenticazione
     const { data: { subscription } } = AuthService.onAuthStateChange(
       async (event, session) => {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
         if (event === 'SIGNED_IN' && session?.user) {
-          proceedAfterAuthentication(session.user);
+          // 🔥 FIX: Evita di chiamare proceedAfterAuthentication se già chiamato da handleAuthSuccess
+          // Il listener onAuthStateChange viene chiamato automaticamente dopo signIn/signUp
+          // ma handleAuthSuccess viene chiamato prima, quindi controlliamo se l'utente è già stato processato
+          if (processedUserIdRef.current !== session.user.id || !isAuthenticatedRef.current) {
+            console.log('🔄 Auth state changed, processing user...');
+            proceedAfterAuthentication(session.user);
+          } else {
+            console.log('⚠️ User already processed via handleAuthSuccess, skipping onAuthStateChange');
+          }
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);
           setUser(null);
+          processedUserIdRef.current = null;
+          isProcessingAuthRef.current = false;
+          isAuthenticatedRef.current = false;
         }
       }
     );
@@ -118,7 +149,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   const isMountedRef = useRef(true);
   // 🔥 FIX: Usiamo un ref per intervalId per evitare problemi con closure e cleanup
   const pushNotificationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -139,15 +170,15 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
     const initPushNotifications = async () => {
       // 🔥 FIX: Verifica se il componente è ancora montato
       if (!isMountedRef.current) return;
-      
+
       const pushService = PushNotificationService.getInstance();
       const enabled = await pushService.isEnabled();
-      
+
       if (enabled) {
         const initialized = await pushService.initialize(user.id);
         if (initialized) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
-          
+
           // 🆕 Esegui controlli delle regole ogni 6 ore
           // 🔥 FIX: Usiamo user.id direttamente dalla closure per evitare problemi con le dipendenze
           const userId = user.id;
@@ -163,16 +194,16 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
             }
             await pushService.checkAllRules(userId);
           };
-          
+
           // Controlla immediatamente
           checkRules();
-          
+
           // 🔥 FIX: Pulisci l'intervallo precedente se esiste
           if (pushNotificationIntervalRef.current) {
             clearInterval(pushNotificationIntervalRef.current);
             pushNotificationIntervalRef.current = null;
           }
-          
+
           // Poi ogni 6 ore (solo se ancora montato)
           pushNotificationIntervalRef.current = setInterval(() => {
             if (isMountedRef.current) {
@@ -190,7 +221,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
     };
 
     initPushNotifications();
-    
+
     return () => {
       // 🔥 FIX: Cleanup completo - assicurati che l'intervallo sia pulito
       if (pushNotificationIntervalRef.current) {
@@ -209,16 +240,21 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   const handleOnboardingComplete = async () => {
     setShowOnboarding(false);
     await OnboardingService.completeOnboarding();
-  
+    console.log('✅ Onboarding completed, checking tutorial status...');
+
     // Check if tutorial should be shown automatically after onboarding
     const isTutorialCompleted = await OnboardingService.isTutorialCompleted();
-    if (!isTutorialCompleted) {
-      // Show tutorial automatically after a short delay to allow UI to settle
-      setTimeout(() => {
-        setShowTutorial(true);
-      }, 500);
-    }
+    console.log('📚 Tutorial completed?', isTutorialCompleted);
     
+    if (!isTutorialCompleted) {
+      // Delay più lungo per permettere all'app di renderizzarsi completamente dopo l'onboarding
+      console.log('🎓 Scheduling InteractiveTutorial to show in 1.5s...');
+      setTimeout(() => {
+        console.log('🎓 Showing InteractiveTutorial now');
+        setShowTutorial(true);
+      }, 1500);
+    }
+
     if (user) {
       onAuthSuccessRef.current(user);
     }
@@ -237,13 +273,8 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <LinearGradient
-          colors={['#667eea', '#764ba2', '#f093fb']}
-          style={styles.loadingGradient}
-        >
-          <ActivityIndicator size="large" color="#fff" />
-        </LinearGradient>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -260,16 +291,18 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   return (
     <View style={styles.appContainer}>
       {children}
-      
+
       {/* Global Tutorial */}
       <InteractiveTutorial
         visible={showTutorial}
         onClose={async () => {
+          console.log('🚪 Tutorial closed by user');
           setShowTutorial(false);
           // Mark tutorial as completed even if closed early
           await OnboardingService.completeTutorial();
         }}
         onComplete={async () => {
+          console.log('✅ Tutorial completed by user');
           setShowTutorial(false);
           // Mark tutorial as completed
           await OnboardingService.completeTutorial();
@@ -314,10 +347,6 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = (props) => {
 
 const styles = StyleSheet.create({
   loadingContainer: {
-    flex: 1,
-    backgroundColor: '#667eea',
-  },
-  loadingGradient: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

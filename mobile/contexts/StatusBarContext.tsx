@@ -17,8 +17,8 @@ interface StatusBarProviderProps {
 }
 
 export const StatusBarProvider: React.FC<StatusBarProviderProps> = ({ children }) => {
-  // 🆕 Inizializza con il colore del gradiente perché l'app inizia sempre con loading/AuthScreen
-  const [statusBarColor, setStatusBarColor] = useState<string | null>('#667eea');
+  // 🆕 Inizializza con null per usare il colore del tema
+  const [statusBarColor, setStatusBarColor] = useState<string | null>(null);
 
   return (
     <StatusBarContext.Provider value={{ statusBarColor, setStatusBarColor }}>

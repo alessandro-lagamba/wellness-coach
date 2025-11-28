@@ -267,7 +267,14 @@ export class AuthService {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
       if (authError || !user) {
-        console.error('Error getting authenticated user:', authError);
+        // ✅ FIX: Non loggare errori normali (session missing è normale quando l'utente non è loggato)
+        const isNormalError = authError?.message?.includes('Auth session missing') ||
+                             authError?.message?.includes('Invalid Refresh Token') ||
+                             authError?.message?.includes('Already Used');
+        
+        if (!isNormalError && authError) {
+          console.error('Error getting authenticated user:', authError);
+        }
         return null;
       }
 
@@ -350,7 +357,14 @@ export class AuthService {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
       if (authError || !user) {
-        console.error('Error getting authenticated user:', authError);
+        // ✅ FIX: Non loggare errori normali (session missing è normale quando l'utente non è loggato)
+        const isNormalError = authError?.message?.includes('Auth session missing') ||
+                             authError?.message?.includes('Invalid Refresh Token') ||
+                             authError?.message?.includes('Already Used');
+        
+        if (!isNormalError && authError) {
+          console.error('Error getting authenticated user:', authError);
+        }
         return null;
       }
 
@@ -384,7 +398,14 @@ export class AuthService {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
       if (authError || !user) {
-        console.error('Error getting authenticated user:', authError);
+        // ✅ FIX: Non loggare errori normali (session missing è normale quando l'utente non è loggato)
+        const isNormalError = authError?.message?.includes('Auth session missing') ||
+                             authError?.message?.includes('Invalid Refresh Token') ||
+                             authError?.message?.includes('Already Used');
+        
+        if (!isNormalError && authError) {
+          console.error('Error getting authenticated user:', authError);
+        }
         return null;
       }
 

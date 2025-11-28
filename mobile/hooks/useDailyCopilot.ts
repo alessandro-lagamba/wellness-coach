@@ -21,7 +21,8 @@ export const useDailyCopilot = () => {
         setCopilotData(data);
         setLastUpdated(new Date());
       } else {
-        setError('Impossibile generare l\'analisi del copilot');
+        // ✅ FIX: Usa la traduzione invece di testo hardcoded
+        setError(null); // Non impostare errore, mostra empty state
       }
     } catch (err) {
       setError('Errore nel caricamento dei dati');

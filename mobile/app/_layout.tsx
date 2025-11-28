@@ -257,24 +257,24 @@ function StatusBarWrapper({ children }: { children: React.ReactNode }) {
 
   // 🆕 Fix StatusBar e NavigationBar: edge-to-edge con fondo tematizzato
   useEffect(() => {
-    // Colora il "dietro" della status bar con il colore override o il tema
-    // Questo evita la banda nera/bianca dietro le icone della status bar
-    SystemUI.setBackgroundColorAsync(effectiveStatusBarColor).catch(() => { });
+    // ✅ FIX: setBackgroundColorAsync non è supportato con edge-to-edge abilitato
+    // Il colore viene già gestito dal View assoluto, quindi possiamo saltare queste chiamate
+    // o sopprimere i warning silenziosamente
+    // SystemUI.setBackgroundColorAsync(effectiveStatusBarColor).catch(() => { });
 
     if (Platform.OS === 'android') {
-      // Colora la navigation bar in basso
+      // ✅ FIX: Questi metodi non sono supportati con edge-to-edge, ma proviamo comunque
+      // Il colore viene già gestito dal View assoluto
       NavigationBar.setBackgroundColorAsync(effectiveStatusBarColor).catch(() => { });
       NavigationBar.setButtonStyleAsync(mode === 'dark' ? 'light' : 'dark').catch(() => { });
-      // Rimuovi la riga di separazione
-      NavigationBar.setBorderColorAsync('transparent').catch(() => { });
-      // Opzionale: per edge-to-edge completo sotto la gesture bar (se necessario)
-      // NavigationBar.setBehaviorAsync('overlay-swipe').catch(() => {});
+      // NavigationBar.setBorderColorAsync('transparent').catch(() => { }); // Non supportato con edge-to-edge
     }
   }, [mode, effectiveStatusBarColor, statusBarColor, colors.background]);
 
   return (
     <>
       {/* View assoluto per coprire tutto lo schermo con il colore di background */}
+      {/* zIndex: -2 per essere sicuri che sia dietro tutto, incluso i gradienti delle schermate */}
       <View style={{
         position: 'absolute',
         top: 0,
@@ -282,7 +282,7 @@ function StatusBarWrapper({ children }: { children: React.ReactNode }) {
         right: 0,
         bottom: 0,
         backgroundColor: effectiveStatusBarColor,
-        zIndex: -1,
+        zIndex: -2,
       }} />
       {/* Edge-to-edge: icone sopra al contenuto, il fondo dietro è già colorato da SystemUI */}
       <StatusBar

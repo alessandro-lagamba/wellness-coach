@@ -14,15 +14,14 @@ import {
   Dimensions,
   Modal,
   Keyboard,
+  StatusBar,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-// Removed status bar manipulation to restore original behavior
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AuthService } from '../../services/auth.service';
 import { useTranslation } from '../../hooks/useTranslation'; // 🆕 i18n
-import { useStatusBarColor } from '../../contexts/StatusBarContext'; // 🆕 StatusBar override
+import { useTheme } from '../../contexts/ThemeContext'; // 🆕 Theme
 
 const { width } = Dimensions.get('window');
 
@@ -34,17 +33,9 @@ type AuthMode = 'login' | 'signup';
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   const { t } = useTranslation(); // 🆕 i18n hook
-  const { setStatusBarColor } = useStatusBarColor(); // 🆕 Override status bar color
+  const { mode: themeMode, colors } = useTheme(); // 🆕 Theme colors
   const [mode, setMode] = useState<AuthMode>('login');
-  
-  // 🆕 AuthWrapper gestisce già il colore della status bar durante loading/!isAuthenticated
-  // Questo useEffect assicura che il colore sia impostato anche se AuthScreen viene renderizzato direttamente
-  useEffect(() => {
-    // Colore del gradiente: '#667eea' (primo colore)
-    setStatusBarColor('#667eea');
-    
-    // Non facciamo cleanup qui perché AuthWrapper gestisce già il cambio quando isAuthenticated diventa true
-  }, [setStatusBarColor]);
+  const insets = useSafeAreaInsets();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -69,11 +60,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     const checkExistingUser = async () => {
       try {
         // 🔥 FIX: Rimossi log eccessivi
-        
+
         // Check if user is already authenticated
         const isAuth = await AuthService.isAuthenticated();
         const currentUser = await AuthService.getCurrentUser();
-        
+
         if (isAuth && currentUser) {
           // User is authenticated, proceed directly to app
           onAuthSuccess(currentUser);
@@ -88,10 +79,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
   // larghezza interna del toggle (serve per muovere l'indicatore senza numeri magici)
   const [toggleInnerW, setToggleInnerW] = useState(0);
-  
+
   // Animazione per la tastiera
   const keyboardHeight = useState(new Animated.Value(0))[0];
-  
+
   // Ref per ScrollView e gestione scroll intelligente
   const scrollViewRef = useRef<ScrollView>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
@@ -148,10 +139,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
           // Crea il profilo con tutti i dati in una volta
           try {
             await AuthService.createUserProfile(user.id, email, `${firstName} ${lastName}`);
-            
+
             // Aspetta un momento per assicurarsi che il profilo sia stato creato
             await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             // Aggiorna con i dati aggiuntivi
             await AuthService.updateUserProfile(user.id, {
               first_name: firstName,
@@ -170,7 +161,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
               gender: gender,
             });
           }
-          
+
           Alert.alert(
             t('auth.signupCompleted'),
             t('auth.checkEmail'),
@@ -205,32 +196,32 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   const switchMode = (newMode: AuthMode) => {
     // Evita animazioni multiple se già in corso
     if (mode === newMode) return;
-    
+
     const newHeight = newMode === 'signup' ? 560 : 200;
     const slideValue = newMode === 'signup' ? 1 : 0;
-    
+
     Animated.parallel([
-      Animated.timing(fadeAnimation, { 
-        toValue: 0, 
-        duration: 150, 
-        useNativeDriver: true 
+      Animated.timing(fadeAnimation, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true
       }),
-      Animated.timing(slideAnimation, { 
-        toValue: slideValue, 
-        duration: 300, 
-        useNativeDriver: true 
+      Animated.timing(slideAnimation, {
+        toValue: slideValue,
+        duration: 300,
+        useNativeDriver: true
       }),
-      Animated.timing(formHeight, { 
-        toValue: newHeight, 
-        duration: 300, 
-        useNativeDriver: false 
+      Animated.timing(formHeight, {
+        toValue: newHeight,
+        duration: 300,
+        useNativeDriver: false
       }),
     ]).start(() => {
       setMode(newMode);
-      Animated.timing(fadeAnimation, { 
-        toValue: 1, 
-        duration: 150, 
-        useNativeDriver: true 
+      Animated.timing(fadeAnimation, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true
       }).start();
     });
   };
@@ -265,7 +256,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       (event) => {
         setKeyboardVisible(false);
         setKeyboardHeightValue(0);
-        
+
         // Solo quando la tastiera si nasconde, torna in cima
         setTimeout(() => {
           scrollViewRef.current?.scrollTo({ y: 0, animated: true });
@@ -284,11 +275,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   // Funzione intelligente per gestire il focus degli input
   const handleInputFocus = (inputName: string) => {
     setIsKeyboardVisible(true);
-    
+
     // Calcola se il campo è già visibile
     const availableHeight = screenHeight - keyboardHeightValue;
     const shouldScroll = shouldScrollToInput(inputName, availableHeight);
-    
+
     if (shouldScroll) {
       setTimeout(() => {
         scrollToInput(inputName);
@@ -312,11 +303,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       'password': mode === 'signup' ? 300 : 100,
       'confirmPassword': 400
     };
-    
+
     const fieldHeight = fieldHeights[inputName as keyof typeof fieldHeights] || 0;
     const headerHeight = 200; // Header + toggle
     const totalContentHeight = headerHeight + fieldHeight + 100; // +100 per il campo stesso
-    
+
     return totalContentHeight > availableHeight;
   };
 
@@ -331,23 +322,26 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       'password': mode === 'signup' ? 250 : 100,
       'confirmPassword': 350
     };
-    
+
     const scrollY = scrollPositions[inputName as keyof typeof scrollPositions] || 0;
     scrollViewRef.current?.scrollTo({ y: scrollY, animated: true });
   };
 
+  const styles = createStyles(colors, themeMode);
+
   return (
-    <View style={[styles.container, { backgroundColor: '#667eea' }]}>
-      <LinearGradient
-        colors={['#667eea', '#764ba2', '#f093fb']}
-        style={styles.backgroundGradient}
-        pointerEvents="none"
+    <View style={styles.container}>
+      <StatusBar 
+        translucent 
+        backgroundColor="transparent" 
+        barStyle={themeMode === 'dark' ? 'light-content' : 'dark-content'} 
       />
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <ScrollView
           ref={scrollViewRef}
           contentContainerStyle={[
             styles.scrollContainer,
+            { paddingTop: Math.max(insets.top, 24) + 24 },
             keyboardVisible && { paddingBottom: keyboardHeightValue + 20 }
           ]}
           showsVerticalScrollIndicator={false}
@@ -357,13 +351,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
           <View style={styles.content}>
             {/* Header */}
             <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <LinearGradient colors={['#fff', '#f8f9ff']} style={styles.logoGradient}>
-                  <FontAwesome name="heart" size={32} color="#667eea" />
-                </LinearGradient>
+              <View style={[styles.logoContainer, { backgroundColor: colors.surface, shadowColor: colors.shadowColor }]}>
+                <FontAwesome name="heart" size={32} color={colors.primary} />
               </View>
-              <Text style={styles.title}>{mode === 'login' ? t('auth.welcome') : t('auth.createAccount')}</Text>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.title, { color: colors.text }]}>{mode === 'login' ? t('auth.welcome') : t('auth.createAccount')}</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 {mode === 'login' ? t('auth.loginSubtitle') : t('auth.signupSubtitle')}
               </Text>
             </View>
@@ -392,10 +384,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                   ]}
                 />
                 <TouchableOpacity style={styles.toggleButton} onPress={() => switchMode('login')}>
-                  <Text style={[styles.toggleText, mode === 'login' && styles.toggleTextActive]}>{t('auth.login')}</Text>
+                  <Text style={[
+                    styles.toggleText, 
+                    { color: mode === 'login' ? colors.primary : colors.textSecondary }
+                  ]}>{t('auth.login')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.toggleButton} onPress={() => switchMode('signup')}>
-                  <Text style={[styles.toggleText, mode === 'signup' && styles.toggleTextActive]}>{t('auth.signup')}</Text>
+                  <Text style={[
+                    styles.toggleText, 
+                    { color: mode === 'signup' ? colors.primary : colors.textSecondary }
+                  ]}>{t('auth.signup')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -410,11 +408,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                       <View style={[styles.inputContainer, styles.halfWidth]}>
                         <Text style={styles.inputLabel}>{t('auth.firstName')} *</Text>
                         <View style={styles.inputWrapperTransparent}>
-                          <FontAwesome name="user" size={16} color="#e5e7eb" style={styles.inputIcon} />
+                          <FontAwesome name="user" size={16} color={colors.textSecondary} style={styles.inputIcon} />
                           <TextInput
                             style={styles.inputTransparent}
                             placeholder={t('auth.firstName')}
-                            placeholderTextColor="#e5e7ebaa"
+                            placeholderTextColor={colors.textTertiary}
                             value={firstName}
                             onChangeText={setFirstName}
                             autoCapitalize="words"
@@ -427,11 +425,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                       <View style={[styles.inputContainer, styles.halfWidth]}>
                         <Text style={styles.inputLabel}>{t('auth.lastName')} *</Text>
                         <View style={styles.inputWrapperTransparent}>
-                          <FontAwesome name="user" size={16} color="#e5e7eb" style={styles.inputIcon} />
+                          <FontAwesome name="user" size={16} color={colors.textSecondary} style={styles.inputIcon} />
                           <TextInput
                             style={styles.inputTransparent}
                             placeholder={t('auth.lastName')}
-                            placeholderTextColor="#e5e7ebaa"
+                            placeholderTextColor={colors.textTertiary}
                             value={lastName}
                             onChangeText={setLastName}
                             autoCapitalize="words"
@@ -447,22 +445,22 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                       <View style={[styles.inputContainer, styles.fieldHalf, { marginBottom: 0 }]}>
                         <Text style={styles.inputLabel}>{t('auth.gender.label')}</Text>
                         <TouchableOpacity style={styles.inputWrapperTransparent} onPress={() => setShowGenderModal(true)}>
-                          <FontAwesome name="venus-mars" size={16} color="#e5e7eb" style={styles.inputIcon} />
-                          <Text style={[styles.inputTransparent, { color: gender === 'male' ? '#e5e7ebaa' : '#fff' }]}>
+                          <FontAwesome name="venus-mars" size={16} color={colors.textSecondary} style={styles.inputIcon} />
+                          <Text style={[styles.inputTransparent, { color: colors.text }]}>
                             {getGenderLabel(gender)}
                           </Text>
-                          <FontAwesome name="chevron-down" size={14} color="#e5e7ebaa" />
+                          <FontAwesome name="chevron-down" size={14} color={colors.textTertiary} />
                         </TouchableOpacity>
                       </View>
 
                       <View style={[styles.inputContainer, styles.fieldHalf, { marginBottom: 0 }]}>
                         <Text style={styles.inputLabel}>{t('auth.age')}</Text>
                         <View style={styles.inputWrapperTransparent}>
-                          <FontAwesome name="calendar" size={16} color="#e5e7eb" style={styles.inputIcon} />
+                          <FontAwesome name="calendar" size={16} color={colors.textSecondary} style={styles.inputIcon} />
                           <TextInput
                             style={styles.inputTransparent}
                             placeholder={t('auth.agePlaceholder')}
-                            placeholderTextColor="#e5e7ebaa"
+                            placeholderTextColor={colors.textTertiary}
                             value={age}
                             onChangeText={setAge}
                             keyboardType="numeric"
@@ -479,11 +477,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>{t('auth.email')} *</Text>
                   <View style={styles.inputWrapperTransparent}>
-                    <FontAwesome name="envelope" size={16} color="#e5e7eb" style={styles.inputIcon} />
+                    <FontAwesome name="envelope" size={16} color={colors.textSecondary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.inputTransparent}
                       placeholder={t('auth.emailPlaceholder')}
-                      placeholderTextColor="#e5e7ebaa"
+                      placeholderTextColor={colors.textTertiary}
                       value={email}
                       onChangeText={setEmail}
                       keyboardType="email-address"
@@ -498,11 +496,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>{t('auth.password')} *</Text>
                   <View style={styles.inputWrapperTransparent}>
-                    <FontAwesome name="lock" size={16} color="#e5e7eb" style={styles.inputIcon} />
+                    <FontAwesome name="lock" size={16} color={colors.textSecondary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.inputTransparent}
                       placeholder={mode === 'login' ? t('auth.passwordPlaceholder') : t('auth.passwordPlaceholderSignup')}
-                      placeholderTextColor="#e5e7ebaa"
+                      placeholderTextColor={colors.textTertiary}
                       value={password}
                       onChangeText={setPassword}
                       secureTextEntry
@@ -525,7 +523,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                         rememberMe && styles.checkboxChecked
                       ]}>
                         {rememberMe && (
-                          <FontAwesome name="check" size={12} color="#fff" />
+                          <FontAwesome name="check" size={12} color={colors.textInverse} />
                         )}
                       </View>
                       <Text style={styles.rememberMeText}>{t('auth.rememberMe')}</Text>
@@ -537,11 +535,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                   <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>{t('auth.confirmPassword')} *</Text>
                     <View style={styles.inputWrapperTransparent}>
-                      <FontAwesome name="lock" size={16} color="#e5e7eb" style={styles.inputIcon} />
+                      <FontAwesome name="lock" size={16} color={colors.textSecondary} style={styles.inputIcon} />
                       <TextInput
                         style={styles.inputTransparent}
                         placeholder={t('auth.confirmPasswordPlaceholder')}
-                        placeholderTextColor="#e5e7ebaa"
+                        placeholderTextColor={colors.textTertiary}
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
                         secureTextEntry
@@ -567,10 +565,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
             {/* Button */}
             <TouchableOpacity style={[styles.authButton, isLoading && styles.authButtonDisabled]} onPress={handleAuth} disabled={isLoading}>
               {isLoading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color="#ffffff" />
               ) : (
                 <>
-                  <FontAwesome name={mode === 'login' ? 'sign-in' : 'user-plus'} size={18} color="#fff" style={styles.buttonIcon} />
+                  <FontAwesome name={mode === 'login' ? 'sign-in' : 'user-plus'} size={18} color="#ffffff" style={styles.buttonIcon} />
                   <Text style={styles.authButtonText}>{mode === 'login' ? t('auth.login') : t('auth.signup')}</Text>
                 </>
               )}
@@ -604,11 +602,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                       setShowGenderModal(false);
                     }}
                   >
-                    <FontAwesome name={option.icon as any} size={20} color={gender === option.value ? '#667eea' : '#666'} style={styles.genderOptionIcon} />
+                    <FontAwesome name={option.icon as any} size={20} color={gender === option.value ? colors.primary : colors.textTertiary} style={styles.genderOptionIcon} />
                     <Text style={[styles.genderOptionText, gender === option.value && styles.genderOptionTextSelected]}>
                       {option.label}
                     </Text>
-                    {gender === option.value && <FontAwesome name="check" size={16} color="#667eea" />}
+                    {gender === option.value && <FontAwesome name="check" size={16} color={colors.primary} />}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -620,24 +618,25 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#667eea' },
-  safeArea: { flex: 1, backgroundColor: 'transparent' },
-  backgroundGradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  scrollContainer: { 
-    flexGrow: 1, 
-    justifyContent: 'center', 
-    padding: 20, 
-    paddingBottom: 40, // Extra padding per la tastiera
-    minHeight: '100%' 
-  },
-  content: { 
+// Styles dinamici basati sul tema
+const createStyles = (colors: any, themeMode: 'light' | 'dark') => StyleSheet.create({
+  container: { 
     flex: 1, 
-    justifyContent: 'center', 
-    maxWidth: 400, 
-    alignSelf: 'center', 
+    backgroundColor: colors.background,
+  },
+  safeArea: { flex: 1, backgroundColor: 'transparent' },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
+    paddingBottom: 40, // Extra padding per la tastiera
+    minHeight: '100%'
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    maxWidth: 400,
+    alignSelf: 'center',
     width: '100%',
     paddingBottom: 20, // Padding extra per evitare che i campi vengano nascosti
   },
@@ -645,23 +644,24 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', marginBottom: 40 },
   logoContainer: {
     width: 80, height: 80, borderRadius: 40, marginBottom: 20,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.shadowColor, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 12,
   },
-  logoGradient: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#fff', marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 16, color: '#fff', opacity: 0.9, textAlign: 'center', lineHeight: 22 },
+  title: { fontSize: 32, fontWeight: 'bold', color: colors.text, marginBottom: 8, textAlign: 'center' },
+  subtitle: { fontSize: 16, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
 
   // --- Toggle
   toggleContainer: { marginBottom: 50, alignItems: 'center' },
   toggleBackground: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
     borderRadius: 30,
     paddingHorizontal: 6,
     width: 300,
     height: 60,
     position: 'relative',
-    shadowColor: '#000',
+    shadowColor: colors.shadowColor,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -670,19 +670,18 @@ const styles = StyleSheet.create({
   toggleIndicator: {
     position: 'absolute',
     top: 6,
-    bottom: 6, // vincola alto/basso => centrato in verticale
+    bottom: 6,
     left: 6,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 24,
-    shadowColor: '#000',
+    shadowColor: colors.shadowColor,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 8,
   },
   toggleButton: { flex: 1, height: '100%', justifyContent: 'center', alignItems: 'center', zIndex: 1 },
-  toggleText: { fontSize: 16, fontWeight: '600', color: '#fff', opacity: 0.8 },
-  toggleTextActive: { color: '#667eea', opacity: 1, fontWeight: 'bold' },
+  toggleText: { fontSize: 16, fontWeight: '600' },
 
   // --- Form
   formContainer: { marginBottom: 20, flexShrink: 1 },
@@ -694,40 +693,40 @@ const styles = StyleSheet.create({
   halfWidth: { width: '48%' },
 
   inputContainer: { marginBottom: 20 },
-  inputLabel: { fontSize: 16, fontWeight: '600', color: '#fff', marginBottom: 8 },
+  inputLabel: { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 },
 
-  // INPUT TRASPARENTI
+  // INPUT con tema
   inputWrapperTransparent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)', // trasparente
+    backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 4,
     height: 56,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)', // bordo tenue
+    borderColor: colors.border,
   },
   inputIcon: { marginRight: 12, width: 16 },
   inputTransparent: {
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#fff', // testo bianco
+    color: colors.text,
   },
 
   forgotPassword: { alignSelf: 'flex-end', marginBottom: 20 },
-  forgotPasswordText: { color: '#fff', fontSize: 14, textDecorationLine: 'underline', fontWeight: '500' },
+  forgotPasswordText: { color: colors.primary, fontSize: 14, textDecorationLine: 'underline', fontWeight: '500' },
 
   // Button
   authButton: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.primary,
     borderRadius: 16,
     padding: 18,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.shadowColor,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -735,23 +734,23 @@ const styles = StyleSheet.create({
   },
   authButtonDisabled: { opacity: 0.7 },
   buttonIcon: { marginRight: 8 },
-  authButtonText: { color: '#667eea', fontSize: 18, fontWeight: 'bold' },
+  authButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContent: {
-    backgroundColor: '#fff', borderRadius: 20, paddingTop: 20, paddingBottom: 40, paddingHorizontal: 20, maxHeight: '60%', width: '90%',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 20,
+    backgroundColor: colors.surface, borderRadius: 20, paddingTop: 20, paddingBottom: 40, paddingHorizontal: 20, maxHeight: '60%', width: '90%',
+    shadowColor: colors.shadowColor, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 20,
   },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text },
   modalCloseButton: { padding: 8 },
   genderOptions: { paddingTop: 20 },
-  genderOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 16, borderRadius: 12, marginBottom: 8, backgroundColor: '#f8f9fa' },
-  genderOptionSelected: { backgroundColor: '#e3f2fd' },
+  genderOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 16, borderRadius: 12, marginBottom: 8, backgroundColor: colors.surfaceMuted },
+  genderOptionSelected: { backgroundColor: colors.primaryMuted },
   genderOptionIcon: { marginRight: 12, width: 20 },
-  genderOptionText: { flex: 1, fontSize: 16, color: '#333' },
-  genderOptionTextSelected: { color: '#667eea', fontWeight: '600' },
+  genderOptionText: { flex: 1, fontSize: 16, color: colors.text },
+  genderOptionTextSelected: { color: colors.primary, fontWeight: '600' },
 
   // Remember Me
   rememberMeContainer: {
@@ -769,18 +768,18 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
   },
   checkboxChecked: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   rememberMeText: {
-    color: '#e5e7eb',
+    color: colors.textSecondary,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -790,19 +789,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: colors.surface,
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: colors.shadowColor,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
   biometricButtonText: {
-    color: '#667eea',
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,

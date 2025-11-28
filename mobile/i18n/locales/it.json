@@ -368,7 +368,10 @@
       "empty": "Ancora nessun dato registrato qui. Continua a usare la tua routine e i progressi appariranno presto.",
       "loading": "Stiamo sincronizzando i tuoi dati...",
       "error": "Impossibile aggiornare i dati. Riprova tra qualche minuto.",
-      "previewBadge": "Anteprima"
+      "previewBadge": "Anteprima",
+      "sampleDataBadge": "Dati di esempio",
+      "sampleDataDescription": "Questi sono dati di esempio. I tuoi dati reali verranno mostrati qui una volta sincronizzati.",
+      "sampleChartDescription": "Questo grafico mostra dati di esempio. I tuoi dati reali verranno visualizzati qui una volta disponibili."
     },
     "calendar": {
       "synced": "Sincronizzato con Calendario",
@@ -1014,6 +1017,11 @@
         "carbsDesc": "Progresso dell'assunzione di carboidrati giornaliera. Essenziale per l'energia.",
         "proteinsDesc": "Progresso dell'assunzione di proteine giornaliera. Importante per la salute muscolare."
       },
+      "recipeHub": {
+        "title": "Il tuo Hub Ricette",
+        "subtitle": "Scopri nuove ricette e pianifica i tuoi pasti settimanali",
+        "open": "Apri il Ricettario"
+      },
       "recipes": {
         "title": "Suggerimenti Ricette AI",
         "subtitle": "Ricette personalizzate in base alle tue preferenze e obiettivi",
@@ -1625,10 +1633,11 @@
       "action": "Scrivi nel Diario"
     },
     "copilot": {
-      "title": "Coach personale in arrivo",
-      "subtitle": "Completa il check-in per sbloccare i consigli",
-      "description": "Sincronizza i dati salute o aggiorna l'umore e il sonno di oggi per ricevere raccomandazioni dell'AI su misura per la tua giornata.",
-      "action": "Apri il check-in"
+      "title": "Daily AI Copilot",
+      "subtitle": "Raccomandazioni personalizzate per la tua giornata",
+      "description": "Questa sezione mostra raccomandazioni personalizzate basate sui tuoi dati di salute, umore e sonno. Sincronizza i dati salute o aggiorna l'umore e il sonno di oggi per ricevere consigli dell'AI su misura per te.",
+      "action": "Apri il check-in",
+      "errorTitle": "Raccomandazioni non disponibili"
     },
     "general": {
       "title": "Nessun dato disponibile",

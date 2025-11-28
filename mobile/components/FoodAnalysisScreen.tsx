@@ -841,14 +841,26 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
   // Handle walkthrough completion
   useEffect(() => {
-    const { copilotEvents } = require('react-native-copilot');
-    const listener = copilotEvents.on('stop', async () => {
-      await OnboardingService.completeFoodWalkthrough();
-    });
+    try {
+      // ✅ FIX: Verifica se copilotEvents esiste prima di usarlo
+      const copilotModule = require('react-native-copilot');
+      const copilotEvents = copilotModule.copilotEvents;
+      
+      if (copilotEvents && typeof copilotEvents.on === 'function') {
+        const listener = copilotEvents.on('stop', async () => {
+          await OnboardingService.completeFoodWalkthrough();
+        });
 
-    return () => {
-      listener.remove();
-    };
+        return () => {
+          if (listener && typeof listener.remove === 'function') {
+            listener.remove();
+          }
+        };
+      }
+    } catch (error) {
+      // ✅ FIX: Se copilotEvents non è disponibile, non bloccare l'app
+      console.warn('⚠️ copilotEvents not available, walkthrough completion tracking disabled');
+    }
   }, []);
 
   useEffect(() => {
@@ -2665,27 +2677,28 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
           {/* Recipe Hub Preview - Redesigned */}
           <CopilotStep text="Il tuo Hub Ricette" description="Scopri nuove ricette e pianifica i tuoi pasti settimanali." order={2} name="recipeHub">
-            <WalkthroughableView style={[styles.recipeHubPreview, { backgroundColor: colors.surface }]}>
+            <WalkthroughableView style={styles.recipeHubPreview}>
               <LinearGradient
-                colors={[colors.primary + '10', colors.surface]}
+                colors={['#8b5cf6', '#f97316']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
                 style={styles.recipeHubGradient}
               >
-                <View style={styles.recipeHubHeader}>
-                  <View>
-                    <Text style={[styles.recipeHubTitle, { color: colors.text }]}>
-                      {t('food.recipeHub.title')}
+                <View style={styles.recipeHubTag}>
+                  <Text style={styles.recipeHubTagText}>{t('analysis.food.recipes.hubTag') || 'Tutto-in-Uno'}</Text>
+                </View>
+                <View style={styles.recipeHubContent}>
+                  <View style={styles.recipeHubTextContainer}>
+                    <Text style={styles.recipeHubTitle}>
+                      {t('analysis.food.recipes.openHubTitle') || t('food.recipeHub.title')}
                     </Text>
-                    <Text style={[styles.recipeHubSubtitle, { color: colors.textSecondary }]}>
-                      {t('food.recipeHub.subtitle')}
+                    <Text style={styles.recipeHubSubtitle}>
+                      {t('analysis.food.recipes.openHubSubtitle') || t('food.recipeHub.subtitle')}
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    style={[styles.recipeHubButton, { backgroundColor: colors.primary }]}
-                    onPress={() => setRecipeHubVisible(true)}
-                  >
-                    <Text style={styles.recipeHubButtonText}>{t('food.recipeHub.open')}</Text>
-                    <MaterialCommunityIcons name="arrow-right" size={20} color="#FFF" />
-                  </TouchableOpacity>
+                  <View style={styles.recipeHubIconContainer}>
+                    <MaterialCommunityIcons name="chef-hat" size={48} color="rgba(255, 255, 255, 0.9)" />
+                  </View>
                 </View>
               </LinearGradient>
             </WalkthroughableView>
@@ -4746,6 +4759,63 @@ const styles = StyleSheet.create({
   goalsButtonText: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  // ✅ ADD: Recipe Hub Styles
+  recipeHubPreview: {
+    marginBottom: 24,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  recipeHubGradient: {
+    padding: 20,
+    position: 'relative',
+  },
+  recipeHubTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 12,
+  },
+  recipeHubTagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+  recipeHubContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  recipeHubTextContainer: {
+    flex: 1,
+    marginRight: 16,
+  },
+  recipeHubTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 6,
+  },
+  recipeHubSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: 20,
+  },
+  recipeHubIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

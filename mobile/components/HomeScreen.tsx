@@ -33,7 +33,7 @@ import { useTutorial } from '../contexts/TutorialContext';
 import WidgetGoalModal from './WidgetGoalModal';
 import { widgetGoalsService } from '../services/widget-goals.service';
 import { HealthPermissionsModal } from './HealthPermissionsModal';
-import { WelcomeOverlay, shouldShowWelcomeOverlay } from './WelcomeOverlay';
+// WelcomeOverlay rimosso - usiamo solo InteractiveTutorial
 import { useHealthData } from '../hooks/useHealthData';
 import { useChartConfig, ChartType } from '../services/chart-config.service';
 import { ChartSelectionModal } from './ChartSelectionModal';
@@ -390,7 +390,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   const [editMode, setEditMode] = useState<boolean>(false);
   const [goalModal, setGoalModal] = useState<{ visible: boolean; widgetId: 'steps' | 'hydration' | 'meditation' | 'sleep' | null }>({ visible: false, widgetId: null });
   const [healthPermissionsModal, setHealthPermissionsModal] = useState<boolean>(false);
-  const [welcomeOverlayVisible, setWelcomeOverlayVisible] = useState<boolean>(false);
+  // WelcomeOverlay rimosso - usiamo solo InteractiveTutorial
   const [recommendationModal, setRecommendationModal] = useState<{ visible: boolean; recommendation: any }>({ visible: false, recommendation: null });
   const [showHistory, setShowHistory] = useState<boolean>(false);
   const [widgetSelectionModal, setWidgetSelectionModal] = useState<{ visible: boolean; position: number }>({ visible: false, position: 0 });
@@ -1705,20 +1705,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     return () => clearInterval(interval);
   }, [loadWellnessActivities]);
 
-  // 🆕 Mostra WelcomeOverlay per nuovi utenti dopo onboarding e tutorial
-  useEffect(() => {
-    const checkAndShowWelcomeOverlay = async () => {
-      const shouldShow = await shouldShowWelcomeOverlay();
-      if (shouldShow) {
-        // Delay per permettere alla UI di stabilizzarsi
-        setTimeout(() => {
-          setWelcomeOverlayVisible(true);
-        }, 1000);
-      }
-    };
-
-    checkAndShowWelcomeOverlay();
-  }, []);
+  // WelcomeOverlay rimosso - usiamo solo InteractiveTutorial gestito da AuthWrapper
 
   // 🔥 Rimuoviamo useEffect non necessario - usiamo direttamente todaysActivities che è già memoizzato
 
@@ -2628,6 +2615,21 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           </View>
         </View>
 
+        {/* ✅ FIX: Banner informativo per dati di esempio - mostrato SOLO se non ci sono dati reali */}
+        {!isHealthDataReady && enabledCharts.length > 0 && (
+          <View style={[styles.sampleDataBanner, { backgroundColor: themeColors.surfaceMuted, borderColor: themeColors.border }]}>
+            <MaterialCommunityIcons name="information-outline" size={18} color={themeColors.primary} />
+            <View style={styles.sampleDataBannerContent}>
+              <Text style={[styles.sampleDataBannerTitle, { color: themeColors.text }]}>
+                {t('home.placeholders.sampleDataBadge')}
+              </Text>
+              <Text style={[styles.sampleDataBannerText, { color: themeColors.textSecondary }]}>
+                {t('home.placeholders.sampleChartDescription')}
+              </Text>
+            </View>
+          </View>
+        )}
+
         <View style={styles.weeklyProgressContainer}>
           {enabledCharts.length === 0 && !chartEditMode ? (
             <View style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
@@ -3236,21 +3238,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         missingNotifications={!permissions.notifications}
       />
 
-      {/* Welcome Overlay for New Users */}
-      <WelcomeOverlay
-        visible={welcomeOverlayVisible}
-        onClose={() => setWelcomeOverlayVisible(false)}
-        hasAvatar={!!avatarUri}
-        onAction={(action) => {
-          if (action === 'widgets') {
-            // Open widget selection modal
-            setWidgetSelectionModal({ visible: true, position: 0 });
-          } else if (action === 'avatar') {
-            // Navigate to avatar capture (handled in WelcomeOverlay)
-          }
-          // Other actions (emotion, skin, food) are handled by navigation in WelcomeOverlay
-        }}
-      />
+      {/* WelcomeOverlay rimosso - usiamo solo InteractiveTutorial gestito da AuthWrapper */}
 
       {/* Recommendation Detail Modal */}
       {recommendationModal.recommendation && (
@@ -4710,6 +4698,29 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     marginTop: 8,
+  },
+  sampleDataBanner: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  sampleDataBannerContent: {
+    flex: 1,
+    gap: 4,
+  },
+  sampleDataBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  sampleDataBannerText: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   progressCardLeft: {
     flexShrink: 1,

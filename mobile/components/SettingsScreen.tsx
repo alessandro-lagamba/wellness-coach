@@ -579,6 +579,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       {/* Content */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
+          {/* ✅ FIX: Mostra sempre la card di verifica email se l'email non è verificata */}
           {!emailVerified && resolvedUser && (
             <View style={[styles.verificationCard, { borderColor: 'rgba(245,158,11,0.4)', backgroundColor: 'rgba(245,158,11,0.12)' }]}>
               <View style={styles.verificationIcon}>
@@ -620,6 +621,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
             />
           )}
           
+          {/* ✅ FIX: Mostra sempre le sezioni principali, anche se l'email non è verificata o resolvedUser è null */}
           <SettingsSection 
             title={t('settings.account')} 
             items={accountItems} 

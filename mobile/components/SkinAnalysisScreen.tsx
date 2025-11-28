@@ -490,14 +490,26 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
   // Handle walkthrough completion
   useEffect(() => {
-    const { copilotEvents } = require('react-native-copilot');
-    const listener = copilotEvents.on('stop', async () => {
-      await OnboardingService.completeSkinWalkthrough();
-    });
+    try {
+      // ✅ FIX: Verifica se copilotEvents esiste prima di usarlo
+      const copilotModule = require('react-native-copilot');
+      const copilotEvents = copilotModule.copilotEvents;
+      
+      if (copilotEvents && typeof copilotEvents.on === 'function') {
+        const listener = copilotEvents.on('stop', async () => {
+          await OnboardingService.completeSkinWalkthrough();
+        });
 
-    return () => {
-      listener.remove();
-    };
+        return () => {
+          if (listener && typeof listener.remove === 'function') {
+            listener.remove();
+          }
+        };
+      }
+    } catch (error) {
+      // ✅ FIX: Se copilotEvents non è disponibile, non bloccare l'app
+      console.warn('⚠️ copilotEvents not available, walkthrough completion tracking disabled');
+    }
   }, []);
 
   // Reload data when screen comes into focus

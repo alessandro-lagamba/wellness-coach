@@ -365,8 +365,11 @@
       "waitingPermission": "These widgets will display your health data as soon as you grant Apple Health or Google Fit permissions.",
       "empty": "No data recorded yet. Keep up with your routine and this area will populate automatically.",
       "loading": "Syncing your data...",
-      "error": "We couldn’t refresh your data. Please try again soon.",
-      "previewBadge": "Preview"
+      "error": "We couldn't refresh your data. Please try again soon.",
+      "previewBadge": "Preview",
+      "sampleDataBadge": "Sample data",
+      "sampleDataDescription": "These are sample data. Your real data will be shown here once synced.",
+      "sampleChartDescription": "This chart shows sample data. Your real data will be displayed here once available."
     },
     "calendar": {
       "synced": "Synced to Calendar",
@@ -1008,6 +1011,11 @@
         "carbsDesc": "Daily carbohydrate intake progress. Essential for energy.",
         "proteinsDesc": "Daily protein intake progress. Important for muscle health."
       },
+      "recipeHub": {
+        "title": "Your Recipe Hub",
+        "subtitle": "Discover new recipes and plan your weekly meals",
+        "open": "Open Recipe Hub"
+      },
       "recipes": {
         "title": "AI Recipe Suggestions",
         "subtitle": "Personalized recipes based on your preferences and goals",
@@ -1611,10 +1619,11 @@
       "action": "Write in Journal"
     },
     "copilot": {
-      "title": "Personal coach unlocking soon",
-      "subtitle": "Complete your check-in to get tailored advice",
-      "description": "Sync your health data or log today’s mood and sleep to receive AI-powered recommendations designed for your day.",
-      "action": "Open daily check-in"
+      "title": "Daily AI Copilot",
+      "subtitle": "Personalized recommendations for your day",
+      "description": "This section shows personalized recommendations based on your health data, mood, and sleep. Sync your health data or update today's mood and sleep to receive AI-powered recommendations tailored for you.",
+      "action": "Open daily check-in",
+      "errorTitle": "Recommendations unavailable"
     },
     "general": {
       "title": "No data available",

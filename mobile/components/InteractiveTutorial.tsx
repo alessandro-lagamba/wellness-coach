@@ -292,7 +292,7 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
       <Animated.View style={[styles.overlay, { opacity: modalFadeAnim }]}>
         <View style={[styles.shell, { maxHeight: modalMaxH }]}>
-          <BlurView intensity={24} tint="light" style={styles.blur}>
+          <BlurView intensity={15} tint="light" style={styles.blur}>
             <LinearGradient colors={current.color as any} style={styles.gradient}>
               {/* Header */}
               <View style={styles.header}>
@@ -369,7 +369,7 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
 };
 
 const styles = StyleSheet.create({
-  overlay:{ flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'center', alignItems:'center' },
+  overlay:{ flex:1, backgroundColor:'rgba(0,0,0,0.7)', justifyContent:'center', alignItems:'center' },
   shell:{ width: width*0.92, maxWidth: 420, borderRadius:22, overflow:'hidden' },
   blur:{ borderRadius:22, overflow:'hidden' },
   gradient:{ padding:16, paddingBottom:24 },
@@ -386,10 +386,11 @@ const styles = StyleSheet.create({
   skip:{ fontSize:15, fontWeight:'700', opacity:0.9, color: '#fff' },
 
   card:{
-    backgroundColor:'rgba(255,255,255,0.95)',
+    backgroundColor:'rgba(255,255,255,0.98)',
     borderRadius:20, padding:24,
-    borderWidth:1, borderColor:'rgba(255,255,255,0.95)',
-    shadowColor:'#000', shadowOpacity:0.12, shadowRadius:16, shadowOffset:{width:0,height:10},
+    borderWidth:2, borderColor:'rgba(255,255,255,1)',
+    shadowColor:'#000', shadowOpacity:0.25, shadowRadius:20, shadowOffset:{width:0,height:12},
+    elevation: 12,
     maxHeight: 580,
   },
   iconWrap:{

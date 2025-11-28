@@ -70,7 +70,7 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({
       case 'journal':
         return {
           icon: 'book-open-variant',
-          gradient: ['#43e97b', '#38f9d7'],
+          gradient: ['#10b981', '#059669'], // ✅ FIX: Gradiente verde più scuro per migliore leggibilità
           title: customTitle || t('emptyStates.journal.title'),
           subtitle: customSubtitle || t('emptyStates.journal.subtitle'),
           actionText: customActionText || t('emptyStates.journal.action'),
