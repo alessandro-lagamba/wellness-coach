@@ -229,8 +229,10 @@ export async function encryptText(
     // Converti Uint8Array key in WordArray per crypto-js
     const keyWords = CryptoJS.lib.WordArray.create(key);
     
-    // Genera IV casuale (128 bit per AES-CBC)
-    const iv = CryptoJS.lib.WordArray.random(16);
+    // 🔥 FIX: Genera IV casuale usando expo-crypto invece di CryptoJS.lib.WordArray.random
+    // CryptoJS.lib.WordArray.random() usa il modulo crypto nativo di Node.js che non è disponibile in React Native
+    const ivBytes = await Crypto.getRandomBytesAsync(16);
+    const iv = CryptoJS.lib.WordArray.create(ivBytes);
     
     // Cifra con AES-CBC
     const encrypted = CryptoJS.AES.encrypt(plaintext, keyWords, {

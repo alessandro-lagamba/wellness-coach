@@ -2764,23 +2764,18 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         {mode === 'chat' && !showVoiceInterface && (
           <CopilotStep text="Scrivi o Parla" order={2} name="inputArea">
             <WalkthroughableView style={[styles.inputContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-              <TouchableOpacity
-                onPress={() => setShowChatMenu(true)}
-                style={styles.attachButton}
-              >
-                <MaterialCommunityIcons name="plus" size={24} color={colors.primary} />
-              </TouchableOpacity>
-
-              <TextInput
-                style={[styles.textInput, { color: colors.text }, isVoiceMode && styles.voiceInput]}
-                placeholder={isVoiceMode ? t('chat.listening') : t('chat.placeholder')}
-                placeholderTextColor={colors.textTertiary}
-                value={inputValue}
-                onChangeText={setInputValue}
-                multiline
-                maxLength={1000}
-                editable={!isSending && !isVoiceMode}
-              />
+              <View style={[styles.inputWrapper, { backgroundColor: surfaceSecondary, borderColor: colors.border, flex: 1, marginRight: 8 }]}>
+                <TextInput
+                  style={[styles.textInput, { color: colors.text }, isVoiceMode && styles.voiceInput]}
+                  placeholder={isVoiceMode ? t('chat.listening') : t('chat.placeholder')}
+                  placeholderTextColor={colors.textTertiary}
+                  value={inputValue}
+                  onChangeText={setInputValue}
+                  multiline
+                  maxLength={1000}
+                  editable={!isSending && !isVoiceMode}
+                />
+              </View>
 
               {inputValue.trim().length > 0 ? (
                 <TouchableOpacity
@@ -3708,6 +3703,8 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
     // 🔥 FIX: backgroundColor rimosso - viene applicato dinamicamente
