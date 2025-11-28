@@ -40,7 +40,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
   onViewHistory,
   compact = false,
 }) => {
-  const { copilotData, loading, error } = useDailyCopilot();
+  const { copilotData, loading, error, reload } = useDailyCopilot();
   const { colors: themeColors } = useTheme();
   const { t } = useTranslation();
   const [showScoreModal, setShowScoreModal] = useState(false);
@@ -143,13 +143,33 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
   }
 
   if (error) {
+    if (compact) {
+      return (
+        <View style={[styles.compactContainer, styles.compactEmptyState]}>
+          <MaterialCommunityIcons name="head-cog" size={28} color="#8b5cf6" />
+          <Text style={styles.compactEmptyTitle}>
+            {t('emptyStates.copilot.errorTitle') || 'Copilot non disponibile'}
+          </Text>
+          <Text style={styles.compactEmptySubtitle}>
+            {error || t('emptyStates.copilot.subtitle')}
+          </Text>
+          <TouchableOpacity style={styles.compactRetryButton} onPress={reload}>
+            <Text style={styles.compactRetryText}>{t('common.retry')}</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     return (
       <View style={[styles.container, compact && styles.compactContainer]}>
-        <View style={styles.errorContainer}>
-          <MaterialCommunityIcons name="alert-circle" size={48} color="#ef4444" />
-          <Text style={styles.errorText}>{error || 'Errore nel caricamento'}</Text>
-          <Text style={styles.errorSubtext}>L'analisi verrà generata automaticamente al prossimo avvio</Text>
-        </View>
+        <EmptyStateCard
+          type="copilot"
+          customTitle={t('emptyStates.copilot.errorTitle') || 'Copilot non disponibile'}
+          customSubtitle={error || t('emptyStates.copilot.subtitle')}
+          customActionText={t('common.retry')}
+          onAction={reload}
+          showLearnMore={false}
+        />
       </View>
     );
   }
@@ -625,6 +645,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6b7280',
     textAlign: 'center',
+  },
+  compactRetryButton: {
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    backgroundColor: '#ede9fe',
+  },
+  compactRetryText: {
+    color: '#7c3aed',
+    fontWeight: '600',
+    fontSize: 13,
   },
   card: {
     borderRadius: 24,

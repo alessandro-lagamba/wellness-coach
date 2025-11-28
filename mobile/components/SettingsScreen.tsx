@@ -12,6 +12,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { saveLanguage } from '../i18n';
 import { Switch } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext'; // 🆕 Theme hook
+import { EmptyStateCard } from './EmptyStateCard';
 
 interface SettingsItem {
   id: string;
@@ -304,11 +305,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   // 🔥 FIX: Fallback color basato su useColorScheme per evitare flash bianco
   const fallbackBackground = systemColorScheme === 'dark' ? '#1a1625' : '#f8fafc';
   const safeAreaBackground = colors?.background || fallbackBackground;
+  const [resolvedUser, setResolvedUser] = useState(user ?? null);
+  const [userResolutionError, setUserResolutionError] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<'main' | 'personal-info' | 'notifications'>('main');
   const [healthPermissionsModal, setHealthPermissionsModal] = useState<boolean>(false);
-  const emailVerified = Boolean(user?.email_confirmed_at);
+  const emailVerified = Boolean(resolvedUser?.email_confirmed_at);
   
   // Health data hook
   const { permissions: healthPermissions, hasData: hasHealthData, isInitialized } = useHealthData();
@@ -330,27 +333,91 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   ];
 
   useEffect(() => {
-    loadUserProfile();
-  }, []);
+    if (user) {
+      setResolvedUser(user);
+      setUserResolutionError(false);
+      return;
+    }
 
-  const loadUserProfile = async () => {
+    let isMounted = true;
+    const hydrateUser = async () => {
+      try {
+        const currentUser = await AuthService.getCurrentUser();
+        if (!isMounted) return;
+        setResolvedUser(currentUser);
+        setUserResolutionError(!currentUser);
+      } catch (error) {
+        console.error('Error resolving current user:', error);
+        if (isMounted) {
+          setResolvedUser(null);
+          setUserResolutionError(true);
+        }
+      }
+    };
+
+    hydrateUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!resolvedUser) {
+      setUserProfile(null);
+      setIsLoading(false);
+      return;
+    }
+    loadUserProfile(resolvedUser);
+  }, [resolvedUser?.id]);
+
+  const loadUserProfile = async (targetUser: any) => {
+    if (!targetUser?.id) {
+      setUserProfile(null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const profile = await AuthService.getUserProfile(user.id);
+      const profile = await AuthService.getUserProfile(targetUser.id);
       setUserProfile(profile);
     } catch (error) {
       console.error('Error loading user profile:', error);
       // In caso di errore, mostra i dati di base dell'utente
       setUserProfile({
-        id: user.id,
-        email: user.email,
-        full_name: user.user_metadata?.full_name || 'User',
+        id: targetUser.id,
+        email: targetUser.email,
+        full_name: targetUser.user_metadata?.full_name || targetUser.email || 'User',
         age: null,
         gender: 'prefer_not_to_say',
-        created_at: user.created_at,
-        updated_at: user.updated_at,
+        created_at: targetUser.created_at,
+        updated_at: targetUser.updated_at,
       } as UserProfile);
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRetryLoad = async () => {
+    try {
+      setIsLoading(true);
+      if (resolvedUser) {
+        setUserResolutionError(false);
+        await loadUserProfile(resolvedUser);
+        return;
+      }
+      const currentUser = await AuthService.getCurrentUser();
+      setResolvedUser(currentUser);
+      setUserResolutionError(!currentUser);
+      if (currentUser) {
+        await loadUserProfile(currentUser);
+      } else {
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Failed to reload profile data:', error);
+      setUserResolutionError(true);
       setIsLoading(false);
     }
   };
@@ -427,6 +494,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   const handleItemPress = (itemId: string) => {
     switch (itemId) {
       case 'profile':
+        if (!resolvedUser) {
+          Alert.alert(
+            t('common.error'),
+            t('settings.profileUnavailableSubtitle') || 'Profilo non disponibile al momento. Riprova più tardi.'
+          );
+          return;
+        }
         setCurrentScreen('personal-info');
         break;
       case 'health-permissions':
@@ -479,12 +553,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   const handleBackToMain = () => {
     setCurrentScreen('main');
     // Reload profile data when returning from personal info screen
-    loadUserProfile();
+    if (resolvedUser) {
+      loadUserProfile(resolvedUser);
+    }
   };
 
   // Show sub-screens
   if (currentScreen === 'personal-info') {
-    return <PersonalInformationScreen user={user} onBack={handleBackToMain} />;
+    return <PersonalInformationScreen user={resolvedUser || user} onBack={handleBackToMain} />;
   }
   if (currentScreen === 'notifications') {
     return <NotificationsSettings onBack={handleBackToMain} />;
@@ -503,7 +579,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       {/* Content */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          {!emailVerified && (
+          {!emailVerified && resolvedUser && (
             <View style={[styles.verificationCard, { borderColor: 'rgba(245,158,11,0.4)', backgroundColor: 'rgba(245,158,11,0.12)' }]}>
               <View style={styles.verificationIcon}>
                 <MaterialCommunityIcons name="email-alert" size={20} color="#f59e0b" />
@@ -511,12 +587,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
               <View style={styles.verificationCopy}>
                 <Text style={[styles.verificationTitle, { color: colors.text }]}>{t('settings.verifyEmailTitle')}</Text>
                 <Text style={[styles.verificationMessage, { color: colors.textSecondary }]}>
-                  {t('settings.verifyEmailDescription', { email: user.email })}
+                  {t('settings.verifyEmailDescription', { email: resolvedUser.email })}
                 </Text>
               </View>
               <TouchableOpacity
                 style={[styles.verificationButton, { borderColor: '#f59e0b' }]}
-                onPress={loadUserProfile}
+                onPress={() => resolvedUser && loadUserProfile(resolvedUser)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.verificationButtonText, { color: '#f59e0b' }]}>
@@ -526,8 +602,23 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
             </View>
           )}
 
-          {/* User Profile Card */}
-          <UserProfileCard userProfile={userProfile} isLoading={isLoading} t={t} colors={colors} />
+          {/* User Profile Card / Placeholder */}
+          {resolvedUser ? (
+            <UserProfileCard userProfile={userProfile} isLoading={isLoading} t={t} colors={colors} />
+          ) : (
+            <EmptyStateCard
+              type="general"
+              customTitle={t('settings.profileUnavailableTitle') || 'Profilo non disponibile'}
+              customSubtitle={
+                userResolutionError
+                  ? t('settings.profileUnavailableSubtitle') || 'Non riusciamo a caricare i tuoi dati. Controlla la connessione e riprova.'
+                  : t('settings.profileLoadingSubtitle') || 'Stiamo recuperando le tue informazioni, un attimo...'
+              }
+              customActionText={t('common.retry')}
+              onAction={handleRetryLoad}
+              showLearnMore={false}
+            />
+          )}
           
           <SettingsSection 
             title={t('settings.account')} 

@@ -337,9 +337,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      {/* Safe padding to ensure top area is painted on all devices */}
-      <LinearGradient colors={['#667eea', '#764ba2', '#f093fb']} style={styles.gradient}>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#667eea', '#764ba2', '#f093fb']}
+        style={styles.backgroundGradient}
+        pointerEvents="none"
+      />
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <ScrollView
           ref={scrollViewRef}
           contentContainerStyle={[
@@ -611,16 +615,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
             </View>
           </View>
         </Modal>
-
-      </LinearGradient>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#667eea' },
-  gradientContainer: { flex: 1 },
-  gradient: { flex: 1 },
+  container: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: 'transparent' },
+  backgroundGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
   scrollContainer: { 
     flexGrow: 1, 
     justifyContent: 'center', 

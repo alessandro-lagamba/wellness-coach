@@ -42,6 +42,7 @@ export const useDailyCopilot = () => {
     loading,
     error,
     lastUpdated,
+    reload: loadCopilotData,
   };
 };
 
