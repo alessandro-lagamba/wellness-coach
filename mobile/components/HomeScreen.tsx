@@ -9,6 +9,7 @@ import {
   ScrollView,
   Alert,
   Pressable,
+  Platform,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -36,7 +37,9 @@ import { WelcomeOverlay, shouldShowWelcomeOverlay } from './WelcomeOverlay';
 import { useHealthData } from '../hooks/useHealthData';
 import { useChartConfig, ChartType } from '../services/chart-config.service';
 import { ChartSelectionModal } from './ChartSelectionModal';
-import { InsightSection } from './InsightSection';
+import { CopilotProvider, walkthroughable, CopilotStep, useCopilot } from 'react-native-copilot';
+import { TutorialTooltip } from './TutorialTooltip';
+import { OnboardingService } from '../services/onboarding.service';
 // Removed useInsights - now using DailyCopilot for insights
 import DailyCopilot from './DailyCopilot';
 import RecommendationDetailModal from './RecommendationDetailModal';
@@ -120,10 +123,32 @@ interface HomeScreenProps {
   onLogout?: () => void;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({
-  user,
-  onLogout
-}) => {
+const WalkthroughableView = walkthroughable(View);
+const WalkthroughableText = walkthroughable(Text);
+
+export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
+  // We need to wrap the content in a component to use useCopilot hook
+  return (
+    <CopilotProvider
+      overlay="view"
+      tooltipComponent={TutorialTooltip}
+      verticalOffset={Platform.OS === 'ios' ? 40 : 0}
+      arrowColor="transparent"
+      backdropColor="rgba(0, 0, 0, 0.6)"
+      labels={{
+        previous: "Indietro",
+        next: "Avanti",
+        skip: "Salta",
+        finish: "Finito"
+      }}
+    >
+      <HomeScreenContent user={user} onLogout={onLogout} />
+    </CopilotProvider>
+  );
+};
+
+const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
+  const { start: startCopilot } = useCopilot();
   const { t, language } = useTranslation(); // 🆕 i18n hook
   const { colors: themeColors } = useTheme();
   const { setShowTutorial } = useTutorial();
@@ -516,7 +541,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [cycleData, setCycleData] = useState<{ day: number; phase: string; phaseName: string; nextPeriodDays: number; cycleLength: number } | null>(null);
   // 🆕 Stato per il genere dell'utente (per filtrare il widget ciclo)
   const [userGender, setUserGender] = useState<'male' | 'female' | 'other' | 'prefer_not_to_say' | null>(null);
-  
+
   // 🆕 Funzione per caricare genere e dati del ciclo
   const loadUserGenderAndCycle = useCallback(async () => {
     try {
@@ -525,7 +550,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         const userProfile = await AuthService.getUserProfile(currentUser.id);
         const gender = userProfile?.gender || null;
         setUserGender(gender);
-        
+
         // Carica i dati del ciclo solo se l'utente è di genere femminile
         if (gender === 'female') {
           const { menstrualCycleService } = await import('../services/menstrual-cycle.service');
@@ -944,7 +969,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       try {
         const { HealthPermissionsService } = await import('../services/health-permissions.service');
         const { OnboardingService } = await import('../services/onboarding.service');
-        
+
         const [grantedPermissions, setupCompleted, onboardingCompleted] = await Promise.all([
           HealthPermissionsService.getGrantedPermissions(),
           HealthPermissionsService.isSetupCompleted(),
@@ -1575,11 +1600,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           const firstName = currentUser.email.split('@')[0].split('.')[0];
           setUserFirstName(firstName);
         }
-        
+
         // 🆕 Aggiorna il genere dell'utente e carica i dati del ciclo se necessario
         const gender = userProfile?.gender || null;
         setUserGender(gender);
-        
+
         // Carica i dati del ciclo solo se l'utente è di genere femminile
         if (gender === 'female') {
           const { menstrualCycleService } = await import('../services/menstrual-cycle.service');
@@ -1679,6 +1704,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     const interval = setInterval(loadWellnessActivities, 60000);
     return () => clearInterval(interval);
   }, [loadWellnessActivities]);
+
+  // 🆕 Mostra WelcomeOverlay per nuovi utenti dopo onboarding e tutorial
+  useEffect(() => {
+    const checkAndShowWelcomeOverlay = async () => {
+      const shouldShow = await shouldShowWelcomeOverlay();
+      if (shouldShow) {
+        // Delay per permettere alla UI di stabilizzarsi
+        setTimeout(() => {
+          setWelcomeOverlayVisible(true);
+        }, 1000);
+      }
+    };
+
+    checkAndShowWelcomeOverlay();
+  }, []);
 
   // 🔥 Rimuoviamo useEffect non necessario - usiamo direttamente todaysActivities che è già memoizzato
 
@@ -2081,40 +2121,46 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <ScrollView style={{ backgroundColor: themeColors.background }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} ref={scrollViewRef}>
         <LinearGradient colors={[themeColors.primaryDark, themeColors.primary]} style={styles.heroCard}>
           {/* Header with buttons inside the purple box */}
-          <View style={styles.heroTopRow}>
-            <View style={styles.heroGreeting}>
-              <Text style={styles.greeting}>{t('home.hello', { name: userFirstName })}</Text>
-              <Text style={styles.tagline}>{t('home.tagline')}</Text>
-            </View>
-            <View style={styles.heroActions}>
-              <TouchableOpacity
-                style={styles.heroHealthButton}
-                onPress={() => setShowTutorial(true)}
-              >
-                <FontAwesome name="question-circle" size={16} color="#ffffff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.heroSettings}
-                onPress={() => router.push('/(tabs)/settings')}
-              >
-                <FontAwesome name="cog" size={18} color="#ffffff" />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <CopilotStep text="Benvenuto" order={1} name="header">
+            <WalkthroughableView style={styles.heroTopRow}>
+              <View style={styles.heroGreeting}>
+                <Text style={styles.greeting}>{t('home.hello', { name: userFirstName })}</Text>
+                <Text style={styles.tagline}>{t('home.tagline')}</Text>
+              </View>
+              <View style={styles.heroActions}>
+                <TouchableOpacity
+                  style={styles.heroHealthButton}
+                  onPress={() => setShowTutorial(true)}
+                >
+                  <FontAwesome name="question-circle" size={16} color="#ffffff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.heroSettings}
+                  onPress={() => router.push('/(tabs)/settings')}
+                >
+                  <FontAwesome name="cog" size={18} color="#ffffff" />
+                </TouchableOpacity>
+              </View>
+            </WalkthroughableView>
+          </CopilotStep>
 
           <View style={styles.heroAvatarRow}>
-            <Avatar
-              avatarUri={avatarUri}
-              isGenerating={avatarGenerating}
-              onCreateAvatar={handleCreateAvatar}
-              onOpenCommunity={() => setCommunityModalVisible(true)}
-              onMicPress={() => {
-                // 🆕 Rimosso log per performance
-                // Force navigation by using a unique timestamp parameter
-                const timestamp = Date.now();
-                router.push(`/(tabs)/coach?voiceMode=true&t=${timestamp}`);
-              }}
-            />
+            <CopilotStep text="Il tuo Coach AI" order={2} name="dailyCopilot">
+              <WalkthroughableView>
+                <Avatar
+                  avatarUri={avatarUri}
+                  isGenerating={avatarGenerating}
+                  onCreateAvatar={handleCreateAvatar}
+                  onOpenCommunity={() => setCommunityModalVisible(true)}
+                  onMicPress={() => {
+                    // 🆕 Rimosso log per performance
+                    // Force navigation by using a unique timestamp parameter
+                    const timestamp = Date.now();
+                    router.push(`/(tabs)/coach?voiceMode=true&t=${timestamp}`);
+                  }}
+                />
+              </WalkthroughableView>
+            </CopilotStep>
             <View style={styles.heroStats}>
               {getStats().map((item: any) => {
                 const isMomentum = item.id === 'momentum';
@@ -2252,198 +2298,200 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             )}
           </View>
         )}
-        <View style={styles.widgetGrid}>
-          {/* Protezione per evitare crash se widgetData è vuoto */}
-          {widgetData.length === 0 || configLoading ? (
-            <View style={styles.loadingContainer}>
-              <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>{t('home.loadingWidgets')}</Text>
-            </View>
-          ) : (
-            <>
-              {/* Riga 1: Posizioni 0, 1, 2 */}
-              <View style={styles.widgetRow}>
-                {(rowHasLarge(0)
-                  ? widgetConfig.filter(w => w.enabled && w.position === 0 && w.size === 'large')
-                  : widgetConfig.filter(w => w.enabled && w.position < 3)
-                )
-                  .sort((a, b) => a.position - b.position)
-                  .map((widget) => {
-                    // 🆕 Filtra il widget 'cycle' se l'utente non è di genere femminile
-                    if (widget.id === 'cycle' && userGender !== 'female') {
-                      return null;
-                    }
-                    
-                    // 👇 lascia esattamente il tuo map attuale (non serve cambiare la logica interna)
-                    const widgetInfo = widgetData.find(w => w.id === widget.id);
-                    if (!widgetInfo) return null;
-
-                    const WidgetComponent =
-                      widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'analyses' || widget.id === 'cycle'
-                        ? MiniInfoCard
-                        : MiniGaugeChart;
-
-                    const gaugeProgress = computeGaugeProgress(widgetInfo);
-                    const gaugeSubtitle = computeGaugeSubtitle(widgetInfo);
-                    const gaugeTrend = computeGaugeTrend(gaugeProgress);
-                    const infoValue = getInfoCardValue(widget.id, widgetInfo);
-                    const infoSubtitle = getInfoCardSubtitle(widget.id, widgetInfo);
-                    const infoTrend = getInfoCardTrend(widget.id, widgetInfo);
-                    const infoDetails = getInfoCardDetails(widget.id, widgetInfo);
-
-                    return (
-                      <View key={widget.id} style={{ width: getWidgetWidth(widget.size) }}>
-                        {dragTargetPosition === widget.position && (
-                          <View style={styles.dropIndicator}>
-                            <View style={styles.dropIndicatorInner} />
-                          </View>
-                        )}
-
-                        <EditableWidget
-                          widgetId={widget.id}
-                          widgetTitle={widgetInfo.title}
-                          onPress={() => handleWidgetPress(widget.id)}
-                          onLongPress={() => handleWidgetLongPress(widget.id)}
-                          onEnterEditMode={() => setEditMode(true)}
-                          onDragTargetChange={setDragTargetPosition}
-                          onResize={async (newSize) => { try { await changeSize(widget.id, newSize); } catch { } }}
-                          onRemove={async () => { try { await toggleWidget(widget.id); } catch { } }}
-                          editMode={editMode}
-                        >
-                          {WidgetComponent === MiniGaugeChart ? (
-                            <MiniGaugeChart
-                              value={gaugeProgress}
-                              maxValue={100}
-                              label={widgetInfo.title}
-                              color={widgetInfo.color}
-                              subtitle={gaugeSubtitle}
-                              backgroundColor={widgetInfo.backgroundColor}
-                              trendValue={gaugeTrend}
-                              icon={widgetInfo.icon}
-                              size={getWidgetSize(widget.size)}
-                              additionalData={
-                                widgetInfo.steps
-                                  ? { steps: widgetInfo.steps }
-                                  : widgetInfo.hydration
-                                    ? { hydration: widgetInfo.hydration }
-                                    : widgetInfo.meditation
-                                      ? { meditation: widgetInfo.meditation }
-                                      : undefined
-                              }
-                            />
-                          ) : (
-                            <MiniInfoCard
-                              label={widgetInfo.title}
-                              value={infoValue}
-                              subtitle={infoSubtitle}
-                              icon={widgetInfo.icon}
-                              color={widgetInfo.color}
-                              backgroundColor={widgetInfo.backgroundColor}
-                              trendValue={infoTrend}
-                              size={getWidgetSize(widget.size)}
-                              showStatus={widget.id === 'analyses'}
-                              status={widgetInfo.analyses?.completed ? 'completed' : 'pending'}
-                              detailChips={infoDetails}
-                            />
-                          )}
-                        </EditableWidget>
-                      </View>
-                    );
-                  })}
-                {!rowHasLarge(0) && createEmptySlots(0, 3)}
+        <CopilotStep text="I tuoi Widget" order={3} name="widgets">
+          <WalkthroughableView style={styles.widgetGrid}>
+            {/* Protezione per evitare crash se widgetData è vuoto */}
+            {widgetData.length === 0 || configLoading ? (
+              <View style={styles.loadingContainer}>
+                <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>{t('home.loadingWidgets')}</Text>
               </View>
+            ) : (
+              <>
+                {/* Riga 1: Posizioni 0, 1, 2 */}
+                <View style={styles.widgetRow}>
+                  {(rowHasLarge(0)
+                    ? widgetConfig.filter(w => w.enabled && w.position === 0 && w.size === 'large')
+                    : widgetConfig.filter(w => w.enabled && w.position < 3)
+                  )
+                    .sort((a, b) => a.position - b.position)
+                    .map((widget) => {
+                      // 🆕 Filtra il widget 'cycle' se l'utente non è di genere femminile
+                      if (widget.id === 'cycle' && userGender !== 'female') {
+                        return null;
+                      }
 
-              {/* Riga 2: Posizioni 3, 4, 5 */}
-              <View style={styles.widgetRow}>
-                {(rowHasLarge(1)
-                  ? widgetConfig.filter(w => w.enabled && w.position === 3 && w.size === 'large')
-                  : widgetConfig.filter(w => w.enabled && w.position >= 3)
-                )
-                  .sort((a, b) => a.position - b.position)
-                  .map((widget) => {
-                    // 🆕 Filtra il widget 'cycle' se l'utente non è di genere femminile
-                    if (widget.id === 'cycle' && userGender !== 'female') {
-                      return null;
-                    }
-                    
-                    const widgetInfo = widgetData.find(w => w.id === widget.id);
-                    if (!widgetInfo) return null;
+                      // 👇 lascia esattamente il tuo map attuale (non serve cambiare la logica interna)
+                      const widgetInfo = widgetData.find(w => w.id === widget.id);
+                      if (!widgetInfo) return null;
 
-                    const WidgetComponent =
-                      widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'analyses' || widget.id === 'cycle'
-                        ? MiniInfoCard
-                        : MiniGaugeChart;
+                      const WidgetComponent =
+                        widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'analyses' || widget.id === 'cycle'
+                          ? MiniInfoCard
+                          : MiniGaugeChart;
 
-                    const gaugeProgress = computeGaugeProgress(widgetInfo);
-                    const gaugeSubtitle = computeGaugeSubtitle(widgetInfo);
-                    const gaugeTrend = computeGaugeTrend(gaugeProgress);
-                    const infoValue = getInfoCardValue(widget.id, widgetInfo);
-                    const infoSubtitle = getInfoCardSubtitle(widget.id, widgetInfo);
-                    const infoTrend = getInfoCardTrend(widget.id, widgetInfo);
-                    const infoDetails = getInfoCardDetails(widget.id, widgetInfo);
+                      const gaugeProgress = computeGaugeProgress(widgetInfo);
+                      const gaugeSubtitle = computeGaugeSubtitle(widgetInfo);
+                      const gaugeTrend = computeGaugeTrend(gaugeProgress);
+                      const infoValue = getInfoCardValue(widget.id, widgetInfo);
+                      const infoSubtitle = getInfoCardSubtitle(widget.id, widgetInfo);
+                      const infoTrend = getInfoCardTrend(widget.id, widgetInfo);
+                      const infoDetails = getInfoCardDetails(widget.id, widgetInfo);
 
-                    return (
-                      <View key={widget.id} style={{ width: getWidgetWidth(widget.size) }}>
-                        {dragTargetPosition === widget.position && (
-                          <View style={styles.dropIndicator}>
-                            <View style={styles.dropIndicatorInner} />
-                          </View>
-                        )}
-                        <EditableWidget
-                          widgetId={widget.id}
-                          widgetTitle={widgetInfo.title}
-                          onPress={() => handleWidgetPress(widget.id)}
-                          onLongPress={() => handleWidgetLongPress(widget.id)}
-                          onEnterEditMode={() => setEditMode(true)}
-                          onDragTargetChange={setDragTargetPosition}
-                          onResize={async (newSize) => { try { await changeSize(widget.id, newSize); } catch { } }}
-                          onRemove={async () => { try { await toggleWidget(widget.id); } catch { } }}
-                          editMode={editMode}
-                        >
-                          {WidgetComponent === MiniGaugeChart ? (
-                            <MiniGaugeChart
-                              value={gaugeProgress}
-                              maxValue={100}
-                              label={widgetInfo.title}
-                              color={widgetInfo.color}
-                              subtitle={gaugeSubtitle}
-                              backgroundColor={widgetInfo.backgroundColor}
-                              trendValue={gaugeTrend}
-                              icon={widgetInfo.icon}
-                              size={getWidgetSize(widget.size)}
-                              additionalData={
-                                widgetInfo.steps
-                                  ? { steps: widgetInfo.steps }
-                                  : widgetInfo.hydration
-                                    ? { hydration: widgetInfo.hydration }
-                                    : widgetInfo.meditation
-                                      ? { meditation: widgetInfo.meditation }
-                                      : undefined
-                              }
-                            />
-                          ) : (
-                            <MiniInfoCard
-                              label={widgetInfo.title}
-                              value={infoValue}
-                              subtitle={infoSubtitle}
-                              icon={widgetInfo.icon}
-                              color={widgetInfo.color}
-                              backgroundColor={widgetInfo.backgroundColor}
-                              trendValue={infoTrend}
-                              size={getWidgetSize(widget.size)}
-                              showStatus={widget.id === 'analyses'}
-                              status={widgetInfo.analyses?.completed ? 'completed' : 'pending'}
-                              detailChips={infoDetails}
-                            />
+                      return (
+                        <View key={widget.id} style={{ width: getWidgetWidth(widget.size) }}>
+                          {dragTargetPosition === widget.position && (
+                            <View style={styles.dropIndicator}>
+                              <View style={styles.dropIndicatorInner} />
+                            </View>
                           )}
-                        </EditableWidget>
-                      </View>
-                    );
-                  })}
-                {!rowHasLarge(1) && createEmptySlots(3, 6)}
-              </View>
-            </>
-          )}
-        </View>
+
+                          <EditableWidget
+                            widgetId={widget.id}
+                            widgetTitle={widgetInfo.title}
+                            onPress={() => handleWidgetPress(widget.id)}
+                            onLongPress={() => handleWidgetLongPress(widget.id)}
+                            onEnterEditMode={() => setEditMode(true)}
+                            onDragTargetChange={setDragTargetPosition}
+                            onResize={async (newSize) => { try { await changeSize(widget.id, newSize); } catch { } }}
+                            onRemove={async () => { try { await toggleWidget(widget.id); } catch { } }}
+                            editMode={editMode}
+                          >
+                            {WidgetComponent === MiniGaugeChart ? (
+                              <MiniGaugeChart
+                                value={gaugeProgress}
+                                maxValue={100}
+                                label={widgetInfo.title}
+                                color={widgetInfo.color}
+                                subtitle={gaugeSubtitle}
+                                backgroundColor={widgetInfo.backgroundColor}
+                                trendValue={gaugeTrend}
+                                icon={widgetInfo.icon}
+                                size={getWidgetSize(widget.size)}
+                                additionalData={
+                                  widgetInfo.steps
+                                    ? { steps: widgetInfo.steps }
+                                    : widgetInfo.hydration
+                                      ? { hydration: widgetInfo.hydration }
+                                      : widgetInfo.meditation
+                                        ? { meditation: widgetInfo.meditation }
+                                        : undefined
+                                }
+                              />
+                            ) : (
+                              <MiniInfoCard
+                                label={widgetInfo.title}
+                                value={infoValue}
+                                subtitle={infoSubtitle}
+                                icon={widgetInfo.icon}
+                                color={widgetInfo.color}
+                                backgroundColor={widgetInfo.backgroundColor}
+                                trendValue={infoTrend}
+                                size={getWidgetSize(widget.size)}
+                                showStatus={widget.id === 'analyses'}
+                                status={widgetInfo.analyses?.completed ? 'completed' : 'pending'}
+                                detailChips={infoDetails}
+                              />
+                            )}
+                          </EditableWidget>
+                        </View>
+                      );
+                    })}
+                  {!rowHasLarge(0) && createEmptySlots(0, 3)}
+                </View>
+
+                {/* Riga 2: Posizioni 3, 4, 5 */}
+                <View style={styles.widgetRow}>
+                  {(rowHasLarge(1)
+                    ? widgetConfig.filter(w => w.enabled && w.position === 3 && w.size === 'large')
+                    : widgetConfig.filter(w => w.enabled && w.position >= 3)
+                  )
+                    .sort((a, b) => a.position - b.position)
+                    .map((widget) => {
+                      // 🆕 Filtra il widget 'cycle' se l'utente non è di genere femminile
+                      if (widget.id === 'cycle' && userGender !== 'female') {
+                        return null;
+                      }
+
+                      const widgetInfo = widgetData.find(w => w.id === widget.id);
+                      if (!widgetInfo) return null;
+
+                      const WidgetComponent =
+                        widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'analyses' || widget.id === 'cycle'
+                          ? MiniInfoCard
+                          : MiniGaugeChart;
+
+                      const gaugeProgress = computeGaugeProgress(widgetInfo);
+                      const gaugeSubtitle = computeGaugeSubtitle(widgetInfo);
+                      const gaugeTrend = computeGaugeTrend(gaugeProgress);
+                      const infoValue = getInfoCardValue(widget.id, widgetInfo);
+                      const infoSubtitle = getInfoCardSubtitle(widget.id, widgetInfo);
+                      const infoTrend = getInfoCardTrend(widget.id, widgetInfo);
+                      const infoDetails = getInfoCardDetails(widget.id, widgetInfo);
+
+                      return (
+                        <View key={widget.id} style={{ width: getWidgetWidth(widget.size) }}>
+                          {dragTargetPosition === widget.position && (
+                            <View style={styles.dropIndicator}>
+                              <View style={styles.dropIndicatorInner} />
+                            </View>
+                          )}
+                          <EditableWidget
+                            widgetId={widget.id}
+                            widgetTitle={widgetInfo.title}
+                            onPress={() => handleWidgetPress(widget.id)}
+                            onLongPress={() => handleWidgetLongPress(widget.id)}
+                            onEnterEditMode={() => setEditMode(true)}
+                            onDragTargetChange={setDragTargetPosition}
+                            onResize={async (newSize) => { try { await changeSize(widget.id, newSize); } catch { } }}
+                            onRemove={async () => { try { await toggleWidget(widget.id); } catch { } }}
+                            editMode={editMode}
+                          >
+                            {WidgetComponent === MiniGaugeChart ? (
+                              <MiniGaugeChart
+                                value={gaugeProgress}
+                                maxValue={100}
+                                label={widgetInfo.title}
+                                color={widgetInfo.color}
+                                subtitle={gaugeSubtitle}
+                                backgroundColor={widgetInfo.backgroundColor}
+                                trendValue={gaugeTrend}
+                                icon={widgetInfo.icon}
+                                size={getWidgetSize(widget.size)}
+                                additionalData={
+                                  widgetInfo.steps
+                                    ? { steps: widgetInfo.steps }
+                                    : widgetInfo.hydration
+                                      ? { hydration: widgetInfo.hydration }
+                                      : widgetInfo.meditation
+                                        ? { meditation: widgetInfo.meditation }
+                                        : undefined
+                                }
+                              />
+                            ) : (
+                              <MiniInfoCard
+                                label={widgetInfo.title}
+                                value={infoValue}
+                                subtitle={infoSubtitle}
+                                icon={widgetInfo.icon}
+                                color={widgetInfo.color}
+                                backgroundColor={widgetInfo.backgroundColor}
+                                trendValue={infoTrend}
+                                size={getWidgetSize(widget.size)}
+                                showStatus={widget.id === 'analyses'}
+                                status={widgetInfo.analyses?.completed ? 'completed' : 'pending'}
+                                detailChips={infoDetails}
+                              />
+                            )}
+                          </EditableWidget>
+                        </View>
+                      );
+                    })}
+                  {!rowHasLarge(1) && createEmptySlots(3, 6)}
+                </View>
+              </>
+            )}
+          </WalkthroughableView>
+        </CopilotStep>
 
 
         <View style={styles.sectionHeader}>
@@ -2452,31 +2500,33 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </View>
 
         {/* Self-check: Mood & Sleep */}
-        <View style={styles.focusGrid}>
-          <View style={{ flex: 1 }}>
-            <MoodCheckinCard
-              value={moodValue as 1 | 2 | 3 | 4 | 5}
-              note={moodNote}
-              hasExistingCheckin={hasExistingMoodCheckin}
-              onChange={(v) => { setMoodValue(v); }}
-              onSave={async ({ value, note }) => { setMoodValue(value); setMoodNote(note); await saveMoodCheckin(value, note); }}
-            />
-          </View>
+        <CopilotStep text="Check-in Giornalieri" order={4} name="dailyCheckin">
+          <WalkthroughableView style={styles.focusGrid}>
+            <View style={{ flex: 1 }}>
+              <MoodCheckinCard
+                value={moodValue as 1 | 2 | 3 | 4 | 5}
+                note={moodNote}
+                hasExistingCheckin={hasExistingMoodCheckin}
+                onChange={(v) => { setMoodValue(v); }}
+                onSave={async ({ value, note }) => { setMoodValue(value); setMoodNote(note); await saveMoodCheckin(value, note); }}
+              />
+            </View>
 
-          <View style={{ flex: 1 }}>
-            <SleepCheckinCard
-              hours={displayedSleepHours}
-              quality={displayedSleepQuality}
-              bedtime={sleepStats?.bedtime ?? '11:30 PM'}
-              waketime={sleepStats?.wakeTime ?? '7:30 AM'}
-              note={sleepNote}
-              restLevel={restLevel}
-              hasExistingCheckin={hasExistingSleepCheckin}
-              onChangeRestLevel={(level) => { setRestLevel(level); }}
-              onSave={async ({ quality, note }) => { setSleepQuality(quality); setSleepNote(note); await saveSleepCheckin(quality, note, restLevel); }}
-            />
-          </View>
-        </View>
+            <View style={{ flex: 1 }}>
+              <SleepCheckinCard
+                hours={displayedSleepHours}
+                quality={displayedSleepQuality}
+                bedtime={sleepStats?.bedtime ?? '11:30 PM'}
+                waketime={sleepStats?.wakeTime ?? '7:30 AM'}
+                note={sleepNote}
+                restLevel={restLevel}
+                hasExistingCheckin={hasExistingSleepCheckin}
+                onChangeRestLevel={(level) => { setRestLevel(level); }}
+                onSave={async ({ quality, note }) => { setSleepQuality(quality); setSleepNote(note); await saveSleepCheckin(quality, note, restLevel); }}
+              />
+            </View>
+          </WalkthroughableView>
+        </CopilotStep>
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.activities.title')}</Text>
@@ -2501,30 +2551,34 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </View>
 
         {/* AI Daily Copilot Section */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionHeaderContent}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCopilot.title')}</Text>
-              <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCopilot.subtitle')}</Text>
+        <CopilotStep text="AI Daily Copilot" order={5} name="dailyCopilotSection">
+          <WalkthroughableView>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderContent}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCopilot.title')}</Text>
+                  <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCopilot.subtitle')}</Text>
+                </View>
+                {showHistory !== undefined && (
+                  <TouchableOpacity
+                    onPress={() => setShowHistory(true)}
+                    style={styles.historyButtonHeader}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialCommunityIcons name="history" size={20} color={themeColors.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-            {showHistory !== undefined && (
-              <TouchableOpacity
-                onPress={() => setShowHistory(true)}
-                style={styles.historyButtonHeader}
-                activeOpacity={0.7}
-              >
-                <MaterialCommunityIcons name="history" size={20} color={themeColors.primary} />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
 
-        <DailyCopilot
-          compact={false}
-          onRecommendationPress={(recommendation) => {
-            setRecommendationModal({ visible: true, recommendation });
-          }}
-        />
+            <DailyCopilot
+              compact={false}
+              onRecommendationPress={(recommendation) => {
+                setRecommendationModal({ visible: true, recommendation });
+              }}
+            />
+          </WalkthroughableView>
+        </CopilotStep>
 
         {/* Weekly Progress Section */}
         <View style={styles.sectionHeader}>
@@ -3368,7 +3422,7 @@ const ActivityItem: React.FC<{
   const { colors: themeColors } = useTheme();
   const [isCompleting, setIsCompleting] = React.useState(false);
   const scale = useSharedValue(1);
-  
+
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: withDelay(index * 80, withTiming(1, { duration: 320 })),
     transform: [
@@ -3389,7 +3443,7 @@ const ActivityItem: React.FC<{
 
   const handleToggleComplete = async () => {
     if (isCompleting) return;
-    
+
     setIsCompleting(true);
     scale.value = withTiming(0.95, { duration: 100 }, () => {
       scale.value = withTiming(1, { duration: 100 });
@@ -3398,7 +3452,7 @@ const ActivityItem: React.FC<{
     try {
       const WellnessActivitiesService = (await import('../services/wellness-activities.service')).default;
       const result = await WellnessActivitiesService.markActivityCompleted(activity.id, !activity.completed);
-      
+
       if (result.success) {
         // Ricarica le attività dopo un breve delay per permettere l'animazione
         setTimeout(() => {
@@ -3414,7 +3468,7 @@ const ActivityItem: React.FC<{
 
   return (
     <Animated.View style={[styles.activityCard, animatedStyle, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-      <TouchableOpacity 
+      <TouchableOpacity
         activeOpacity={0.9}
         onPress={handleToggleComplete}
         disabled={isCompleting}
@@ -3442,7 +3496,7 @@ const ActivityItem: React.FC<{
             </View>
             <View style={styles.activityText}>
               <Text style={[
-                styles.activityTitle, 
+                styles.activityTitle,
                 { color: activity.completed ? themeColors.textSecondary : themeColors.text },
                 activity.completed && styles.activityCompleted
               ]}>
@@ -3476,14 +3530,14 @@ const ActivityItem: React.FC<{
             ) : activity.progress ? (
               <View style={styles.progressContainer}>
                 <View style={[styles.progressBar, { backgroundColor: `${colors[0]}20` }]}>
-                  <Animated.View 
+                  <Animated.View
                     style={[
-                      styles.progressFill, 
-                      { 
+                      styles.progressFill,
+                      {
                         width: `${activity.progress}%`,
                         backgroundColor: colors[0]
                       }
-                    ]} 
+                    ]}
                   />
                 </View>
                 <Text style={[styles.progressText, { color: colors[0] }]}>
@@ -4688,4 +4742,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HomeScreen;
+// Removed export default since we export named component above
+// export default HomeScreen;

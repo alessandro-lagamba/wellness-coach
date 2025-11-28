@@ -30,6 +30,8 @@ import CameraCapture from './CameraCapture';
 import { useCameraController } from '../hooks/useCameraController';
 import { Platform } from 'react-native';
 import AnalysisCaptureLayout from './shared/AnalysisCaptureLayout';
+import { CopilotProvider, walkthroughable, CopilotStep, useCopilot } from 'react-native-copilot';
+import { TutorialTooltip } from './TutorialTooltip';
 
 import { BACKEND_URL } from '../constants/env';
 import UnifiedAnalysisService from '../services/unified-analysis.service';
@@ -386,7 +388,31 @@ const getDefaultRecipe = (mealType: string) => {
   return defaultRecipes[mealType] || defaultRecipes.breakfast;
 };
 
+const WalkthroughableView = walkthroughable(View);
+const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
+
 export const FoodAnalysisScreen: React.FC = () => {
+  return (
+    <CopilotProvider
+      overlay="view"
+      tooltipComponent={TutorialTooltip}
+      verticalOffset={Platform.OS === 'ios' ? 40 : 0}
+      arrowColor="transparent"
+      backdropColor="rgba(0, 0, 0, 0.6)"
+      labels={{
+        previous: "Indietro",
+        next: "Avanti",
+        skip: "Salta",
+        finish: "Finito"
+      }}
+    >
+      <FoodAnalysisScreenContent />
+    </CopilotProvider>
+  );
+};
+
+const FoodAnalysisScreenContent: React.FC = () => {
+  const { start: startCopilot } = useCopilot();
   const { t, language } = useTranslation(); // 🆕 i18n hook
   const { colors } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
@@ -415,10 +441,10 @@ export const FoodAnalysisScreen: React.FC = () => {
 
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
-  
+
   // First analysis celebration
   const [showFirstAnalysisCelebration, setShowFirstAnalysisCelebration] = useState(false);
-  
+
   // Contextual permission modal
   const [showPermissionModal, setShowPermissionModal] = useState(false);
 
@@ -667,7 +693,7 @@ export const FoodAnalysisScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
-      
+
       const reloadData = async () => {
         try {
           await ChartDataService.loadFoodDataForCharts();
@@ -700,7 +726,7 @@ export const FoodAnalysisScreen: React.FC = () => {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
         await ChartDataService.loadFoodDataForCharts();
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         if (isMounted) {
           setIsLoadingData(false); // Data loading complete
         }
@@ -794,6 +820,35 @@ export const FoodAnalysisScreen: React.FC = () => {
     } finally {
       setRecipesLoading(false);
     }
+  }, []);
+
+  // Check for walkthrough on mount
+  useEffect(() => {
+    const checkWalkthrough = async () => {
+      const isCompleted = await OnboardingService.isFoodWalkthroughCompleted();
+      const onboardingCompleted = await OnboardingService.isOnboardingCompleted();
+
+      if (onboardingCompleted && !isCompleted) {
+        // Small delay to ensure layout is ready
+        setTimeout(() => {
+          startCopilot();
+        }, 1000);
+      }
+    };
+
+    checkWalkthrough();
+  }, []);
+
+  // Handle walkthrough completion
+  useEffect(() => {
+    const { copilotEvents } = require('react-native-copilot');
+    const listener = copilotEvents.on('stop', async () => {
+      await OnboardingService.completeFoodWalkthrough();
+    });
+
+    return () => {
+      listener.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -1090,7 +1145,7 @@ export const FoodAnalysisScreen: React.FC = () => {
     let fat = 0;
     mealPlanEntries.forEach((entry) => {
       const servings = entry.servings || 1;
-      
+
       // ✅ FIX: Supporta sia recipe che custom_recipe
       if (entry.recipe) {
         if (entry.recipe.calories_per_serving) {
@@ -1894,8 +1949,8 @@ export const FoodAnalysisScreen: React.FC = () => {
                 id: savedAnalysis.id,
                 timestamp: new Date(savedAnalysis.created_at),
                 macronutrients: {
-                  carbohydrates: typeof result.data.macronutrients?.carbohydrates === 'number' 
-                    ? result.data.macronutrients.carbohydrates 
+                  carbohydrates: typeof result.data.macronutrients?.carbohydrates === 'number'
+                    ? result.data.macronutrients.carbohydrates
                     : (typeof savedAnalysis.carbohydrates === 'number' ? savedAnalysis.carbohydrates : 0),
                   proteins: typeof result.data.macronutrients?.proteins === 'number'
                     ? result.data.macronutrients.proteins
@@ -1910,12 +1965,12 @@ export const FoodAnalysisScreen: React.FC = () => {
                     typeof result.data.macronutrients?.calories === 'number'
                       ? result.data.macronutrients.calories
                       : typeof savedAnalysis.calories === 'number'
-                      ? savedAnalysis.calories
-                      : 0,
+                        ? savedAnalysis.calories
+                        : 0,
                 },
                 meal_type: effectiveMealType,
-                health_score: typeof result.data.health_score === 'number' 
-                  ? result.data.health_score 
+                health_score: typeof result.data.health_score === 'number'
+                  ? result.data.health_score
                   : (typeof savedAnalysis.health_score === 'number' ? savedAnalysis.health_score : 70),
                 confidence: typeof result.data.confidence === 'number'
                   ? result.data.confidence
@@ -1945,7 +2000,7 @@ export const FoodAnalysisScreen: React.FC = () => {
                 );
 
                 const todayISO = toISODate(new Date());
-                
+
                 // Crea un custom_recipe con tutte le informazioni dell'analisi
                 const customRecipe = {
                   title: result.data.identified_foods?.join(', ') || 'Pasto analizzato',
@@ -1965,7 +2020,7 @@ export const FoodAnalysisScreen: React.FC = () => {
 
                 await mealPlanService.upsertEntry({
                   plan_date: todayISO,
-                      meal_type: mealType,
+                  meal_type: mealType,
                   custom_recipe: customRecipe,
                   servings: 1,
                   notes: `Analisi automatica - ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`,
@@ -2238,19 +2293,19 @@ export const FoodAnalysisScreen: React.FC = () => {
 
   if (cameraController.active && !analyzing) {
     return (
-      <AnalysisCaptureLayout
-        renderCamera={<CameraFrame />}
-        onBack={handleExitCapture}
-        onCancel={() => cameraController.stopCamera()}
-        onCapture={captureAndAnalyze}
-        captureDisabled={captureDisabled}
-        showSwitch
-        switchDisabled={cameraSwitching}
-        switchLabel={cameraType === 'front' ? 'Back' : 'Front'}
-        onSwitch={switchCamera}
-        cancelLabel={t('common.cancel')}
-        captureLabel={t('common.capture')}
-      />
+      <CopilotStep text="Analizza il tuo cibo" description="Scatta una foto o carica un'immagine per analizzare i valori nutrizionali." order={1} name="camera">
+        <WalkthroughableView style={{ flex: 1 }}>
+          <AnalysisCaptureLayout
+            onCapture={captureAndAnalyze}
+            onPickImage={analyzeFromGallery}
+            isAnalyzing={analyzing}
+            permissionStatus={cameraController.hasPermission ? 'granted' : 'undetermined'}
+            onRequestPermission={handleStartAnalysis}
+            cameraComponent={<CameraFrame />}
+            analysisType="food"
+          />
+        </WalkthroughableView>
+      </CopilotStep>
     );
   }
 
@@ -2369,76 +2424,76 @@ export const FoodAnalysisScreen: React.FC = () => {
           {/* Recent Analysis Section - Only show if there are analyses */}
           {latestFoodSession && (
             <>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.recent.title')}</Text>
-            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.recent.subtitle')}</Text>
-          </View>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.recent.title')}</Text>
+                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.recent.subtitle')}</Text>
+              </View>
 
-          {(() => {
-            try {
-              // ✅ FIX: Usa la variabile reattiva latestFoodSession invece di getState()
-              // Always show the card, with fallback data if no session exists
-              const fallbackSession = {
-                id: 'fallback',
-                timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
-                macronutrients: {
-                  carbohydrates: 150,
-                  proteins: 50,
-                  fats: 30,
-                  calories: 1000,
-                },
-                meal_type: 'breakfast',
-                health_score: 65,
-                identified_foods: [],
-              };
+              {(() => {
+                try {
+                  // ✅ FIX: Usa la variabile reattiva latestFoodSession invece di getState()
+                  // Always show the card, with fallback data if no session exists
+                  const fallbackSession = {
+                    id: 'fallback',
+                    timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
+                    macronutrients: {
+                      carbohydrates: 150,
+                      proteins: 50,
+                      fats: 30,
+                      calories: 1000,
+                    },
+                    meal_type: 'breakfast',
+                    health_score: 65,
+                    identified_foods: [],
+                  };
 
-              return (
-                <FoodCaptureCard
-                  session={latestFoodSession || fallbackSession}
-                  dailyCaloriesGoal={dailyGoals.calories}
-                />
-              );
-            } catch (error) {
-              // 🔥 FIX: Solo errori critici in console
-              console.error('❌ Failed to load latest food session:', error);
-              // Fallback session in case of error
-              const fallbackSession = {
-                id: 'error-fallback',
-                timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
-                macronutrients: {
-                  carbohydrates: 150,
-                  proteins: 50,
-                  fats: 30,
-                  calories: 1000,
-                },
-                meal_type: 'breakfast',
-                health_score: 65,
-                identified_foods: [],
-              };
-              return <FoodCaptureCard session={fallbackSession} />;
-            }
-          })()}
+                  return (
+                    <FoodCaptureCard
+                      session={latestFoodSession || fallbackSession}
+                      dailyCaloriesGoal={dailyGoals.calories}
+                    />
+                  );
+                } catch (error) {
+                  // 🔥 FIX: Solo errori critici in console
+                  console.error('❌ Failed to load latest food session:', error);
+                  // Fallback session in case of error
+                  const fallbackSession = {
+                    id: 'error-fallback',
+                    timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
+                    macronutrients: {
+                      carbohydrates: 150,
+                      proteins: 50,
+                      fats: 30,
+                      calories: 1000,
+                    },
+                    meal_type: 'breakfast',
+                    health_score: 65,
+                    identified_foods: [],
+                  };
+                  return <FoodCaptureCard session={fallbackSession} />;
+                }
+              })()}
 
-          {/* Meal Improvement Suggestions Button */}
-          <TouchableOpacity
-            style={styles.detailedAnalysisButton}
-            onPress={() => setShowDetailedAnalysis(true)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#10b981', '#059669']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.detailedAnalysisButtonGradient}
-            >
-              <MaterialCommunityIcons name="lightbulb-on" size={20} color="#ffffff" />
-              <Text style={[styles.detailedAnalysisButtonText, { color: '#ffffff' }]}>
-                {t('analysis.food.mealImprovement.title') || 'Suggerimenti per migliorare questo pasto'}
-              </Text>
-              <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
-            </LinearGradient>
-          </TouchableOpacity>
-          </>
+              {/* Meal Improvement Suggestions Button */}
+              <TouchableOpacity
+                style={styles.detailedAnalysisButton}
+                onPress={() => setShowDetailedAnalysis(true)}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#10b981', '#059669']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.detailedAnalysisButtonGradient}
+                >
+                  <MaterialCommunityIcons name="lightbulb-on" size={20} color="#ffffff" />
+                  <Text style={[styles.detailedAnalysisButtonText, { color: '#ffffff' }]}>
+                    {t('analysis.food.mealImprovement.title') || 'Suggerimenti per migliorare questo pasto'}
+                  </Text>
+                  <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
+                </LinearGradient>
+              </TouchableOpacity>
+            </>
           )}
 
           {/* Nutritional Goals Configuration Section */}
@@ -2609,66 +2664,32 @@ export const FoodAnalysisScreen: React.FC = () => {
           )}
 
           {/* Recipe Hub Preview - Redesigned */}
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('analysis.food.recipes.hubTitle') || 'Ricettario'}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={() => setRecipeHubVisible(true)}
-            style={{ marginBottom: 24 }}
-          >
-            <LinearGradient
-              colors={[colors.primary, colors.accent]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                borderRadius: 20,
-                padding: 24,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                shadowColor: colors.primary,
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.3,
-                shadowRadius: 12,
-                elevation: 8,
-              }}
-            >
-              <View style={{ flex: 1, marginRight: 16 }}>
-                <View style={{
-                  backgroundColor: 'rgba(255,255,255,0.2)',
-                  alignSelf: 'flex-start',
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                  borderRadius: 12,
-                  marginBottom: 8
-                }}>
-                  <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 12 }}>
-                    {t('analysis.food.recipes.hubTag') || 'All-in-One'}
-                  </Text>
+          <CopilotStep text="Il tuo Hub Ricette" description="Scopri nuove ricette e pianifica i tuoi pasti settimanali." order={2} name="recipeHub">
+            <WalkthroughableView style={[styles.recipeHubPreview, { backgroundColor: colors.surface }]}>
+              <LinearGradient
+                colors={[colors.primary + '10', colors.surface]}
+                style={styles.recipeHubGradient}
+              >
+                <View style={styles.recipeHubHeader}>
+                  <View>
+                    <Text style={[styles.recipeHubTitle, { color: colors.text }]}>
+                      {t('food.recipeHub.title')}
+                    </Text>
+                    <Text style={[styles.recipeHubSubtitle, { color: colors.textSecondary }]}>
+                      {t('food.recipeHub.subtitle')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.recipeHubButton, { backgroundColor: colors.primary }]}
+                    onPress={() => setRecipeHubVisible(true)}
+                  >
+                    <Text style={styles.recipeHubButtonText}>{t('food.recipeHub.open')}</Text>
+                    <MaterialCommunityIcons name="arrow-right" size={20} color="#FFF" />
+                  </TouchableOpacity>
                 </View>
-                <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFF', marginBottom: 4 }}>
-                  {t('analysis.food.recipes.openHubTitle') || 'Apri il Ricettario'}
-                </Text>
-                <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)', lineHeight: 20 }}>
-                  {t('analysis.food.recipes.openHubSubtitle') || 'Filtra, salva e pianifica ricette in base ai tuoi gusti e obiettivi nutrizionali.'}
-                </Text>
-              </View>
-              <View style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <MaterialCommunityIcons name="chef-hat" size={32} color="#FFF" />
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
+              </LinearGradient>
+            </WalkthroughableView>
+          </CopilotStep>
 
           {/* Meal Planner - Redesigned */}
           <View style={styles.sectionHeader}>
@@ -2697,7 +2718,7 @@ export const FoodAnalysisScreen: React.FC = () => {
               return (
                 <TouchableOpacity
                   key={day.iso}
-                onPress={() => setSelectedPlannerDate(fromISODate(day.iso))}
+                  onPress={() => setSelectedPlannerDate(fromISODate(day.iso))}
                   style={{
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2761,9 +2782,9 @@ export const FoodAnalysisScreen: React.FC = () => {
                     >
                       {/* Mostra immagine se disponibile (da recipe o custom_recipe) */}
                       {entry.recipe?.image || (entry.custom_recipe as any)?.image_url ? (
-                        <Image 
-                          source={{ uri: entry.recipe?.image || (entry.custom_recipe as any)?.image_url }} 
-                          style={{ width: 56, height: 56, borderRadius: 12, marginRight: 12 }} 
+                        <Image
+                          source={{ uri: entry.recipe?.image || (entry.custom_recipe as any)?.image_url }}
+                          style={{ width: 56, height: 56, borderRadius: 12, marginRight: 12 }}
                         />
                       ) : (
                         <View style={{ width: 56, height: 56, borderRadius: 12, backgroundColor: colors.surfaceElevated, marginRight: 12, alignItems: 'center', justifyContent: 'center' }}>
@@ -2777,8 +2798,8 @@ export const FoodAnalysisScreen: React.FC = () => {
                         <Text style={{ fontSize: 12, color: colors.textSecondary }}>
                           {Math.round(
                             entry.recipe?.calories_per_serving ||
-                              (entry.custom_recipe as any)?.calories ||
-                              0
+                            (entry.custom_recipe as any)?.calories ||
+                            0
                           )}{' '}
                           kcal
                           {entry.recipe?.ready_in_minutes
@@ -2819,8 +2840,8 @@ export const FoodAnalysisScreen: React.FC = () => {
                               },
                               ingredients: Array.isArray(custom.identified_foods)
                                 ? custom.identified_foods.map((name: string) => ({
-                                    name,
-                                  }))
+                                  name,
+                                }))
                                 : [],
                               steps: [],
                               source: custom.source || 'food_analysis',
@@ -2830,13 +2851,13 @@ export const FoodAnalysisScreen: React.FC = () => {
                             const macrosEstimate =
                               custom.macros || custom.calories
                                 ? {
-                                    protein: custom.macros?.protein,
-                                    carbs: custom.macros?.carbs,
-                                    fat: custom.macros?.fat,
-                                    fiber: custom.macros?.fiber,
-                                    sugar: custom.macros?.sugar,
-                                    calories: custom.calories,
-                                  }
+                                  protein: custom.macros?.protein,
+                                  carbs: custom.macros?.carbs,
+                                  fat: custom.macros?.fat,
+                                  fiber: custom.macros?.fiber,
+                                  sugar: custom.macros?.sugar,
+                                  calories: custom.calories,
+                                }
                                 : undefined;
 
                             const aiContext = {
@@ -4728,4 +4749,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default FoodAnalysisScreen;
+// Removed export default since we export named component above
+// export default FoodAnalysisScreen;

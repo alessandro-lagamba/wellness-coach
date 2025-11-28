@@ -290,8 +290,8 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
               router.push('/coach/chat');
               break;
             case 'suggestions':
-              // Le suggestions sono mostrate nella home screen
-              router.push('/(tabs)');
+              // Naviga alla schermata WellnessSuggestions
+              router.push('/(tabs)/suggestions');
               break;
             default:
               // 🔥 FIX: Solo errori critici in console

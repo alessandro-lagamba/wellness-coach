@@ -14,8 +14,9 @@ import {
   useColorScheme,
   FlatList,
   Platform,
-  // KeyboardAvoidingView, // Removed
+  ActivityIndicator, // Added
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons'; // Added
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Modal } from 'react-native';
@@ -37,6 +38,9 @@ import { useKeyboardHandler } from 'react-native-keyboard-controller';
 // import { AvoidSoftInput, AvoidSoftInputView } from 'react-native-avoid-softinput';
 import WellnessSuggestionPopup from './WellnessSuggestionPopup';
 import { TimePickerModal } from './TimePickerModal';
+import { CopilotProvider, walkthroughable, CopilotStep, useCopilot } from 'react-native-copilot';
+import { TutorialTooltip } from './TutorialTooltip';
+import { OnboardingService } from '../services/onboarding.service';
 
 import { BACKEND_URL, getBackendURL } from '../constants/env';
 
@@ -193,7 +197,30 @@ const extractSuggestionFromAIResponse = (aiResponse: string) => {
   return null;
 };
 
+const WalkthroughableView = walkthroughable(View);
+
 export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
+  return (
+    <CopilotProvider
+      overlay="view"
+      tooltipComponent={TutorialTooltip}
+      verticalOffset={Platform.OS === 'ios' ? 40 : 0}
+      arrowColor="transparent"
+      backdropColor="rgba(0, 0, 0, 0.6)"
+      labels={{
+        previous: "Indietro",
+        next: "Avanti",
+        skip: "Salta",
+        finish: "Finito"
+      }}
+    >
+      <ChatScreenContent user={user} onLogout={onLogout} />
+    </CopilotProvider>
+  );
+};
+
+const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
+  const { start: startCopilot } = useCopilot();
   const { t, language } = useTranslation(); // 🆕 i18n hook
   const { colors, mode: themeMode } = useTheme();
   const { hideTabBar, showTabBar } = useTabBarVisibility();
@@ -303,6 +330,35 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       const template = await JournalSettingsService.getTemplate();
       setSelectedTemplate(template);
     })();
+  }, []);
+
+  // Check for walkthrough on mount
+  useEffect(() => {
+    const checkWalkthrough = async () => {
+      const isCompleted = await OnboardingService.isChatWalkthroughCompleted();
+      const onboardingCompleted = await OnboardingService.isOnboardingCompleted();
+
+      if (onboardingCompleted && !isCompleted) {
+        // Small delay to ensure layout is ready
+        setTimeout(() => {
+          startCopilot();
+        }, 1000);
+      }
+    };
+
+    checkWalkthrough();
+  }, []);
+
+  // Handle walkthrough completion
+  useEffect(() => {
+    const { copilotEvents } = require('react-native-copilot');
+    const listener = copilotEvents.on('stop', async () => {
+      await OnboardingService.completeChatWalkthrough();
+    });
+
+    return () => {
+      listener.remove();
+    };
   }, []);
 
   // Load journal local + remote, build prompt
@@ -2045,24 +2101,28 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         </TouchableOpacity>
         <View style={styles.headerContent}>
           {/* Segmented toggle: Chat | Journal */}
-          <View style={[styles.segmentedWrap, { backgroundColor: surfaceSecondary, borderColor: colors.border }]}>
-            <TouchableOpacity
-              style={[styles.segmentBtn, mode === 'chat' && [styles.segmentBtnActive, { backgroundColor: colors.surface }]]}
-              onPress={() => setMode('chat')}
-              accessibilityRole="button"
-              accessibilityState={{ selected: mode === 'chat' }}
-            >
-              <Text style={[styles.segmentText, { color: colors.textSecondary }, mode === 'chat' && [styles.segmentTextActive, { color: colors.text }]]}>{t('chat.title')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.segmentBtn, mode === 'journal' && [styles.segmentBtnActive, { backgroundColor: colors.surface }]]}
-              onPress={() => handleOpenJournal()}
-              accessibilityRole="button"
-              accessibilityState={{ selected: mode === 'journal' }}
-            >
-              <Text style={[styles.segmentText, { color: colors.textSecondary }, mode === 'journal' && [styles.segmentTextActive, { color: colors.text }]]}>{t('journal.title')}</Text>
-            </TouchableOpacity>
-          </View>
+          <CopilotStep text="Modalità Chat o Journal" order={1} name="modeToggle">
+            <WalkthroughableView style={[styles.segmentedControl, { backgroundColor: surfaceSecondary }]}>
+              <TouchableOpacity
+                onPress={() => setMode('chat')}
+                style={[styles.segmentBtn, mode === 'chat' && [styles.segmentBtnActive, { backgroundColor: colors.surface }]]}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityState={{ selected: mode === 'chat' }}
+              >
+                <Text style={[styles.segmentText, { color: colors.textSecondary }, mode === 'chat' && [styles.segmentTextActive, { color: colors.text }]]}>{t('chat.title')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setMode('journal')}
+                style={[styles.segmentBtn, mode === 'journal' && [styles.segmentBtnActive, { backgroundColor: colors.surface }]]}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityState={{ selected: mode === 'journal' }}
+              >
+                <Text style={[styles.segmentText, { color: colors.textSecondary }, mode === 'journal' && [styles.segmentTextActive, { color: colors.text }]]}>{t('journal.title')}</Text>
+              </TouchableOpacity>
+            </WalkthroughableView>
+          </CopilotStep>
         </View>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {/* Cronologia Chat Button */}
@@ -2690,45 +2750,48 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
         {/* Input Area (Chat only) - hidden when voice interface is visible */}
         {mode === 'chat' && !showVoiceInterface && (
-          <View
-            ref={inputContainerRef}
-            style={[
-              styles.inputContainer,
-              {
-                backgroundColor: colors.surface,
-                borderTopColor: colors.border,
-                // 🔥 FIX: Padding costante - AvoidSoftInputView gestisce automaticamente lo spazio della tastiera
-                paddingBottom: insets.bottom,
-              },
-            ]}
-          >
-            <View style={[styles.inputWrapper, { backgroundColor: surfaceSecondary, borderColor: colors.border }]}>
+          <CopilotStep text="Scrivi o Parla" order={2} name="inputArea">
+            <WalkthroughableView style={[styles.inputContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+              <TouchableOpacity
+                onPress={() => setShowChatMenu(true)}
+                style={styles.attachButton}
+              >
+                <MaterialCommunityIcons name="plus" size={24} color={colors.primary} />
+              </TouchableOpacity>
+
               <TextInput
                 style={[styles.textInput, { color: colors.text }, isVoiceMode && styles.voiceInput]}
-                placeholder={isVoiceMode ? t('chat.voicePlaceholder') : t('chat.placeholder')}
+                placeholder={isVoiceMode ? t('chat.listening') : t('chat.placeholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={inputValue}
                 onChangeText={setInputValue}
                 multiline
-                maxLength={500}
-                onFocus={handleInputFocus}
-                onBlur={handleInputBlur}
+                maxLength={1000}
+                editable={!isSending && !isVoiceMode}
               />
-              <TouchableOpacity
-                style={[styles.micButton, !inputValue.trim() && styles.micButtonActive]}
-                onPress={() => setShowVoiceInterface(true)}
-              >
-                <FontAwesome name="microphone" size={18} color="#ffffff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.sendButton, !inputValue.trim() && styles.sendButtonDisabled]}
-                disabled={!inputValue.trim() || isSending}
-                onPress={handleSendMessage}
-              >
-                <FontAwesome name="send" size={16} color={inputValue.trim() ? '#ffffff' : (themeMode === 'dark' ? '#94a3b8' : '#cbd5f5')} />
-              </TouchableOpacity>
-            </View>
-          </View>
+
+              {inputValue.trim().length > 0 ? (
+                <TouchableOpacity
+                  onPress={handleSendMessage}
+                  disabled={isSending}
+                  style={[styles.sendButton, { backgroundColor: colors.primary }]}
+                >
+                  {isSending ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <MaterialCommunityIcons name="arrow-up" size={20} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={() => setIsVoiceMode(true)}
+                  style={[styles.micButton, { backgroundColor: (colors as any).surfaceSecondary ?? colors.surface }]}
+                >
+                  <MaterialCommunityIcons name="microphone" size={20} color={colors.text} />
+                </TouchableOpacity>
+              )}
+            </WalkthroughableView>
+          </CopilotStep>
         )}
         {/* Fake View for Keyboard Animation */}
         <Animated.View style={fakeViewStyle} />
@@ -3901,6 +3964,19 @@ const styles = StyleSheet.create({
   templateOptionDescription: {
     fontSize: 13,
   },
+  segmentedControl: {
+    flexDirection: 'row',
+    borderRadius: 20,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  attachButton: {
+    padding: 8,
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
 
 // Stili per il markdown nella chat (dinamici basati sul tema)
@@ -3971,4 +4047,5 @@ const chatMarkdownStyles = (mode: 'light' | 'dark', colors: any) => ({
   },
 });
 
-export default ChatScreen;
+// Removed export default since we export named component above
+// export default ChatScreen;

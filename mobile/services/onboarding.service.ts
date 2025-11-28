@@ -21,6 +21,10 @@ export class OnboardingService {
     FIRST_SKIN_ANALYSIS: 'first_skin_analysis_completed',
     FIRST_FOOD_ANALYSIS: 'first_food_analysis_completed',
     FIRST_JOURNAL_ENTRY: 'first_journal_entry_completed',
+    HOME_WALKTHROUGH_COMPLETED: 'home_walkthrough_completed',
+    FOOD_WALKTHROUGH_COMPLETED: 'food_walkthrough_completed',
+    CHAT_WALKTHROUGH_COMPLETED: 'chat_walkthrough_completed',
+    SKIN_WALKTHROUGH_COMPLETED: 'skin_walkthrough_completed',
   };
 
   /**
@@ -110,7 +114,7 @@ export class OnboardingService {
     try {
       const currentState = await this.getOnboardingState();
       const updatedSteps = [...currentState.completedSteps, stepId];
-      
+
       await Promise.all([
         AsyncStorage.setItem(this.STORAGE_KEYS.STEPS, JSON.stringify(updatedSteps)),
         AsyncStorage.setItem(this.STORAGE_KEYS.LAST_STEP, stepIndex.toString()),
@@ -195,10 +199,10 @@ export class OnboardingService {
   }> {
     try {
       const state = await this.getOnboardingState();
-      
+
       // Calcola completion rate
       const completionRate = state.isCompleted ? 100 : 0;
-      
+
       // Calcola tempo medio (se disponibile)
       let averageTimeToComplete: number | null = null;
       if (state.completedAt) {
@@ -206,7 +210,7 @@ export class OnboardingService {
         const now = new Date();
         averageTimeToComplete = now.getTime() - completedAt.getTime();
       }
-      
+
       return {
         completionRate,
         averageTimeToComplete,
@@ -227,10 +231,10 @@ export class OnboardingService {
    */
   static async isFirstTime(feature: 'emotion' | 'skin' | 'food' | 'journal'): Promise<boolean> {
     try {
-      const key = this.STORAGE_KEYS[`FIRST_${feature.toUpperCase()}_ANALYSIS` as keyof typeof this.STORAGE_KEYS] || 
-                  this.STORAGE_KEYS[`FIRST_${feature.toUpperCase()}_ENTRY` as keyof typeof this.STORAGE_KEYS];
+      const key = this.STORAGE_KEYS[`FIRST_${feature.toUpperCase()}_ANALYSIS` as keyof typeof this.STORAGE_KEYS] ||
+        this.STORAGE_KEYS[`FIRST_${feature.toUpperCase()}_ENTRY` as keyof typeof this.STORAGE_KEYS];
       if (!key) return false;
-      
+
       const completed = await AsyncStorage.getItem(key);
       return completed !== 'true';
     } catch (error) {
@@ -244,10 +248,10 @@ export class OnboardingService {
    */
   static async markFirstTimeCompleted(feature: 'emotion' | 'skin' | 'food' | 'journal'): Promise<void> {
     try {
-      const key = this.STORAGE_KEYS[`FIRST_${feature.toUpperCase()}_ANALYSIS` as keyof typeof this.STORAGE_KEYS] || 
-                  this.STORAGE_KEYS[`FIRST_${feature.toUpperCase()}_ENTRY` as keyof typeof this.STORAGE_KEYS];
+      const key = this.STORAGE_KEYS[`FIRST_${feature.toUpperCase()}_ANALYSIS` as keyof typeof this.STORAGE_KEYS] ||
+        this.STORAGE_KEYS[`FIRST_${feature.toUpperCase()}_ENTRY` as keyof typeof this.STORAGE_KEYS];
       if (!key) return;
-      
+
       await AsyncStorage.setItem(key, 'true');
       console.log(`✅ First ${feature} analysis/entry marked as completed`);
     } catch (error) {
@@ -265,10 +269,106 @@ export class OnboardingService {
         AsyncStorage.removeItem(this.STORAGE_KEYS.FIRST_SKIN_ANALYSIS),
         AsyncStorage.removeItem(this.STORAGE_KEYS.FIRST_FOOD_ANALYSIS),
         AsyncStorage.removeItem(this.STORAGE_KEYS.FIRST_JOURNAL_ENTRY),
+        AsyncStorage.removeItem(this.STORAGE_KEYS.HOME_WALKTHROUGH_COMPLETED),
+        AsyncStorage.removeItem(this.STORAGE_KEYS.FOOD_WALKTHROUGH_COMPLETED),
+        AsyncStorage.removeItem(this.STORAGE_KEYS.CHAT_WALKTHROUGH_COMPLETED),
+        AsyncStorage.removeItem(this.STORAGE_KEYS.SKIN_WALKTHROUGH_COMPLETED),
       ]);
       console.log('🔄 First time tracking reset successfully');
     } catch (error) {
       console.error('Error resetting first time tracking:', error);
+    }
+  }
+
+  /**
+   * Verifica se il walkthrough della Home è stato completato
+   */
+  static async isHomeWalkthroughCompleted(): Promise<boolean> {
+    try {
+      const completed = await AsyncStorage.getItem(this.STORAGE_KEYS.HOME_WALKTHROUGH_COMPLETED);
+      return completed === 'true';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Marca il walkthrough della Home come completato
+   */
+  static async completeHomeWalkthrough(): Promise<void> {
+    try {
+      await AsyncStorage.setItem(this.STORAGE_KEYS.HOME_WALKTHROUGH_COMPLETED, 'true');
+    } catch (error) {
+      console.error('Error completing home walkthrough:', error);
+    }
+  }
+
+  /**
+   * Verifica se il walkthrough del Food è stato completato
+   */
+  static async isFoodWalkthroughCompleted(): Promise<boolean> {
+    try {
+      const completed = await AsyncStorage.getItem(this.STORAGE_KEYS.FOOD_WALKTHROUGH_COMPLETED);
+      return completed === 'true';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Marca il walkthrough del Food come completato
+   */
+  static async completeFoodWalkthrough(): Promise<void> {
+    try {
+      await AsyncStorage.setItem(this.STORAGE_KEYS.FOOD_WALKTHROUGH_COMPLETED, 'true');
+    } catch (error) {
+      console.error('Error completing food walkthrough:', error);
+    }
+  }
+
+  /**
+   * Verifica se il walkthrough della Chat è stato completato
+   */
+  static async isChatWalkthroughCompleted(): Promise<boolean> {
+    try {
+      const completed = await AsyncStorage.getItem(this.STORAGE_KEYS.CHAT_WALKTHROUGH_COMPLETED);
+      return completed === 'true';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Marca il walkthrough della Chat come completato
+   */
+  static async completeChatWalkthrough(): Promise<void> {
+    try {
+      await AsyncStorage.setItem(this.STORAGE_KEYS.CHAT_WALKTHROUGH_COMPLETED, 'true');
+    } catch (error) {
+      console.error('Error completing chat walkthrough:', error);
+    }
+  }
+
+  /**
+   * Verifica se il walkthrough della Skin è stato completato
+   */
+  static async isSkinWalkthroughCompleted(): Promise<boolean> {
+    try {
+      const completed = await AsyncStorage.getItem(this.STORAGE_KEYS.SKIN_WALKTHROUGH_COMPLETED);
+      return completed === 'true';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Marca il walkthrough della Skin come completato
+   */
+  static async completeSkinWalkthrough(): Promise<void> {
+    try {
+      await AsyncStorage.setItem(this.STORAGE_KEYS.SKIN_WALKTHROUGH_COMPLETED, 'true');
+    } catch (error) {
+      console.error('Error completing skin walkthrough:', error);
     }
   }
 }

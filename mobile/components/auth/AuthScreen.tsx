@@ -337,7 +337,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: '#667eea' }]}>
       <LinearGradient
         colors={['#667eea', '#764ba2', '#f093fb']}
         style={styles.backgroundGradient}
@@ -621,7 +621,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: '#667eea' },
   safeArea: { flex: 1, backgroundColor: 'transparent' },
   backgroundGradient: {
     ...StyleSheet.absoluteFillObject,

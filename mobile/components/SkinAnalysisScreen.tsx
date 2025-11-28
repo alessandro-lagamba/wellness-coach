@@ -59,6 +59,8 @@ import { EmptyStateCard } from './EmptyStateCard';
 import { FirstAnalysisCelebration } from './FirstAnalysisCelebration';
 import { ContextualPermissionModal } from './ContextualPermissionModal';
 import { OnboardingService } from '../services/onboarding.service';
+import { CopilotProvider, walkthroughable, CopilotStep, useCopilot } from 'react-native-copilot';
+import { TutorialTooltip } from './TutorialTooltip';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
@@ -331,7 +333,30 @@ const ImageWithFallback: React.FC<{ uri: string; style: any; fallbackColor?: str
   );
 };
 
+const WalkthroughableView = walkthroughable(View);
+
 const SkinAnalysisScreen: React.FC = () => {
+  return (
+    <CopilotProvider
+      overlay="view"
+      tooltipComponent={TutorialTooltip}
+      verticalOffset={Platform.OS === 'ios' ? 40 : 0}
+      arrowColor="transparent"
+      backdropColor="rgba(0, 0, 0, 0.6)"
+      labels={{
+        previous: "Indietro",
+        next: "Avanti",
+        skip: "Salta",
+        finish: "Finito"
+      }}
+    >
+      <SkinAnalysisScreenContent />
+    </CopilotProvider>
+  );
+};
+
+const SkinAnalysisScreenContent: React.FC = () => {
+  const { start: startCopilot } = useCopilot();
   const { t, i18n } = useTranslation(); // 🆕 i18n hook
   const { colors } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
@@ -363,10 +388,10 @@ const SkinAnalysisScreen: React.FC = () => {
 
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
-  
+
   // First analysis celebration
   const [showFirstAnalysisCelebration, setShowFirstAnalysisCelebration] = useState(false);
-  
+
   // Contextual permission modal
   const [showPermissionModal, setShowPermissionModal] = useState(false);
 
@@ -446,11 +471,40 @@ const SkinAnalysisScreen: React.FC = () => {
     ensureAnalysisReady();
   }, [ensureAnalysisReady]);
 
+  // Check for walkthrough on mount
+  useEffect(() => {
+    const checkWalkthrough = async () => {
+      const isCompleted = await OnboardingService.isSkinWalkthroughCompleted();
+      const onboardingCompleted = await OnboardingService.isOnboardingCompleted();
+
+      if (onboardingCompleted && !isCompleted) {
+        // Small delay to ensure layout is ready
+        setTimeout(() => {
+          startCopilot();
+        }, 1000);
+      }
+    };
+
+    checkWalkthrough();
+  }, []);
+
+  // Handle walkthrough completion
+  useEffect(() => {
+    const { copilotEvents } = require('react-native-copilot');
+    const listener = copilotEvents.on('stop', async () => {
+      await OnboardingService.completeSkinWalkthrough();
+    });
+
+    return () => {
+      listener.remove();
+    };
+  }, []);
+
   // Reload data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
-      
+
       const reloadData = async () => {
         try {
           await ChartDataService.loadSkinDataForCharts();
@@ -483,7 +537,7 @@ const SkinAnalysisScreen: React.FC = () => {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
         await ChartDataService.loadSkinDataForCharts();
         // 🔥 FIX: Rimuoviamo console.log eccessivi
-        
+
         if (isMounted) {
           setIsLoadingData(false); // Data loading complete
         }
@@ -1515,19 +1569,19 @@ const SkinAnalysisScreen: React.FC = () => {
 
   if (cameraController.active && !analyzing) {
     return (
-      <AnalysisCaptureLayout
-        renderCamera={<CameraFrame />}
-        onBack={handleExitCapture}
-        onCancel={handleExitCapture}
-        onCapture={captureAndAnalyze}
-        captureDisabled={captureDisabled}
-        showSwitch
-        switchDisabled={cameraSwitching}
-        switchLabel={cameraType === 'front' ? 'Back' : 'Front'}
-        onSwitch={switchCamera}
-        cancelLabel={t('common.cancel')}
-        captureLabel={t('common.capture')}
-      />
+      <CopilotStep text="Analisi della Pelle" description="Scatta una foto per analizzare la salute della tua pelle." order={1} name="skinCamera">
+        <WalkthroughableView style={{ flex: 1 }}>
+          <AnalysisCaptureLayout
+            onCapture={captureAndAnalyze}
+            onPickImage={analyzeFromGallery}
+            isAnalyzing={analyzing}
+            permissionStatus={cameraController.hasPermission ? 'granted' : 'undetermined'}
+            onRequestPermission={handleStartAnalysis}
+            cameraComponent={<CameraFrame />}
+            analysisType="skin"
+          />
+        </WalkthroughableView>
+      </CopilotStep>
     );
   }
 
@@ -1646,88 +1700,88 @@ const SkinAnalysisScreen: React.FC = () => {
           {/* Recent Analysis Section - Only show if there are captures */}
           {latestSkinCapture && (
             <>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.recent.title')}</Text>
-            <Text style={styles.sectionSubtitle}>{t('analysis.skin.recent.subtitle')}</Text>
-          </View>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.recent.title')}</Text>
+                <Text style={styles.sectionSubtitle}>{t('analysis.skin.recent.subtitle')}</Text>
+              </View>
 
-          {(() => {
-            try {
-              const store = useAnalysisStore.getState();
-              const latestCapture = store.latestSkinCapture;
-              const skinHistory = store.skinHistory;
+              {(() => {
+                try {
+                  const store = useAnalysisStore.getState();
+                  const latestCapture = store.latestSkinCapture;
+                  const skinHistory = store.skinHistory;
 
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
+                  // 🔥 FIX: Rimuoviamo console.log eccessivi
 
-              // Always show the card, with fallback data if no capture exists
-              const fallbackCapture = {
-                id: 'fallback',
-                timestamp: new Date().toISOString(),
-                scores: {
-                  texture: 65,
-                  redness: 25,
-                  hydration: 70,
-                  oiliness: 45,
-                  overall: 60,
-                },
-                confidence: 0.5,
-                quality: {
-                  lighting: 0.7,
-                  focus: 0.6,
-                  roi_coverage: 0.8,
-                },
-              };
+                  // Always show the card, with fallback data if no capture exists
+                  const fallbackCapture = {
+                    id: 'fallback',
+                    timestamp: new Date().toISOString(),
+                    scores: {
+                      texture: 65,
+                      redness: 25,
+                      hydration: 70,
+                      oiliness: 45,
+                      overall: 60,
+                    },
+                    confidence: 0.5,
+                    quality: {
+                      lighting: 0.7,
+                      focus: 0.6,
+                      roi_coverage: 0.8,
+                    },
+                  };
 
-              return (
-                <SkinCaptureCard
-                  capture={latestCapture || fallbackCapture}
-                />
-              );
-            } catch (error) {
-              // 🔥 FIX: Solo errori critici in console
-              console.error('❌ Failed to load latest skin capture:', error);
-              // Fallback capture in case of error
-              const fallbackCapture = {
-                id: 'error-fallback',
-                timestamp: new Date().toISOString(),
-                scores: {
-                  texture: 65,
-                  redness: 25,
-                  hydration: 70,
-                  oiliness: 45,
-                  overall: 60,
-                },
-                confidence: 0.5,
-                quality: {
-                  lighting: 0.7,
-                  focus: 0.6,
-                  roi_coverage: 0.8,
-                },
-              };
-              return <SkinCaptureCard capture={fallbackCapture} />;
-            }
-          })()}
+                  return (
+                    <SkinCaptureCard
+                      capture={latestCapture || fallbackCapture}
+                    />
+                  );
+                } catch (error) {
+                  // 🔥 FIX: Solo errori critici in console
+                  console.error('❌ Failed to load latest skin capture:', error);
+                  // Fallback capture in case of error
+                  const fallbackCapture = {
+                    id: 'error-fallback',
+                    timestamp: new Date().toISOString(),
+                    scores: {
+                      texture: 65,
+                      redness: 25,
+                      hydration: 70,
+                      oiliness: 45,
+                      overall: 60,
+                    },
+                    confidence: 0.5,
+                    quality: {
+                      lighting: 0.7,
+                      focus: 0.6,
+                      roi_coverage: 0.8,
+                    },
+                  };
+                  return <SkinCaptureCard capture={fallbackCapture} />;
+                }
+              })()}
 
-          {/* Detailed Analysis Button */}
-          <TouchableOpacity
-            style={styles.detailedAnalysisButton}
-            onPress={() => setShowDetailedAnalysis(true)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#22d3ee', '#6366f1']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.detailedAnalysisButtonGradient}
-            >
-              <MaterialCommunityIcons name="face-woman-shimmer" size={20} color="#ffffff" />
-              <Text style={styles.detailedAnalysisButtonText}>
-                {t('analysis.skin.detailedAnalysis.buttonText')}
-              </Text>
-              <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
-            </LinearGradient>
-          </TouchableOpacity>
-          </>
+              {/* Detailed Analysis Button */}
+              <TouchableOpacity
+                style={styles.detailedAnalysisButton}
+                onPress={() => setShowDetailedAnalysis(true)}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#22d3ee', '#6366f1']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.detailedAnalysisButtonGradient}
+                >
+                  <MaterialCommunityIcons name="face-woman-shimmer" size={20} color="#ffffff" />
+                  <Text style={styles.detailedAnalysisButtonText}>
+                    {t('analysis.skin.detailedAnalysis.buttonText')}
+                  </Text>
+                  <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
+                </LinearGradient>
+              </TouchableOpacity>
+            </>
           )}
 
           {/* Quick Stats Section */}
