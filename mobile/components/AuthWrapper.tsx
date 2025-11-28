@@ -113,6 +113,56 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       setIsAuthenticated(true);
       setUser(currentUser);
 
+      // 🔥 FIX: Crea il profilo SOLO se l'email è verificata
+      // Il profilo non viene creato durante la registrazione, ma solo dopo la verifica email
+      try {
+        const { AuthService } = await import('../services/auth.service');
+        const emailVerified = Boolean(currentUser.email_confirmed_at);
+        
+        if (emailVerified) {
+          const existingProfile = await AuthService.getUserProfile(currentUser.id);
+          
+          if (!existingProfile) {
+            console.log('✅ Email verified, creating user profile...');
+            // Crea il profilo con i dati disponibili dall'utente
+            const fullName = currentUser.user_metadata?.full_name || 
+                            currentUser.user_metadata?.name || 
+                            currentUser.email?.split('@')[0] || 
+                            'User';
+            
+            await AuthService.createUserProfile(
+              currentUser.id,
+              currentUser.email || '',
+              fullName
+            );
+            
+            // Se ci sono dati aggiuntivi nei metadata, aggiornali
+            const firstName = currentUser.user_metadata?.first_name;
+            const lastName = currentUser.user_metadata?.last_name;
+            const age = currentUser.user_metadata?.age;
+            const gender = currentUser.user_metadata?.gender;
+            
+            if (firstName || lastName || age || gender) {
+              await AuthService.updateUserProfile(currentUser.id, {
+                first_name: firstName,
+                last_name: lastName,
+                age: age ? parseInt(age) : undefined,
+                gender: gender,
+              });
+            }
+            
+            console.log('✅ User profile created successfully after email verification');
+          } else {
+            console.log('✅ User profile already exists');
+          }
+        } else {
+          console.log('⚠️ Email not verified yet, profile will be created after verification');
+        }
+      } catch (profileError) {
+        console.error('❌ Error checking/creating user profile:', profileError);
+        // Non blocchiamo l'autenticazione se la creazione del profilo fallisce
+      }
+
       // 🔥 FIX: Non mostriamo più OnboardingScreen, andiamo direttamente al tutorial
       // Controlla se mostrare il tutorial
       const tutorialCompleted = await OnboardingService.isTutorialCompleted();

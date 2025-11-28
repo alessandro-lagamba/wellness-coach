@@ -113,26 +113,30 @@ export class AuthService {
         return { user: null, error };
       }
 
-      // Crea il profilo utente
+      // 🔥 FIX: Non creiamo il profilo durante la registrazione
+      // Il profilo verrà creato automaticamente quando l'utente verifica l'email
+      // Questo evita di avere profili per utenti che non completano la verifica
+      
       if (data.user) {
-        await this.createUserProfile(data.user.id, email, fullName);
-        
         // Inizializza la chiave di cifratura E2E per il nuovo utente
-        try {
-          const { initializeEncryptionKey } = await import('./encryption.service');
-          await initializeEncryptionKey(data.user.id, password);
-          console.log('[Auth] ✅ Encryption key initialized for new user');
-        } catch (encError) {
-          console.warn('[Auth] ⚠️ Failed to initialize encryption key (non-critical):', encError);
-          // Non blocchiamo la registrazione se la cifratura fallisce
-        }
+        // (solo se l'email è già verificata, altrimenti verrà fatto dopo la verifica)
+        if (data.user.email_confirmed_at) {
+          try {
+            const { initializeEncryptionKey } = await import('./encryption.service');
+            await initializeEncryptionKey(data.user.id, password);
+            console.log('[Auth] ✅ Encryption key initialized for new user');
+          } catch (encError) {
+            console.warn('[Auth] ⚠️ Failed to initialize encryption key (non-critical):', encError);
+            // Non blocchiamo la registrazione se la cifratura fallisce
+          }
 
-        // 🆕 Gestisci multi-device login
-        try {
-          const { MultiDeviceAuthService } = await import('./multi-device-auth.service');
-          await MultiDeviceAuthService.handleLogin();
-        } catch (error) {
-          // Non critico, ignora
+          // 🆕 Gestisci multi-device login
+          try {
+            const { MultiDeviceAuthService } = await import('./multi-device-auth.service');
+            await MultiDeviceAuthService.handleLogin();
+          } catch (error) {
+            // Non critico, ignora
+          }
         }
       }
 

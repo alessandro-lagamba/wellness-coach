@@ -142,30 +142,27 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
           return;
         }
         if (user) {
-          // Crea il profilo con tutti i dati in una volta
+          // 🔥 FIX: Non creiamo il profilo durante la registrazione
+          // Il profilo verrà creato automaticamente quando l'utente verifica l'email
+          // I dati aggiuntivi (first_name, last_name, age, gender) vengono salvati
+          // nei metadata dell'utente per essere applicati quando il profilo viene creato
+          
+          // Salva i dati aggiuntivi nei metadata dell'utente
           try {
-            await AuthService.createUserProfile(user.id, email, `${firstName} ${lastName}`);
-
-            // Aspetta un momento per assicurarsi che il profilo sia stato creato
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Aggiorna con i dati aggiuntivi
-            await AuthService.updateUserProfile(user.id, {
-              first_name: firstName,
-              last_name: lastName,
-              age: age ? parseInt(age) : undefined,
-              gender: gender,
+            const { supabase } = await import('../../lib/supabase');
+            await supabase.auth.updateUser({
+              data: {
+                full_name: `${firstName} ${lastName}`,
+                first_name: firstName,
+                last_name: lastName,
+                age: age ? parseInt(age) : undefined,
+                gender: gender,
+              }
             });
-          } catch (createError) {
-            console.log('Profile already exists, updating instead...');
-            // Se il profilo esiste già, aggiornalo direttamente
-            await AuthService.updateUserProfile(user.id, {
-              first_name: firstName,
-              last_name: lastName,
-              full_name: `${firstName} ${lastName}`,
-              age: age ? parseInt(age) : undefined,
-              gender: gender,
-            });
+            console.log('✅ User metadata saved for profile creation after email verification');
+          } catch (metadataError) {
+            console.warn('⚠️ Failed to save user metadata (non-critical):', metadataError);
+            // Non blocchiamo la registrazione se il salvataggio dei metadata fallisce
           }
 
           Alert.alert(
