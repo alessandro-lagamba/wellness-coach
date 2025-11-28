@@ -336,9 +336,13 @@ export class WellnessSyncService {
    * Check permissions status
    */
   async getPermissionsStatus(): Promise<{ calendar: boolean; notifications: boolean }> {
-    const notificationStatus = await NotificationService.ensurePermission();
+    const [calendarStatus, notificationStatus] = await Promise.all([
+      this.calendarService.refreshPermissionStatus(),
+      NotificationService.getPermissionStatus(),
+    ]);
+
     return {
-      calendar: this.calendarService.hasCalendarPermissions(),
+      calendar: calendarStatus,
       notifications: notificationStatus,
     };
   }

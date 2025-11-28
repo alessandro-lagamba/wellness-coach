@@ -94,6 +94,19 @@ async function scheduleUnique(key: string, args: Parameters<typeof Notifications
 let defaultsScheduled = false;
 
 export const NotificationService = {
+  async getPermissionStatus(): Promise<boolean> {
+    try {
+      const settings = await Notifications.getPermissionsAsync();
+      return (
+        settings.granted ||
+        settings.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL
+      );
+    } catch (error) {
+      console.error('[NotificationService] ❌ Error checking permission status:', error);
+      return false;
+    }
+  },
+
   async ensurePermission(): Promise<boolean> {
     const settings = await Notifications.getPermissionsAsync();
     if (settings.granted || settings.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {

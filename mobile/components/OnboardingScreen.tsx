@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Image,
   StatusBar,
   Platform,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -16,6 +17,10 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HealthPermissionsModal } from './HealthPermissionsModal';
+import { WellnessPermissionsModal } from './WellnessPermissionsModal';
+import WellnessSyncService from '../services/wellness-sync.service';
+import PushNotificationService from '../services/push-notification.service';
+import { AuthService } from '../services/auth.service';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 
 const { width, height } = Dimensions.get('window');
@@ -134,12 +139,28 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [showHealthPermissions, setShowHealthPermissions] = useState(false);
+  const [showWellnessPermissions, setShowWellnessPermissions] = useState(false);
+  const [requestingWellnessPermissions, setRequestingWellnessPermissions] = useState(false);
+  const wellnessSyncServiceRef = useRef(WellnessSyncService.getInstance());
   const scrollViewRef = useRef<ScrollView>(null);
   
   // 🆕 Costruisci steps dinamicamente con traduzioni
   const ONBOARDING_STEPS = getOnboardingSteps(t);
   const currentStepData = ONBOARDING_STEPS[currentStep];
   const isLastStep = currentStep === ONBOARDING_STEPS.length - 1;
+
+  const advanceToNextStep = () => {
+    const newCompletedSteps = new Set(completedSteps);
+    newCompletedSteps.add(currentStepData.id);
+    setCompletedSteps(newCompletedSteps);
+
+    const nextStep = currentStep + 1;
+    setCurrentStep(nextStep);
+
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ x: nextStep * width, animated: true });
+    }
+  };
 
   const handleNext = async () => {
     // Haptic feedback
@@ -165,19 +186,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
       }
       onComplete();
     } else {
-      // Mark current step as completed
-      const newCompletedSteps = new Set(completedSteps);
-      newCompletedSteps.add(currentStepData.id);
-      setCompletedSteps(newCompletedSteps);
-
-      // Move to next step
-      const nextStep = currentStep + 1;
-      setCurrentStep(nextStep);
-      
-      // Scroll to next step
-      if (scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({ x: nextStep * width, animated: true });
-      }
+      advanceToNextStep();
     }
   };
 
@@ -195,24 +204,55 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
 
   const handleHealthPermissionsSuccess = () => {
     setShowHealthPermissions(false);
-    // Continue to next step
-    const nextStep = currentStep + 1;
-    setCurrentStep(nextStep);
-    
-    if (scrollViewRef.current) {
-      scrollViewRef.current.scrollTo({ x: nextStep * width, animated: true });
-    }
+    setShowWellnessPermissions(true);
   };
 
   const handleHealthPermissionsClose = () => {
     setShowHealthPermissions(false);
-    // Continue to next step even if permissions were skipped
-    const nextStep = currentStep + 1;
-    setCurrentStep(nextStep);
-    
-    if (scrollViewRef.current) {
-      scrollViewRef.current.scrollTo({ x: nextStep * width, animated: true });
+    setShowWellnessPermissions(true);
+  };
+
+  const enableNotificationScheduling = useCallback(async () => {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      const pushService = PushNotificationService.getInstance();
+      await pushService.setEnabled(true);
+      if (currentUser?.id) {
+        await pushService.initialize(currentUser.id);
+      }
+      const { NotificationService } = await import('../services/notifications.service');
+      await NotificationService.scheduleDefaults();
+    } catch (error) {
+      console.error('Error enabling notification scheduling during onboarding:', error);
     }
+  }, []);
+
+  const handleWellnessPermissionsEnable = async () => {
+    try {
+      setRequestingWellnessPermissions(true);
+      const result = await wellnessSyncServiceRef.current.requestPermissions();
+
+      if (result.notifications) {
+        await enableNotificationScheduling();
+      }
+
+      setShowWellnessPermissions(false);
+      advanceToNextStep();
+
+      if (result.calendar || result.notifications) {
+        Alert.alert(t('common.success'), t('home.permissions.success'));
+      }
+    } catch (error) {
+      console.error('Error requesting wellness permissions:', error);
+      Alert.alert(t('common.error'), t('home.permissions.error'));
+    } finally {
+      setRequestingWellnessPermissions(false);
+    }
+  };
+
+  const handleWellnessPermissionsSkip = () => {
+    setShowWellnessPermissions(false);
+    advanceToNextStep();
   };
 
   const handlePrevious = async () => {
@@ -335,6 +375,14 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
         visible={showHealthPermissions}
         onClose={handleHealthPermissionsClose}
         onSuccess={handleHealthPermissionsSuccess}
+      />
+      <WellnessPermissionsModal
+        visible={showWellnessPermissions}
+        onEnable={handleWellnessPermissionsEnable}
+        onSkip={handleWellnessPermissionsSkip}
+        loading={requestingWellnessPermissions}
+        missingCalendar={true}
+        missingNotifications={true}
       />
 
     </View>

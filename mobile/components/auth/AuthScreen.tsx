@@ -17,13 +17,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 // Removed status bar manipulation to restore original behavior
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AuthService } from '../../services/auth.service';
-import { BiometricAuthService } from '../../services/biometric-auth.service';
-import { BiometricSetupModal } from '../BiometricSetupModal';
-import { BiometricSuggestionModal } from '../BiometricSuggestionModal';
 import { useTranslation } from '../../hooks/useTranslation'; // 🆕 i18n
 import { useStatusBarColor } from '../../contexts/StatusBarContext'; // 🆕 StatusBar override
 
@@ -39,7 +36,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   const { t } = useTranslation(); // 🆕 i18n hook
   const { setStatusBarColor } = useStatusBarColor(); // 🆕 Override status bar color
   const [mode, setMode] = useState<AuthMode>('login');
-  const insets = useSafeAreaInsets();
   
   // 🆕 AuthWrapper gestisce già il colore della status bar durante loading/!isAuthenticated
   // Questo useEffect assicura che il colore sia impostato anche se AuthScreen viene renderizzato direttamente
@@ -62,9 +58,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [showBiometricSetup, setShowBiometricSetup] = useState(false);
-  const [showBiometricSuggestion, setShowBiometricSuggestion] = useState(false);
-  const [newUserCredentials, setNewUserCredentials] = useState<{email: string, password: string} | null>(null);
 
   // --- Animazioni toggle / form
   const slideAnimation = useState(new Animated.Value(0))[0];
@@ -130,28 +123,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     return true;
   };
 
-  const handleBiometricSuggestionEnable = () => {
-    console.log('✅ Biometric authentication enabled for new user');
-    setShowBiometricSuggestion(false);
-      Alert.alert(
-        t('auth.signupCompleted'),
-        t('auth.checkEmail'),
-        [{ text: t('common.ok'), onPress: () => onAuthSuccess({ email: newUserCredentials?.email, id: 'temp-id' }) }],
-      );
-  };
-
-  const handleBiometricSuggestionSkip = () => {
-    console.log('⏭️ User skipped biometric setup');
-    setShowBiometricSuggestion(false);
-      Alert.alert(
-        t('auth.signupCompleted'),
-        t('auth.checkEmail'),
-        [{ text: t('common.ok'), onPress: () => onAuthSuccess({ email: newUserCredentials?.email, id: 'temp-id' }) }],
-      );
-  };
-
-  // Biometric login removed - only AuthWrapper handles biometrics for authenticated users
-
   const handleAuth = async () => {
     if (!validateForm()) return;
 
@@ -165,14 +136,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
         }
         if (user) {
           Alert.alert(t('common.success'), t('auth.loginSuccess'));
-          
-          // Show biometric setup if available and not already configured
-          const biometricEnabled = await BiometricAuthService.isBiometricEnabled();
-          if (!biometricEnabled) {
-            setShowBiometricSetup(true);
-          } else {
-            onAuthSuccess(user);
-          }
+          onAuthSuccess(user);
         }
       } else {
         const { user, error } = await AuthService.signUp(email, password, `${firstName} ${lastName}`);
@@ -207,28 +171,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
             });
           }
           
-          // Store credentials for biometric suggestion
-          setNewUserCredentials({ email, password });
-          
-          // Show biometric suggestion modal if biometrics are available
-          try {
-            const capabilities = await BiometricAuthService.getCapabilities();
-            if (capabilities.isAvailable) {
-              setShowBiometricSuggestion(true);
-            } else {
-              Alert.alert(
-                t('auth.signupCompleted'),
-                t('auth.checkEmail'),
-                [{ text: t('common.ok'), onPress: () => onAuthSuccess(user) }],
-              );
-            }
-          } catch (error) {
-            Alert.alert(
-              'Registrazione Completata',
-              "Controlla la tua email per confermare l'account",
-              [{ text: 'OK', onPress: () => onAuthSuccess(user) }],
-            );
-          }
+          Alert.alert(
+            t('auth.signupCompleted'),
+            t('auth.checkEmail'),
+            [{ text: t('common.ok'), onPress: () => onAuthSuccess(user) }],
+          );
         }
       }
     } catch {
@@ -390,9 +337,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       {/* Safe padding to ensure top area is painted on all devices */}
-      <LinearGradient colors={['#667eea', '#764ba2', '#f093fb']} style={[styles.gradient, { paddingTop: insets.top }] }>
+      <LinearGradient colors={['#667eea', '#764ba2', '#f093fb']} style={styles.gradient}>
         <ScrollView
           ref={scrollViewRef}
           contentContainerStyle={[
@@ -665,34 +612,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
           </View>
         </Modal>
 
-        {/* Biometric Setup Modal */}
-        <BiometricSetupModal
-          visible={showBiometricSetup}
-          onClose={() => setShowBiometricSetup(false)}
-          onSuccess={() => {
-            // Get the current user from the login result
-            const currentUser = { email, id: 'temp-id' }; // This will be replaced with actual user data
-            onAuthSuccess(currentUser);
-          }}
-          userEmail={email}
-          userPassword={password}
-        />
-
-        {/* Biometric Suggestion Modal for New Users */}
-        <BiometricSuggestionModal
-          visible={showBiometricSuggestion}
-          onEnable={handleBiometricSuggestionEnable}
-          onSkip={handleBiometricSuggestionSkip}
-          userEmail={newUserCredentials?.email || ''}
-          userPassword={newUserCredentials?.password || ''}
-        />
       </LinearGradient>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: '#667eea' },
   gradientContainer: { flex: 1 },
   gradient: { flex: 1 },
   scrollContainer: { 

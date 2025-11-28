@@ -250,6 +250,10 @@ class PushNotificationService {
    */
   async setEnabled(enabled: boolean): Promise<void> {
     await AsyncStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify({ enabled }));
+    if (!enabled) {
+      this.notificationPermissionGranted = false;
+      this.expoPushToken = null;
+    }
   }
 
   /**
@@ -260,11 +264,13 @@ class PushNotificationService {
       const saved = await AsyncStorage.getItem(NOTIFICATION_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return parsed.enabled !== false; // Default true
+        if (typeof parsed.enabled === 'boolean') {
+          return parsed.enabled;
+        }
       }
-      return true; // Default enabled
+      return false; // Default disabled until user opts in
     } catch (e) {
-      return true;
+      return false;
     }
   }
 }

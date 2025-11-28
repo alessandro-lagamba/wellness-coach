@@ -40,6 +40,8 @@ import { InsightSection } from './InsightSection';
 // Removed useInsights - now using DailyCopilot for insights
 import DailyCopilot from './DailyCopilot';
 import RecommendationDetailModal from './RecommendationDetailModal';
+import { WellnessPermissionsModal } from './WellnessPermissionsModal';
+import PushNotificationService from '../services/push-notification.service';
 import DailyCopilotHistory from './DailyCopilotHistory';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
@@ -238,6 +240,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // const [activities, setActivities] = useState<DailyActivity[]>(() => todaysActivities);
   const [syncService] = useState(() => WellnessSyncService.getInstance());
   const [permissions, setPermissions] = useState({ calendar: false, notifications: false });
+  const [showWellnessPermissionsModal, setShowWellnessPermissionsModal] = useState(false);
+  const [requestingWellnessPermissions, setRequestingWellnessPermissions] = useState(false);
+  useEffect(() => {
+    let isMounted = true;
+    const syncPermissionStatus = async () => {
+      try {
+        const status = await syncService.getPermissionsStatus();
+        if (isMounted) {
+          setPermissions(status);
+        }
+      } catch (error) {
+        console.error('Error checking wellness permissions:', error);
+      }
+    };
+
+    syncPermissionStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [syncService]);
+
   const [userFirstName, setUserFirstName] = useState<string>('User');
   const [momentumData, setMomentumData] = useState<MomentumData | null>(null);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
@@ -1519,15 +1543,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     ];
   };
 
-  // Initialize sync service
-  useEffect(() => {
-    const initializeSync = async () => {
-      const result = await syncService.initialize();
-      setPermissions(result);
-    };
-    initializeSync();
-  }, []);
-
   // 🔥 FIX: Usiamo useRef per tracciare se i dati utente sono già stati caricati per evitare loop infiniti
   const userDataLoadedRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
@@ -1848,18 +1863,51 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     }
   };
 
-  const requestPermissions = async () => {
-    const result = await syncService.requestPermissions();
-    setPermissions(result);
+  const ensureNotificationScheduling = useCallback(async () => {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      const pushService = PushNotificationService.getInstance();
+      await pushService.setEnabled(true);
+      if (currentUser?.id) {
+        await pushService.initialize(currentUser.id);
+      }
+      const { NotificationService } = await import('../services/notifications.service');
+      await NotificationService.scheduleDefaults();
+    } catch (error) {
+      console.error('Error enabling notification scheduling:', error);
+    }
+  }, []);
 
-    if (!result.calendar && !result.notifications) {
-      Alert.alert(
-        t('home.permissions.required'),
-        t('home.permissions.requiredMessage'),
-        [{ text: t('common.ok') }]
-      );
+  const handleEnableWellnessPermissions = async () => {
+    try {
+      setRequestingWellnessPermissions(true);
+      const result = await syncService.requestPermissions();
+      setPermissions(result);
+
+      if (result.notifications) {
+        await ensureNotificationScheduling();
+      }
+
+      setShowWellnessPermissionsModal(false);
+
+      if (result.calendar || result.notifications) {
+        Alert.alert(t('common.success'), t('home.permissions.success'));
+      } else {
+        Alert.alert(t('home.permissions.required'), t('home.permissions.requiredMessage'), [{ text: t('common.ok') }]);
+      }
+    } catch (error) {
+      console.error('Error requesting wellness permissions:', error);
+      Alert.alert(t('common.error'), t('home.permissions.error'));
+    } finally {
+      setRequestingWellnessPermissions(false);
     }
   };
+
+  const handleSkipWellnessPermissions = () => {
+    setShowWellnessPermissionsModal(false);
+  };
+
+  const shouldShowWellnessPermissionCard = !permissions.calendar || !permissions.notifications;
 
   // Removed renderQuickLink function - replaced with Today at a glance widgets
 
@@ -2100,6 +2148,34 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </View>
           </View>
         </LinearGradient>
+
+        {shouldShowWellnessPermissionCard && (
+          <TouchableOpacity
+            style={[
+              styles.permissionCard,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border }
+            ]}
+            activeOpacity={0.9}
+            onPress={() => setShowWellnessPermissionsModal(true)}
+          >
+            <View style={[styles.permissionCardIcon, { backgroundColor: `${themeColors.primary}20` }]}>
+              <MaterialCommunityIcons name="bell-plus" size={20} color={themeColors.primary} />
+            </View>
+            <View style={styles.permissionCardCopy}>
+              <Text style={[styles.permissionCardTitle, { color: themeColors.text }]}>
+                {t('home.permissions.cardTitle')}
+              </Text>
+              <Text style={[styles.permissionCardSubtitle, { color: themeColors.textSecondary }]}>
+                {t('home.permissions.cardSubtitle')}
+              </Text>
+            </View>
+            <View style={[styles.permissionCardAction, { borderColor: themeColors.primary }]}>
+              <Text style={[styles.permissionCardActionText, { color: themeColors.primary }]}>
+                {t('home.permissions.cardCta')}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderContent}>
@@ -3097,6 +3173,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         }}
       />
 
+      <WellnessPermissionsModal
+        visible={showWellnessPermissionsModal}
+        onEnable={handleEnableWellnessPermissions}
+        onSkip={handleSkipWellnessPermissions}
+        loading={requestingWellnessPermissions}
+        missingCalendar={!permissions.calendar}
+        missingNotifications={!permissions.notifications}
+      />
+
       {/* Welcome Overlay for New Users */}
       <WelcomeOverlay
         visible={welcomeOverlayVisible}
@@ -3556,6 +3641,45 @@ const styles = StyleSheet.create({
   sectionHeader: {
     paddingHorizontal: 20,
     marginBottom: 12,
+  },
+  permissionCard: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  permissionCardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  permissionCardCopy: {
+    flex: 1,
+  },
+  permissionCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  permissionCardSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  permissionCardAction: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  permissionCardActionText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   sectionHeaderContent: {
     flexDirection: 'row',

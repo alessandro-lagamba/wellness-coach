@@ -3,14 +3,12 @@ import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthService } from '../services/auth.service';
 import { OnboardingService } from '../services/onboarding.service';
-import { BiometricAuthService } from '../services/biometric-auth.service';
 import { AuthScreen } from './auth/AuthScreen';
 import { OnboardingScreen } from './OnboardingScreen';
 import { InteractiveTutorial } from './InteractiveTutorial';
-import { BiometricPromptModal } from './BiometricPromptModal';
 import { TutorialProvider, useTutorial } from '../contexts/TutorialContext';
 import { useRouter } from 'expo-router';
-import PushNotificationService, { temporarilySilenceForegroundBanners } from '../services/push-notification.service'; // 🆕 Push notifications
+import PushNotificationService from '../services/push-notification.service'; // 🆕 Push notifications
 import { useStatusBarColor } from '../contexts/StatusBarContext'; // 🆕 StatusBar override
 
 interface AuthWrapperProps {
@@ -27,7 +25,6 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [biometricPromptVisible, setBiometricPromptVisible] = useState(false);
   const { showTutorial, setShowTutorial } = useTutorial();
   const router = useRouter();
   const { setStatusBarColor } = useStatusBarColor(); // 🆕 Override status bar color
@@ -55,92 +52,45 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   }, [isLoading, isAuthenticated, setStatusBarColor]);
 
   // 🔥 FIX: Memoizziamo checkAuthStatus per evitare ricreazioni - rimuoviamo onAuthSuccess dalle dipendenze
+  const proceedAfterAuthentication = useCallback(async (currentUser: any) => {
+    setIsAuthenticated(true);
+    setUser(currentUser);
+
+    const onboardingCompleted = await OnboardingService.isOnboardingCompleted();
+    if (!onboardingCompleted) {
+      setShowOnboarding(true);
+      return;
+    }
+
+    const tutorialCompleted = await OnboardingService.isTutorialCompleted();
+    if (!tutorialCompleted) {
+      setTimeout(() => {
+        setShowTutorial(true);
+      }, 400);
+    }
+
+    onAuthSuccessRef.current(currentUser);
+  }, [setShowTutorial]);
+
   const checkAuthStatus = useCallback(async () => {
     try {
-      // 🔥 FIX: Rimuoviamo console.log eccessivi - manteniamo solo errori critici
       const isAuth = await AuthService.isAuthenticated();
       const currentUser = await AuthService.getCurrentUser();
       
       if (isAuth && currentUser) {
-        // User is already authenticated, proceed with biometric check
-        
-        // Check if biometric authentication is enabled
-        const isBiometricEnabled = await BiometricAuthService.isBiometricEnabled();
-        
-        // Check if device actually supports biometrics
-        let biometricAvailable = false;
-        try {
-          const capabilities = await BiometricAuthService.getCapabilities();
-          biometricAvailable = capabilities.isAvailable;
-        } catch (error) {
-          // 🔥 FIX: Solo errori critici in console
-          console.error('Error checking biometric availability:', error);
-          biometricAvailable = false;
-        }
-        
-        // 🔥 Fallback: se ci sono credenziali biometriche salvate, proponi comunque il prompt
-        let hasSavedBiometricCredentials = false;
-        try {
-          const creds = await BiometricAuthService.getBiometricCredentials();
-          hasSavedBiometricCredentials = !!(creds.email && creds.password);
-        } catch (error) {
-          // 🔥 FIX: Solo errori critici in console
-          console.error('Error checking saved biometric credentials:', error);
-        }
-
-        // 🔥 Mostra il prompt biometrico se:
-        // 1. L'autenticazione biometrica è abilitata E il dispositivo supporta biometrics
-        // 2. OPPURE ci sono credenziali biometriche salvate E il dispositivo supporta biometrics
-        const shouldShowBiometric = (isBiometricEnabled || hasSavedBiometricCredentials) && biometricAvailable;
-
-        if (shouldShowBiometric) {
-          // 🔥 Imposta isAuthenticated a true PRIMA di mostrare il prompt
-          // Questo permette al prompt di essere mostrato (perché isAuthenticated è true)
-          setIsAuthenticated(true);
-          setUser(currentUser);
-          setBiometricPromptVisible(true);
-          // Il prompt biometrico verrà mostrato e, se confermato, chiamerà handleBiometricSuccess
-        } else {
-          // No biometric required or not available, proceed normally
-          if (isBiometricEnabled && !biometricAvailable) {
-            // Optionally disable biometric if device doesn't support it anymore
-            try {
-              // Disabilita la biometria se il dispositivo non la supporta più
-              await BiometricAuthService.disableBiometric();
-            } catch (e) {
-              // 🔥 FIX: Solo errori critici in console
-              console.error('Error disabling biometric:', e);
-            }
-          }
-          
-          setIsAuthenticated(true);
-          setUser(currentUser);
-          
-          // Check if onboarding is needed
-          const isOnboardingCompleted = await OnboardingService.isOnboardingCompleted();
-          if (!isOnboardingCompleted) {
-            setShowOnboarding(true);
-          } else {
-            onAuthSuccessRef.current(currentUser);
-          }
-        }
+        await proceedAfterAuthentication(currentUser);
       } else {
-        // User not authenticated, show login screen
         setIsAuthenticated(false);
         setUser(null);
-        setBiometricPromptVisible(false); // Ensure biometric prompt is hidden
-        // Don't show biometric prompt for unauthenticated users
-        // Let AuthScreen handle biometric authentication
       }
     } catch (error) {
-      // 🔥 FIX: Solo errori critici in console + feedback utente per errori critici
       console.error('Error checking auth status:', error);
       setIsAuthenticated(false);
       setUser(null);
     } finally {
       setIsLoading(false);
     }
-  }, []); // 🔥 FIX: Rimossi onAuthSuccess dalle dipendenze - usiamo ref
+  }, [proceedAfterAuthentication]);
 
   useEffect(() => {
     checkAuthStatus();
@@ -150,9 +100,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       async (event, session) => {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
         if (event === 'SIGNED_IN' && session?.user) {
-          setIsAuthenticated(true);
-          setUser(session.user);
-          onAuthSuccessRef.current(session.user);
+          proceedAfterAuthentication(session.user);
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);
           setUser(null);
@@ -163,7 +111,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
     return () => {
       subscription.unsubscribe();
     };
-  }, [checkAuthStatus]); // 🔥 FIX: Rimossi onAuthSuccess dalle dipendenze - usiamo ref
+  }, [checkAuthStatus, proceedAfterAuthentication]); // 🔥 FIX: Rimossi onAuthSuccess dalle dipendenze - usiamo ref
 
   // 🆕 Inizializza push notifications quando l'utente è autenticato
   // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
@@ -252,88 +200,16 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
     };
   }, [isAuthenticated, user?.id]);
 
-  // 🆕 Inizializza notifiche locali programmate quando l'utente è autenticato
-  // 🧹 PULIZIA: Rimossa logica ridondante - scheduleDefaults() gestisce tutto internamente con DEFAULTS_FLAG
-  useEffect(() => {
-    if (!isAuthenticated || !user?.id) return;
-
-    const initLocalNotifications = async () => {
-      // 🔥 FIX: Verifica se il componente è ancora montato
-      if (!isMountedRef.current) return;
-      
-      try {
-        // 🔇 silenzia banner per qualche secondo durante il (re)scheduling
-        temporarilySilenceForegroundBanners(8000);
-        const { NotificationService } = await import('../services/notifications.service');
-        // scheduleDefaults() si occupa lui di non duplicare (controlla DEFAULTS_FLAG internamente)
-        await NotificationService.scheduleDefaults();
-      } catch (error) {
-        // 🔥 FIX: Solo errori critici in console
-        console.error('[AuthWrapper] ❌ Error initializing local notifications:', error);
-      }
-    };
-
-    // Delay di 3 secondi per evitare rischedulazioni immediate all'avvio
-    const timer = setTimeout(() => {
-      if (isMountedRef.current) {
-        initLocalNotifications();
-      }
-    }, 3000);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [isAuthenticated, user?.id]);
-
   // 🔥 FIX: checkAuthStatus è già definita come useCallback sopra (linea 54) - rimuoviamo questa duplicata
 
   const handleAuthSuccess = (user: any) => {
-    setIsAuthenticated(true);
-    setUser(user);
-    onAuthSuccessRef.current(user);
-  };
-
-  const handleBiometricSuccess = async () => {
-    try {
-      // 🔥 FIX: Rimuoviamo console.log eccessivi
-      setBiometricPromptVisible(false);
-      
-      // User is already authenticated (set in checkAuthStatus), just proceed with onboarding check
-      const currentUser = await AuthService.getCurrentUser();
-      if (currentUser) {
-        // isAuthenticated e user sono già impostati in checkAuthStatus, quindi non serve reimpostarli
-        
-        // Check if onboarding is needed
-        const isOnboardingCompleted = await OnboardingService.isOnboardingCompleted();
-        if (!isOnboardingCompleted) {
-          setShowOnboarding(true);
-        } else {
-          onAuthSuccessRef.current(currentUser);
-        }
-      } else {
-        // 🔥 FIX: Solo errori critici in console
-        console.error('❌ No authenticated user found after biometric success');
-        setIsAuthenticated(false);
-        setUser(null);
-      }
-    } catch (error) {
-      // 🔥 FIX: Solo errori critici in console
-      console.error('❌ Error in biometric success handler:', error);
-      setIsAuthenticated(false);
-      setUser(null);
-    }
-  };
-
-  const handleBiometricFailure = () => {
-    // 🔥 FIX: Rimuoviamo console.log eccessivi
-    setBiometricPromptVisible(false);
-    setIsAuthenticated(false);
-    setUser(null);
+    proceedAfterAuthentication(user);
   };
 
   const handleOnboardingComplete = async () => {
     setShowOnboarding(false);
-    
+    await OnboardingService.completeOnboarding();
+  
     // Check if tutorial should be shown automatically after onboarding
     const isTutorialCompleted = await OnboardingService.isTutorialCompleted();
     if (!isTutorialCompleted) {
@@ -384,15 +260,6 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   return (
     <View style={styles.appContainer}>
       {children}
-      
-      {/* Biometric Authentication Modal - Only show for authenticated users */}
-      {isAuthenticated && (
-        <BiometricPromptModal
-          visible={biometricPromptVisible}
-          onSuccess={handleBiometricSuccess}
-          onFailure={handleBiometricFailure}
-        />
-      )}
       
       {/* Global Tutorial */}
       <InteractiveTutorial

@@ -26,6 +26,12 @@ export class CalendarService {
   private calendarId: string | null = null;
   private hasPermissions: boolean = false;
 
+  /**
+   * Keeps track of whether we've already attempted to lazily hydrate the calendar id.
+   * Prevents repeated setup calls when checking permission status at app start.
+   */
+  private attemptedLazySetup = false;
+
   public static getInstance(): CalendarService {
     if (!CalendarService.instance) {
       CalendarService.instance = new CalendarService();
@@ -55,6 +61,27 @@ export class CalendarService {
       }
     } catch (error) {
       console.error('Failed to initialize calendar service:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Refresh permission status without prompting the user.
+   * Useful for silently checking current state on app launch.
+   */
+  async refreshPermissionStatus(): Promise<boolean> {
+    try {
+      const { status } = await Calendar.getCalendarPermissionsAsync();
+      this.hasPermissions = status === 'granted';
+
+      if (this.hasPermissions && !this.calendarId && !this.attemptedLazySetup) {
+        this.attemptedLazySetup = true;
+        await this.setupWellnessCalendar();
+      }
+
+      return this.hasPermissions;
+    } catch (error) {
+      console.error('Failed to refresh calendar permission status:', error);
       return false;
     }
   }

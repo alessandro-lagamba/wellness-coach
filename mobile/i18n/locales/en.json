@@ -50,6 +50,9 @@
     "subscriptionDescription": "Manage your plan",
     "about": "About",
     "aboutDescription": "Learn more about Wellness Coach",
+    "verifyEmailTitle": "Confirm your email",
+    "verifyEmailDescription": "We sent a link to {{email}}. Verify it to unlock the full experience.",
+    "verifyEmailAction": "I’ve verified",
     "logout": "Logout",
     "logoutConfirm": "Are you sure you want to logout?",
     "logoutCancel": "Cancel",
@@ -343,7 +346,20 @@
     },
     "permissions": {
       "required": "Permissions Required",
-      "requiredMessage": "To sync activities with your calendar and reminders, please enable permissions in Settings."
+      "requiredMessage": "To sync activities with your calendar and reminders, please enable permissions in Settings.",
+      "cardTitle": "Enable smart reminders",
+      "cardSubtitle": "Connect calendar and notifications to receive timely nudges tailored to you.",
+      "cardCta": "Enable now",
+      "modalTitle": "Why do we ask for these permissions?",
+      "modalDescription": "We only use your calendar and notifications to plan the activities you choose and to remind you at the right moment.",
+      "calendarTitle": "Calendar sync",
+      "calendarDescription": "We add selected routines to your personal calendar so everything stays organised.",
+      "notificationsTitle": "Intelligent notifications",
+      "notificationsDescription": "We send gentle reminders (never spam) when the coach detects they could be useful.",
+      "enable": "Allow reminders",
+      "skip": "Maybe later",
+      "success": "Great! Calendar sync and reminders are now enabled.",
+      "error": "We couldn’t finish the setup. Please try again later."
     },
     "placeholders": {
       "waitingPermission": "These widgets will display your health data as soon as you grant Apple Health or Google Fit permissions.",

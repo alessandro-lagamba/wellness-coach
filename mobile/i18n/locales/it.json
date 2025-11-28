@@ -52,6 +52,9 @@
     "subscriptionDescription": "Gestisci il tuo piano",
     "about": "Informazioni",
     "aboutDescription": "Scopri di più su Wellness Coach",
+    "verifyEmailTitle": "Conferma la tua email",
+    "verifyEmailDescription": "Abbiamo inviato un link a {{email}}. Confermalo per sbloccare tutte le funzionalità.",
+    "verifyEmailAction": "Ho verificato",
     "logout": "Logout",
     "logoutConfirm": "Sei sicuro di voler effettuare il logout?",
     "logoutCancel": "Annulla",
@@ -345,7 +348,20 @@
     },
     "permissions": {
       "required": "Permessi Necessari",
-      "requiredMessage": "Per sincronizzare le attività con il calendario e i promemoria, abilita i permessi nelle Impostazioni."
+      "requiredMessage": "Per sincronizzare le attività con il calendario e i promemoria, abilita i permessi nelle Impostazioni.",
+      "cardTitle": "Attiva promemoria intelligenti",
+      "cardSubtitle": "Collega calendario e notifiche per ricevere suggerimenti e promemoria su misura.",
+      "cardCta": "Attiva ora",
+      "modalTitle": "Perché chiediamo questi permessi?",
+      "modalDescription": "Usiamo il calendario e le notifiche solo per ricordarti le attività che scegli tu e per aggiungere gli esercizi che salvi nel planner.",
+      "calendarTitle": "Sincronizzazione con calendario",
+      "calendarDescription": "Aggiungiamo le attività selezionate nel tuo calendario personale così puoi gestirle da un unico posto.",
+      "notificationsTitle": "Promemoria intelligenti",
+      "notificationsDescription": "Ti inviamo suggerimenti delicati (mai invasivi) quando rileviamo che potrebbe esserti utile.",
+      "enable": "Consenti promemoria",
+      "skip": "Non ora",
+      "success": "Perfetto! Calendario e promemoria sono stati configurati.",
+      "error": "Non siamo riusciti a completare la configurazione. Riprova più tardi."
     },
     "placeholders": {
       "waitingPermission": "Qui sotto vedrai i widget con i tuoi dati di salute non appena concedi i permessi ad Apple Health o Google Fit.",

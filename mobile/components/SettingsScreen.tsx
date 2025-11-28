@@ -308,6 +308,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   const [isLoading, setIsLoading] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<'main' | 'personal-info' | 'notifications'>('main');
   const [healthPermissionsModal, setHealthPermissionsModal] = useState<boolean>(false);
+  const emailVerified = Boolean(user?.email_confirmed_at);
   
   // Health data hook
   const { permissions: healthPermissions, hasData: hasHealthData, isInitialized } = useHealthData();
@@ -502,6 +503,29 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       {/* Content */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
+          {!emailVerified && (
+            <View style={[styles.verificationCard, { borderColor: 'rgba(245,158,11,0.4)', backgroundColor: 'rgba(245,158,11,0.12)' }]}>
+              <View style={styles.verificationIcon}>
+                <MaterialCommunityIcons name="email-alert" size={20} color="#f59e0b" />
+              </View>
+              <View style={styles.verificationCopy}>
+                <Text style={[styles.verificationTitle, { color: colors.text }]}>{t('settings.verifyEmailTitle')}</Text>
+                <Text style={[styles.verificationMessage, { color: colors.textSecondary }]}>
+                  {t('settings.verifyEmailDescription', { email: user.email })}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.verificationButton, { borderColor: '#f59e0b' }]}
+                onPress={loadUserProfile}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.verificationButtonText, { color: '#f59e0b' }]}>
+                  {t('settings.verifyEmailAction')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* User Profile Card */}
           <UserProfileCard userProfile={userProfile} isLoading={isLoading} t={t} colors={colors} />
           
@@ -594,6 +618,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 100, // Increased padding to account for bottom navigation bar
+  },
+  verificationCard: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  verificationIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(245,158,11,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  verificationCopy: {
+    flex: 1,
+  },
+  verificationTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  verificationMessage: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  verificationButton: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  verificationButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   section: {
     marginBottom: 32,
