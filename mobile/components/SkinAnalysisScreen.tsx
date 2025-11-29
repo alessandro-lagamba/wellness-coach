@@ -57,7 +57,7 @@ import { VideoHero } from './VideoHero';
 import { SkinTrendDetailModal } from './SkinTrendDetailModal';
 import { EmptyStateCard } from './EmptyStateCard';
 import { FirstAnalysisCelebration } from './FirstAnalysisCelebration';
-import { ContextualPermissionModal } from './ContextualPermissionModal';
+// 🔥 FIX: ContextualPermissionModal rimosso - non serve più
 import { OnboardingService } from '../services/onboarding.service';
 import { CopilotProvider, walkthroughable, CopilotStep, useCopilot } from 'react-native-copilot';
 import { TutorialTooltip } from './TutorialTooltip';
@@ -392,8 +392,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
   // First analysis celebration
   const [showFirstAnalysisCelebration, setShowFirstAnalysisCelebration] = useState(false);
 
-  // Contextual permission modal
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  // 🔥 FIX: Modal rimosso - non serve più
 
   // Intelligent insights are now handled by IntelligentInsightsSection component
 
@@ -634,26 +633,13 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
 
   const handleStartAnalysis = async () => {
-    // 🔥 FIX: Se permesso è già negato, mostra modal per aprire impostazioni
-    // Altrimenti richiedi permesso direttamente (mostra popup nativo se undetermined)
-    if (cameraController.permissionDenied) {
-      // Permesso già negato - mostra modal per aprire impostazioni
-      if (isMountedRef.current) {
-        setShowPermissionModal(true);
-      }
-      return;
-    }
-
-    // Se permesso è "undetermined" o non concesso, richiedi direttamente (popup nativo)
+    // 🔥 FIX: Chiama sempre ensureCameraPermission() che ora chiama sempre requestPermission()
+    // Android mostrerà il popup nativo se possibile (anche se permesso è "denied")
+    // Solo se l'utente ha selezionato "Non chiedere più" (blocked), Android non mostrerà il popup
     const granted = await ensureCameraPermission();
-    
     if (!granted) {
-      // Se dopo la richiesta il permesso è ancora negato, mostra modal
-      if (cameraController.permissionDenied) {
-        if (isMountedRef.current) {
-          setShowPermissionModal(true);
-        }
-      }
+      // Se il permesso non è stato concesso, esci
+      // Se Android non può più mostrare il popup (blocked), l'utente dovrà aprire le impostazioni manualmente
       return;
     }
 
@@ -2137,24 +2123,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
           onClose={() => setShowFirstAnalysisCelebration(false)}
         />
 
-        {/* Contextual Permission Modal */}
-        <ContextualPermissionModal
-          visible={showPermissionModal}
-          type="camera"
-          context="skin"
-          onClose={() => setShowPermissionModal(false)}
-          onGrant={async () => {
-            setShowPermissionModal(false);
-            // 🔥 FIX: Se permesso è negato, apri direttamente impostazioni
-            // Il modal viene mostrato solo quando il permesso è già negato
-            const { Linking, Platform } = await import('react-native');
-            if (Platform.OS === 'ios') {
-              Linking.openURL('app-settings:');
-            } else {
-              Linking.openSettings();
-            }
-          }}
-        />
+        {/* 🔥 FIX: Modal rimosso - non serve più */}
       </SafeAreaView>
     </View>
   );

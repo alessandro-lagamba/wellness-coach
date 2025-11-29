@@ -25,14 +25,16 @@ export function useCameraController({ isScreenFocused }: { isScreenFocused: bool
   }, [isScreenFocused]);
 
   const ensurePermission = async () => {
-    // 🔥 FIX: Rimuoviamo console.log eccessivi
+    // 🔥 FIX: Chiama sempre requestPermission() quando non è "granted"
+    // Su Android, anche se "denied", possiamo ancora mostrare il popup nativo
+    // finché l'utente non ha selezionato "Non chiedere più" (blocked)
     if (permissionGranted) {
       return true;
     }
-    // If permission was denied, return false immediately (don't request again)
-    if (permission?.status === 'denied') {
-      return false;
-    }
+    
+    // Chiama sempre requestPermission() - Android mostrerà il popup nativo se possibile
+    // Se l'utente ha selezionato "Non chiedere più", il sistema non mostrerà il popup
+    // ma requestPermission() comunque ritorna un risultato
     const res = await requestPermission();
     return !!res?.granted;
   };
