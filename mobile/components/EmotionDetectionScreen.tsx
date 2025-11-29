@@ -417,40 +417,20 @@ export const EmotionDetectionScreen: React.FC = () => {
   // No background camera initialization - privacy first!
 
   const handleStartDetection = async () => {
-    // 🔥 FIX: Mostra modal solo se permesso è "undetermined" (prima volta)
-    // Se permesso è negato, apri direttamente le impostazioni
-    if (cameraController.permissionDenied) {
-      // Permesso già negato - apri direttamente le impostazioni
-      const { Linking, Platform } = await import('react-native');
-      if (Platform.OS === 'ios') {
-        Linking.openURL('app-settings:');
-      } else {
-        Linking.openSettings();
-      }
-      return;
-    }
-
-    // Se permesso non è ancora stato richiesto (undetermined), mostra modal esplicativo
-    if (cameraController.permissionLoading || cameraController.needsPermission) {
-      if (isMountedRef.current) {
-        setShowPermissionModal(true);
-      }
-      return;
-    }
-
+    // 🔥 FIX: Allineato a calendario/notifiche - richiedi permesso direttamente
+    // Se permesso è "undetermined", mostra popup nativo direttamente
+    // Se permesso è "denied", mostra modal esplicativo che poi apre impostazioni
     const granted = await ensureCameraPermission();
-    // 🔥 FIX: Rimuoviamo console.log eccessivi
+    
     if (!granted) {
-      // Se il permesso è stato negato dopo la richiesta, apri impostazioni
+      // Se il permesso è stato negato, mostra modal esplicativo
+      // Il modal permetterà di aprire le impostazioni o riprovare
       if (cameraController.permissionDenied) {
-        const { Linking, Platform } = await import('react-native');
-        if (Platform.OS === 'ios') {
-          Linking.openURL('app-settings:');
-        } else {
-          Linking.openSettings();
+        if (isMountedRef.current) {
+          setShowPermissionModal(true);
         }
       } else {
-        // Altrimenti mostra modal (caso raro)
+        // Caso raro: permesso non concesso ma non negato esplicitamente
         if (isMountedRef.current) {
           setShowPermissionModal(true);
         }
@@ -1572,27 +1552,30 @@ export const EmotionDetectionScreen: React.FC = () => {
           onClose={() => setShowPermissionModal(false)}
           onGrant={async () => {
             setShowPermissionModal(false);
-            // 🔥 FIX: Chiama direttamente requestPermission per aprire il popup nativo
-            // Questo funziona solo se il permesso è "undetermined", non se è già negato
-            if (cameraController.requestPermission) {
-              const result = await cameraController.requestPermission();
-              if (result?.granted) {
-                // Permesso concesso, avvia analisi
-                await handleStartDetection();
-              } else if (result?.status === 'denied') {
-                // Permesso negato, apri impostazioni
-                const { Linking, Platform } = await import('react-native');
-                if (Platform.OS === 'ios') {
-                  Linking.openURL('app-settings:');
-                } else {
-                  Linking.openSettings();
-                }
+            // 🔥 FIX: Se permesso è negato, apri direttamente impostazioni
+            // Se permesso è undetermined, requestPermission aprirà il popup nativo
+            if (cameraController.permissionDenied) {
+              // Permesso già negato - apri impostazioni
+              const { Linking, Platform } = await import('react-native');
+              if (Platform.OS === 'ios') {
+                Linking.openURL('app-settings:');
+              } else {
+                Linking.openSettings();
               }
             } else {
-              // Fallback: usa ensurePermission
-              const granted = await cameraController.ensurePermission();
-              if (granted) {
-                await handleStartDetection();
+              // Permesso undetermined - richiedi permesso (apre popup nativo)
+              if (cameraController.requestPermission) {
+                const result = await cameraController.requestPermission();
+                if (result?.granted) {
+                  // Permesso concesso, avvia analisi
+                  await handleStartDetection();
+                }
+              } else {
+                // Fallback: usa ensurePermission
+                const granted = await cameraController.ensurePermission();
+                if (granted) {
+                  await handleStartDetection();
+                }
               }
             }
           }}
