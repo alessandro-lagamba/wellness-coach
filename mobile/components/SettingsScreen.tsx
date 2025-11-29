@@ -6,6 +6,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AuthService } from '../services/auth.service';
 import { UserProfile } from '../lib/supabase';
 import { PersonalInformationScreen } from './settings/PersonalInformationScreen';
+import { MenstrualCycleSettings } from './settings/MenstrualCycleSettings';
 import { HealthPermissionsModal } from './HealthPermissionsModal';
 import { useHealthData } from '../hooks/useHealthData';
 import { useTranslation } from '../hooks/useTranslation';
@@ -309,7 +310,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   const [userResolutionError, setUserResolutionError] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentScreen, setCurrentScreen] = useState<'main' | 'personal-info' | 'notifications'>('main');
+  const [currentScreen, setCurrentScreen] = useState<'main' | 'personal-info' | 'notifications' | 'menstrual-cycle'>('main');
   const [healthPermissionsModal, setHealthPermissionsModal] = useState<boolean>(false);
   const emailVerified = Boolean(resolvedUser?.email_confirmed_at);
   
@@ -322,10 +323,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
     { id: 'preferences', label: t('settings.preferences'), description: t('settings.preferencesDescription'), icon: 'sliders' },
   ];
 
+  // 🆕 Costruisci appItems dinamicamente, aggiungendo ciclo mestruale solo se l'utente è di genere femminile
   const appItems: SettingsItem[] = [
     { id: 'health-permissions', label: t('settings.healthPermissions'), description: t('settings.healthPermissionsDescription'), icon: 'heart' },
     { id: 'language', label: t('settings.language'), description: t('settings.languageDescription'), icon: 'globe' },
     { id: 'dark-mode', label: t('settings.darkMode'), description: t('settings.darkModeDescription'), icon: 'moon-o' }, // 🆕 Dark mode toggle
+    ...(userProfile?.gender === 'female' ? [{ id: 'menstrual-cycle', label: t('settings.menstrualCycle'), description: t('settings.menstrualCycleDescription'), icon: 'venus' as any }] : []), // 🆕 Ciclo mestruale solo per utenti femminili
     { id: 'app-config', label: t('settings.appConfig'), description: t('settings.appConfigDescription'), icon: 'wrench' },
     { id: 'notifications', label: t('settings.notificationsTitle'), description: t('settings.notificationsDescription'), icon: 'bell' },
     { id: 'subscription', label: t('settings.subscription'), description: t('settings.subscriptionDescription'), icon: 'credit-card' },
@@ -539,6 +542,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       case 'notifications':
         setCurrentScreen('notifications');
         break;
+      case 'menstrual-cycle':
+        if (!resolvedUser || userProfile?.gender !== 'female') {
+          Alert.alert(
+            t('common.error'),
+            t('settings.menstrualCycleNotAvailable') || 'Questa funzione è disponibile solo per utenti di genere femminile.'
+          );
+          return;
+        }
+        setCurrentScreen('menstrual-cycle');
+        break;
       case 'subscription':
         Alert.alert(t('settings.comingSoon'), t('settings.comingSoonMessage'));
         break;
@@ -564,6 +577,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   }
   if (currentScreen === 'notifications') {
     return <NotificationsSettings onBack={handleBackToMain} />;
+  }
+  if (currentScreen === 'menstrual-cycle') {
+    return <MenstrualCycleSettings user={resolvedUser || user} onBack={handleBackToMain} />;
   }
 
   return (

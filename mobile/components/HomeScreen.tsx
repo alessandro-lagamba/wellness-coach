@@ -567,6 +567,16 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
         // Carica i dati del ciclo solo se l'utente è di genere femminile
         if (gender === 'female') {
+          // 🔥 FIX: Abilita automaticamente il widget del ciclo per utenti di genere femminile
+          const { widgetConfigService } = await import('../services/widget-config.service');
+          const config = await widgetConfigService.getWidgetConfig();
+          const cycleWidget = config.find(w => w.id === 'cycle');
+          if (cycleWidget && !cycleWidget.enabled) {
+            // Abilita il widget se non è già abilitato
+            await widgetConfigService.enableWidget('cycle', 'small');
+            console.log('✅ Cycle widget automatically enabled for female user');
+          }
+
           const { menstrualCycleService } = await import('../services/menstrual-cycle.service');
           const cycle = await menstrualCycleService.getCycleData();
           setCycleData(cycle);
@@ -1720,6 +1730,20 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
         // Carica i dati del ciclo solo se l'utente è di genere femminile
         if (gender === 'female') {
+          // 🔥 FIX: Abilita automaticamente il widget del ciclo per utenti di genere femminile
+          try {
+            const { widgetConfigService } = await import('../services/widget-config.service');
+            const config = await widgetConfigService.getWidgetConfig();
+            const cycleWidget = config.find(w => w.id === 'cycle');
+            if (cycleWidget && !cycleWidget.enabled) {
+              // Abilita il widget se non è già abilitato
+              await widgetConfigService.enableWidget('cycle', 'small');
+              console.log('✅ Cycle widget automatically enabled for female user');
+            }
+          } catch (error) {
+            console.warn('[HomeScreen] Failed to enable cycle widget:', error);
+          }
+
           const { menstrualCycleService } = await import('../services/menstrual-cycle.service');
           const cycle = await menstrualCycleService.getCycleData();
           setCycleData(cycle);

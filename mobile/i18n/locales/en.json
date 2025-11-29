@@ -99,6 +99,24 @@
       "diaryTitle": "Diary",
       "diaryBody": "Would you like to write a brief journal entry?",
       "saved": "Notifications updated successfully"
+    },
+    "menstrualCycle": "Menstrual Cycle",
+    "menstrualCycleDescription": "Configure and monitor your menstrual cycle",
+    "menstrualCycleNotAvailable": "This feature is only available for female users.",
+    "menstrualCycleSettings": {
+      "title": "Menstrual Cycle",
+      "info": "Configure your menstrual cycle to monitor phases and receive personalized reminders.",
+      "lastPeriodDate": "Last Period Date",
+      "selectDate": "Select date",
+      "lastPeriodHelp": "Select the start date of your last menstrual period.",
+      "cycleLength": "Cycle Length (days)",
+      "cycleLengthHelp": "Your average cycle length (usually between 21 and 35 days).",
+      "lastPeriodRequired": "Please enter the last period date.",
+      "invalidLength": "Cycle length must be between 21 and 35 days.",
+      "saveSuccess": "Menstrual cycle data saved successfully!",
+      "saveError": "Error saving cycle data.",
+      "loadError": "Error loading cycle data.",
+      "loading": "Loading..."
     }
   },
   "journal": {

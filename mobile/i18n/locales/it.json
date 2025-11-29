@@ -101,6 +101,24 @@
       "diaryTitle": "Diario",
       "diaryBody": "Ti va di scrivere una breve voce nel diario?",
       "saved": "Notifiche aggiornate con successo"
+    },
+    "menstrualCycle": "Ciclo Mestruale",
+    "menstrualCycleDescription": "Configura e monitora il tuo ciclo mestruale",
+    "menstrualCycleNotAvailable": "Questa funzione è disponibile solo per utenti di genere femminile.",
+    "menstrualCycleSettings": {
+      "title": "Ciclo Mestruale",
+      "info": "Configura il tuo ciclo mestruale per monitorare le fasi e ricevere promemoria personalizzati.",
+      "lastPeriodDate": "Data Ultimo Periodo",
+      "selectDate": "Seleziona data",
+      "lastPeriodHelp": "Seleziona la data di inizio dell'ultimo ciclo mestruale.",
+      "cycleLength": "Lunghezza Ciclo (giorni)",
+      "cycleLengthHelp": "La lunghezza media del tuo ciclo (solitamente tra 21 e 35 giorni).",
+      "lastPeriodRequired": "Inserisci la data dell'ultimo periodo.",
+      "invalidLength": "La lunghezza del ciclo deve essere tra 21 e 35 giorni.",
+      "saveSuccess": "Dati del ciclo mestruale salvati con successo!",
+      "saveError": "Errore nel salvataggio dei dati del ciclo.",
+      "loadError": "Errore nel caricamento dei dati del ciclo.",
+      "loading": "Caricamento..."
     }
   },
   "journal": {

@@ -428,6 +428,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
   const [cameraType, setCameraType] = useState<'front' | 'back'>('front'); // Default to front camera for consistency
   const [cameraSwitching, setCameraSwitching] = useState(false);
   const [permissionChecking, setPermissionChecking] = useState(false);
+  const [isStarting, setIsStarting] = useState(false); // 🔥 FIX: Stato per feedback visivo del pulsante
   const [analysisReady, setAnalysisReady] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
@@ -1297,34 +1298,50 @@ const FoodAnalysisScreenContent: React.FC = () => {
   }, [cameraController.active, analyzing, results, handleExitCapture]);
 
   const handleStartAnalysis = async () => {
-    // 🔥 FIX: Chiama sempre ensureCameraPermission() che ora chiama sempre requestPermission()
-    // Android mostrerà il popup nativo se possibile (anche se permesso è "denied")
-    // Solo se l'utente ha selezionato "Non chiedere più" (blocked), Android non mostrerà il popup
-    const granted = await ensureCameraPermission();
-    if (!granted) {
-      // Se il permesso non è stato concesso, esci
-      // Se Android non può più mostrare il popup (blocked), l'utente dovrà aprire le impostazioni manualmente
-      return;
-    }
-
-    const ready = await ensureAnalysisReady();
-    if (!ready) {
-      if (isMountedRef.current) {
-        alert(t('analysis.food.errors.serviceNotReady'));
-      }
-      return;
-    }
-
-    // 🔥 FIX: Rimuoviamo console.log eccessivi
-    // Reset previous session state so the camera preview always shows immediately
+    // 🔥 FIX: Mostra feedback visivo immediato quando il pulsante viene premuto
     if (isMountedRef.current) {
-      setResults(null);
-      setAnalyzing(false);
-      setCameraSwitching(false);
+      setIsStarting(true);
     }
 
-    // Avvia la fotocamera solo dopo aver verificato permessi e servizio
-    await cameraController.startCamera();
+    try {
+      // 🔥 FIX: Chiama sempre ensureCameraPermission() che ora chiama sempre requestPermission()
+      // Android mostrerà il popup nativo se possibile (anche se permesso è "denied")
+      // Solo se l'utente ha selezionato "Non chiedere più" (blocked), Android non mostrerà il popup
+      const granted = await ensureCameraPermission();
+      if (!granted) {
+        // Se il permesso non è stato concesso, esci
+        // Se Android non può più mostrare il popup (blocked), l'utente dovrà aprire le impostazioni manualmente
+        if (isMountedRef.current) {
+          setIsStarting(false);
+        }
+        return;
+      }
+
+      const ready = await ensureAnalysisReady();
+      if (!ready) {
+        if (isMountedRef.current) {
+          setIsStarting(false);
+          alert(t('analysis.food.errors.serviceNotReady'));
+        }
+        return;
+      }
+
+      // 🔥 FIX: Rimuoviamo console.log eccessivi
+      // Reset previous session state so the camera preview always shows immediately
+      if (isMountedRef.current) {
+        setResults(null);
+        setAnalyzing(false);
+        setCameraSwitching(false);
+      }
+
+      // Avvia la fotocamera solo dopo aver verificato permessi e servizio
+      await cameraController.startCamera();
+    } finally {
+      // 🔥 FIX: Reset sempre il feedback visivo, anche in caso di errore
+      if (isMountedRef.current) {
+        setIsStarting(false);
+      }
+    }
   };
 
   // 🔧 FALLBACK: Image Picker for Testing (100% Reliable)
@@ -2415,13 +2432,13 @@ const FoodAnalysisScreenContent: React.FC = () => {
               fallbackImageUri={heroImageUri}
             />
             <TouchableOpacity
-              activeOpacity={0.9}
+              activeOpacity={0.8}
               onPress={handleStartAnalysis}
-              disabled={startDisabled}
-              style={startDisabled ? { opacity: 0.6 } : undefined}
+              disabled={startDisabled || isStarting}
+              style={startDisabled || isStarting ? { opacity: 0.6 } : undefined}
             >
               <LinearGradient
-                colors={['#8b5cf6', '#6366f1']}
+                colors={isStarting ? ['#6d28d9', '#5b21b6'] : ['#8b5cf6', '#6366f1']} // 🔥 FIX: Colore più scuro quando premuto
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[styles.primaryButton, styles.heroButton]}
@@ -3139,8 +3156,13 @@ const FoodAnalysisScreenContent: React.FC = () => {
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
-                  style={[styles.secondaryButton, { borderColor: colors.border }]}
+                  style={[styles.secondaryButton, { 
+                    backgroundColor: colors.surfaceElevated || colors.surface,
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                  }]}
                   onPress={closeSlotPicker}
+                  activeOpacity={0.8}
                 >
                   <Text style={[styles.secondaryButtonText, { color: colors.text }]}>{t('common.close')}</Text>
                 </TouchableOpacity>

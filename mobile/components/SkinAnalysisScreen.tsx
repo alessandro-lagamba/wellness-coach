@@ -425,17 +425,9 @@ const SkinAnalysisScreenContent: React.FC = () => {
   }, [cameraController, showTabBar]);
 
   const ensureCameraPermission = useCallback(async () => {
-    try {
-      if (isMountedRef.current) {
-        setPermissionChecking(true);
-      }
-      const result = await cameraController.ensurePermission();
-      return result;
-    } finally {
-      if (isMountedRef.current) {
-        setPermissionChecking(false);
-      }
-    }
+    // 🔥 FIX: Non impostare permissionChecking per evitare delay - il popup nativo viene mostrato direttamente
+    const result = await cameraController.ensurePermission();
+    return result;
   }, [cameraController]);
 
   const ensureAnalysisReady = useCallback(async () => {

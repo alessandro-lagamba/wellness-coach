@@ -159,6 +159,32 @@ export class MenstrualCycleService {
   }
 
   /**
+   * Salva la lunghezza del ciclo
+   */
+  async setCycleLength(length: number): Promise<void> {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) {
+        console.warn('[Cycle] Cannot save cycle length: user not authenticated');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ cycle_length: length })
+        .eq('id', currentUser.id);
+
+      if (error) {
+        console.error('[Cycle] Error saving cycle length:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('[Cycle] Error saving cycle length:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Calcola i dati del ciclo per oggi
    */
   async getCycleData(): Promise<CycleData | null> {
