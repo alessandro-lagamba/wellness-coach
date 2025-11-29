@@ -2447,9 +2447,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
               </LinearGradient>
             </TouchableOpacity>
 
-            {permissionChecking && (
-              <Text style={[styles.permissionBanner, { color: '#ffffff' }]}>{t('analysis.common.requestingPermission')}</Text>
-            )}
+            {/* 🔥 FIX: Rimosso messaggio permissionChecking per evitare flash visivo - il popup nativo viene mostrato direttamente */}
             {analysisError && !permissionChecking && (
               <Text style={[styles.permissionBanner, { color: '#fee2e2' }]}>{analysisError}</Text>
             )}
@@ -2709,29 +2707,35 @@ const FoodAnalysisScreenContent: React.FC = () => {
           {/* Recipe Hub Preview - Redesigned */}
           <CopilotStep text="Il tuo Hub Ricette" description="Scopri nuove ricette e pianifica i tuoi pasti settimanali." order={2} name="recipeHub">
             <WalkthroughableView style={styles.recipeHubPreview}>
-              <LinearGradient
-                colors={['#8b5cf6', '#f97316']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.recipeHubGradient}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setRecipeHubVisible(true)}
+                style={styles.recipeHubTouchable}
               >
-                <View style={styles.recipeHubTag}>
-                  <Text style={styles.recipeHubTagText}>{t('analysis.food.recipes.hubTag') || 'Tutto-in-Uno'}</Text>
-                </View>
-                <View style={styles.recipeHubContent}>
-                  <View style={styles.recipeHubTextContainer}>
-                    <Text style={styles.recipeHubTitle}>
-                      {t('analysis.food.recipes.openHubTitle') || t('food.recipeHub.title')}
-                    </Text>
-                    <Text style={styles.recipeHubSubtitle}>
-                      {t('analysis.food.recipes.openHubSubtitle') || t('food.recipeHub.subtitle')}
-                    </Text>
+                <LinearGradient
+                  colors={['#8b5cf6', '#f97316']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.recipeHubGradient}
+                >
+                  <View style={styles.recipeHubTag}>
+                    <Text style={styles.recipeHubTagText}>{t('analysis.food.recipes.hubTag') || 'Tutto-in-Uno'}</Text>
                   </View>
-                  <View style={styles.recipeHubIconContainer}>
-                    <MaterialCommunityIcons name="chef-hat" size={48} color="rgba(255, 255, 255, 0.9)" />
+                  <View style={styles.recipeHubContent}>
+                    <View style={styles.recipeHubTextContainer}>
+                      <Text style={styles.recipeHubTitle}>
+                        {t('analysis.food.recipes.openHubTitle') || t('food.recipeHub.title')}
+                      </Text>
+                      <Text style={styles.recipeHubSubtitle}>
+                        {t('analysis.food.recipes.openHubSubtitle') || t('food.recipeHub.subtitle')}
+                      </Text>
+                    </View>
+                    <View style={styles.recipeHubIconContainer}>
+                      <MaterialCommunityIcons name="chef-hat" size={48} color="rgba(255, 255, 255, 0.9)" />
+                    </View>
                   </View>
-                </View>
-              </LinearGradient>
+                </LinearGradient>
+              </TouchableOpacity>
             </WalkthroughableView>
           </CopilotStep>
 
@@ -4788,6 +4792,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 8,
+  },
+  recipeHubTouchable: {
+    flex: 1,
+    borderRadius: 20,
+    overflow: 'hidden',
   },
   recipeHubGradient: {
     padding: 20,

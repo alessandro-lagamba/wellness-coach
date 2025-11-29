@@ -1217,9 +1217,7 @@ export const EmotionDetectionScreen: React.FC = () => {
               </LinearGradient>
             </TouchableOpacity>
 
-            {permissionChecking && (
-              <Text style={styles.permissionBanner}>{t('analysis.common.requestingPermission')}</Text>
-            )}
+            {/* 🔥 FIX: Rimosso messaggio permissionChecking per evitare flash visivo - il popup nativo viene mostrato direttamente */}
             {analysisError && !permissionChecking && (
               <Text style={styles.permissionBanner}>{analysisError}</Text>
             )}
