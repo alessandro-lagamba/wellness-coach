@@ -634,20 +634,22 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
 
   const handleStartAnalysis = async () => {
-    // 🔥 FIX: Allineato a calendario/notifiche - richiedi permesso direttamente
-    // Se permesso è "undetermined", mostra popup nativo direttamente
-    // Se permesso è "denied", mostra modal esplicativo che poi apre impostazioni
+    // 🔥 FIX: Se permesso è già negato, mostra modal per aprire impostazioni
+    // Altrimenti richiedi permesso direttamente (mostra popup nativo se undetermined)
+    if (cameraController.permissionDenied) {
+      // Permesso già negato - mostra modal per aprire impostazioni
+      if (isMountedRef.current) {
+        setShowPermissionModal(true);
+      }
+      return;
+    }
+
+    // Se permesso è "undetermined" o non concesso, richiedi direttamente (popup nativo)
     const granted = await ensureCameraPermission();
     
     if (!granted) {
-      // Se il permesso è stato negato, mostra modal esplicativo
-      // Il modal permetterà di aprire le impostazioni o riprovare
+      // Se dopo la richiesta il permesso è ancora negato, mostra modal
       if (cameraController.permissionDenied) {
-        if (isMountedRef.current) {
-          setShowPermissionModal(true);
-        }
-      } else {
-        // Caso raro: permesso non concesso ma non negato esplicitamente
         if (isMountedRef.current) {
           setShowPermissionModal(true);
         }
@@ -2144,30 +2146,12 @@ const SkinAnalysisScreenContent: React.FC = () => {
           onGrant={async () => {
             setShowPermissionModal(false);
             // 🔥 FIX: Se permesso è negato, apri direttamente impostazioni
-            // Se permesso è undetermined, requestPermission aprirà il popup nativo
-            if (cameraController.permissionDenied) {
-              // Permesso già negato - apri impostazioni
-              const { Linking, Platform } = await import('react-native');
-              if (Platform.OS === 'ios') {
-                Linking.openURL('app-settings:');
-              } else {
-                Linking.openSettings();
-              }
+            // Il modal viene mostrato solo quando il permesso è già negato
+            const { Linking, Platform } = await import('react-native');
+            if (Platform.OS === 'ios') {
+              Linking.openURL('app-settings:');
             } else {
-              // Permesso undetermined - richiedi permesso (apre popup nativo)
-              if (cameraController.requestPermission) {
-                const result = await cameraController.requestPermission();
-                if (result?.granted) {
-                  // Permesso concesso, avvia analisi
-                  await handleStartAnalysis();
-                }
-              } else {
-                // Fallback: usa ensurePermission
-                const granted = await cameraController.ensurePermission();
-                if (granted) {
-                  await handleStartAnalysis();
-                }
-              }
+              Linking.openSettings();
             }
           }}
         />
