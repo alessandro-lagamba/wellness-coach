@@ -210,25 +210,86 @@ class IntelligentInsightService {
    * Build emotion analysis prompt
    */
   private buildEmotionPrompt(emotionData: any): string {
+    // Estrai dati specifici dalla struttura dati
+    const latestSession = emotionData?.latestSession || emotionData?.latest_emotion || emotionData;
+    const emotionHistory = emotionData?.emotionHistory || emotionData?.emotion_history || [];
+    const trend = emotionData?.trend || emotionData?.emotionTrend || 'stable';
+    const insights = emotionData?.insights || [];
+
+    // Valori attuali - supporta sia EmotionSession che altre strutture
+    const currentEmotion = latestSession?.dominant || latestSession?.emotion || latestSession?.dominantEmotion || 'neutral';
+    const currentValence = latestSession?.avg_valence ?? latestSession?.valence ?? latestSession?.valence_score ?? 0;
+    const currentArousal = latestSession?.avg_arousal ?? latestSession?.arousal ?? latestSession?.arousal_score ?? 0;
+    const currentConfidence = latestSession?.confidence ?? latestSession?.confidence_score ?? 0;
+    const currentDate = latestSession?.date || (latestSession?.timestamp ? new Date(latestSession.timestamp).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+
+    // Analizza trend storico
+    let valenceTrend = 'stabile';
+    let arousalTrend = 'stabile';
+    let emotionPattern = 'nessun pattern evidente';
+    
+    if (emotionHistory && emotionHistory.length > 0) {
+      const recentSessions = emotionHistory.slice(-5);
+      const valences = recentSessions.map((s: any) => s.avg_valence ?? s.valence ?? s.valence_score ?? 0).filter((v: number) => v !== 0);
+      const arousals = recentSessions.map((s: any) => s.avg_arousal ?? s.arousal ?? s.arousal_score ?? 0).filter((a: number) => a !== 0);
+      
+      if (valences.length > 1) {
+        const avgValence = valences.reduce((a: number, b: number) => a + b, 0) / valences.length;
+        if (currentValence > avgValence + 0.1) valenceTrend = 'in miglioramento';
+        else if (currentValence < avgValence - 0.1) valenceTrend = 'in calo';
+      }
+      
+      if (arousals.length > 1) {
+        const avgArousal = arousals.reduce((a: number, b: number) => a + b, 0) / arousals.length;
+        if (currentArousal > avgArousal + 0.1) arousalTrend = 'più alto del solito';
+        else if (currentArousal < avgArousal - 0.1) arousalTrend = 'più basso del solito';
+      }
+
+      // Analizza pattern emotivi
+      const emotions = recentSessions.map((s: any) => s.dominant || s.emotion || s.dominantEmotion || 'neutral');
+      const emotionCounts: Record<string, number> = {};
+      emotions.forEach((e: string) => {
+        emotionCounts[e] = (emotionCounts[e] || 0) + 1;
+      });
+      const mostCommon = Object.entries(emotionCounts).sort((a, b) => b[1] - a[1])[0];
+      if (mostCommon && mostCommon[1] >= 3) {
+        emotionPattern = `tendenza verso ${mostCommon[0]} (${mostCommon[1]} volte negli ultimi ${recentSessions.length} giorni)`;
+      }
+    }
+
+    // Osservazioni e raccomandazioni
+    const observations = latestSession?.observations || emotionData?.observations || [];
+    const recommendations = latestSession?.recommendations || emotionData?.recommendations || [];
+
     return `Sei un assistente wellness specializzato in benessere emotivo. 
-Analizza i dati storici delle analisi emozionali e fornisci insight pratici per aiutare l'utente a mantenere o migliorare il proprio stato.
+Analizza i dati specifici dell'utente e fornisci insight pratici e personalizzati basati sui valori reali.
 
-Dati recenti:
-${JSON.stringify(emotionData)}
+📊 STATO EMOTIVO ATTUALE (${currentDate}):
+- Emozione dominante: ${currentEmotion}
+- Valence: ${currentValence.toFixed(2)} (da -1 negativo a +1 positivo)
+- Arousal: ${currentArousal.toFixed(2)} (da -1 calmo a +1 eccitato)
+- Confidenza: ${(currentConfidence * 100).toFixed(0)}%
 
-Osservazioni rilevate dall'AI visiva:
-${emotionData.observations ? emotionData.observations.join('\n- ') : 'Nessuna osservazione specifica.'}
+📈 TREND E PATTERN:
+- Trend generale: ${trend === 'improving' ? 'miglioramento' : trend === 'declining' ? 'peggioramento' : 'stabile'}
+- Trend valence: ${valenceTrend}
+- Trend arousal: ${arousalTrend}
+- Pattern emotivo: ${emotionPattern}
+${emotionHistory.length > 0 ? `- Storia disponibile: ${emotionHistory.length} analisi precedenti` : '- Nessuna storia precedente disponibile'}
 
-Raccomandazioni iniziali:
-${emotionData.recommendations ? emotionData.recommendations.join('\n- ') : 'Nessuna raccomandazione iniziale.'}
+${observations.length > 0 ? `\n👁️ OSSERVAZIONI AI VISIVA:\n${observations.map((o: string) => `- ${o}`).join('\n')}` : ''}
 
-Istruzioni:
-1. Analizza trend di valence, arousal e categorie emotive (positive, neutre, negative).
-2. Usa le osservazioni visive per contestualizzare i consigli.
-3. Espandi le raccomandazioni iniziali in insight pratici e dettagliati.
-4. Fornisci massimo 3 insight pratici, brevi e personalizzati.
-5. Suggerisci routine giornaliere per migliorare umore o gestire eventuali cali (es. attività fisica leggera, respirazione, journaling).
-6. Rispondi solo con raccomandazioni pratiche, non spiegazioni scientifiche.
+${recommendations.length > 0 ? `\n💡 RACCOMANDAZIONI INIZIALI:\n${recommendations.map((r: string) => `- ${r}`).join('\n')}` : ''}
+
+${insights.length > 0 ? `\n🧠 INSIGHT PREVIOUS:\n${insights.slice(0, 3).map((i: string) => `- ${i}`).join('\n')}` : ''}
+
+🎯 ISTRUZIONI PER GLI INSIGHT:
+1. **Usa i valori specifici**: Riferisciti esplicitamente ai valori di valence (${currentValence.toFixed(2)}), arousal (${currentArousal.toFixed(2)}), e emozione (${currentEmotion}) nei tuoi insight.
+2. **Basati sul trend**: Se il trend è "${trend}", crea insight che supportino o contrastino questo trend in modo appropriato.
+3. **Personalizza**: Se valence è ${currentValence < -0.3 ? 'molto negativa' : currentValence < 0 ? 'leggermente negativa' : currentValence > 0.3 ? 'molto positiva' : 'neutra'}, suggerisci azioni specifiche per ${currentValence < 0 ? 'migliorare' : 'mantenere'} l'umore.
+4. **Considera arousal**: Se arousal è ${currentArousal > 0.5 ? 'alto (stress/ansia)' : currentArousal < -0.5 ? 'basso (depressione/fatica)' : 'normale'}, adatta le raccomandazioni di conseguenza.
+5. **Action-oriented**: Ogni insight deve essere una **azione concreta** che l'utente può fare OGGI, non teoria.
+6. **Massimo 3 insight**: Scegli i 3 più rilevanti basati sui dati reali.
 
 IMPORTANTE: Rispondi SOLO con un JSON valido nel seguente formato:
 
@@ -269,17 +330,89 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
    * Build skin analysis prompt
    */
   private buildSkinPrompt(skinData: any): string {
+    // Estrai dati specifici dalla struttura dati
+    const latestSession = skinData?.latestCapture || skinData?.latestSession || skinData?.latest_skin || skinData;
+    const skinHistory = skinData?.skinHistory || skinData?.skin_history || [];
+    const trend = skinData?.trend || skinData?.skinTrend || 'stable';
+
+    // Valori attuali - supporta sia SkinCapture (con scores) che altre strutture
+    const scores = latestSession?.scores || {};
+    // SkinCapture usa scores.overall, non overallScore
+    const overallScore = scores?.overall ?? scores?.overallScore ?? latestSession?.overallScore ?? latestSession?.overall_score ?? 70;
+    const hydrationScore = scores?.hydration ?? latestSession?.hydrationScore ?? latestSession?.hydration_score ?? latestSession?.hydration ?? 50;
+    const oilinessScore = scores?.oiliness ?? latestSession?.oilinessScore ?? latestSession?.oiliness_score ?? latestSession?.oiliness ?? 50;
+    const textureScore = scores?.texture ?? latestSession?.textureScore ?? latestSession?.texture_score ?? latestSession?.texture ?? 50;
+    const pigmentationScore = scores?.pigmentation ?? latestSession?.pigmentationScore ?? latestSession?.pigmentation_score ?? latestSession?.pigmentation ?? 50;
+    const elasticityScore = scores?.elasticity ?? latestSession?.elasticityScore ?? latestSession?.elasticity_score ?? latestSession?.elasticity ?? 50;
+    const currentDate = latestSession?.date || (latestSession?.timestamp ? new Date(latestSession.timestamp).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+
+    // Analizza trend storico
+    let hydrationTrend = 'stabile';
+    let textureTrend = 'stabile';
+    let overallTrend = 'stabile';
+    
+    if (skinHistory && skinHistory.length > 0) {
+      const recentSessions = skinHistory.slice(-5);
+      const scores = recentSessions.map((s: any) => {
+        const sessionScores = s.scores || {};
+        return {
+          overall: sessionScores.overall ?? sessionScores.overallScore ?? s.overallScore ?? s.overall_score ?? 70,
+          hydration: sessionScores.hydration ?? s.hydrationScore ?? s.hydration_score ?? s.hydration ?? 50,
+          texture: sessionScores.texture ?? s.textureScore ?? s.texture_score ?? s.texture ?? 50,
+        };
+      });
+
+      if (scores.length > 1) {
+        const avgOverall = scores.reduce((sum: number, s: any) => sum + s.overall, 0) / scores.length;
+        if (overallScore > avgOverall + 5) overallTrend = 'miglioramento';
+        else if (overallScore < avgOverall - 5) overallTrend = 'peggioramento';
+
+        const avgHydration = scores.reduce((sum: number, s: any) => sum + s.hydration, 0) / scores.length;
+        if (hydrationScore > avgHydration + 5) hydrationTrend = 'miglioramento';
+        else if (hydrationScore < avgHydration - 5) hydrationTrend = 'peggioramento';
+
+        const avgTexture = scores.reduce((sum: number, s: any) => sum + s.texture, 0) / scores.length;
+        if (textureScore > avgTexture + 5) textureTrend = 'miglioramento';
+        else if (textureScore < avgTexture - 5) textureTrend = 'peggioramento';
+      }
+    }
+
+    // Identifica aree critiche
+    const criticalAreas: string[] = [];
+    if (hydrationScore < 40) criticalAreas.push('idratazione molto bassa');
+    if (textureScore < 40) criticalAreas.push('texture ruvida');
+    if (oilinessScore > 70) criticalAreas.push('eccesso di sebo');
+    if (oilinessScore < 30) criticalAreas.push('pelle molto secca');
+    if (pigmentationScore > 60) criticalAreas.push('pigmentazione elevata');
+    if (elasticityScore < 40) criticalAreas.push('elasticità ridotta');
+
     return `Sei un assistente wellness specializzato in skincare. 
-Analizza i dati storici dell'utente relativi alla pelle e fornisci insight pratici e personalizzati.
+Analizza i dati specifici dell'utente e fornisci insight pratici e personalizzati basati sui valori reali.
 
-Dati recenti:
-${JSON.stringify(skinData)}
+📊 STATO PELLE ATTUALE (${currentDate}):
+- Punteggio complessivo: ${overallScore}/100
+- Idratazione: ${hydrationScore}/100 ${hydrationScore < 40 ? '⚠️ CRITICO' : hydrationScore < 60 ? '⚠️ BASSO' : '✅'}
+- Texture: ${textureScore}/100 ${textureScore < 40 ? '⚠️ CRITICO' : textureScore < 60 ? '⚠️ BASSO' : '✅'}
+- Sebo/Oleosità: ${oilinessScore}/100 ${oilinessScore > 70 ? '⚠️ ECCESSO' : oilinessScore < 30 ? '⚠️ CARENZA' : '✅'}
+- Pigmentazione: ${pigmentationScore}/100
+- Elasticità: ${elasticityScore}/100 ${elasticityScore < 40 ? '⚠️ BASSO' : '✅'}
 
-Istruzioni:
-1. Analizza trend (miglioramento, peggioramento, stabilità) per ciascun parametro rilevante: idratazione, texture, luminosità, elasticità, secchezza.
-2. Fornisci massimo 3 insight pratici e personalizzati per migliorare la condizione della pelle.
-3. Se possibile, collega l'insight a routine giornaliere semplici (es. idratazione, alimentazione, abitudini).
-4. Non dare spiegazioni teoriche: le risposte devono essere **brevi, chiare e action-oriented**.
+📈 TREND E PATTERN:
+- Trend generale: ${trend === 'improving' ? 'miglioramento' : trend === 'declining' ? 'peggioramento' : 'stabile'}
+- Trend idratazione: ${hydrationTrend}
+- Trend texture: ${textureTrend}
+- Trend complessivo: ${overallTrend}
+${skinHistory.length > 0 ? `- Storia disponibile: ${skinHistory.length} analisi precedenti` : '- Nessuna storia precedente disponibile'}
+
+${criticalAreas.length > 0 ? `\n⚠️ AREE CRITICHE IDENTIFICATE:\n${criticalAreas.map((a: string) => `- ${a}`).join('\n')}` : '\n✅ Nessuna area critica identificata - la pelle è in buone condizioni'}
+
+🎯 ISTRUZIONI PER GLI INSIGHT:
+1. **Usa i valori specifici**: Riferisciti esplicitamente ai punteggi reali (es. "idratazione ${hydrationScore}/100", "texture ${textureScore}/100") nei tuoi insight.
+2. **Prioritizza aree critiche**: ${criticalAreas.length > 0 ? `Concentrati su: ${criticalAreas.join(', ')}` : 'Mantieni e migliora le aree già in buone condizioni'}.
+3. **Basati sul trend**: Se il trend è "${trend}", crea insight che supportino o contrastino questo trend in modo appropriato.
+4. **Action-oriented**: Ogni insight deve essere una **routine concreta** che l'utente può fare OGGI (es. "Applica crema idratante entro 30 min dalla doccia", "Aggiungi un siero con acido ialuronico alla routine serale").
+5. **Specifico e pratico**: Non dire "idrata di più" ma "bevi 2 bicchieri d'acqua ora e applica crema idratante dopo la doccia".
+6. **Massimo 3 insight**: Scegli i 3 più rilevanti basati sui dati reali e sulle aree critiche.
 
 IMPORTANTE: Rispondi SOLO con un JSON valido nel seguente formato:
 
@@ -325,22 +458,65 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
     const healthScore = foodData?.health_score ?? foodData?.healthScore ?? 70;
     const recommendations = foodData?.recommendations || [];
     const observations = foodData?.observations || [];
+    const calories = foodData?.calories || macronutrients?.calories || 0;
+    const mealType = foodData?.mealType || foodData?.meal_type || 'meal';
+
+    // Estrai valori macronutrienti
+    const carbs = macronutrients?.carbohydrates || macronutrients?.carbs || 0;
+    const proteins = macronutrients?.proteins || macronutrients?.protein || 0;
+    const fats = macronutrients?.fats || macronutrients?.fat || 0;
+    const fiber = macronutrients?.fiber || 0;
+    const totalMacros = carbs + proteins + fats;
+
+    // Calcola percentuali
+    const carbsPct = totalMacros > 0 ? Math.round((carbs / totalMacros) * 100) : 0;
+    const proteinPct = totalMacros > 0 ? Math.round((proteins / totalMacros) * 100) : 0;
+    const fatsPct = totalMacros > 0 ? Math.round((fats / totalMacros) * 100) : 0;
+
+    // Identifica squilibri
+    const imbalances: string[] = [];
+    if (carbsPct > 65) imbalances.push(`eccesso di carboidrati (${carbsPct}%, target 35-65%)`);
+    if (carbsPct < 35) imbalances.push(`carenza di carboidrati (${carbsPct}%, target 35-65%)`);
+    if (proteinPct > 35) imbalances.push(`eccesso di proteine (${proteinPct}%, target 15-35%)`);
+    if (proteinPct < 15) imbalances.push(`carenza di proteine (${proteinPct}%, target 15-35%)`);
+    if (fatsPct > 35) imbalances.push(`eccesso di grassi (${fatsPct}%, target 15-35%)`);
+    if (fatsPct < 15) imbalances.push(`carenza di grassi (${fatsPct}%, target 15-35%)`);
+    if (fiber < 5) imbalances.push(`basso contenuto di fibre (${fiber.toFixed(1)}g, target 5-10g per pasto)`);
+
+    // Valuta il pasto
+    let mealQuality = 'equilibrato';
+    if (healthScore >= 80) mealQuality = 'eccellente';
+    else if (healthScore >= 60) mealQuality = 'buono';
+    else if (healthScore >= 40) mealQuality = 'discreto';
+    else mealQuality = 'da migliorare';
 
     return `Sei un nutrizionista digitale specializzato in alimentazione equilibrata.
-Analizza gli ultimi dati nutrizionali del pasto e genera insight pratici per aiutare l'utente a migliorare la qualità della propria alimentazione quotidiana.
+Analizza i dati specifici del pasto dell'utente e genera insight pratici e personalizzati basati sui valori reali.
 
-Dati disponibili:
+📊 ANALISI PASTO (${mealType}):
 - Alimenti identificati: ${identifiedFoods.length ? identifiedFoods.join(', ') : 'non specificati'}
-- Macronutrienti stimati: ${JSON.stringify(macronutrients)}
-- Punteggio salute pasto: ${healthScore}
-- Osservazioni AI: ${observations.length ? observations.join('; ') : 'nessuna osservazione specifica'}
-- Suggerimenti AI iniziali: ${recommendations.length ? recommendations.join('; ') : 'nessun suggerimento iniziale'}
+- Calorie totali: ${calories > 0 ? `${calories} kcal` : 'non disponibili'}
+- Punteggio salute: ${healthScore}/100 (${mealQuality})
 
-Istruzioni:
-1. Analizza equilibrio tra carboidrati, proteine e grassi rispetto ai range consigliati (Carb 35-65%, Prot 15-35%, Grassi 15-35%).
-2. Evidenzia eventuali eccessi o carenze nutrizionali e suggerisci modifiche concrete per il prossimo pasto.
-3. Includi consigli su porzioni, abbinamenti alimentari o timing (es. integrare fibre, aumentare proteine magre, idratazione).
-4. Mantieni un tono positivo e orientato all'azione, con massimo tre insight numerati.
+🥗 MACRONUTRIENTI:
+- Carboidrati: ${carbs.toFixed(1)}g (${carbsPct}%) ${carbsPct < 35 || carbsPct > 65 ? '⚠️' : '✅'}
+- Proteine: ${proteins.toFixed(1)}g (${proteinPct}%) ${proteinPct < 15 || proteinPct > 35 ? '⚠️' : '✅'}
+- Grassi: ${fats.toFixed(1)}g (${fatsPct}%) ${fatsPct < 15 || fatsPct > 35 ? '⚠️' : '✅'}
+- Fibre: ${fiber.toFixed(1)}g ${fiber < 5 ? '⚠️ BASSO' : '✅'}
+
+${imbalances.length > 0 ? `\n⚠️ SQUILIBRI IDENTIFICATI:\n${imbalances.map((i: string) => `- ${i}`).join('\n')}` : '\n✅ Nessuno squilibrio significativo - il pasto è ben bilanciato'}
+
+${observations.length > 0 ? `\n👁️ OSSERVAZIONI AI:\n${observations.map((o: string) => `- ${o}`).join('\n')}` : ''}
+
+${recommendations.length > 0 ? `\n💡 SUGGERIMENTI INIZIALI:\n${recommendations.map((r: string) => `- ${r}`).join('\n')}` : ''}
+
+🎯 ISTRUZIONI PER GLI INSIGHT:
+1. **Usa i valori specifici**: Riferisciti esplicitamente ai valori reali (es. "carboidrati ${carbsPct}%", "proteine ${proteins.toFixed(1)}g", "fibre ${fiber.toFixed(1)}g") nei tuoi insight.
+2. **Prioritizza squilibri**: ${imbalances.length > 0 ? `Concentrati su: ${imbalances.slice(0, 2).join(', ')}` : 'Mantieni l'equilibrio attuale e suggerisci miglioramenti incrementali'}.
+3. **Action-oriented**: Ogni insight deve essere una **modifica concreta** per il prossimo pasto (es. "Aggiungi 100g di petto di pollo al prossimo pasto per aumentare le proteine", "Sostituisci metà riso con verdure per bilanciare i carboidrati").
+4. **Specifico e pratico**: Non dire "mangia più proteine" ma "aggiungi ${(30 - proteins).toFixed(0)}g di proteine magre (es. petto di pollo, tofu, legumi) al prossimo pasto".
+5. **Considera il tipo di pasto**: Se è ${mealType}, adatta i consigli di conseguenza (colazione = energia, pranzo = bilanciato, cena = leggero).
+6. **Massimo 3 insight**: Scegli i 3 più rilevanti basati sui dati reali e sugli squilibri identificati.
 
 Rispondi in italiano nella lingua dell'utente e limita la lunghezza a poche frasi per insight.`;
   }
