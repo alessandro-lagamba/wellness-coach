@@ -222,16 +222,178 @@ export class TodayGlanceService {
   }
 
   /**
+   * Rimuove un bicchiere d'acqua (250ml) dai dati di idratazione di oggi
+   * @returns true se l'operazione è riuscita, false altrimenti
+   */
+  static async removeWaterGlass(userId: string): Promise<{ success: boolean; error?: string; newHydration?: number }> {
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { HealthDataSyncService } = await import('./health-data-sync.service');
+      const { HealthDataService } = await import('./health-data.service');
+
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const GLASS_SIZE_ML = 250; // Un bicchiere standard è 250ml
+
+      // Recupera i dati di salute attuali per oggi
+      const { data: existingData } = await supabase
+        .from('health_data')
+        .select('hydration, steps, distance, calories, active_minutes, heart_rate, resting_heart_rate, hrv, sleep_hours, sleep_quality, deep_sleep_minutes, rem_sleep_minutes, light_sleep_minutes, mindfulness_minutes')
+        .eq('user_id', userId)
+        .eq('date', today)
+        .maybeSingle();
+
+      // Calcola la nuova idratazione (rimuovi 250ml, minimo 0)
+      const currentHydration = existingData?.hydration || 0;
+      const newHydration = Math.max(0, currentHydration - GLASS_SIZE_ML);
+
+      // Se l'idratazione è già 0, non fare nulla
+      if (currentHydration === 0) {
+        return {
+          success: false,
+          error: 'Nessun bicchiere da rimuovere',
+        };
+      }
+
+      // Recupera tutti i dati di salute attuali (o usa valori di default)
+      const healthService = HealthDataService.getInstance();
+      const currentHealthData = await healthService.getLatestSyncedHealthData();
+
+      // Prepara i dati per il sync (preserva tutti i valori esistenti e aggiorna solo hydration)
+      const healthDataToSync = {
+        steps: existingData?.steps ?? currentHealthData.data?.steps ?? 0,
+        distance: existingData?.distance ?? currentHealthData.data?.distance ?? 0,
+        calories: existingData?.calories ?? currentHealthData.data?.calories ?? 0,
+        activeMinutes: existingData?.active_minutes ?? currentHealthData.data?.activeMinutes ?? 0,
+        heartRate: existingData?.heart_rate ?? currentHealthData.data?.heartRate ?? 0,
+        restingHeartRate: existingData?.resting_heart_rate ?? currentHealthData.data?.restingHeartRate ?? 0,
+        hrv: existingData?.hrv ?? currentHealthData.data?.hrv ?? 0,
+        sleepHours: existingData?.sleep_hours ?? currentHealthData.data?.sleepHours ?? 0,
+        sleepQuality: existingData?.sleep_quality ?? currentHealthData.data?.sleepQuality ?? 0,
+        deepSleepMinutes: existingData?.deep_sleep_minutes ?? currentHealthData.data?.deepSleepMinutes ?? 0,
+        remSleepMinutes: existingData?.rem_sleep_minutes ?? currentHealthData.data?.remSleepMinutes ?? 0,
+        lightSleepMinutes: existingData?.light_sleep_minutes ?? currentHealthData.data?.lightSleepMinutes ?? 0,
+        hydration: newHydration, // 🔥 Aggiorna con il nuovo valore
+        mindfulnessMinutes: existingData?.mindfulness_minutes ?? currentHealthData.data?.mindfulnessMinutes ?? 0,
+      };
+
+      // Sincronizza i dati aggiornati nel database (source: 'manual' perché modificato manualmente dall'utente)
+      const syncService = HealthDataSyncService.getInstance();
+      const syncResult = await syncService.syncHealthData(userId, healthDataToSync, 'manual');
+
+      if (syncResult.success) {
+        return {
+          success: true,
+          newHydration,
+        };
+      } else {
+        return {
+          success: false,
+          error: syncResult.error || 'Errore durante il salvataggio',
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error removing water glass:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Errore sconosciuto',
+      };
+    }
+  }
+
+  /**
+   * Aggiunge un bicchiere d'acqua (250ml) ai dati di idratazione di oggi
+   * @returns true se l'operazione è riuscita, false altrimenti
+   */
+  static async addWaterGlass(userId: string): Promise<{ success: boolean; error?: string; newHydration?: number }> {
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { HealthDataSyncService } = await import('./health-data-sync.service');
+      const { HealthDataService } = await import('./health-data.service');
+      const { AuthService } = await import('./auth.service');
+
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const GLASS_SIZE_ML = 250; // Un bicchiere standard è 250ml
+
+      // Recupera i dati di salute attuali per oggi
+      const { data: existingData } = await supabase
+        .from('health_data')
+        .select('hydration, steps, distance, calories, active_minutes, heart_rate, resting_heart_rate, hrv, sleep_hours, sleep_quality, deep_sleep_minutes, rem_sleep_minutes, light_sleep_minutes, mindfulness_minutes')
+        .eq('user_id', userId)
+        .eq('date', today)
+        .maybeSingle();
+
+      // Calcola la nuova idratazione (aggiungi 250ml)
+      const currentHydration = existingData?.hydration || 0;
+      const newHydration = currentHydration + GLASS_SIZE_ML;
+
+      // Recupera tutti i dati di salute attuali (o usa valori di default)
+      const healthService = HealthDataService.getInstance();
+      const currentHealthData = await healthService.getLatestSyncedHealthData();
+
+      // Prepara i dati per il sync (preserva tutti i valori esistenti e aggiorna solo hydration)
+      const healthDataToSync = {
+        steps: existingData?.steps ?? currentHealthData.data?.steps ?? 0,
+        distance: existingData?.distance ?? currentHealthData.data?.distance ?? 0,
+        calories: existingData?.calories ?? currentHealthData.data?.calories ?? 0,
+        activeMinutes: existingData?.active_minutes ?? currentHealthData.data?.activeMinutes ?? 0,
+        heartRate: existingData?.heart_rate ?? currentHealthData.data?.heartRate ?? 0,
+        restingHeartRate: existingData?.resting_heart_rate ?? currentHealthData.data?.restingHeartRate ?? 0,
+        hrv: existingData?.hrv ?? currentHealthData.data?.hrv ?? 0,
+        sleepHours: existingData?.sleep_hours ?? currentHealthData.data?.sleepHours ?? 0,
+        sleepQuality: existingData?.sleep_quality ?? currentHealthData.data?.sleepQuality ?? 0,
+        deepSleepMinutes: existingData?.deep_sleep_minutes ?? currentHealthData.data?.deepSleepMinutes ?? 0,
+        remSleepMinutes: existingData?.rem_sleep_minutes ?? currentHealthData.data?.remSleepMinutes ?? 0,
+        lightSleepMinutes: existingData?.light_sleep_minutes ?? currentHealthData.data?.lightSleepMinutes ?? 0,
+        hydration: newHydration, // 🔥 Aggiorna con il nuovo valore
+        mindfulnessMinutes: existingData?.mindfulness_minutes ?? currentHealthData.data?.mindfulnessMinutes ?? 0,
+      };
+
+      // Sincronizza i dati aggiornati nel database (source: 'manual' perché aggiunto manualmente dall'utente)
+      const syncService = HealthDataSyncService.getInstance();
+      const syncResult = await syncService.syncHealthData(userId, healthDataToSync, 'manual');
+
+      if (syncResult.success) {
+        return {
+          success: true,
+          newHydration,
+        };
+      } else {
+        return {
+          success: false,
+          error: syncResult.error || 'Errore durante il salvataggio',
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error adding water glass:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Errore sconosciuto',
+      };
+    }
+  }
+
+  /**
    * Gestisce le azioni rapide per ogni widget
    */
-  static async handleQuickAction(widgetId: string, action: string): Promise<boolean> {
+  static async handleQuickAction(widgetId: string, action: string, userId?: string): Promise<boolean> {
     try {
       switch (widgetId) {
         case 'hydration':
           if (action === 'add_water') {
-            // Aggiungi un bicchiere d'acqua
-            console.log('Adding water glass...');
-            return true;
+            // 🔥 FIX: Implementa l'aggiunta di un bicchiere d'acqua
+            if (!userId) {
+              // Prova a recuperare l'utente corrente
+              const { AuthService } = await import('./auth.service');
+              const currentUser = await AuthService.getCurrentUser();
+              if (!currentUser?.id) {
+                console.error('❌ Cannot add water: user not authenticated');
+                return false;
+              }
+              userId = currentUser.id;
+            }
+
+            const result = await this.addWaterGlass(userId);
+            return result.success;
           }
           break;
         case 'mindfulness':

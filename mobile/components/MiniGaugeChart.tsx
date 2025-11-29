@@ -9,7 +9,14 @@ import { useTheme } from "../contexts/ThemeContext"
 type WidgetSize = "small" | "medium" | "large"
 
 type StepsDetails = { current: number; goal: number; km?: number; calories?: number }
-type HydrationDetails = { glasses: number; goal: number; ml?: number; lastDrink?: string }
+type HydrationDetails = { 
+  glasses: number; // 🔥 FIX: Ora contiene il valore in unità preferita (non sempre bicchieri)
+  goal: number; // 🔥 FIX: Goal in unità preferita
+  ml?: number; 
+  lastDrink?: string;
+  preferredUnit?: 'glass' | 'bottle' | 'liter'; // 🆕 Unità preferita
+  unitLabel?: string; // 🆕 Etichetta unità (es. "bicchiere", "bottiglia", "litro")
+}
 type MeditationDetails = { minutes: number; goal: number; sessions?: number; streak?: number; favoriteType?: string }
 
 type AdditionalData =
@@ -76,7 +83,9 @@ const MiniGaugeChart: React.FC<Props> = memo(({
     }
     if ("hydration" in additionalData) {
       const d = additionalData.hydration
-      const chips = [{ icon: "cup-water", label: "Glasses", value: `${d.glasses}/${d.goal}` }]
+      // 🔥 FIX: Usa unità preferita se disponibile, altrimenti "Glasses" come default
+      const unitLabel = d.unitLabel || "Glasses";
+      const chips = [{ icon: "cup-water", label: unitLabel, value: `${d.glasses}/${d.goal}` }]
       if (size === "large" && d.ml) chips.push({ icon: "water", label: "Volume", value: `${d.ml} ml` })
       return chips
     }

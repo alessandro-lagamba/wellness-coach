@@ -241,6 +241,10 @@
     "insights": "Insight",
     "suggestions": "Suggerimenti per Te",
     "subtitle": "Routine curate per mantenere lo slancio",
+    "actions": {
+      "start": "Inizia",
+      "remind": "Promemoria"
+    },
     "edit": "Modifica",
     "done": "Fatto",
     "addChart": "Aggiungi grafico",
@@ -323,6 +327,18 @@
     },
     "goal": "Obiettivo",
     "bpm": "bpm",
+    "hydrationActions": {
+      "menuTitle": "Gestisci Idratazione",
+      "menuMessage": "Cosa vuoi fare?",
+      "add": "Aggiungi",
+      "remove": "Rimuovi",
+      "addedTitle": "Acqua aggiunta",
+      "addedSuccess": "Aggiunto! Totale: {{units}} {{unitLabel}}",
+      "removedTitle": "Acqua rimossa",
+      "removedSuccess": "Rimosso! Totale: {{units}} {{unitLabel}}",
+      "addError": "Errore durante l'aggiunta dell'acqua. Riprova più tardi.",
+      "removeError": "Errore durante la rimozione dell'acqua. Riprova più tardi."
+    },
     "stats": {
       "streak": "Serie",
       "momentum": "Progresso",
@@ -1467,7 +1483,14 @@
           "hydration": {
             "title": "Obiettivo Idratazione",
             "unit": "bicchieri",
-            "hint": "es. 8"
+            "hint": "es. 8",
+            "selectUnit": "Seleziona unità di misura",
+            "unitInfo": "{{ml}}ml per {{unit}}",
+            "units": {
+              "glass": "Bicchiere",
+              "bottle": "Bottiglia",
+              "liter": "Litri"
+            }
           },
           "meditation": {
             "title": "Obiettivo Meditazione",

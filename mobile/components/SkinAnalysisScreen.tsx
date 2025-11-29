@@ -644,27 +644,20 @@ const SkinAnalysisScreenContent: React.FC = () => {
       return;
     }
 
-    // Start camera immediately for better perceived performance
-    await cameraController.startCamera();
-
-    // Run permission and analysis checks in parallel
-    const [granted, ready] = await Promise.all([
-      ensureCameraPermission(),
-      ensureAnalysisReady()
-    ]);
-
-    // 🔥 FIX: Rimuoviamo console.log eccessivi
+    // 🔥 FIX: Allineato a EmotionDetectionScreen - controlla permessi PRIMA di avviare la fotocamera
+    const granted = await ensureCameraPermission();
     if (!granted) {
-      cameraController.stopCamera();
       if (isMountedRef.current) {
         setShowPermissionModal(true);
       }
       return;
     }
 
+    const ready = await ensureAnalysisReady();
     if (!ready) {
-      alert(t('analysis.skin.errors.serviceNotReady'));
-      cameraController.stopCamera();
+      if (isMountedRef.current) {
+        alert(t('analysis.skin.errors.serviceNotReady'));
+      }
       return;
     }
 
@@ -675,6 +668,9 @@ const SkinAnalysisScreenContent: React.FC = () => {
       setAnalyzing(false);
       setCameraSwitching(false);
     }
+
+    // Avvia la fotocamera solo dopo aver verificato permessi e servizio
+    await cameraController.startCamera();
   };
 
   // 🔧 FALLBACK: Image Picker for Testing (100% Reliable)
@@ -1609,8 +1605,8 @@ const SkinAnalysisScreenContent: React.FC = () => {
           setResults(null);
           setAnalyzing(false);
           setFullAnalysisResult(null);
-          // Immediately restart camera to prevent flash
-          cameraController.startCamera();
+          // 🔥 FIX: Ferma la fotocamera e torna alla schermata principale (overview)
+          cameraController.stopCamera();
         }}
         onRetake={resetAnalysis}
       />

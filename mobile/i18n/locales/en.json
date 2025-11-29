@@ -239,6 +239,10 @@
     "insights": "Insights",
     "suggestions": "Suggested For You",
     "subtitle": "Curated routines to keep momentum going",
+    "actions": {
+      "start": "Start",
+      "remind": "Reminder"
+    },
     "edit": "Edit",
     "done": "Done",
     "addChart": "Add chart",
@@ -321,6 +325,18 @@
     },
     "goal": "Goal",
     "bpm": "bpm",
+    "hydrationActions": {
+      "menuTitle": "Manage Hydration",
+      "menuMessage": "What would you like to do?",
+      "add": "Add",
+      "remove": "Remove",
+      "addedTitle": "Water added",
+      "addedSuccess": "Added! Total: {{units}} {{unitLabel}}",
+      "removedTitle": "Water removed",
+      "removedSuccess": "Removed! Total: {{units}} {{unitLabel}}",
+      "addError": "Error adding water. Please try again later.",
+      "removeError": "Error removing water. Please try again later."
+    },
     "stats": {
       "streak": "Streak",
       "momentum": "Progress",
@@ -1359,7 +1375,14 @@
           "hydration": {
             "title": "Hydration Goal",
             "unit": "glasses",
-            "hint": "e.g. 8"
+            "hint": "e.g. 8",
+            "selectUnit": "Select unit of measurement",
+            "unitInfo": "{{ml}}ml per {{unit}}",
+            "units": {
+              "glass": "Glass",
+              "bottle": "Bottle",
+              "liter": "Liters"
+            }
           },
           "meditation": {
             "title": "Meditation Goal",

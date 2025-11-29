@@ -22,7 +22,7 @@ interface IntelligentInsightsSectionProps {
   showTitle?: boolean;
   compact?: boolean;
   onInsightPress?: (insight: IntelligentInsight) => void;
-  onActionPress?: (insight: IntelligentInsight, action: 'start' | 'remind' | 'track') => void;
+  onActionPress?: (insight: IntelligentInsight, action: 'start' | 'remind') => void;
   enabled?: boolean;
   sourceDate?: string | null;
 }
@@ -127,7 +127,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
     }
   };
 
-  const handleActionPress = async (insight: IntelligentInsight, action: 'start' | 'remind' | 'track') => {
+  const handleActionPress = async (insight: IntelligentInsight, action: 'start' | 'remind') => {
     try {
       switch (action) {
         case 'start':
@@ -157,22 +157,6 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
                 onPress: () => {
                   onActionPress?.(insight, action);
                   Alert.alert('Promemoria Impostato', 'Ti ricorderemo di questa attività!');
-                }
-              }
-            ]
-          );
-          break;
-        case 'track':
-          Alert.alert(
-            'Traccia Progresso',
-            `Vuoi iniziare a tracciare i progressi per: "${insight.title}"?`,
-            [
-              { text: 'Annulla', style: 'cancel' },
-              { 
-                text: 'Traccia', 
-                onPress: () => {
-                  onActionPress?.(insight, action);
-                  Alert.alert('Tracking Avviato', 'Inizieremo a tracciare i tuoi progressi!');
                 }
               }
             ]

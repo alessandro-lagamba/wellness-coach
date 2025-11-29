@@ -16,13 +16,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { IntelligentInsight } from '../services/intelligent-insight.service';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTranslation } from '../hooks/useTranslation';
 
 const { width } = Dimensions.get('window');
 
 interface IntelligentInsightCardProps {
   insight: IntelligentInsight;
   onPress?: (insight: IntelligentInsight) => void;
-  onActionPress?: (insight: IntelligentInsight, action: 'start' | 'remind' | 'track') => void;
+  onActionPress?: (insight: IntelligentInsight, action: 'start' | 'remind') => void;
   compact?: boolean;
 }
 
@@ -33,6 +34,7 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
   compact = false,
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -70,7 +72,7 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
     }
   };
 
-  const handleActionPress = async (action: 'start' | 'remind' | 'track') => {
+  const handleActionPress = async (action: 'start' | 'remind') => {
     setActionLoading(action);
     try {
       await onActionPress?.(insight, action);
@@ -255,7 +257,9 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
                 ) : (
                   <MaterialCommunityIcons name="play" size={16} color="#ffffff" />
                 )}
-                <Text style={styles.actionButtonText}>Inizia</Text>
+                <Text style={styles.actionButtonText}>
+                  {t('insights.actions.start') || 'Inizia'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -269,22 +273,7 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
                   <MaterialCommunityIcons name="bell" size={16} color={getCategoryColor(insight.category)} />
                 )}
                 <Text style={[styles.actionButtonText, { color: getCategoryColor(insight.category) }]}>
-                  Promemoria
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionButton, styles.secondaryActionButton, { borderColor: colors.border }]}
-                onPress={() => handleActionPress('track')}
-                disabled={actionLoading === 'track'}
-              >
-                {actionLoading === 'track' ? (
-                  <ActivityIndicator size="small" color={getCategoryColor(insight.category)} />
-                ) : (
-                  <MaterialCommunityIcons name="chart-line" size={16} color={getCategoryColor(insight.category)} />
-                )}
-                <Text style={[styles.actionButtonText, { color: getCategoryColor(insight.category) }]}>
-                  Traccia
+                  {t('insights.actions.remind') || 'Promemoria'}
                 </Text>
               </TouchableOpacity>
             </View>

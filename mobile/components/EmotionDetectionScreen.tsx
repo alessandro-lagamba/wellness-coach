@@ -1088,8 +1088,8 @@ export const EmotionDetectionScreen: React.FC = () => {
             setShowingResults(false);
             setDetecting(false);
             setFullAnalysisResult(null);
-            // Immediately restart camera to prevent flash
-            cameraController.startCamera();
+            // 🔥 FIX: Ferma la fotocamera e torna alla schermata principale (overview)
+            cameraController.stopCamera();
           }
         }}
         onRetake={resetDetection}

@@ -22,7 +22,14 @@ export interface WidgetData {
   category: 'health' | 'wellness' | 'analysis';
   // Dati opzionali per widget specifici
   steps?: { current: number; goal: number; km: number; calories: number };
-  hydration?: { glasses: number; goal: number; ml: number; lastDrink: string };
+  hydration?: { 
+    glasses: number; // 🔥 FIX: Ora contiene il valore in unità preferita (non sempre bicchieri)
+    goal: number; // 🔥 FIX: Goal in unità preferita
+    ml: number; 
+    lastDrink: string;
+    preferredUnit?: 'glass' | 'bottle' | 'liter'; // 🆕 Unità preferita
+    unitLabel?: string; // 🆕 Etichetta unità (es. "bicchiere", "bottiglia", "litro")
+  };
   meditation?: { minutes: number; goal: number; sessions: number; streak: number; favoriteType: string };
   sleep?: { hours: number; quality: number; goal: number; deepSleep: string; remSleep: string; bedtime: string; wakeTime: string };
   hrv?: { value: number; restingHR: number; currentHR?: number; avgHRV: number; recovery: string };

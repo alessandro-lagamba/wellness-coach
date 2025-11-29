@@ -130,7 +130,10 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
 
   return (
     <LinearGradient
-      colors={isDark ? ['#111827', '#1f2937'] : ['#f8fafc', '#e2e8f0']}
+      colors={isDark 
+        ? ['rgba(17, 24, 39, 0)', 'rgba(17, 24, 39, 0.3)', 'rgba(31, 41, 55, 1)'] 
+        : ['rgba(248, 250, 252, 0)', 'rgba(248, 250, 252, 0.3)', 'rgba(226, 232, 240, 1)']}
+      locations={[0, 0.3, 1]}
       style={styles.container}
     >
       <ScrollView

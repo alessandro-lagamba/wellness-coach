@@ -456,14 +456,21 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   }, [hasAnyHealthPermission]);
 
   // 🔥 Helper function per costruire i widget dati da healthData
-  const buildWidgetDataFromHealthDataHelper = (
+  const buildWidgetDataFromHealthDataHelper = async (
     hd: any,
     stepsGoal: number,
-    hydrationGoal: number,
+    hydrationGoalInGlasses: number, // 🔥 FIX: Goal sempre in bicchieri internamente
     meditationGoal: number,
     sleepGoal: number,
     cycle?: { day: number; phase: string; phaseName: string; nextPeriodDays: number; cycleLength: number } | null
-  ): WidgetData[] => {
+  ): Promise<WidgetData[]> => {
+    // 🔥 FIX: Converti goal e valore corrente all'unità preferita per la visualizzazione
+    const { hydrationUnitService } = await import('../services/hydration-unit.service');
+    const preferredUnit = await hydrationUnitService.getPreferredUnit();
+    const unitConfig = hydrationUnitService.getUnitConfig(preferredUnit);
+    const hydrationMl = hd.hydration || 0;
+    const hydrationInPreferredUnit = hydrationUnitService.mlToUnit(hydrationMl, preferredUnit);
+    const hydrationGoalInPreferredUnit = hydrationUnitService.mlToUnit(hydrationGoalInGlasses * 250, preferredUnit);
     const normalizeHrv = (value?: number | null) => {
       if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) return 0;
       return value >= 100 ? Math.round(value) : Math.round(value * 10) / 10;
@@ -503,7 +510,14 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       },
       {
         id: 'hydration', title: t('widgets.hydration'), icon: '💧', color: '#3b82f6', backgroundColor: '#eff6ff', category: 'health',
-        hydration: { glasses: Math.round((hd.hydration || 0) / 250), goal: hydrationGoal, ml: Math.max(0, hd.hydration || 0), lastDrink: '' }
+        hydration: { 
+          glasses: Math.round(hydrationInPreferredUnit * 10) / 10, // 🔥 FIX: Usa unità preferita (anche se si chiama "glasses" per retrocompatibilità)
+          goal: Math.round(hydrationGoalInPreferredUnit * 10) / 10, // 🔥 FIX: Goal in unità preferita
+          ml: Math.max(0, hydrationMl), 
+          lastDrink: '',
+          preferredUnit: preferredUnit, // 🆕 Aggiungi unità preferita
+          unitLabel: unitConfig.label, // 🆕 Aggiungi etichetta unità
+        }
       },
       {
         id: 'sleep', title: t('widgets.sleep'), icon: '🌙', color: '#6366f1', backgroundColor: '#eef2ff', category: 'health',
@@ -597,14 +611,20 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   const buildWidgetDataFromHealth = useCallback(async (): Promise<WidgetData[]> => {
     const goals = await widgetGoalsService.getGoals();
     const stepsGoal = goals?.steps ?? 10000;
-    const hydrationGoal = goals?.hydration ?? 8;
+    // 🔥 FIX: Mantieni sempre il goal in bicchieri internamente (per retrocompatibilità)
+    const hydrationGoalInGlasses = goals?.hydration ?? 8;
     const meditationGoal = goals?.meditation ?? 30;
     const sleepGoal = goals?.sleep ?? 8;
 
     if (healthStatus !== 'ready') {
+      // 🔥 FIX: Per placeholder, converti goal all'unità preferita per la visualizzazione
+      const { hydrationUnitService } = await import('../services/hydration-unit.service');
+      const preferredUnit = await hydrationUnitService.getPreferredUnit();
+      const hydrationGoalForDisplay = hydrationUnitService.mlToUnit(hydrationGoalInGlasses * 250, preferredUnit);
+      
       const placeholderData = WidgetDataService.generateWidgetData({
         steps: stepsGoal,
-        hydration: hydrationGoal,
+        hydration: Math.round(hydrationGoalForDisplay), // Usa unità preferita per placeholder
         meditation: meditationGoal,
         sleep: sleepGoal,
       }).map((widget) => ({
@@ -636,13 +656,13 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         distance: 0,
         calories: 0,
       };
-      return buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoal, meditationGoal, sleepGoal);
+      return await buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoalInGlasses, meditationGoal, sleepGoal);
     }
 
     const hd = healthData;
     // 🆕 Passa cycleData solo se l'utente è di genere femminile
     const cycleForWidget = userGender === 'female' ? cycleData : null;
-    return buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoal, meditationGoal, sleepGoal, cycleForWidget);
+    return await buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoalInGlasses, meditationGoal, sleepGoal, cycleForWidget);
   }, [healthData, healthStatus, placeholderMessages, translateWidgetTitle, cycleData, userGender, t]);
 
   // Load today glance data
@@ -787,7 +807,11 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
   const computeGaugeSubtitle = (info: any) => {
     if (info?.steps) return `${t('home.goal')} • ${info.steps.goal.toLocaleString()} steps`;
-    if (info?.hydration) return `${t('home.goal')} • ${info.hydration.goal} glasses`;
+    if (info?.hydration) {
+      // 🔥 FIX: Usa unità preferita se disponibile, altrimenti "glasses" come default
+      const unitLabel = info.hydration.unitLabel || t('home.glasses') || 'glasses';
+      return `${t('home.goal')} • ${info.hydration.goal} ${unitLabel}`;
+    }
     if (info?.meditation) return `${t('home.goal')} • ${info.meditation.goal} mins`;
     return '';
   };
@@ -1424,7 +1448,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   };
 
   // Handle widget interactions
-  const handleWidgetPress = (widgetId: string) => {
+  const handleWidgetPress = async (widgetId: string) => {
     if (healthStatus !== 'ready') {
       if (healthStatus === 'waiting-permission') {
         setHealthPermissionsModal(true);
@@ -1436,7 +1460,96 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       case 'steps':
         break;
       case 'hydration':
-        TodayGlanceService.handleQuickAction(widgetId, 'add_water');
+        // 🔥 FIX: Mostra menu per aggiungere/rimuovere acqua quando si fa tap sul widget
+        try {
+          const currentUser = await AuthService.getCurrentUser();
+          if (!currentUser?.id) {
+            UserFeedbackService.showWarning('Devi essere loggato per gestire l\'acqua.');
+            return;
+          }
+
+          // Mostra menu con opzioni
+          Alert.alert(
+            t('home.hydrationActions.menuTitle') || 'Gestisci Idratazione',
+            t('home.hydrationActions.menuMessage') || 'Cosa vuoi fare?',
+            [
+              {
+                text: t('home.hydrationActions.remove') || 'Rimuovi',
+                style: 'destructive',
+                onPress: async () => {
+                  const result = await TodayGlanceService.removeWaterGlass(currentUser.id);
+                  
+                  if (result.success) {
+                    const { hydrationUnitService } = await import('../services/hydration-unit.service');
+                    const unit = await hydrationUnitService.getPreferredUnit();
+                    const config = hydrationUnitService.getUnitConfig(unit);
+                    const units = hydrationUnitService.mlToUnit(result.newHydration || 0, unit);
+                    
+                    UserFeedbackService.showSuccess(
+                      t('home.hydrationActions.removedSuccess', { 
+                        units: Math.round(units * 10) / 10,
+                        unitLabel: config.label 
+                      }) || `Rimosso! Totale: ${Math.round(units * 10) / 10} ${config.label}`,
+                      t('home.hydrationActions.removedTitle') || 'Acqua rimossa'
+                    );
+
+                    // Aggiorna i dati di salute e i widget
+                    await syncData();
+                    const updatedWidgetData = await buildWidgetDataFromHealth();
+                    setWidgetData(updatedWidgetData);
+                  } else {
+                    UserFeedbackService.showError(
+                      result.error || t('home.hydrationActions.removeError') || 'Errore durante la rimozione dell\'acqua',
+                      t('common.error') || 'Errore'
+                    );
+                  }
+                },
+              },
+              {
+                text: t('home.hydrationActions.add') || 'Aggiungi',
+                style: 'default',
+                onPress: async () => {
+                  const result = await TodayGlanceService.addWaterGlass(currentUser.id);
+                  
+                  if (result.success) {
+                    const { hydrationUnitService } = await import('../services/hydration-unit.service');
+                    const unit = await hydrationUnitService.getPreferredUnit();
+                    const config = hydrationUnitService.getUnitConfig(unit);
+                    const units = hydrationUnitService.mlToUnit(result.newHydration || 0, unit);
+                    
+                    UserFeedbackService.showSuccess(
+                      t('home.hydrationActions.addedSuccess', { 
+                        units: Math.round(units * 10) / 10,
+                        unitLabel: config.label 
+                      }) || `Aggiunto! Totale: ${Math.round(units * 10) / 10} ${config.label}`,
+                      t('home.hydrationActions.addedTitle') || 'Acqua aggiunta'
+                    );
+
+                    // Aggiorna i dati di salute e i widget
+                    await syncData();
+                    const updatedWidgetData = await buildWidgetDataFromHealth();
+                    setWidgetData(updatedWidgetData);
+                  } else {
+                    UserFeedbackService.showError(
+                      result.error || t('home.hydrationActions.addError') || 'Errore durante l\'aggiunta dell\'acqua',
+                      t('common.error') || 'Errore'
+                    );
+                  }
+                },
+              },
+              {
+                text: t('common.cancel') || 'Annulla',
+                style: 'cancel',
+              },
+            ]
+          );
+        } catch (error) {
+          console.error('❌ Error managing water:', error);
+          UserFeedbackService.showError(
+            t('home.hydrationActions.addError') || 'Errore durante la gestione dell\'acqua',
+            t('common.error') || 'Errore'
+          );
+        }
         break;
       case 'meditation': // <-- id corretto
         router.push('/breathing-exercise' as any);
@@ -3209,7 +3322,13 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             if (!w) return undefined;
             switch (goalModal.widgetId) {
               case 'steps': return w.steps?.goal;
-              case 'hydration': return w.hydration?.goal;
+              case 'hydration': {
+                // 🔥 FIX: Converti da bicchieri all'unità preferita per la visualizzazione
+                const glasses = w.hydration?.goal ?? 8;
+                // Convertiamo in modo asincrono, ma per ora usiamo bicchieri come default
+                // Il modal caricherà l'unità preferita e convertirà automaticamente
+                return glasses;
+              }
               case 'meditation': return w.meditation?.goal;
               case 'sleep': return w.sleep?.goal;
               default: return undefined;
@@ -3217,8 +3336,18 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           })()}
           onClose={() => setGoalModal({ visible: false, widgetId: null })}
           onSave={async (newVal) => {
+            // 🔥 FIX: Per hydration, converti dall'unità preferita a bicchieri per retrocompatibilità
+            let valueToSave = newVal;
+            if (goalModal.widgetId === 'hydration') {
+              const { hydrationUnitService } = await import('../services/hydration-unit.service');
+              const preferredUnit = await hydrationUnitService.getPreferredUnit();
+              // Converti dall'unità preferita a ml, poi a bicchieri (250ml)
+              const ml = hydrationUnitService.unitToMl(newVal, preferredUnit);
+              valueToSave = Math.round(ml / 250); // Salva sempre in bicchieri internamente
+            }
+            
             // salva
-            await widgetGoalsService.setGoal(goalModal.widgetId!, newVal);
+            await widgetGoalsService.setGoal(goalModal.widgetId!, valueToSave);
             // ricarica widget data con i nuovi goal
             const goals = await widgetGoalsService.getGoals();
             const data = WidgetDataService.generateWidgetData(goals);

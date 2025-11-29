@@ -142,9 +142,11 @@ export const generateRecipeSchema = {
       },
       caloriesPerServing: { type: "number" },
       shoppingGaps: { type: "array", items: { type: "string" } },
-      image: { type: "string" },
+      // 🔥 FIX: 'image' NON è nelle properties perché viene aggiunto DOPO la generazione della ricetta
+      // tramite generateRecipeImageFromTitle. Se lo includiamo qui, OpenAI lo richiede come obbligatorio.
     },
     // ✅ FIX: Aggiunto tips e shoppingGaps a required per compatibilità con additionalProperties: false e strict: true
+    // 'image' NON è richiesto perché viene aggiunto dopo la generazione della ricetta
     required: [
       "title",
       "servings",
