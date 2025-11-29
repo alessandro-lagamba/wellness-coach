@@ -1753,6 +1753,13 @@
     "notNow": "Non ora",
     "openSettings": "Apri Impostazioni",
     "camera": {
+      "unified": {
+        "title": "Permesso Fotocamera Necessario",
+        "description": "Per analizzare la tua salute e il tuo benessere, abbiamo bisogno dell'accesso alla fotocamera.",
+        "benefit1": "Analisi dettagliate di pelle, emozioni e cibo",
+        "benefit2": "Consigli personalizzati basati sui tuoi dati",
+        "benefit3": "Monitoraggio dei miglioramenti nel tempo"
+      },
       "emotion": {
         "title": "Permesso fotocamera necessario",
         "description": "Per analizzare le tue emozioni in tempo reale, abbiamo bisogno dell'accesso alla fotocamera.",

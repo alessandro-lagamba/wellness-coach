@@ -634,10 +634,21 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
 
   const handleStartAnalysis = async () => {
-    // 🔥 FIX: Rimuoviamo console.log eccessivi
+    // 🔥 FIX: Mostra modal solo se permesso è "undetermined" (prima volta)
+    // Se permesso è negato, apri direttamente le impostazioni
+    if (cameraController.permissionDenied) {
+      // Permesso già negato - apri direttamente le impostazioni
+      const { Linking, Platform } = await import('react-native');
+      if (Platform.OS === 'ios') {
+        Linking.openURL('app-settings:');
+      } else {
+        Linking.openSettings();
+      }
+      return;
+    }
 
-    // Check if permission is denied - show contextual modal
-    if (cameraController.permissionDenied || cameraController.needsPermission) {
+    // Se permesso non è ancora stato richiesto (undetermined), mostra modal esplicativo
+    if (cameraController.permissionLoading || cameraController.needsPermission) {
       if (isMountedRef.current) {
         setShowPermissionModal(true);
       }
@@ -647,8 +658,19 @@ const SkinAnalysisScreenContent: React.FC = () => {
     // 🔥 FIX: Allineato a EmotionDetectionScreen - controlla permessi PRIMA di avviare la fotocamera
     const granted = await ensureCameraPermission();
     if (!granted) {
-      if (isMountedRef.current) {
-        setShowPermissionModal(true);
+      // Se il permesso è stato negato dopo la richiesta, apri impostazioni
+      if (cameraController.permissionDenied) {
+        const { Linking, Platform } = await import('react-native');
+        if (Platform.OS === 'ios') {
+          Linking.openURL('app-settings:');
+        } else {
+          Linking.openSettings();
+        }
+      } else {
+        // Altrimenti mostra modal (caso raro)
+        if (isMountedRef.current) {
+          setShowPermissionModal(true);
+        }
       }
       return;
     }
@@ -2141,10 +2163,28 @@ const SkinAnalysisScreenContent: React.FC = () => {
           onClose={() => setShowPermissionModal(false)}
           onGrant={async () => {
             setShowPermissionModal(false);
-            // Try to start camera again after granting permission
-            const granted = await cameraController.ensurePermission();
-            if (granted) {
-              await handleStartAnalysis();
+            // 🔥 FIX: Chiama direttamente requestPermission per aprire il popup nativo
+            // Questo funziona solo se il permesso è "undetermined", non se è già negato
+            if (cameraController.requestPermission) {
+              const result = await cameraController.requestPermission();
+              if (result?.granted) {
+                // Permesso concesso, avvia analisi
+                await handleStartAnalysis();
+              } else if (result?.status === 'denied') {
+                // Permesso negato, apri impostazioni
+                const { Linking, Platform } = await import('react-native');
+                if (Platform.OS === 'ios') {
+                  Linking.openURL('app-settings:');
+                } else {
+                  Linking.openSettings();
+                }
+              }
+            } else {
+              // Fallback: usa ensurePermission
+              const granted = await cameraController.ensurePermission();
+              if (granted) {
+                await handleStartAnalysis();
+              }
             }
           }}
         />

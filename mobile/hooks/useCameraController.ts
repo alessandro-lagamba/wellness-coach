@@ -108,6 +108,7 @@ export function useCameraController({ isScreenFocused }: { isScreenFocused: bool
     setDetecting,
     setError,
     ensurePermission,
+    requestPermission, // 🔥 FIX: Esposto per aprire direttamente il popup nativo
     startCamera,
     stopCamera,
     permissionLoading,

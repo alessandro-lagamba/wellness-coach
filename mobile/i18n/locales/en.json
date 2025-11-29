@@ -1734,6 +1734,26 @@
       "nextAction": "Open Journal"
     }
   },
+  "permissions": {
+    "grant": "Grant Permission",
+    "notNow": "Not Now",
+    "openSettings": "Open Settings",
+    "camera": {
+      "unified": {
+        "title": "Camera Permission Required",
+        "description": "To analyze your health and wellness, we need access to your camera.",
+        "benefit1": "Detailed analysis of skin, emotions, and food",
+        "benefit2": "Personalized recommendations based on your data",
+        "benefit3": "Track improvements over time"
+      }
+    },
+    "microphone": {
+      "title": "Microphone Permission Required",
+      "description": "To use voice chat with your AI Coach, we need access to your microphone.",
+      "benefit1": "Voice chat with AI Coach",
+      "benefit2": "Voice commands to navigate the app"
+    }
+  },
   "auth": {
     "welcome": "Welcome",
     "createAccount": "Create Account",
