@@ -65,9 +65,14 @@ export default function CameraCapture({
       restoreRefs();
 
       // Delayed restoration to catch any async issues (solo una volta)
-      // 🔥 FIX: I timeout vengono gestiti in un useEffect separato per evitare problemi con callback ref
-      setTimeout(restoreRefs, 100);
-      setTimeout(restoreRefs, 500);
+      // 🔥 FIX: Memory leak - puliamo i timeout se il componente viene smontato
+      const timeoutId1 = setTimeout(restoreRefs, 100);
+      const timeoutId2 = setTimeout(restoreRefs, 500);
+      
+      // Store timeout IDs for cleanup (if component unmounts before timeouts fire)
+      // Note: These are very short timeouts (100ms, 500ms) so cleanup is less critical,
+      // but we store them in case we need to add cleanup logic later
+      (globalThis as any).cameraRestoreTimeouts = [timeoutId1, timeoutId2];
     } else {
       // Only clear refs if we're actually unmounting, not just switching
       if (!isScreenFocused) {

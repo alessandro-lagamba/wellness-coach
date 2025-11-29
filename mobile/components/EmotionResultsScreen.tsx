@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -51,6 +52,18 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
       showTabBar();
     };
   }, [hideTabBar, showTabBar]);
+
+  // 🔥 FIX: Gestisci il tasto indietro del sistema per tornare alla schermata overview
+  useEffect(() => {
+    const onBackPress = () => {
+      onGoBack();
+      return true; // Previeni il comportamento di default (navigare via dalla schermata)
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+    return () => subscription.remove();
+  }, [onGoBack]);
 
 
 

@@ -158,6 +158,7 @@ export const EmotionDetectionScreen: React.FC = () => {
 
   const analysisServiceRef = useRef(UnifiedAnalysisService.getInstance());
   const isMountedRef = useRef(true);
+  const isCapturingRef = useRef(false); // 🔥 FIX: Previeni race conditions con multiple catture simultanee
 
   // 🆕 FIX: Use reactive hook to get latest emotion session (triggers re-render when store updates)
   const latestEmotionSession = useAnalysisStore((state) => state.latestEmotionSession);
@@ -561,6 +562,11 @@ export const EmotionDetectionScreen: React.FC = () => {
   };
 
   const captureAndAnalyze = async () => {
+    // 🔥 FIX: Previeni race conditions - se già in cattura, ignora la nuova richiesta
+    if (isCapturingRef.current) {
+      return;
+    }
+
     // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     // Store cameraController methods in local variables to prevent scope issues
@@ -580,6 +586,9 @@ export const EmotionDetectionScreen: React.FC = () => {
       // 🔥 FIX: Rimuoviamo console.log eccessivi
       return;
     }
+
+    // 🔥 FIX: Imposta flag di cattura in corso
+    isCapturingRef.current = true;
 
     try {
       const serviceReady = await ensureAnalysisReady();
@@ -675,11 +684,25 @@ export const EmotionDetectionScreen: React.FC = () => {
 
         try {
           const capturePromise = ref.current.takePictureAsync(strategy.options);
+          
+          // 🔥 FIX: Memory leak - puliamo il timeout se il componente viene smontato
+          let timeoutId: ReturnType<typeof setTimeout> | null = null;
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Camera capture timeout')), 8000);
+            timeoutId = setTimeout(() => {
+              timeoutId = null;
+              reject(new Error('Camera capture timeout'));
+            }, 8000);
           });
 
-          photo = await Promise.race([capturePromise, timeoutPromise]);
+          try {
+            photo = await Promise.race([capturePromise, timeoutPromise]);
+          } finally {
+            // 🔥 FIX: Pulisci sempre il timeout per evitare memory leaks
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = null;
+            }
+          }
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           break;
         } catch (strategyError) {
@@ -939,6 +962,9 @@ export const EmotionDetectionScreen: React.FC = () => {
         alert(errorMessage);
         setDetecting(false);
       }
+    } finally {
+      // 🔥 FIX: Reset sempre il flag di cattura, anche in caso di errore o uscita anticipata
+      isCapturingRef.current = false;
     }
   };
 

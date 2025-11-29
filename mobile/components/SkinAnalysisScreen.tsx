@@ -10,6 +10,7 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -398,6 +399,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
   const analysisServiceRef = useRef(UnifiedAnalysisService.getInstance());
   const isMountedRef = useRef(true);
+  const isCapturingRef = useRef(false); // 🔥 FIX: Previeni race conditions con multiple catture simultanee
 
   const { addSkinCapture } = useAnalysisStore();
 
@@ -631,6 +633,21 @@ const SkinAnalysisScreenContent: React.FC = () => {
     showTabBar();
   }, [cameraController.active, analyzing, results, hideTabBar, showTabBar]);
 
+  // 🔥 FIX: Gestisci il tasto indietro del sistema per tornare alla schermata overview invece che alla HomeScreen
+  useEffect(() => {
+    const onBackPress = () => {
+      // Se siamo in modalità camera o analyzing o results, chiudi prima quella modalità
+      if (cameraController.active || analyzing || !!results) {
+        handleExitCapture();
+        return true; // Previeni il comportamento di default (navigare via dalla schermata)
+      }
+      return false; // Permetti il comportamento di default
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+    return () => subscription.remove();
+  }, [cameraController.active, analyzing, results, handleExitCapture]);
 
   const handleStartAnalysis = async () => {
     // 🔥 FIX: Chiama sempre ensureCameraPermission() che ora chiama sempre requestPermission()
@@ -970,6 +987,11 @@ const SkinAnalysisScreenContent: React.FC = () => {
   }, [cameraType, cameraSwitching]);
 
   const captureAndAnalyze = async () => {
+    // 🔥 FIX: Previeni race conditions - se già in cattura, ignora la nuova richiesta
+    if (isCapturingRef.current) {
+      return;
+    }
+
     // 🔥 FIX: Rimuoviamo console.log eccessivi
 
     // Store cameraController methods in local variables to prevent scope issues
@@ -1118,11 +1140,25 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           const capturePromise = ref.current.takePictureAsync(strategy.options);
+          
+          // 🔥 FIX: Memory leak - puliamo il timeout se il componente viene smontato
+          let timeoutId: ReturnType<typeof setTimeout> | null = null;
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Camera capture timeout')), 8000);
+            timeoutId = setTimeout(() => {
+              timeoutId = null;
+              reject(new Error('Camera capture timeout'));
+            }, 8000);
           });
 
-          photo = await Promise.race([capturePromise, timeoutPromise]);
+          try {
+            photo = await Promise.race([capturePromise, timeoutPromise]);
+          } finally {
+            // 🔥 FIX: Pulisci sempre il timeout per evitare memory leaks
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = null;
+            }
+          }
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           break;
         } catch (strategyError) {
@@ -1385,6 +1421,9 @@ const SkinAnalysisScreenContent: React.FC = () => {
         setAnalyzing(false);
         setDetecting(false);
       }
+    } finally {
+      // 🔥 FIX: Reset sempre il flag di cattura, anche in caso di errore o uscita anticipata
+      isCapturingRef.current = false;
     }
   };
 
@@ -1570,13 +1609,17 @@ const SkinAnalysisScreenContent: React.FC = () => {
       <CopilotStep text="Analisi della Pelle" description="Scatta una foto per analizzare la salute della tua pelle." order={1} name="skinCamera">
         <WalkthroughableView style={{ flex: 1 }}>
           <AnalysisCaptureLayout
+            renderCamera={<CameraFrame />}
+            onBack={handleExitCapture}
+            onCancel={() => cameraController.stopCamera()}
             onCapture={captureAndAnalyze}
-            onPickImage={analyzeFromGallery}
-            isAnalyzing={analyzing}
-            permissionStatus={cameraController.hasPermission ? 'granted' : 'undetermined'}
-            onRequestPermission={handleStartAnalysis}
-            cameraComponent={<CameraFrame />}
-            analysisType="skin"
+            captureDisabled={captureDisabled || cameraSwitching}
+            showSwitch
+            switchDisabled={cameraSwitching}
+            switchLabel={cameraType === 'front' ? 'Back' : 'Front'}
+            onSwitch={switchCamera}
+            cancelLabel={t('common.cancel')}
+            captureLabel={t('common.capture')}
           />
         </WalkthroughableView>
       </CopilotStep>
