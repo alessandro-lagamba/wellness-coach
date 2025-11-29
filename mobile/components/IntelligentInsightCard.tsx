@@ -286,7 +286,7 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 16,
+    marginHorizontal: 8, // 🔥 FIX: Ridotto da 16 a 8 per aumentare la larghezza delle card
     marginVertical: 6,
     borderRadius: 16,
     shadowColor: '#000',
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     borderRadius: 16,
-    padding: 16,
+    padding: 18, // 🔥 FIX: Aumentato da 16 a 18 per migliorare la leggibilità del testo
     borderLeftWidth: 4,
     borderWidth: 1,
   },
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    lineHeight: 18,
+    lineHeight: 20, // 🔥 FIX: Aumentato da 18 a 20 per migliorare la leggibilità
   },
   priorityBadge: {
     paddingHorizontal: 8,

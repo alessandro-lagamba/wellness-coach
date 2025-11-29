@@ -323,11 +323,28 @@ Testo dettato dall'utente (può contenere ingredienti, quantità, unità, scaden
 "${params.text}"
 
 Estrai:
-1) **Ingredienti** con quantità/unità normalizzate
+1) **Ingredienti** con quantità/unità normalizzate e categoria
 2) **Comandi vocali** (es. "rimuovi X", "segna Y finito", "scadenza Z domani/il 12/05")
 3) **Ambiguità** se presenti (es. "quark" → formaggio o fisica?)
 
 Regole:
+- **Separazione ingredienti**: 
+  - Se ci sono virgole, usa le virgole come separatori principali
+  - Se NON ci sono virgole, cerca di identificare ingredienti separati da spazi o contesto (es. "pomodori mozzarella basilico" → 3 ingredienti)
+  - Quando incerto, preferisci ingredienti separati piuttosto che un unico ingrediente composto
+
+- **Categorizzazione**: assegna una categoria a ogni ingrediente:
+  - "meat": carne (pollo, manzo, maiale, tacchino, salsicce, prosciutto, ecc.)
+  - "fish": pesce e frutti di mare (salmone, tonno, gamberi, cozze, ecc.)
+  - "vegetables": verdure (pomodori, zucchine, carote, insalata, spinaci, peperoni, ecc.)
+  - "fruits": frutta (mele, banane, arance, fragole, uva, ecc.)
+  - "dairy": latticini (latte, formaggio, yogurt, burro, panna, ecc.)
+  - "grains": cereali e farinacei (pasta, riso, pane, farina, avena, ecc.)
+  - "legumes": legumi (fagioli, lenticchie, ceci, piselli, ecc.)
+  - "spices": spezie e erbe (sale, pepe, basilico, origano, aglio, cipolla, ecc.)
+  - "beverages": bevande (acqua, succo, vino, birra, ecc.)
+  - "other": altro (olio, aceto, miele, ecc.)
+
 - **Unità**: normalizza a g/ml/pcs/serving
   - "grammi", "g", "kg" (→ g), "etti", "etto", "hg" (→ 100g), "mezzo chilo" (→ 500g)
   - "millilitri", "ml", "litri", "l" (→ ml), "bicchiere" (→ 200ml), "cucchiaio" (→ 15ml), "cucchiaino" (→ 5ml)

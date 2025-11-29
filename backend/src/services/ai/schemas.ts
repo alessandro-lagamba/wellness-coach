@@ -217,6 +217,7 @@ export const parseIngredientsSchema = {
             quantity: { type: "number" },
             unit: { type: "string", enum: ["g", "ml", "pcs", "serving"] },
             expiry: { type: "string" },
+            category: { type: "string", enum: ["meat", "fish", "vegetables", "fruits", "dairy", "grains", "legumes", "spices", "beverages", "other"] },
             confidence: { type: "number", minimum: 0, maximum: 1 },
             notes: { type: "string" },
           },

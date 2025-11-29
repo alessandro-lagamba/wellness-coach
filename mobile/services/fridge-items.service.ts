@@ -14,6 +14,7 @@ export interface FridgeItem {
   quantity?: number;
   unit?: string;
   expiry_date?: string; // YYYY-MM-DD
+  category?: 'meat' | 'fish' | 'vegetables' | 'fruits' | 'dairy' | 'grains' | 'legumes' | 'spices' | 'beverages' | 'other';
   notes?: string;
   created_at?: string;
   updated_at?: string;
@@ -103,6 +104,7 @@ export class FridgeItemsService {
             quantity: item.quantity ?? existing.quantity,
             unit: item.unit ?? existing.unit,
             expiry_date: item.expiry_date ?? existing.expiry_date,
+            category: item.category ?? existing.category,
             notes: encryptedNotes,
           })
           .eq('id', existing.id)
@@ -141,6 +143,7 @@ export class FridgeItemsService {
             quantity: item.quantity,
             unit: item.unit,
             expiry_date: item.expiry_date,
+            category: item.category,
             notes: encryptedNotes,
           })
           .select()

@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   trendCard: {
-    marginHorizontal: 16,
+    marginHorizontal: 8, // 🔥 FIX: Ridotto da 16 a 8 per allinearsi con IntelligentInsightCard
     marginBottom: 16,
     borderRadius: 16,
     overflow: 'hidden',
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingCard: {
-    marginHorizontal: 16,
+    marginHorizontal: 8, // 🔥 FIX: Ridotto da 16 a 8 per allinearsi con le card degli insight
     padding: 32,
     borderRadius: 16,
     alignItems: 'center',
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorCard: {
-    marginHorizontal: 16,
+    marginHorizontal: 8, // 🔥 FIX: Ridotto da 16 a 8 per allinearsi con le card degli insight
     padding: 24,
     borderRadius: 16,
     alignItems: 'center',
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   emptyCard: {
-    marginHorizontal: 16,
+    marginHorizontal: 8, // 🔥 FIX: Ridotto da 16 a 8 per allinearsi con le card degli insight
     padding: 24,
     borderRadius: 16,
     alignItems: 'center',

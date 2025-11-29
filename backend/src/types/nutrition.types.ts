@@ -153,6 +153,7 @@ export interface ParsedIngredient {
   quantity?: number;
   unit?: "g" | "ml" | "pcs" | "serving";
   expiry?: string; // YYYY-MM-DD
+  category?: "meat" | "fish" | "vegetables" | "fruits" | "dairy" | "grains" | "legumes" | "spices" | "beverages" | "other";
   confidence: number; // 0..1
   notes?: string; // e.g., "low_confidence", "ambiguous"
 }

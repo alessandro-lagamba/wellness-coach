@@ -35,6 +35,7 @@ interface IngredientRow {
   expiry?: string; // YYYY-MM-DD opzionale
   quantity?: number;
   unit?: 'g' | 'ml' | 'pcs' | 'serving';
+  category?: 'meat' | 'fish' | 'vegetables' | 'fruits' | 'dairy' | 'grains' | 'legumes' | 'spices' | 'beverages' | 'other';
 }
 
 interface ParsedIngredientChip {
@@ -42,6 +43,7 @@ interface ParsedIngredientChip {
   quantity?: number;
   unit?: 'g' | 'ml' | 'pcs' | 'serving';
   expiry?: string;
+  category?: 'meat' | 'fish' | 'vegetables' | 'fruits' | 'dairy' | 'grains' | 'legumes' | 'spices' | 'beverages' | 'other';
   confidence: number;
   id: string; // per key in map
 }
@@ -82,6 +84,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   const [parsingTranscript, setParsingTranscript] = useState(false);
   const [parsedChips, setParsedChips] = useState<ParsedIngredientChip[]>([]);
   const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
+  const [processingAI, setProcessingAI] = useState<Record<number, boolean>>({}); // 🔥 FIX: Traccia quali ingredienti stanno processando
   const [preferences, setPreferences] = useState<NutritionPreferences | null>(null);
   const [preferencesLoading, setPreferencesLoading] = useState(false);
   const [newFavorite, setNewFavorite] = useState('');
@@ -169,11 +172,83 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
     onRecipeSaved?.(recipe);
   };
 
-  const updateIngredient = (index: number, field: 'name' | 'expiry', value: string) => {
+  const updateIngredient = (index: number, field: 'name' | 'expiry' | 'category', value: string) => {
     const updated = [...ingredients];
     updated[index] = { ...updated[index], [field]: value };
     setIngredients(updated);
   };
+
+  // 🔥 FIX: Processa automaticamente con AI quando l'utente finisce di digitare il nome
+  const processIngredientNameWithAI = useCallback(async (index: number, nameText: string) => {
+    if (!nameText.trim() || nameText.trim().length < 2) {
+      setProcessingAI(prev => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+      return;
+    }
+    
+    setProcessingAI(prev => ({ ...prev, [index]: true }));
+    
+    try {
+      // Usa AI per categorizzare e separare ingredienti
+      const result = await NutritionService.parseIngredients(nameText.trim(), 'it-IT');
+      
+      if (result.success && result.data && result.data.ingredients.length > 0) {
+        const parsed = result.data.ingredients[0]; // Prendi il primo ingrediente parsato
+        
+        // Se l'AI ha trovato più ingredienti, separali
+        if (result.data.ingredients.length > 1) {
+          // Crea nuove righe per gli ingredienti aggiuntivi
+          const newRows: IngredientRow[] = result.data.ingredients.slice(1).map(ing => ({
+            name: ing.name,
+            quantity: ing.quantity,
+            unit: ing.unit,
+            expiry: ing.expiry,
+            category: ing.category,
+          }));
+          
+          // Aggiorna l'ingrediente corrente e aggiungi i nuovi
+          setIngredients(prev => {
+            const updated = [...prev];
+            updated[index] = {
+              ...updated[index],
+              name: parsed.name,
+              quantity: parsed.quantity,
+              unit: parsed.unit,
+              expiry: parsed.expiry,
+              category: parsed.category || updated[index].category, // Mantieni categoria manuale se già impostata
+            };
+            return [...updated, ...newRows];
+          });
+        } else {
+          // Aggiorna solo l'ingrediente corrente con categoria AI
+          setIngredients(prev => {
+            const updated = [...prev];
+            updated[index] = {
+              ...updated[index],
+              name: parsed.name,
+              quantity: parsed.quantity || updated[index].quantity,
+              unit: parsed.unit || updated[index].unit,
+              expiry: parsed.expiry || updated[index].expiry,
+              category: parsed.category || updated[index].category, // Mantieni categoria manuale se già impostata
+            };
+            return updated;
+          });
+        }
+      }
+    } catch (error) {
+      // Silently fail - non bloccare l'utente se l'AI fallisce
+      console.warn('AI categorization failed for ingredient:', error);
+    } finally {
+      setProcessingAI(prev => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+    }
+  }, []);
 
   // Parsing veloce "dettatura": accetta input del tipo "pomodori, latte, uova 10 pezzi"
   const parseBulkInput = async () => {
@@ -191,6 +266,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
           quantity: ing.quantity,
           unit: ing.unit,
           expiry: ing.expiry,
+          category: ing.category,
           confidence: ing.confidence,
         }));
         
@@ -296,6 +372,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
       quantity: chip.quantity,
       unit: chip.unit,
       expiry: chip.expiry,
+      category: chip.category, // 🔥 FIX: Include categoria
     }));
     
     setIngredients((prev) => {
@@ -311,6 +388,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
           quantity: chip.quantity,
           unit: chip.unit,
           expiry_date: chip.expiry || undefined, // Scadenza opzionale
+          category: chip.category, // 🔥 FIX: Aggiunta categoria
         }))
       );
     } catch (error) {
@@ -332,6 +410,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
         expiry: (ing.expiry || '').trim() || undefined,
         quantity: ing.quantity,
         unit: ing.unit,
+        category: ing.category, // 🔥 FIX: Include categoria
       }))
       .filter(ing => ing.name.length > 0);
     
@@ -348,6 +427,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
           quantity: ing.quantity,
           unit: ing.unit,
           expiry_date: ing.expiry || undefined, // Scadenza opzionale
+          category: ing.category, // 🔥 FIX: Include categoria
         }))
       );
       Alert.alert(
@@ -673,6 +753,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
           newIngredients.map((ing) => ({
             name: ing.name,
             expiry_date: ing.expiry || undefined,
+            category: ing.category, // 🔥 FIX: Include categoria
           })),
         );
         await loadSavedIngredients(); // Ricarica dopo il salvataggio
@@ -990,6 +1071,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                       multiline
                     />
                   </View>
+                  {/* 🔥 FIX: Rimosso hint sulle virgole - l'AI gestisce tutto automaticamente */}
                   <TouchableOpacity onPress={parseBulkInput} style={[styles.addButton, { borderColor: colors.border }]}> 
                     <FontAwesome name="plus" size={14} color={colors.primary} />
                     <Text style={[styles.addButtonText, { color: colors.primary }]}>
@@ -1073,36 +1155,79 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                     </Text>
                     
                     {ingredients.map((ingredient, index) => (
-                    <View key={index} style={styles.ingredientRow}>
-                      <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                        <TextInput
-                          style={[styles.input, { color: colors.text }]}
-                          value={ingredient.name}
-                          onChangeText={(value) => updateIngredient(index, 'name', value)}
-                          placeholder={t('analysis.food.fridge.ingredientPlaceholder', { number: index + 1 })}
-                          placeholderTextColor={colors.textTertiary}
-                          autoCapitalize="words"
-                        />
+                    <View key={index} style={styles.ingredientRowContainer}>
+                      <View style={styles.ingredientRow}>
+                        <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border, flex: 1 }]}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                            <TextInput
+                              style={[styles.input, { color: colors.text, flex: 1 }]}
+                              value={ingredient.name}
+                              onChangeText={(value) => updateIngredient(index, 'name', value)}
+                              onBlur={() => {
+                                // 🔥 FIX: Processa automaticamente con AI quando l'utente finisce di digitare
+                                if (ingredient.name.trim().length >= 2) {
+                                  processIngredientNameWithAI(index, ingredient.name);
+                                }
+                              }}
+                              placeholder={t('analysis.food.fridge.ingredientPlaceholderAI') || `Ingrediente ${index + 1} (es: pomodori, mozzarella)`}
+                              placeholderTextColor={colors.textTertiary}
+                              autoCapitalize="words"
+                            />
+                            {processingAI[index] && (
+                              <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 8 }} />
+                            )}
+                          </View>
+                        </View>
+                        <View style={[styles.expiryWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}> 
+                          <MaterialCommunityIcons name="calendar" size={12} color={colors.textTertiary} />
+                          <TextInput
+                            style={[styles.expiryInput, { color: colors.text }]}
+                            value={ingredient.expiry || ''}
+                            onChangeText={(value) => updateIngredient(index, 'expiry', value)}
+                            placeholder={t('analysis.food.fridge.expiryPlaceholder')}
+                            placeholderTextColor={colors.textTertiary}
+                            keyboardType="numbers-and-punctuation"
+                          />
+                        </View>
+                        {ingredients.length > 1 && (
+                          <TouchableOpacity
+                            onPress={() => removeIngredient(index)}
+                            style={[styles.removeButton, { backgroundColor: colors.error + '20' }]}
+                          >
+                            <FontAwesome name="trash" size={14} color={colors.error} />
+                          </TouchableOpacity>
+                        )}
                       </View>
-                      <View style={[styles.expiryWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}> 
-                        <MaterialCommunityIcons name="calendar" size={14} color={colors.textTertiary} />
-                        <TextInput
-                          style={[styles.expiryInput, { color: colors.text }]}
-                          value={ingredient.expiry || ''}
-                          onChangeText={(value) => updateIngredient(index, 'expiry', value)}
-                          placeholder={t('analysis.food.fridge.expiryPlaceholder')}
-                          placeholderTextColor={colors.textTertiary}
-                          keyboardType="numbers-and-punctuation"
-                        />
+                      {/* 🔥 FIX: Selettore categoria */}
+                      <View style={styles.categorySelector}>
+                        <Text style={[styles.categoryLabel, { color: colors.textSecondary }]}>
+                          {t('analysis.food.fridge.category') || 'Categoria:'}
+                        </Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryChips}>
+                          {(['meat', 'fish', 'vegetables', 'fruits', 'dairy', 'grains', 'legumes', 'spices', 'beverages', 'other'] as const).map((cat) => (
+                            <TouchableOpacity
+                              key={cat}
+                              style={[
+                                styles.categoryChip,
+                                {
+                                  backgroundColor: ingredient.category === cat ? colors.primary : colors.surfaceElevated,
+                                  borderColor: ingredient.category === cat ? colors.primary : colors.border,
+                                },
+                              ]}
+                              onPress={() => updateIngredient(index, 'category', cat)}
+                            >
+                              <Text
+                                style={[
+                                  styles.categoryChipText,
+                                  { color: ingredient.category === cat ? colors.textInverse : colors.text },
+                                ]}
+                              >
+                                {t(`analysis.food.fridge.categories.${cat}`) || cat}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
                       </View>
-                      {ingredients.length > 1 && (
-                        <TouchableOpacity
-                          onPress={() => removeIngredient(index)}
-                          style={[styles.removeButton, { backgroundColor: colors.error + '20' }]}
-                        >
-                          <FontAwesome name="trash" size={14} color={colors.error} />
-                        </TouchableOpacity>
-                      )}
                     </View>
                   ))}
 
@@ -1563,11 +1688,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 16,
   },
+  ingredientRowContainer: {
+    marginBottom: 16,
+  },
   ingredientRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   inputWrapper: {
     flex: 1,
@@ -1575,6 +1703,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    minWidth: 0, // Permette al flex di ridursi correttamente
   },
   input: {
     fontSize: 16,
@@ -1596,12 +1725,15 @@ const styles = StyleSheet.create({
     gap: 6,
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 12,
+    width: 120, // 🔥 FIX: Larghezza fissa ridotta invece di minWidth
+    flexShrink: 0, // Non si riduce
   },
   expiryInput: {
-    minWidth: 110,
-    fontSize: 14,
+    flex: 1,
+    fontSize: 13, // 🔥 FIX: Font leggermente più piccolo
+    minWidth: 0, // Permette al flex di funzionare
   },
   addButton: {
     flexDirection: 'row',
@@ -1942,6 +2074,44 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  categorySelector: {
+    marginTop: 4,
+  },
+  categoryLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  categoryChips: {
+    flexDirection: 'row',
+  },
+  categoryChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  categoryChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  commaHintContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  commaHintText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
   },
 });
 

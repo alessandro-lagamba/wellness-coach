@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { AuthService } from '../../services/auth.service';
@@ -31,6 +32,8 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
   const { colors } = useTheme(); // 🆕 Theme colors
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showGenderModal, setShowGenderModal] = useState(false);
+  const [showActivityModal, setShowActivityModal] = useState(false);
   const [profile, setProfile] = useState({
     full_name: '',
     email: '',
@@ -204,18 +207,7 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
             <Text style={[styles.label, { color: colors.text }]}>{t('auth.gender.label')}</Text>
             <TouchableOpacity 
               style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => {
-                Alert.alert(
-                  t('auth.gender.selectTitle'),
-                  t('profile.selectGender'),
-                  [
-                    { text: t('auth.gender.male'), onPress: () => setProfile({ ...profile, gender: 'male' }) },
-                    { text: t('auth.gender.female'), onPress: () => setProfile({ ...profile, gender: 'female' }) },
-                    { text: t('auth.gender.preferNotToSay'), onPress: () => setProfile({ ...profile, gender: 'prefer_not_to_say' }) },
-                    { text: t('common.cancel'), style: 'cancel' }
-                  ]
-                );
-              }}
+              onPress={() => setShowGenderModal(true)}
             >
               <FontAwesome name="venus-mars" size={16} color={colors.primary} style={styles.inputIcon} />
               <Text style={[styles.inputText, { color: colors.text }]}>{getGenderLabel(profile.gender)}</Text>
@@ -262,20 +254,7 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
             <Text style={[styles.label, { color: colors.text }]}>{t('profile.activityLevel')}</Text>
             <TouchableOpacity 
               style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => {
-                Alert.alert(
-                  t('profile.selectActivityLevel'),
-                  t('profile.selectActivityLevelDesc'),
-                  [
-                    { text: t('profile.activityLevels.sedentary'), onPress: () => setProfile({ ...profile, activity_level: 'sedentary' }) },
-                    { text: t('profile.activityLevels.lightlyActive'), onPress: () => setProfile({ ...profile, activity_level: 'lightly_active' }) },
-                    { text: t('profile.activityLevels.moderatelyActive'), onPress: () => setProfile({ ...profile, activity_level: 'moderately_active' }) },
-                    { text: t('profile.activityLevels.veryActive'), onPress: () => setProfile({ ...profile, activity_level: 'very_active' }) },
-                    { text: t('profile.activityLevels.extremelyActive'), onPress: () => setProfile({ ...profile, activity_level: 'extremely_active' }) },
-                    { text: t('common.cancel'), style: 'cancel' }
-                  ]
-                );
-              }}
+              onPress={() => setShowActivityModal(true)}
             >
               <FontAwesome name="tachometer" size={16} color={colors.primary} style={styles.inputIcon} />
               <Text style={[styles.inputText, { color: colors.text }]}>{getActivityLevelLabel(profile.activity_level)}</Text>
@@ -302,6 +281,76 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
         </TouchableOpacity>
       </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Gender Selection Modal */}
+      <Modal visible={showGenderModal} transparent animationType="slide" onRequestClose={() => setShowGenderModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('auth.gender.selectTitle')}</Text>
+              <TouchableOpacity onPress={() => setShowGenderModal(false)}>
+                <FontAwesome name="times" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              {(['male', 'female', 'prefer_not_to_say'] as const).map((gender) => (
+                <TouchableOpacity
+                  key={gender}
+                  style={[
+                    styles.optionButton,
+                    { borderColor: colors.border },
+                    profile.gender === gender && { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
+                  ]}
+                  onPress={() => {
+                    setProfile({ ...profile, gender });
+                    setShowGenderModal(false);
+                  }}
+                >
+                  <Text style={[styles.optionText, { color: colors.text }, profile.gender === gender && { color: colors.primary, fontWeight: '700' }]}>
+                    {getGenderLabel(gender)}
+                  </Text>
+                  {profile.gender === gender && <FontAwesome name="check" size={14} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Activity Level Selection Modal */}
+      <Modal visible={showActivityModal} transparent animationType="slide" onRequestClose={() => setShowActivityModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('profile.selectActivityLevel')}</Text>
+              <TouchableOpacity onPress={() => setShowActivityModal(false)}>
+                <FontAwesome name="times" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {(['sedentary', 'lightly_active', 'moderately_active', 'very_active', 'extremely_active'] as const).map((level) => (
+                <TouchableOpacity
+                  key={level}
+                  style={[
+                    styles.optionButton,
+                    { borderColor: colors.border },
+                    profile.activity_level === level && { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
+                  ]}
+                  onPress={() => {
+                    setProfile({ ...profile, activity_level: level });
+                    setShowActivityModal(false);
+                  }}
+                >
+                  <Text style={[styles.optionText, { color: colors.text }, profile.activity_level === level && { color: colors.primary, fontWeight: '700' }]}>
+                    {getActivityLevelLabel(level)}
+                  </Text>
+                  {profile.activity_level === level && <FontAwesome name="check" size={14} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -406,6 +455,47 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Modal Styles
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    maxHeight: '70%',
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalBody: {
+    padding: 20,
+    gap: 10,
+  },
+  optionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  optionText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
 
