@@ -3320,28 +3320,45 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         visible={healthPermissionsModal}
         onClose={() => setHealthPermissionsModal(false)}
         onSuccess={async () => {
-          // 🔥 FIX: Rimuoviamo console.log eccessivi
-          // 🔥 Chiudi il modal PRIMA di fare sync per evitare loop
+          // 🔥 FIX: Chiudi il modal PRIMA di fare sync per evitare loop
           setHealthPermissionsModal(false);
 
-          // 🔥 Forza sync dei dati e aggiornamento widget
+          // 🔥 FIX: Forza sync immediata dei dati dopo concessione permessi
           try {
+            // Forza una sincronizzazione immediata bypassando il cooldown
+            const { HealthDataService } = await import('../services/health-data.service');
+            const healthService = HealthDataService.getInstance();
+            const forceSyncResult = await healthService.syncHealthData(true); // Force sync
+            
+            // Aggiorna anche tramite il hook per mantenere lo stato sincronizzato
             const syncResult = await syncData();
-            // 🔥 Se abbiamo dati, aggiorna i widget immediatamente
-            if (syncResult.success && syncResult.data) {
+            
+            // 🔥 Aggiorna i widget immediatamente con i nuovi dati
+            if (forceSyncResult.success && forceSyncResult.data) {
               const data = await buildWidgetDataFromHealth();
               setWidgetData(data);
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
+            } else if (syncResult.success && syncResult.data) {
+              const data = await buildWidgetDataFromHealth();
+              setWidgetData(data);
             } else if (hasHealthData && healthData) {
               // Fallback: usa i dati già disponibili
               const data = await buildWidgetDataFromHealth();
               setWidgetData(data);
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
             }
+            
+            // Ricarica anche i dati del Daily Copilot
+            loadTodayGlanceData();
           } catch (error) {
             console.error('Error syncing after permissions:', error);
+            // Fallback: prova comunque a sincronizzare tramite hook
+            try {
+              await syncData();
+              const data = await buildWidgetDataFromHealth();
+              setWidgetData(data);
+            } catch (fallbackError) {
+              console.error('Fallback sync also failed:', fallbackError);
+            }
           }
-          loadTodayGlanceData();
         }}
       />
 

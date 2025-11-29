@@ -597,23 +597,26 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
         <View style={styles.content}>
           {/* ✅ FIX: Mostra sempre la card di verifica email se l'email non è verificata */}
           {!emailVerified && resolvedUser && (
-            <View style={[styles.verificationCard, { borderColor: 'rgba(245,158,11,0.4)', backgroundColor: 'rgba(245,158,11,0.12)' }]}>
-              <View style={styles.verificationIcon}>
-                <MaterialCommunityIcons name="email-alert" size={20} color="#f59e0b" />
+            <View style={[styles.verificationCard, { borderColor: 'rgba(139,92,246,0.4)', backgroundColor: 'rgba(139,92,246,0.12)' }]}>
+              <View style={[styles.verificationIcon, { backgroundColor: 'rgba(139,92,246,0.15)' }]}>
+                <MaterialCommunityIcons name="email-check" size={24} color="#8b5cf6" />
               </View>
               <View style={styles.verificationCopy}>
-                <Text style={[styles.verificationTitle, { color: colors.text }]}>{t('settings.verifyEmailTitle')}</Text>
+                <Text style={[styles.verificationTitle, { color: colors.text }]}>
+                  {t('settings.verifyEmailTitle') || 'Conferma la tua email'}
+                </Text>
                 <Text style={[styles.verificationMessage, { color: colors.textSecondary }]}>
-                  {t('settings.verifyEmailDescription', { email: resolvedUser.email })}
+                  {t('settings.verifyEmailDescriptionNew') || `Abbiamo inviato un'email di verifica a ${resolvedUser.email}. Apri la tua casella email e clicca sul link di conferma per attivare il tuo account e accedere a tutte le funzionalità dell'app.`}
                 </Text>
               </View>
               <TouchableOpacity
-                style={[styles.verificationButton, { borderColor: '#f59e0b' }]}
+                style={[styles.verificationButton, { borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.1)' }]}
                 onPress={() => resolvedUser && loadUserProfile(resolvedUser)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.verificationButtonText, { color: '#f59e0b' }]}>
-                  {t('settings.verifyEmailAction')}
+                <MaterialCommunityIcons name="refresh" size={16} color="#8b5cf6" style={{ marginRight: 6 }} />
+                <Text style={[styles.verificationButtonText, { color: '#8b5cf6' }]}>
+                  {t('settings.verifyEmailAction') || 'Verifica stato'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -681,8 +684,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       <HealthPermissionsModal
         visible={healthPermissionsModal}
         onClose={() => setHealthPermissionsModal(false)}
-        onSuccess={() => {
-          // 🆕 Rimossi log per performance
+        onSuccess={async () => {
+          // 🔥 FIX: Forza sincronizzazione dati dopo concessione permessi
+          try {
+            const { HealthDataService } = await import('../services/health-data.service');
+            const healthService = HealthDataService.getInstance();
+            await healthService.syncHealthData(true); // Force sync
+          } catch (error) {
+            console.error('Error syncing health data after permissions:', error);
+          }
+          
           Alert.alert(
             t('settings.healthPermissionsUpdated'),
             t('settings.healthPermissionsUpdatedMessage'),

@@ -54,7 +54,8 @@
     "aboutDescription": "Scopri di più su Wellness Coach",
     "verifyEmailTitle": "Conferma la tua email",
     "verifyEmailDescription": "Abbiamo inviato un link a {{email}}. Confermalo per sbloccare tutte le funzionalità.",
-    "verifyEmailAction": "Ho verificato",
+    "verifyEmailDescriptionNew": "Abbiamo inviato un'email di verifica a {{email}}. Apri la tua casella email e clicca sul link di conferma per attivare il tuo account e accedere a tutte le funzionalità dell'app.",
+    "verifyEmailAction": "Verifica stato",
     "logout": "Logout",
     "logoutConfirm": "Sei sicuro di voler effettuare il logout?",
     "logoutCancel": "Annulla",
@@ -1494,6 +1495,7 @@
       "openSettings": "Apri Impostazioni",
       "errorMessage": "Si è verificato un errore durante la richiesta dei permessi",
       "reloadPermissions": "Ricarica permessi",
+      "reloadPermissionsHint": "Usa questo pulsante se hai concesso i permessi manualmente in Health Connect",
       "permissionsGranted": "Permessi concessi",
       "permissionsNowActive": "I permessi sono ora attivi!",
       "categories": {

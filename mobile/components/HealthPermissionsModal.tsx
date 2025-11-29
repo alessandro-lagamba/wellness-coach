@@ -66,11 +66,14 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
       const { HealthDataService } = await import('../services/health-data.service');
       const healthService = HealthDataService.getInstance();
       
-      // Sincronizza i dati
-      const syncResult = await healthService.syncHealthData();
+      // 🔥 FIX: Forza sincronizzazione immediata bypassando cooldown
+      const syncResult = await healthService.syncHealthData(true);
       if (!syncResult.success) {
         // 🔥 FIX: Solo errori critici in console
         console.error('⚠️ Health data sync failed:', syncResult.error);
+      } else {
+        // 🔥 FIX: Aggiorna anche i permessi nel servizio per riflettere i nuovi permessi concessi
+        await healthService.initialize();
       }
     } catch (error) {
       // 🔥 FIX: Solo errori critici in console
@@ -247,7 +250,9 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
             }] : []),
             {
               text: t('modals.healthPermissions.perfect'),
-              onPress: () => {
+              onPress: async () => {
+                // 🔥 FIX: Forza una sincronizzazione immediata prima di chiudere
+                await syncHealthDataAfterPermissions();
                 onSuccess();
                 onClose();
               },
@@ -454,42 +459,47 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
               <View style={styles.footer}>
                 {/* 🔥 Pulsante Ricarica Permessi - utile quando l'utente torna da Health Connect */}
                 {Platform.OS === 'android' && (
-                  <TouchableOpacity
-                    onPress={async () => {
-                      // 🔥 FIX: Rimuoviamo console.log eccessivi
-                      await loadPermissionsState(true);
-                      try {
-                        // Se tutti i required sono concessi, forza una sync immediata
-                        const required = state?.permissions?.filter(p => p.required) || [];
-                        const allRequiredGranted = required.length > 0 && required.every(p => p.granted);
-                        if (allRequiredGranted) {
-                          const { HealthDataService } = await import('../services/health-data.service');
-                          const svc = HealthDataService.getInstance();
-                          const res = await svc.syncHealthData(true);
-                          // 🔥 FIX: Rimuoviamo console.log eccessivi
-                          if (!res.success) {
-                            // 🔥 FIX: Solo errori critici in console
-                            console.error('⚠️ Forced sync failed:', res.error);
+                  <View style={styles.refreshButtonContainer}>
+                    <TouchableOpacity
+                      onPress={async () => {
+                        // 🔥 FIX: Rimuoviamo console.log eccessivi
+                        await loadPermissionsState(true);
+                        try {
+                          // Se tutti i required sono concessi, forza una sync immediata
+                          const required = state?.permissions?.filter(p => p.required) || [];
+                          const allRequiredGranted = required.length > 0 && required.every(p => p.granted);
+                          if (allRequiredGranted) {
+                            const { HealthDataService } = await import('../services/health-data.service');
+                            const svc = HealthDataService.getInstance();
+                            const res = await svc.syncHealthData(true);
+                            // 🔥 FIX: Rimuoviamo console.log eccessivi
+                            if (!res.success) {
+                              // 🔥 FIX: Solo errori critici in console
+                              console.error('⚠️ Forced sync failed:', res.error);
+                            }
                           }
+                        } catch (e) {
+                          // 🔥 FIX: Solo errori critici in console
+                          console.error('⚠️ Forced sync failed:', e);
                         }
-                      } catch (e) {
-                        // 🔥 FIX: Solo errori critici in console
-                        console.error('⚠️ Forced sync failed:', e);
-                      }
-                    }}
-                    style={styles.refreshButton}
-                    disabled={isLoading}
-                  >
-                    <MaterialCommunityIcons 
-                      name="refresh" 
-                      size={18} 
-                      color="#fff" 
-                      style={{ marginRight: 8 }}
-                    />
-                    <Text style={styles.refreshButtonText}>
-                      {t('modals.healthPermissions.reloadPermissions') || 'Ricarica permessi'}
+                      }}
+                      style={styles.refreshButton}
+                      disabled={isLoading}
+                    >
+                      <MaterialCommunityIcons 
+                        name="refresh" 
+                        size={18} 
+                        color="#fff" 
+                        style={{ marginRight: 8 }}
+                      />
+                      <Text style={styles.refreshButtonText}>
+                        {t('modals.healthPermissions.reloadPermissions') || 'Ricarica permessi'}
+                      </Text>
+                    </TouchableOpacity>
+                    <Text style={styles.refreshButtonHint}>
+                      {t('modals.healthPermissions.reloadPermissionsHint') || 'Usa questo pulsante se hai concesso i permessi manualmente in Health Connect'}
                     </Text>
-                  </TouchableOpacity>
+                  </View>
                 )}
                 
                 <View style={styles.buttonContainer}>
@@ -530,7 +540,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -696,6 +706,9 @@ const styles = StyleSheet.create({
   footer: {
     // Footer container
   },
+  refreshButtonContainer: {
+    marginBottom: 12,
+  },
   refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -704,7 +717,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 12,
-    marginBottom: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
@@ -712,6 +724,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '500',
+  },
+  refreshButtonHint: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 6,
+    fontStyle: 'italic',
   },
   motivationBox: {
     flexDirection: 'row',
