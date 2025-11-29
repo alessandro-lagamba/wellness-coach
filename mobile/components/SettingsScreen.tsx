@@ -689,6 +689,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
           try {
             const { HealthDataService } = await import('../services/health-data.service');
             const healthService = HealthDataService.getInstance();
+            
+            // 🔥 CRITICO: PRIMA reinizializza per aggiornare i permessi
+            await healthService.initialize();
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // 🔥 Poi sincronizza i dati
             await healthService.syncHealthData(true); // Force sync
           } catch (error) {
             console.error('Error syncing health data after permissions:', error);

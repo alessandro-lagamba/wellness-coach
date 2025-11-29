@@ -62,18 +62,22 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
     if (!isMountedRef.current) return;
     
     try {
-      // 🔥 FIX: Rimuoviamo console.log eccessivi - manteniamo solo errori critici
+      // 🔥 FIX: PRIMA reinizializza il servizio per aggiornare i permessi
       const { HealthDataService } = await import('../services/health-data.service');
       const healthService = HealthDataService.getInstance();
+      
+      // 🔥 CRITICO: Reinizializza il servizio per aggiornare this.permissions
+      // Questo è fondamentale perché il servizio controlla this.permissions per decidere se sincronizzare
+      await healthService.initialize();
+      
+      // 🔥 FIX: Aspetta un attimo per dare tempo al servizio di aggiornare i permessi
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       // 🔥 FIX: Forza sincronizzazione immediata bypassando cooldown
       const syncResult = await healthService.syncHealthData(true);
       if (!syncResult.success) {
         // 🔥 FIX: Solo errori critici in console
         console.error('⚠️ Health data sync failed:', syncResult.error);
-      } else {
-        // 🔥 FIX: Aggiorna anche i permessi nel servizio per riflettere i nuovi permessi concessi
-        await healthService.initialize();
       }
     } catch (error) {
       // 🔥 FIX: Solo errori critici in console

@@ -426,7 +426,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   }, [chartEditMode, getAvailableCharts]);
 
   // Health data hook
-  const { permissions: healthPermissions, hasData: hasHealthData, isInitialized, healthData, syncData, status: healthStatus } = useHealthData();
+  const { permissions: healthPermissions, hasData: hasHealthData, isInitialized, healthData, syncData, refreshPermissions, status: healthStatus } = useHealthData();
   const hasAnyHealthPermission =
     healthPermissions.steps ||
     healthPermissions.heartRate ||
@@ -3325,23 +3325,21 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
           // 🔥 FIX: Forza sync immediata dei dati dopo concessione permessi
           try {
-            // Forza una sincronizzazione immediata bypassando il cooldown
-            const { HealthDataService } = await import('../services/health-data.service');
-            const healthService = HealthDataService.getInstance();
-            const forceSyncResult = await healthService.syncHealthData(true); // Force sync
+            // 🔥 CRITICO: PRIMA aggiorna i permessi nel hook (reinizializza servizio e aggiorna stato)
+            await refreshPermissions();
             
-            // Aggiorna anche tramite il hook per mantenere lo stato sincronizzato
+            // 🔥 Poi sincronizza i dati con i nuovi permessi
             const syncResult = await syncData();
             
+            // 🔥 Aspetta un attimo per dare tempo ai dati di essere processati
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             // 🔥 Aggiorna i widget immediatamente con i nuovi dati
-            if (forceSyncResult.success && forceSyncResult.data) {
+            if (syncResult.success && syncResult.data) {
               const data = await buildWidgetDataFromHealth();
               setWidgetData(data);
-            } else if (syncResult.success && syncResult.data) {
-              const data = await buildWidgetDataFromHealth();
-              setWidgetData(data);
-            } else if (hasHealthData && healthData) {
-              // Fallback: usa i dati già disponibili
+            } else {
+              // Fallback: prova a costruire i widget con i dati disponibili
               const data = await buildWidgetDataFromHealth();
               setWidgetData(data);
             }
@@ -3352,6 +3350,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             console.error('Error syncing after permissions:', error);
             // Fallback: prova comunque a sincronizzare tramite hook
             try {
+              await refreshPermissions();
               await syncData();
               const data = await buildWidgetDataFromHealth();
               setWidgetData(data);
