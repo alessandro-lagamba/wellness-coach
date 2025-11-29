@@ -48,6 +48,7 @@ import PushNotificationService from '../services/push-notification.service';
 import DailyCopilotHistory from './DailyCopilotHistory';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
+import { HydrationActionModal } from './HydrationActionModal';
 import MoodCheckinCard from './MoodCheckinCard';
 import SleepCheckinCard from './SleepCheckinCard';
 import PrimaryCTA from './PrimaryCTA';
@@ -404,6 +405,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   }>({ steps: [], sleepHours: [], hrv: [], heartRate: [], hydration: [], meditation: [] });
   const [chartEditMode, setChartEditMode] = useState<boolean>(false);
   const [chartSelectionModal, setChartSelectionModal] = useState<boolean>(false);
+  const [hydrationActionModal, setHydrationActionModal] = useState<boolean>(false);
   const [chartDetailModal, setChartDetailModal] = useState<{ visible: boolean; chartType: ChartType | null; currentValue?: number; color: string }>({
     visible: false,
     chartType: null,
@@ -1478,81 +1480,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             return;
           }
 
-          // Mostra menu con opzioni
-          Alert.alert(
-            t('home.hydrationActions.menuTitle') || 'Gestisci Idratazione',
-            t('home.hydrationActions.menuMessage') || 'Cosa vuoi fare?',
-            [
-              {
-                text: t('home.hydrationActions.remove') || 'Rimuovi',
-                style: 'destructive',
-                onPress: async () => {
-                  const result = await TodayGlanceService.removeWaterGlass(currentUser.id);
-                  
-                  if (result.success) {
-                    const { hydrationUnitService } = await import('../services/hydration-unit.service');
-                    const unit = await hydrationUnitService.getPreferredUnit();
-                    const config = hydrationUnitService.getUnitConfig(unit);
-                    const units = hydrationUnitService.mlToUnit(result.newHydration || 0, unit);
-                    
-                    UserFeedbackService.showSuccess(
-                      t('home.hydrationActions.removedSuccess', { 
-                        units: Math.round(units * 10) / 10,
-                        unitLabel: config.label 
-                      }) || `Rimosso! Totale: ${Math.round(units * 10) / 10} ${config.label}`,
-                      t('home.hydrationActions.removedTitle') || 'Acqua rimossa'
-                    );
-
-                    // Aggiorna i dati di salute e i widget
-                    await syncData();
-                    const updatedWidgetData = await buildWidgetDataFromHealth();
-                    setWidgetData(updatedWidgetData);
-                  } else {
-                    UserFeedbackService.showError(
-                      result.error || t('home.hydrationActions.removeError') || 'Errore durante la rimozione dell\'acqua',
-                      t('common.error') || 'Errore'
-                    );
-                  }
-                },
-              },
-              {
-                text: t('home.hydrationActions.add') || 'Aggiungi',
-                style: 'default',
-                onPress: async () => {
-                  const result = await TodayGlanceService.addWaterGlass(currentUser.id);
-                  
-                  if (result.success) {
-                    const { hydrationUnitService } = await import('../services/hydration-unit.service');
-                    const unit = await hydrationUnitService.getPreferredUnit();
-                    const config = hydrationUnitService.getUnitConfig(unit);
-                    const units = hydrationUnitService.mlToUnit(result.newHydration || 0, unit);
-                    
-                    UserFeedbackService.showSuccess(
-                      t('home.hydrationActions.addedSuccess', { 
-                        units: Math.round(units * 10) / 10,
-                        unitLabel: config.label 
-                      }) || `Aggiunto! Totale: ${Math.round(units * 10) / 10} ${config.label}`,
-                      t('home.hydrationActions.addedTitle') || 'Acqua aggiunta'
-                    );
-
-                    // Aggiorna i dati di salute e i widget
-                    await syncData();
-                    const updatedWidgetData = await buildWidgetDataFromHealth();
-                    setWidgetData(updatedWidgetData);
-                  } else {
-                    UserFeedbackService.showError(
-                      result.error || t('home.hydrationActions.addError') || 'Errore durante l\'aggiunta dell\'acqua',
-                      t('common.error') || 'Errore'
-                    );
-                  }
-                },
-              },
-              {
-                text: t('common.cancel') || 'Annulla',
-                style: 'cancel',
-              },
-            ]
-          );
+          // Mostra modal personalizzato
+          setHydrationActionModal(true);
         } catch (error) {
           console.error('❌ Error managing water:', error);
           UserFeedbackService.showError(
@@ -3493,6 +3422,74 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           color={chartDetailModal.color}
         />
       )}
+
+      {/* Hydration Action Modal */}
+      <HydrationActionModal
+        visible={hydrationActionModal}
+        onClose={() => setHydrationActionModal(false)}
+        onAdd={async () => {
+          const currentUser = await AuthService.getCurrentUser();
+          if (!currentUser?.id) return;
+
+          const result = await TodayGlanceService.addWaterGlass(currentUser.id);
+          
+          if (result.success) {
+            const { hydrationUnitService } = await import('../services/hydration-unit.service');
+            const unit = await hydrationUnitService.getPreferredUnit();
+            const config = hydrationUnitService.getUnitConfig(unit);
+            const units = hydrationUnitService.mlToUnit(result.newHydration || 0, unit);
+            
+            UserFeedbackService.showSuccess(
+              t('home.hydrationActions.addedSuccess', { 
+                units: Math.round(units * 10) / 10,
+                unitLabel: config.label 
+              }) || `Aggiunto! Totale: ${Math.round(units * 10) / 10} ${config.label}`,
+              t('home.hydrationActions.addedTitle') || 'Acqua aggiunta'
+            );
+
+            // Aggiorna i dati di salute e i widget
+            await syncData();
+            const updatedWidgetData = await buildWidgetDataFromHealth();
+            setWidgetData(updatedWidgetData);
+          } else {
+            UserFeedbackService.showError(
+              result.error || t('home.hydrationActions.addError') || 'Errore durante l\'aggiunta dell\'acqua',
+              t('common.error') || 'Errore'
+            );
+          }
+        }}
+        onRemove={async () => {
+          const currentUser = await AuthService.getCurrentUser();
+          if (!currentUser?.id) return;
+
+          const result = await TodayGlanceService.removeWaterGlass(currentUser.id);
+          
+          if (result.success) {
+            const { hydrationUnitService } = await import('../services/hydration-unit.service');
+            const unit = await hydrationUnitService.getPreferredUnit();
+            const config = hydrationUnitService.getUnitConfig(unit);
+            const units = hydrationUnitService.mlToUnit(result.newHydration || 0, unit);
+            
+            UserFeedbackService.showSuccess(
+              t('home.hydrationActions.removedSuccess', { 
+                units: Math.round(units * 10) / 10,
+                unitLabel: config.label 
+              }) || `Rimosso! Totale: ${Math.round(units * 10) / 10} ${config.label}`,
+              t('home.hydrationActions.removedTitle') || 'Acqua rimossa'
+            );
+
+            // Aggiorna i dati di salute e i widget
+            await syncData();
+            const updatedWidgetData = await buildWidgetDataFromHealth();
+            setWidgetData(updatedWidgetData);
+          } else {
+            UserFeedbackService.showError(
+              result.error || t('home.hydrationActions.removeError') || 'Errore durante la rimozione dell\'acqua',
+              t('common.error') || 'Errore'
+            );
+          }
+        }}
+      />
 
     </SafeAreaView>
   );
