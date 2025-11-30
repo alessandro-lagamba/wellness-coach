@@ -170,3 +170,33 @@ export const calculateNutritionSchema = {
     required: ["macrosPerServing", "caloriesPerServing", "confidence"],
   },
 } as const;
+
+// 🆕 Schema per le raccomandazioni del coach
+export const coachSchema = {
+  name: "coach_suggestion",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      title: { type: "string" },
+      message: { type: "string" },
+      priority: { type: "string", enum: ["low", "medium", "high"] },
+      category: { type: "string", enum: ["nutrition", "hydration", "recovery", "sleep", "activity"] },
+      cta: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          label: { type: "string" },
+          action: {
+            type: "string",
+            enum: ["SUGGEST_MEAL", "LOG_WATER", "START_BREATHING", "SCHEDULE_MEAL", "OPEN_RECIPE"],
+          },
+          payload: { type: "object" }, // Opzionale, può essere qualsiasi oggetto
+        },
+        required: ["label", "action"],
+      },
+      expireAt: { type: "string" }, // ISO date string, opzionale
+    },
+    required: ["title", "message", "priority", "category"],
+  },
+} as const;
