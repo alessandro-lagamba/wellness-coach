@@ -10,7 +10,7 @@ import {
   Platform,
   BackHandler,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaWrapper } from './shared/SafeAreaWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -54,6 +54,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
   const isDark = mode === 'dark';
   const { t, language } = useTranslation();
   const { hideTabBar, showTabBar } = useTabBarVisibility();
+  const insets = useSafeAreaInsets(); // 🔥 FIX: Per gestire bottom insets nelle bottom bars
 
   useEffect(() => {
     hideTabBar();
@@ -494,7 +495,11 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
       <View
         style={[
           styles.bottomBar,
-          { backgroundColor: colors.background, borderTopColor: isDark ? 'rgba(148,163,184,0.18)' : 'rgba(15,23,42,0.08)' },
+          { 
+            backgroundColor: colors.background, 
+            borderTopColor: isDark ? 'rgba(148,163,184,0.18)' : 'rgba(15,23,42,0.08)',
+            paddingBottom: insets.bottom, // 🔥 FIX: Rispetta gli insets bottom per i tasti di navigazione Android
+          },
         ]}
       >
         <View

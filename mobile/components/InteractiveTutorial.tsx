@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
+import { SpotlightOverlay, SpotlightArea } from './shared/SpotlightOverlay';
 
 const { width, height } = Dimensions.get('window');
 
@@ -20,6 +21,7 @@ interface TutorialStep {
   actionText: string;
   highlightElement?: string;
   targetScreen?: string;
+  spotlightArea?: SpotlightArea | null; // 🆕 Area da evidenziare con spotlight
 }
 
 interface InteractiveTutorialProps {
@@ -42,7 +44,15 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       'Monitoraggio completo del benessere'
     ],
     actionText: 'Iniziamo!',
-    targetScreen: 'home'
+    targetScreen: 'home',
+    // 🆕 Spotlight sull'header di HomeScreen (area superiore centrale)
+    spotlightArea: {
+      x: 0.1,      // 10% da sinistra
+      y: 0.08,     // 8% dall'alto (header)
+      width: 0.8,  // 80% della larghezza
+      height: 0.15, // 15% dell'altezza (header + greeting)
+      borderRadius: 24,
+    },
   },
   {
     id: 'dashboard',
@@ -57,7 +67,15 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       'Check-in giornalieri'
     ],
     actionText: 'Scopri i Widget',
-    targetScreen: 'home'
+    targetScreen: 'home',
+    // 🆕 Spotlight sull'area dei widget (centro schermo)
+    spotlightArea: {
+      x: 0.05,     // 5% da sinistra
+      y: 0.35,     // 35% dall'alto (dopo header e hero card)
+      width: 0.9,  // 90% della larghezza
+      height: 0.25, // 25% dell'altezza (area widget)
+      borderRadius: 20,
+    },
   },
   {
     id: 'widgets',
@@ -290,9 +308,18 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
 
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
+      {/* 🆕 Spotlight Overlay - mostra alone luminoso sull'area evidenziata */}
+      <SpotlightOverlay
+        visible={visible && !!current.spotlightArea}
+        spotlightArea={current.spotlightArea || undefined}
+        overlayOpacity={0.5}
+        spotlightIntensity={0.4}
+        animationDuration={400}
+      />
+      
       <Animated.View style={[styles.overlay, { opacity: modalFadeAnim }]}>
         <View style={[styles.shell, { maxHeight: modalMaxH }]}>
-          <BlurView intensity={15} tint="light" style={styles.blur}>
+          <BlurView intensity={20} tint="light" style={styles.blur}>
             <LinearGradient colors={current.color as any} style={styles.gradient}>
               {/* Header */}
               <View style={styles.header}>
@@ -369,7 +396,7 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
 };
 
 const styles = StyleSheet.create({
-  overlay:{ flex:1, backgroundColor:'rgba(0,0,0,0.7)', justifyContent:'center', alignItems:'center' },
+  overlay:{ flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'center', alignItems:'center' }, // 🔥 Più chiaro per vedere meglio
   shell:{ width: width*0.92, maxWidth: 420, borderRadius:22, overflow:'hidden' },
   blur:{ borderRadius:22, overflow:'hidden' },
   gradient:{ padding:16, paddingBottom:24 },
@@ -386,9 +413,9 @@ const styles = StyleSheet.create({
   skip:{ fontSize:15, fontWeight:'700', opacity:0.9, color: '#fff' },
 
   card:{
-    backgroundColor:'rgba(255,255,255,0.98)',
+    backgroundColor:'rgba(255,255,255,0.85)', // 🔥 Più trasparente per vedere meglio il contenuto
     borderRadius:20, padding:24,
-    borderWidth:2, borderColor:'rgba(255,255,255,1)',
+    borderWidth:2, borderColor:'rgba(255,255,255,0.9)',
     shadowColor:'#000', shadowOpacity:0.25, shadowRadius:20, shadowOffset:{width:0,height:12},
     elevation: 12,
     maxHeight: 580,

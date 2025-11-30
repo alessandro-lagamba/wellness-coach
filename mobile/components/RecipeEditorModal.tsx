@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -68,6 +68,19 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
   });
   const [saving, setSaving] = useState(false);
   const canUseAiComplete = !!aiContext && mode === 'create';
+  const [calculatedNutrition, setCalculatedNutrition] = useState<{
+    macrosPerServing?: {
+      protein: number;
+      carbs: number;
+      fat: number;
+      fiber?: number;
+      sugar?: number;
+    };
+    caloriesPerServing?: number;
+    confidence?: number;
+  } | null>(null);
+  const [isCalculatingNutrition, setIsCalculatingNutrition] = useState(false);
+  const nutritionCalculationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const hydrateForm = (source?: Partial<UserRecipe> | null) => {
     const mealTypesValue =
@@ -157,6 +170,15 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
       notes: form.notes?.trim(),
       ingredients,
       steps,
+      // 🔥 FIX: Includi i macronutrienti calcolati se disponibili
+      calories_per_serving: calculatedNutrition?.caloriesPerServing,
+      macros: calculatedNutrition?.macrosPerServing ? {
+        protein: calculatedNutrition.macrosPerServing.protein,
+        carbs: calculatedNutrition.macrosPerServing.carbs,
+        fat: calculatedNutrition.macrosPerServing.fat,
+        fiber: calculatedNutrition.macrosPerServing.fiber,
+        sugar: calculatedNutrition.macrosPerServing.sugar,
+      } : undefined,
     };
   };
 
@@ -423,6 +445,35 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
               placeholder={t('analysis.food.recipes.editor.ingredientsPlaceholder')}
               placeholderTextColor={colors.textTertiary}
             />
+            {/* 🔥 FIX: Mostra i macronutrienti calcolati */}
+            {isCalculatingNutrition && (
+              <View style={[styles.nutritionInfo, { backgroundColor: colors.surface }]}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.nutritionText, { color: colors.textSecondary }]}>
+                  {t('analysis.food.recipes.editor.calculatingNutrition')}
+                </Text>
+              </View>
+            )}
+            {calculatedNutrition && !isCalculatingNutrition && (
+              <View style={[styles.nutritionInfo, { backgroundColor: colors.surface, borderColor: colors.primary + '40' }]}>
+                <View style={styles.nutritionHeader}>
+                  <MaterialCommunityIcons name="information" size={16} color={colors.primary} />
+                  <Text style={[styles.nutritionText, { color: colors.text }]}>
+                    {t('analysis.food.recipes.editor.calculatedNutrition')}
+                  </Text>
+                </View>
+                <View style={styles.nutritionValues}>
+                  <Text style={[styles.nutritionValue, { color: colors.text }]}>
+                    {Math.round(calculatedNutrition.caloriesPerServing || 0)} kcal
+                  </Text>
+                  <Text style={[styles.nutritionValue, { color: colors.textSecondary }]}>
+                    P: {Math.round(calculatedNutrition.macrosPerServing?.protein || 0)}g | 
+                    C: {Math.round(calculatedNutrition.macrosPerServing?.carbs || 0)}g | 
+                    F: {Math.round(calculatedNutrition.macrosPerServing?.fat || 0)}g
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
 
           <View style={[styles.field, { borderColor: colors.border }]}>
@@ -614,6 +665,31 @@ const styles = StyleSheet.create({
   aiButtonText: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  nutritionInfo: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 8,
+  },
+  nutritionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  nutritionText: {
+    fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
+  },
+  nutritionValues: {
+    marginTop: 4,
+    gap: 4,
+  },
+  nutritionValue: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

@@ -374,3 +374,45 @@ ${styleHints}
 Output JSON secondo schema. Locale: ${params.locale ?? "it-IT"}.
 `;
 
+/**
+ * Calculate Nutrition User Prompt
+ * Calculates macronutrients and calories from a list of ingredients
+ */
+export const calculateNutritionPrompt = (params: {
+  ingredients: string[];
+  servings?: number;
+  locale?: string;
+}): string => {
+  const servings = params.servings ?? 1;
+  const ingredientsList = params.ingredients.join(", ");
+
+  return `
+Calcola i valori nutrizionali (macronutrienti e calorie) per una ricetta con questi ingredienti:
+
+Ingredienti: ${ingredientsList}
+
+Servings: ${servings}
+
+Istruzioni:
+1. Per ogni ingrediente, stima la quantità tipica usata in una ricetta (se non specificata, usa quantità standard ragionevoli)
+2. Calcola i macronutrienti totali (proteine, carboidrati, grassi, fibre, zuccheri) per TUTTA la ricetta
+3. Calcola le calorie totali per TUTTA la ricetta
+4. Dividi per il numero di servings per ottenere i valori per porzione
+
+Regole:
+- Usa valori nutrizionali standard per alimenti comuni (database nutrizionale standard)
+- Se un ingrediente non ha quantità specificata, stima una quantità ragionevole basata sul tipo di ingrediente e sul contesto della ricetta
+- Se incerto sulla quantità o su qualche ingrediente, abbassa la confidence
+- I valori devono essere realistici e coerenti con gli ingredienti elencati
+
+Output JSON secondo schema "nutrition_calculation" con:
+- macrosPerServing: macronutrienti per porzione (proteine, carboidrati, grassi, fibre, zuccheri in grammi)
+- caloriesPerServing: calorie per porzione (kcal)
+- confidence: livello di confidenza nel calcolo (0-1)
+
+${styleHints}
+
+Output JSON secondo schema. Locale: ${params.locale ?? "it-IT"}.
+`;
+};
+

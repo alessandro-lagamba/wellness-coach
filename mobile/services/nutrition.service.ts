@@ -254,6 +254,66 @@ export class NutritionServiceClass {
     }
   }
   /**
+   * Calculate nutrition values (macronutrients and calories) from ingredients list
+   */
+  async calculateNutrition(request: {
+    ingredients: string[];
+    servings?: number;
+  }): Promise<{
+    success: boolean;
+    data?: {
+      macrosPerServing: {
+        protein: number;
+        carbs: number;
+        fat: number;
+        fiber?: number;
+        sugar?: number;
+      };
+      caloriesPerServing: number;
+      confidence: number;
+    };
+    error?: string;
+  }> {
+    try {
+      const backendURL = await getBackendURL();
+
+      const response = await fetch(`${backendURL}/api/nutrition/calculate-nutrition`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          `Backend request failed: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`
+        );
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        return {
+          success: false,
+          error: data.error || 'Failed to calculate nutrition',
+        };
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      };
+    }
+  }
+
+  /**
    * Parse ingredients from voice/text input
    */
   async parseIngredients(text: string, locale?: string): Promise<{

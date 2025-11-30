@@ -9,6 +9,7 @@ import {
   generateRecipe,
   generateRestaurantRecipe,
   parseIngredients,
+  calculateNutrition,
 } from "../controllers/nutrition.controller";
 import { strictRateLimiter } from "../middleware/rate-limiter";
 
@@ -30,6 +31,9 @@ router.post("/generate-restaurant-recipe", strictRateLimiter, generateRestaurant
 
 // POST /api/nutrition/parse-ingredients - Parse ingredients from voice/text
 router.post("/parse-ingredients", parseIngredients);
+
+// POST /api/nutrition/calculate-nutrition - Calculate nutrition from ingredients
+router.post("/calculate-nutrition", calculateNutrition);
 
 export default router;
 

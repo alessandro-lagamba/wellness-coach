@@ -99,7 +99,6 @@ export const suggestMealSchema = {
     },
     required: ["suggestions"],
   },
-  strict: true,
 } as const;
 
 export const generateRecipeSchema = {
@@ -119,10 +118,10 @@ export const generateRecipeSchema = {
           properties: {
             name: { type: "string" },
             quantity: { type: "number" },
-            unit: { type: "string" },
+            unit: { type: "string", enum: ["g", "ml", "pcs", "serving"] },
             optional: { type: "boolean" },
           },
-          required: ["name", "quantity", "unit", "optional"],
+          required: ["name", "quantity", "unit"],
         },
       },
       steps: { type: "array", items: { type: "string" } },
@@ -137,125 +136,37 @@ export const generateRecipeSchema = {
           fiber: { type: "number" },
           sugar: { type: "number" },
         },
-        // ✅ FIX: Aggiunto fiber e sugar a required per compatibilità con additionalProperties: false
-        required: ["protein", "carbs", "fat", "fiber", "sugar"],
+        required: ["protein", "carbs", "fat"],
       },
       caloriesPerServing: { type: "number" },
       shoppingGaps: { type: "array", items: { type: "string" } },
-      // 🔥 FIX: 'image' NON è nelle properties perché viene aggiunto DOPO la generazione della ricetta
-      // tramite generateRecipeImageFromTitle. Se lo includiamo qui, OpenAI lo richiede come obbligatorio.
     },
-    // ✅ FIX: Aggiunto tips e shoppingGaps a required per compatibilità con additionalProperties: false e strict: true
-    // 'image' NON è richiesto perché viene aggiunto dopo la generazione della ricetta
-    required: [
-      "title",
-      "servings",
-      "readyInMinutes",
-      "ingredients",
-      "steps",
-      "tips",
-      "macrosPerServing",
-      "caloriesPerServing",
-      "shoppingGaps",
-    ],
+    required: ["title", "servings", "readyInMinutes", "ingredients", "steps", "macrosPerServing", "caloriesPerServing"],
   },
-  strict: true,
 } as const;
 
-export const coachSchema = {
-  name: "coach_suggestion",
+// 🆕 Schema per calcolare solo i macronutrienti dagli ingredienti
+export const calculateNutritionSchema = {
+  name: "nutrition_calculation",
   schema: {
     type: "object",
     additionalProperties: false,
     properties: {
-      title: { type: "string" },
-      message: { type: "string" },
-      priority: { type: "string", enum: ["low", "medium", "high"] },
-      category: {
-        type: "string",
-        enum: ["nutrition", "hydration", "recovery", "sleep", "activity"],
-      },
-      cta: {
+      macrosPerServing: {
         type: "object",
         additionalProperties: false,
         properties: {
-          label: { type: "string" },
-          action: {
-            type: "string",
-            enum: [
-              "SUGGEST_MEAL",
-              "LOG_WATER",
-              "START_BREATHING",
-              "SCHEDULE_MEAL",
-              "OPEN_RECIPE",
-            ],
-          },
-          payload: { type: "object" },
+          protein: { type: "number" },
+          carbs: { type: "number" },
+          fat: { type: "number" },
+          fiber: { type: "number" },
+          sugar: { type: "number" },
         },
-        required: ["label", "action"],
+        required: ["protein", "carbs", "fat"],
       },
-      expireAt: { type: "string" },
-    },
-    required: ["title", "message", "priority", "category"],
-  },
-  strict: true,
-} as const;
-
-export const parseIngredientsSchema = {
-  name: "parsed_ingredients",
-  schema: {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      ingredients: {
-        type: "array",
-        items: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            name: { type: "string" },
-            quantity: { type: "number" },
-            unit: { type: "string", enum: ["g", "ml", "pcs", "serving"] },
-            expiry: { type: "string" },
-            category: { type: "string", enum: ["meat", "fish", "vegetables", "fruits", "dairy", "grains", "legumes", "spices", "beverages", "other"] },
-            confidence: { type: "number", minimum: 0, maximum: 1 },
-            notes: { type: "string" },
-          },
-          required: ["name", "confidence"],
-        },
-      },
-      commands: {
-        type: "array",
-        items: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            type: {
-              type: "string",
-              enum: ["add", "remove", "update_expiry", "mark_finished"],
-            },
-            ingredientName: { type: "string" },
-            expiry: { type: "string" },
-          },
-          required: ["type"],
-        },
-      },
+      caloriesPerServing: { type: "number" },
       confidence: { type: "number", minimum: 0, maximum: 1 },
-      ambiguous: {
-        type: "array",
-        items: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            text: { type: "string" },
-            suggestions: { type: "array", items: { type: "string" } },
-          },
-          required: ["text", "suggestions"],
-        },
-      },
     },
-    required: ["ingredients", "confidence"],
+    required: ["macrosPerServing", "caloriesPerServing", "confidence"],
   },
-  strict: true,
 } as const;
-

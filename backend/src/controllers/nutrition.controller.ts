@@ -17,6 +17,7 @@ import {
   generateRecipeFromIngredientsHook,
   generateRestaurantRecipeHook,
   parseIngredientsHook,
+  calculateNutritionHook,
 } from "../services/nutrition.service";
 
 /**
@@ -209,6 +210,46 @@ export const parseIngredients = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error("[Nutrition] ❌ parseIngredients controller error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Internal server error",
+    });
+  }
+};
+
+/**
+ * POST /api/nutrition/calculate-nutrition
+ * Calculate macronutrients and calories from ingredients list
+ */
+export const calculateNutrition = async (req: Request, res: Response) => {
+  try {
+    const body = req.body;
+
+    if (!body.ingredients || !Array.isArray(body.ingredients) || body.ingredients.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "ingredients array is required and must be non-empty",
+      });
+    }
+
+    const result = await calculateNutritionHook({
+      ingredients: body.ingredients,
+      servings: body.servings ?? 1,
+    });
+
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result.data,
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+      });
+    }
+  } catch (error: any) {
+    console.error("[Nutrition] ❌ calculateNutrition controller error:", error);
     res.status(500).json({
       success: false,
       error: error.message || "Internal server error",

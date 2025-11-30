@@ -27,8 +27,9 @@ import {
   recipeFromIngredientsPrompt,
   restaurantMealRecipePrompt,
   parseIngredientsUserPrompt,
+  calculateNutritionPrompt,
 } from "./ai/prompt";
-import { analyzeImageSchema, suggestMealSchema, generateRecipeSchema } from "./ai/schemas";
+import { analyzeImageSchema, suggestMealSchema, generateRecipeSchema, calculateNutritionSchema } from "./ai/schemas";
 import { generateRecipeImageFromTitle } from "./recipe-image.service";
 
 // TS2305 workaround: in alcuni ambienti (ts-node + nodemon) la cache dei tipi non vede ancora parseIngredientsSchema.
@@ -341,6 +342,70 @@ export async function parseIngredientsHook(
     return {
       success: false,
       error: e.message ?? "parseIngredients failed",
+    };
+  }
+}
+
+/**
+ * Calculate nutrition values (macronutrients and calories) from ingredients list
+ */
+export async function calculateNutritionHook(
+  body: {
+    ingredients: string[];
+    servings?: number;
+  }
+): Promise<{
+  success: boolean;
+  data?: {
+    macrosPerServing: {
+      protein: number;
+      carbs: number;
+      fat: number;
+      fiber?: number;
+      sugar?: number;
+    };
+    caloriesPerServing: number;
+    confidence: number;
+  };
+  error?: string;
+}> {
+  try {
+    console.log("[Nutrition] 🧮 Calculating nutrition from ingredients...", {
+      ingredientsCount: body.ingredients.length,
+      servings: body.servings ?? 1,
+    });
+
+    const res = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      response_format: {
+        type: "json_schema",
+        json_schema: calculateNutritionSchema as any,
+      },
+      messages: [
+        { role: "system", content: systemGuardrails },
+        { role: "user", content: calculateNutritionPrompt(body) },
+      ],
+      temperature: 0.2, // Low temperature for consistent calculations
+    });
+
+    const content = res.choices[0].message.content;
+    if (!content) {
+      throw new Error("Empty response from OpenAI");
+    }
+
+    const data = JSON.parse(content);
+
+    console.log("[Nutrition] ✅ Nutrition calculated:", {
+      caloriesPerServing: data.caloriesPerServing,
+      confidence: data.confidence,
+    });
+
+    return { success: true, data };
+  } catch (e: any) {
+    console.error("[Nutrition] ❌ calculateNutrition failed:", e);
+    return {
+      success: false,
+      error: e.message ?? "calculateNutrition failed",
     };
   }
 }

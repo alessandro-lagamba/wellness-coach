@@ -1144,7 +1144,9 @@
           "deleteMessage": "Vuoi davvero eliminare questa ricetta?",
           "deleteError": "Impossibile eliminare la ricetta",
           "aiComplete": "Completa con AI",
-          "aiCompleteError": "Impossibile completare la ricetta con l'AI. Riprova più tardi."
+          "aiCompleteError": "Impossibile completare la ricetta con l'AI. Riprova più tardi.",
+          "calculatingNutrition": "Calcolo valori nutrizionali...",
+          "calculatedNutrition": "Valori nutrizionali calcolati:"
         }
       },
       "mealPlanner": {
