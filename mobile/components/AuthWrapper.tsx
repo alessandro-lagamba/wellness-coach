@@ -78,13 +78,36 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
       console.log('🔍 checkAndShowTutorial - onboardingCompleted:', onboardingCompleted, 'tutorialCompleted:', tutorialCompleted);
 
-      // 🔥 FIX: Mostra sempre il tutorial se non è completato, indipendentemente dall'onboarding
-      if (!tutorialCompleted && !showTutorial) {
-        console.log('🎓 Tutorial should be shown, scheduling in 2s...');
+      // 🔥 CRITICO: Verifica se l'utente è nuovo o esistente controllando il profilo nel database
+      // Se l'utente ha già un profilo, è un utente esistente e non dovrebbe vedere il tutorial
+      let isExistingUser = false;
+      try {
+        const { AuthService } = await import('../services/auth.service');
+        const existingProfile = await AuthService.getUserProfile(user.id);
+        isExistingUser = !!existingProfile;
+        console.log('🔍 checkAndShowTutorial - isExistingUser:', isExistingUser);
+      } catch (error) {
+        console.warn('⚠️ Could not check user profile in useEffect, assuming new user:', error);
+      }
+
+      // 🔥 FIX: Mostra il tutorial SOLO se:
+      // 1. Il tutorial non è completato E
+      // 2. L'utente è nuovo (non ha un profilo esistente) E
+      // 3. Il tutorial non è già visibile
+      // Questo previene che utenti esistenti vedano il tutorial dopo aver eliminato l'app
+      if (!tutorialCompleted && !isExistingUser && !showTutorial) {
+        console.log('🎓 New user detected, tutorial should be shown, scheduling in 2s...');
         setTimeout(() => {
           console.log('🎓 Showing tutorial now via useEffect');
           setShowTutorial(true);
         }, 2000);
+      } else if (isExistingUser && !tutorialCompleted) {
+        // 🔥 Se l'utente è esistente ma il tutorial non è completato (AsyncStorage resettato),
+        // marca il tutorial come completato automaticamente
+        console.log('✅ Existing user detected in useEffect, marking tutorial as completed automatically');
+        OnboardingService.completeTutorial().catch(err => {
+          console.error('Error completing tutorial:', err);
+        });
       }
     };
 
@@ -175,15 +198,37 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         console.log('✅ Onboarding marked as completed automatically (skipping OnboardingScreen)');
       }
       
-      if (!tutorialCompleted) {
+      // 🔥 CRITICO: Verifica se l'utente è nuovo o esistente controllando il profilo nel database
+      // Se l'utente ha già un profilo, è un utente esistente e non dovrebbe vedere il tutorial
+      // anche se AsyncStorage è stato resettato (es. dopo aver eliminato l'app)
+      let isExistingUser = false;
+      try {
+        const { AuthService } = await import('../services/auth.service');
+        const existingProfile = await AuthService.getUserProfile(currentUser.id);
+        isExistingUser = !!existingProfile;
+        console.log('🔍 User profile check - isExistingUser:', isExistingUser);
+      } catch (error) {
+        console.warn('⚠️ Could not check user profile, assuming new user:', error);
+      }
+      
+      // 🔥 FIX: Mostra il tutorial SOLO se:
+      // 1. Il tutorial non è completato E
+      // 2. L'utente è nuovo (non ha un profilo esistente)
+      // Questo previene che utenti esistenti vedano il tutorial dopo aver eliminato l'app
+      if (!tutorialCompleted && !isExistingUser) {
         // Delay più lungo per permettere all'app di renderizzarsi completamente
-        console.log('🎓 Scheduling InteractiveTutorial to show in 2s after authentication...');
+        console.log('🎓 New user detected, scheduling InteractiveTutorial to show in 2s after authentication...');
         setTimeout(() => {
           console.log('🎓 Showing InteractiveTutorial after authentication');
           setShowTutorial(true);
         }, 2000);
+      } else if (isExistingUser && !tutorialCompleted) {
+        // 🔥 Se l'utente è esistente ma il tutorial non è completato (AsyncStorage resettato),
+        // marca il tutorial come completato automaticamente
+        console.log('✅ Existing user detected, marking tutorial as completed automatically');
+        await OnboardingService.completeTutorial();
       } else {
-        console.log('⚠️ Tutorial already completed, skipping...');
+        console.log('⚠️ Tutorial already completed or user is existing, skipping...');
       }
 
       onAuthSuccessRef.current(currentUser);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaWrapper } from './shared/SafeAreaWrapper';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AuthService } from '../services/auth.service';
@@ -202,7 +203,7 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={["top"]}>
+    <SafeAreaWrapper style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
         <Text style={[styles.title, { color: colors.text }]}>{t('settings.notificationsTitle')}</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
@@ -295,7 +296,7 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </SafeAreaWrapper>
   );
 };
 
@@ -583,7 +584,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: safeAreaBackground }]} edges={["top"]}>
+    <SafeAreaWrapper style={[styles.container, { backgroundColor: safeAreaBackground }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.text }]}>{t('settings.title')}</Text>
@@ -690,12 +691,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
             const { HealthDataService } = await import('../services/health-data.service');
             const healthService = HealthDataService.getInstance();
             
-            // 🔥 CRITICO: PRIMA reinizializza per aggiornare i permessi
-            await healthService.initialize();
-            await new Promise(resolve => setTimeout(resolve, 300));
+            // 🔥 CRITICO: PRIMA aggiorna i permessi nel servizio
+            await healthService.refreshPermissions();
             
-            // 🔥 Poi sincronizza i dati
-            await healthService.syncHealthData(true); // Force sync
+            // 🔥 Aspetta un momento per assicurarci che i permessi siano effettivamente disponibili
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // 🔥 Forza sincronizzazione immediata
+            await healthService.syncHealthData(true);
           } catch (error) {
             console.error('Error syncing health data after permissions:', error);
           }
@@ -708,7 +711,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
         }}
       />
 
-    </SafeAreaView>
+    </SafeAreaWrapper>
   );
 };
 

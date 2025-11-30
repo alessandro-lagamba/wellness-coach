@@ -37,28 +37,93 @@ export class TodayGlanceService {
   private static async getHealthData(): Promise<HealthData> {
     try {
       const healthService = HealthDataService.getInstance();
-      const syncResult = await healthService.syncHealthData();
+      
+      // 🔥 CRITICO: Verifica se ci sono permessi concessi prima di sincronizzare
+      const permissions = healthService.getPermissions();
+      const hasAnyPermission = Object.values(permissions).some(Boolean);
+      
+      // 🔥 Se ci sono permessi concessi, forza la sincronizzazione
+      const syncResult = await healthService.syncHealthData(hasAnyPermission);
       
       if (syncResult.success && syncResult.data) {
-        // Convert real health data to our format
-        const realData = syncResult.data;
+        // 🔥 Verifica che i dati siano reali (non mock) controllando se hanno valori significativi
+        const hasRealData = (syncResult.data.steps && syncResult.data.steps > 0) ||
+                            (syncResult.data.heartRate && syncResult.data.heartRate > 0) ||
+                            (syncResult.data.sleepHours && syncResult.data.sleepHours > 0) ||
+                            (syncResult.data.hrv && syncResult.data.hrv > 0);
+        
+        // 🔥 SOLO se i dati sono reali, convertili e restituiscili
+        if (hasRealData) {
+          const realData = syncResult.data;
+          return {
+            steps: realData.steps,
+            hydration: Math.round(realData.hydration / 250), // Convert ml to glasses
+            mindfulnessMinutes: realData.mindfulnessMinutes || 0,
+            hrv: realData.hrv,
+            restingHR: realData.restingHeartRate,
+            sleepHours: realData.sleepHours,
+            sleepQuality: realData.sleepQuality,
+            analysesCompleted: 0, // This will be fetched separately
+            analysesGoal: 2,
+          };
+        }
+        
+        // 🔥 Se i permessi sono concessi ma i dati sono mock, prova a ottenere l'ultimo dato reale
+        if (hasAnyPermission) {
+          const latestData = await healthService.getLatestSyncedHealthData();
+          if (latestData.data) {
+            const hasRealLatestData = (latestData.data.steps && latestData.data.steps > 0) ||
+                                      (latestData.data.heartRate && latestData.data.heartRate > 0) ||
+                                      (latestData.data.sleepHours && latestData.data.sleepHours > 0) ||
+                                      (latestData.data.hrv && latestData.data.hrv > 0);
+            
+            if (hasRealLatestData) {
+              return {
+                steps: latestData.data.steps,
+                hydration: Math.round(latestData.data.hydration / 250),
+                mindfulnessMinutes: latestData.data.mindfulnessMinutes || 0,
+                hrv: latestData.data.hrv,
+                restingHR: latestData.data.restingHeartRate,
+                sleepHours: latestData.data.sleepHours,
+                sleepQuality: latestData.data.sleepQuality,
+                analysesCompleted: 0,
+                analysesGoal: 2,
+              };
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to get real health data:', error);
+    }
+    
+    // 🔥 SOLO se NON ci sono permessi concessi, usa i mock
+    // Se ci sono permessi concessi, restituisci dati vuoti invece di mock
+    try {
+      const healthService = HealthDataService.getInstance();
+      const permissions = healthService.getPermissions();
+      const hasAnyPermission = Object.values(permissions).some(Boolean);
+      
+      if (hasAnyPermission) {
+        // 🔥 Se ci sono permessi ma non ci sono dati, restituisci dati vuoti (non mock)
         return {
-          steps: realData.steps,
-          hydration: Math.round(realData.hydration / 250), // Convert ml to glasses
-          mindfulnessMinutes: realData.mindfulnessMinutes || 0,
-          hrv: realData.hrv,
-          restingHR: realData.restingHeartRate,
-          sleepHours: realData.sleepHours,
-          sleepQuality: realData.sleepQuality,
-          analysesCompleted: 0, // This will be fetched separately
+          steps: 0,
+          hydration: 0,
+          mindfulnessMinutes: 0,
+          hrv: 0,
+          restingHR: 0,
+          sleepHours: 0,
+          sleepQuality: 0,
+          analysesCompleted: 0,
           analysesGoal: 2,
         };
       }
     } catch (error) {
-      console.warn('Failed to get real health data, using mock:', error);
+      // Se c'è un errore nel controllo dei permessi, usa i mock come fallback
+      console.warn('Error checking permissions, using mock data:', error);
     }
     
-    // Fallback to mock data
+    // Fallback to mock data SOLO se non ci sono permessi concessi
     return this.generateMockHealthData();
   }
 

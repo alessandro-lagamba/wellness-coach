@@ -62,25 +62,22 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
     if (!isMountedRef.current) return;
     
     try {
-      // 🔥 FIX: PRIMA reinizializza il servizio per aggiornare i permessi
       const { HealthDataService } = await import('../services/health-data.service');
       const healthService = HealthDataService.getInstance();
       
-      // 🔥 CRITICO: Reinizializza il servizio per aggiornare this.permissions
-      // Questo è fondamentale perché il servizio controlla this.permissions per decidere se sincronizzare
-      await healthService.initialize();
+      // 🔥 CRITICO: PRIMA aggiorna i permessi nel servizio
+      // Questo è fondamentale perché syncHealthData controlla this.permissions
+      await healthService.refreshPermissions();
       
-      // 🔥 FIX: Aspetta un attimo per dare tempo al servizio di aggiornare i permessi
+      // 🔥 Aspetta un momento per assicurarci che i permessi siano effettivamente disponibili
       await new Promise(resolve => setTimeout(resolve, 300));
       
       // 🔥 FIX: Forza sincronizzazione immediata bypassando cooldown
       const syncResult = await healthService.syncHealthData(true);
       if (!syncResult.success) {
-        // 🔥 FIX: Solo errori critici in console
         console.error('⚠️ Health data sync failed:', syncResult.error);
       }
     } catch (error) {
-      // 🔥 FIX: Solo errori critici in console
       console.error('❌ Error syncing health data:', error);
     }
   }, []);
@@ -466,25 +463,37 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                   <View style={styles.refreshButtonContainer}>
                     <TouchableOpacity
                       onPress={async () => {
-                        // 🔥 FIX: Rimuoviamo console.log eccessivi
-                        await loadPermissionsState(true);
+                        setIsLoading(true);
                         try {
-                          // Se tutti i required sono concessi, forza una sync immediata
+                          // 🔥 Ricarica lo stato dei permessi
+                          await loadPermissionsState(true);
+                          
+                          // 🔥 Se tutti i required sono concessi, forza refresh e sync immediata
                           const required = state?.permissions?.filter(p => p.required) || [];
                           const allRequiredGranted = required.length > 0 && required.every(p => p.granted);
                           if (allRequiredGranted) {
                             const { HealthDataService } = await import('../services/health-data.service');
                             const svc = HealthDataService.getInstance();
+                            
+                            // 🔥 CRITICO: PRIMA aggiorna i permessi nel servizio
+                            await svc.refreshPermissions();
+                            
+                            // 🔥 Aspetta un momento per assicurarci che i permessi siano effettivamente disponibili
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            
+                            // 🔥 Forza sync immediata
                             const res = await svc.syncHealthData(true);
-                            // 🔥 FIX: Rimuoviamo console.log eccessivi
                             if (!res.success) {
-                              // 🔥 FIX: Solo errori critici in console
                               console.error('⚠️ Forced sync failed:', res.error);
+                            } else {
+                              // 🔥 Sincronizza anche tramite la funzione del modal
+                              await syncHealthDataAfterPermissions();
                             }
                           }
                         } catch (e) {
-                          // 🔥 FIX: Solo errori critici in console
-                          console.error('⚠️ Forced sync failed:', e);
+                          console.error('⚠️ Error reloading permissions:', e);
+                        } finally {
+                          setIsLoading(false);
                         }
                       }}
                       style={styles.refreshButton}

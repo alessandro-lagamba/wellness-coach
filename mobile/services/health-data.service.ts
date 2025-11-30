@@ -35,6 +35,7 @@ export class HealthDataService {
   private isSyncInProgress: boolean = false;
   private lastSyncAt: number | null = null;
   private lastHealthData: HealthData | null = null; // 🔥 Memorizza l'ultimo dato sincronizzato
+  private lastHealthDataSource: 'healthkit' | 'health_connect' | 'manual' | 'mock' | null = null; // 🔥 Memorizza la source dell'ultimo dato
   private permissions: HealthPermissions = {
     steps: false,
     heartRate: false,
@@ -73,30 +74,7 @@ export class HealthDataService {
       // 🔥 FIX: Rimuoviamo console.log eccessivi - manteniamo solo errori critici
       
       // Carica i permessi concessi se disponibili
-      if (Platform.OS === 'android') {
-        try {
-          const { HealthPermissionsService } = await import('./health-permissions.service');
-          const grantedPermissions = await HealthPermissionsService.getGrantedPermissions();
-          
-          // Aggiorna i permessi locali basandosi su quelli concessi
-          this.permissions = {
-            steps: grantedPermissions.includes('steps'),
-            heartRate: grantedPermissions.includes('heart_rate'),
-            sleep: grantedPermissions.includes('sleep'),
-            hrv: grantedPermissions.includes('hrv'),
-            bloodPressure: grantedPermissions.includes('blood_pressure'),
-            weight: grantedPermissions.includes('weight'),
-            bodyFat: grantedPermissions.includes('body_fat'),
-            hydration: false, // Not directly available
-            mindfulness: false, // Not directly available
-          };
-          
-          // 🔥 FIX: Rimuoviamo console.log eccessivi
-        } catch (error) {
-          // 🔥 FIX: Solo errori critici in console
-          console.error('❌ Could not load granted permissions:', error);
-        }
-      }
+      await this.refreshPermissions();
       
       if (Platform.OS === 'ios' && this.config.enableHealthKit) {
         return await this.initializeHealthKit();
@@ -109,6 +87,42 @@ export class HealthDataService {
     } catch (error) {
       console.error('❌ Failed to initialize health data service:', error);
       return false;
+    }
+  }
+
+  /**
+   * 🔥 NUOVO: Forza il refresh dei permessi da HealthPermissionsService
+   * Utile dopo aver concesso nuovi permessi
+   */
+  async refreshPermissions(): Promise<void> {
+    try {
+      if (Platform.OS === 'android') {
+        const { HealthPermissionsService } = await import('./health-permissions.service');
+        
+        // 🔥 Aspetta un breve momento per assicurarci che Health Connect abbia processato i permessi
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // 🔥 Forza il refresh leggendo direttamente da Health Connect
+        const grantedPermissions = await HealthPermissionsService.getGrantedPermissions();
+        
+        // Aggiorna i permessi locali basandosi su quelli concessi
+        this.permissions = {
+          steps: grantedPermissions.includes('steps'),
+          heartRate: grantedPermissions.includes('heart_rate'),
+          sleep: grantedPermissions.includes('sleep'),
+          hrv: grantedPermissions.includes('hrv'),
+          bloodPressure: grantedPermissions.includes('blood_pressure'),
+          weight: grantedPermissions.includes('weight'),
+          bodyFat: grantedPermissions.includes('body_fat'),
+          hydration: false, // Not directly available
+          mindfulness: false, // Not directly available
+        };
+      } else if (Platform.OS === 'ios') {
+        // Per iOS, i permessi vengono gestiti direttamente da HealthKit
+        // Non serve refresh esplicito
+      }
+    } catch (error) {
+      console.error('❌ Could not refresh permissions:', error);
     }
   }
 
@@ -316,7 +330,6 @@ export class HealthDataService {
     try {
       // Debounce/lock: evita sync concorrenti o troppo ravvicinate
       if (this.isSyncInProgress && !force) {
-        // 🔥 FIX: Rimuoviamo console.log eccessivi
         // 🔥 Restituisci l'ultimo dato sincronizzato invece di undefined
         return { 
           success: true, 
@@ -325,7 +338,6 @@ export class HealthDataService {
         };
       }
       if (!force && this.lastSyncAt && Date.now() - this.lastSyncAt < 60_000) {
-        // 🔥 FIX: Rimuoviamo console.log eccessivi
         // 🔥 Restituisci l'ultimo dato sincronizzato invece di undefined
         return { 
           success: true, 
@@ -335,7 +347,12 @@ export class HealthDataService {
       }
 
       this.isSyncInProgress = true;
-      // 🔥 FIX: Rimuoviamo console.log eccessivi
+
+      // 🔥 CRITICO: Verifica se abbiamo permessi concessi PRIMA di sincronizzare
+      const hasAnyPermission = Object.values(this.permissions).some(Boolean);
+      const shouldUseRealData = hasAnyPermission && 
+        ((Platform.OS === 'ios' && AppleHealthKit) || 
+         (Platform.OS === 'android' && HealthConnect));
 
       let healthData: HealthData;
       let source: 'healthkit' | 'health_connect' | 'manual' | 'mock' = 'mock';
@@ -346,7 +363,13 @@ export class HealthDataService {
           healthData = result.data;
           source = 'healthkit';
         } else {
-          throw new Error(result.error || 'HealthKit sync failed');
+          // 🔥 Se i permessi sono concessi ma la sync fallisce, usa l'ultimo dato reale
+          if (this.lastHealthData && this.lastHealthData.steps && this.lastHealthData.steps > 0) {
+            healthData = this.lastHealthData;
+            source = 'healthkit'; // Mantieni la source originale
+          } else {
+            throw new Error(result.error || 'HealthKit sync failed');
+          }
         }
       } else if (Platform.OS === 'android' && HealthConnect && 
                  (this.permissions.steps || this.permissions.heartRate || this.permissions.sleep)) {
@@ -356,10 +379,27 @@ export class HealthDataService {
           healthData = result.data;
           source = 'health_connect';
         } else {
-          throw new Error(result.error || 'Health Connect sync failed');
+          // 🔥 CRITICO: Se i permessi sono concessi ma la sync fallisce, usa l'ultimo dato reale
+          // NON cadere mai nel fallback ai mock se i permessi sono concessi
+          if (this.lastHealthData && shouldUseRealData) {
+            // Verifica che l'ultimo dato sia reale (non mock) controllando se ha valori significativi
+            const hasRealData = (this.lastHealthData.steps && this.lastHealthData.steps > 0) ||
+                                (this.lastHealthData.heartRate && this.lastHealthData.heartRate > 0) ||
+                                (this.lastHealthData.sleepHours && this.lastHealthData.sleepHours > 0);
+            
+            if (hasRealData) {
+              healthData = this.lastHealthData;
+              source = 'health_connect'; // Mantieni la source originale
+            } else {
+              throw new Error(result.error || 'Health Connect sync failed');
+            }
+          } else {
+            throw new Error(result.error || 'Health Connect sync failed');
+          }
         }
-      } else if (this.config.fallbackToMock || (Platform.OS === 'android' && !HealthConnect)) {
-        // 🔥 FIX: Rimuoviamo console.log eccessivi
+      } else if (this.config.fallbackToMock && !shouldUseRealData) {
+        // 🔥 SOLO se NON abbiamo permessi concessi, usa i mock
+        // Se abbiamo permessi concessi, NON usare mai i mock
         healthData = this.generateMockHealthData();
         source = 'mock';
       } else {
@@ -379,14 +419,21 @@ export class HealthDataService {
         const syncResult = await syncService.syncHealthData(currentUser.id, healthData, source);
         
         if (!syncResult.success) {
-          // 🔥 FIX: Solo errori critici in console
           console.error('❌ Failed to sync to Supabase:', syncResult.error);
         }
-        // 🔥 FIX: Rimuoviamo console.log eccessivi
       }
 
-      // 🔥 Memorizza l'ultimo dato sincronizzato
-      this.lastHealthData = healthData;
+      // 🔥 Memorizza l'ultimo dato sincronizzato SOLO se è reale (non mock)
+      // Questo previene che i dati mock sovrascrivano i dati reali
+      if (source !== 'mock') {
+        this.lastHealthData = healthData;
+        this.lastHealthDataSource = source;
+      } else if (this.lastHealthDataSource === null) {
+        // 🔥 Se non abbiamo mai avuto dati reali, possiamo salvare i mock temporaneamente
+        // Ma solo se non abbiamo mai avuto dati reali prima
+        this.lastHealthData = healthData;
+        this.lastHealthDataSource = 'mock';
+      }
       
       const result: HealthDataSyncResult = {
         success: true,
@@ -397,6 +444,19 @@ export class HealthDataService {
       return result;
     } catch (error) {
       console.error('❌ Health data sync failed:', error);
+      
+      // 🔥 CRITICO: Se abbiamo permessi concessi e dati reali precedenti, restituiscili
+      // NON restituire un errore che potrebbe causare il fallback ai mock
+      const hasAnyPermission = Object.values(this.permissions).some(Boolean);
+      if (hasAnyPermission && this.lastHealthData && this.lastHealthDataSource !== 'mock') {
+        // Se abbiamo dati reali precedenti (non mock), restituiscili
+        return {
+          success: true,
+          data: this.lastHealthData,
+          lastSyncDate: this.lastSyncAt ? new Date(this.lastSyncAt) : new Date(),
+        };
+      }
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

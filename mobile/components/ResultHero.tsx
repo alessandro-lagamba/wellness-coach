@@ -28,15 +28,24 @@ export const ResultHero: React.FC<ResultHeroProps> = ({
     const insets = useSafeAreaInsets();
     const isDark = mode === 'dark';
 
+    // Helper to convert hex to rgba
+    const hexToRgba = (hex: string, alpha: number): string => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
     return (
         <View style={[styles.container, { height: 340 + insets.top, paddingTop: 0 }, style]}>
             {imageUri ? (
                 <Image source={imageUri} style={styles.image} resizeMode="cover" />
             ) : (
                 <LinearGradient
-                    colors={[color, isDark ? '#111827' : '#1e293b']}
+                    colors={[hexToRgba(color, 0), hexToRgba(color, 0.5), color]}
+                    locations={[0, 0.5, 1]}
                     start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                    end={{ x: 0, y: 1 }}
                     style={styles.gradient}
                 />
             )}

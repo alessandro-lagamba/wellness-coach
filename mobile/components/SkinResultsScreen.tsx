@@ -11,6 +11,7 @@ import {
   BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaWrapper } from './shared/SafeAreaWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SkinCapture } from '../stores/analysis.store';
@@ -141,14 +142,26 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
 
   if (!results) return null;
 
+  // Determine hero color based on overall score
+  const heroColor = overallScore > 70 ? '#10b981' : overallScore > 40 ? '#f59e0b' : '#ef4444';
+
+  // Helper to convert hex to rgba
+  const hexToRgba = (hex: string, alpha: number): string => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
   return (
-    <LinearGradient
-      colors={isDark 
-        ? ['rgba(17, 24, 39, 0)', 'rgba(17, 24, 39, 0.3)', 'rgba(31, 41, 55, 1)'] 
-        : ['rgba(248, 250, 252, 0)', 'rgba(248, 250, 252, 0.3)', 'rgba(226, 232, 240, 1)']}
-      locations={[0, 0.3, 1]}
-      style={styles.container}
-    >
+    <SafeAreaWrapper style={styles.container}>
+      <LinearGradient
+        colors={isDark 
+          ? [hexToRgba(heroColor, 0), hexToRgba(heroColor, 0.25), 'rgba(31, 41, 55, 1)'] 
+          : [hexToRgba(heroColor, 0), hexToRgba(heroColor, 0.19), 'rgba(226, 232, 240, 1)']}
+        locations={[0, 0.3, 1]}
+        style={StyleSheet.absoluteFill}
+      >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -333,7 +346,8 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
           </View>
         </View>
       </View>
-    </LinearGradient>
+      </LinearGradient>
+    </SafeAreaWrapper>
   );
 };
 

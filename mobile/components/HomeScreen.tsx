@@ -16,6 +16,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaWrapper } from './shared/SafeAreaWrapper';
 import { Avatar } from './Avatar';
 import Colors from '../constants/Colors';
 import { useTheme } from '../contexts/ThemeContext';
@@ -426,7 +427,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   }, [chartEditMode, getAvailableCharts]);
 
   // Health data hook
-  const { permissions: healthPermissions, hasData: hasHealthData, isInitialized, healthData, syncData, refreshPermissions, status: healthStatus } = useHealthData();
+  const { permissions: healthPermissions, hasData: hasHealthData, isInitialized, healthData, syncData, status: healthStatus } = useHealthData();
   const hasAnyHealthPermission =
     healthPermissions.steps ||
     healthPermissions.heartRate ||
@@ -620,7 +621,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
   // Costruisce i dati dei widget partendo dai dati reali di salute + goals
   // 🔥 FIX: Memoizziamo per evitare ricreazioni ad ogni render
-  const buildWidgetDataFromHealth = useCallback(async (): Promise<WidgetData[]> => {
+  const buildWidgetDataFromHealth = useCallback(async (overrideHealthData?: any): Promise<WidgetData[]> => {
     const goals = await widgetGoalsService.getGoals();
     const stepsGoal = goals?.steps ?? 10000;
     // 🔥 FIX: Mantieni sempre il goal in bicchieri internamente (per retrocompatibilità)
@@ -628,7 +629,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     const meditationGoal = goals?.meditation ?? 30;
     const sleepGoal = goals?.sleep ?? 8;
 
-    if (healthStatus !== 'ready') {
+    // 🔥 CRITICO: Usa i dati passati come override se disponibili, altrimenti usa healthData dal hook
+    const dataToUse = overrideHealthData || healthData;
+
+    if (healthStatus !== 'ready' && !overrideHealthData) {
       // 🔥 FIX: Per placeholder, converti goal all'unità preferita per la visualizzazione
       const { hydrationUnitService } = await import('../services/hydration-unit.service');
       const preferredUnit = await hydrationUnitService.getPreferredUnit();
@@ -651,7 +655,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     }
 
     // 🔥 Gestisci null/undefined healthData
-    if (!healthData) {
+    if (!dataToUse) {
       // 🔥 FIX: Rimuoviamo console.warn eccessivi
       // Ritorna widget con valori 0 se healthData non è disponibile
       const hd = {
@@ -671,7 +675,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       return await buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoalInGlasses, meditationGoal, sleepGoal);
     }
 
-    const hd = healthData;
+    const hd = dataToUse;
     // 🆕 Passa cycleData solo se l'utente è di genere femminile
     const cycleForWidget = userGender === 'female' ? cycleData : null;
     return await buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoalInGlasses, meditationGoal, sleepGoal, cycleForWidget);
@@ -734,25 +738,37 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       // 🔥 Aggiorna sempre i widget se abbiamo dati di salute reali (anche se sono 0)
       // Verifica se healthData è disponibile (non null/undefined) e se ci sono permessi
       if (healthData !== null && healthData !== undefined && hasAnyHealthPermission) {
-        // Aggiorna i widget con dati reali (anche se sono 0)
-        try {
-          const data = await buildWidgetDataFromHealth();
-          // 🔥 FIX: Aggiorna il ref solo dopo aver costruito i dati con successo
-          lastProcessedHealthDataRef.current = healthDataKey;
-          setWidgetData(data);
-          // 🔥 FIX: Rimuoviamo console.log eccessivi - manteniamo solo errori critici
-          // Aggiorna anche la sezione Today At a Glance
-          loadTodayGlanceData();
-        } catch (error) {
-          // 🔥 FIX: Solo errori critici in console + feedback utente per errori critici
-          console.error('❌ Error building widget data from health:', error);
-          // Mostra feedback utente solo per errori critici (non per errori di rete temporanei)
-          if (error instanceof Error && error.message.includes('critical')) {
-            Alert.alert(
-              t('common.error') || 'Errore',
-              t('home.errors.widgetDataLoad') || 'Errore nel caricamento dei dati dei widget. Riprova più tardi.'
-            );
+        // 🔥 CRITICO: Verifica che i dati siano reali (non mock) prima di aggiornare i widget
+        const hasRealData = (healthData.steps && healthData.steps > 0) ||
+                            (healthData.heartRate && healthData.heartRate > 0) ||
+                            (healthData.sleepHours && healthData.sleepHours > 0) ||
+                            (healthData.hrv && healthData.hrv > 0);
+        
+        // 🔥 Aggiorna i widget SOLO se i dati sono reali o se non abbiamo ancora dati
+        // Questo previene che i widget vengano aggiornati con dati mock
+        if (hasRealData || !lastProcessedHealthDataRef.current || lastProcessedHealthDataRef.current.startsWith('placeholder-')) {
+          try {
+            const data = await buildWidgetDataFromHealth(healthData);
+            // 🔥 FIX: Aggiorna il ref solo dopo aver costruito i dati con successo
+            lastProcessedHealthDataRef.current = healthDataKey;
+            setWidgetData(data);
+            // 🔥 FIX: Rimuoviamo console.log eccessivi - manteniamo solo errori critici
+            // Aggiorna anche la sezione Today At a Glance
+            loadTodayGlanceData();
+          } catch (error) {
+            // 🔥 FIX: Solo errori critici in console + feedback utente per errori critici
+            console.error('❌ Error building widget data from health:', error);
+            // Mostra feedback utente solo per errori critici (non per errori di rete temporanei)
+            if (error instanceof Error && error.message.includes('critical')) {
+              Alert.alert(
+                t('common.error') || 'Errore',
+                t('home.errors.widgetDataLoad') || 'Errore nel caricamento dei dati dei widget. Riprova più tardi.'
+              );
+            }
           }
+        } else {
+          // 🔥 Se i dati sono mock ma abbiamo già dati reali, non aggiornare i widget
+          console.log('⚠️ Skipping widget update: mock data detected but real data already exists');
         }
       } else if (isInitialized && (healthData === null || healthData === undefined) && !hasAnyHealthPermission) {
         // Se non ci sono dati E non ci sono permessi, usa i mock
@@ -2170,7 +2186,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={["top"]}>
+    <SafeAreaWrapper style={[styles.container, { backgroundColor: themeColors.background }]}>
       <ScrollView style={{ backgroundColor: themeColors.background }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} ref={scrollViewRef}>
         <LinearGradient colors={[themeColors.primaryDark, themeColors.primary]} style={styles.heroCard}>
           {/* Header with buttons inside the purple box */}
@@ -3325,23 +3341,55 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
           // 🔥 FIX: Forza sync immediata dei dati dopo concessione permessi
           try {
-            // 🔥 CRITICO: PRIMA aggiorna i permessi nel hook (reinizializza servizio e aggiorna stato)
-            await refreshPermissions();
+            const { HealthDataService } = await import('../services/health-data.service');
+            const healthService = HealthDataService.getInstance();
             
-            // 🔥 Poi sincronizza i dati con i nuovi permessi
-            const syncResult = await syncData();
+            // 🔥 CRITICO: PRIMA aggiorna i permessi nel servizio
+            await healthService.refreshPermissions();
             
-            // 🔥 Aspetta un attimo per dare tempo ai dati di essere processati
+            // 🔥 Aspetta un momento per assicurarci che i permessi siano effettivamente disponibili
             await new Promise(resolve => setTimeout(resolve, 500));
             
-            // 🔥 Aggiorna i widget immediatamente con i nuovi dati
-            if (syncResult.success && syncResult.data) {
-              const data = await buildWidgetDataFromHealth();
-              setWidgetData(data);
-            } else {
-              // Fallback: prova a costruire i widget con i dati disponibili
-              const data = await buildWidgetDataFromHealth();
-              setWidgetData(data);
+            // 🔥 Forza una sincronizzazione immediata bypassando il cooldown
+            const forceSyncResult = await healthService.syncHealthData(true);
+            
+            // 🔥 CRITICO: Aggiorna i widget IMMEDIATAMENTE con i dati sincronizzati
+            // Passa direttamente i dati sincronizzati invece di aspettare che il hook si aggiorni
+            if (forceSyncResult.success && forceSyncResult.data) {
+              // 🔥 Verifica che i dati siano reali (non mock) controllando se hanno valori significativi
+              const hasRealData = (forceSyncResult.data.steps && forceSyncResult.data.steps > 0) ||
+                                  (forceSyncResult.data.heartRate && forceSyncResult.data.heartRate > 0) ||
+                                  (forceSyncResult.data.sleepHours && forceSyncResult.data.sleepHours > 0) ||
+                                  (forceSyncResult.data.hrv && forceSyncResult.data.hrv > 0);
+              
+              if (hasRealData) {
+                // 🔥 Passa direttamente i dati sincronizzati per evitare che vengano usati dati mock dal hook
+                const data = await buildWidgetDataFromHealth(forceSyncResult.data);
+                setWidgetData(data);
+              }
+            }
+            
+            // 🔥 Aggiorna anche tramite il hook per mantenere lo stato sincronizzato
+            // Questo notifica il hook useHealthData del cambiamento
+            const syncResult = await syncData();
+            
+            // 🔥 Se la prima sync non ha funzionato, prova con i dati dal hook
+            if (!forceSyncResult.success || !forceSyncResult.data) {
+              if (syncResult.success && syncResult.data) {
+                const hasRealData = (syncResult.data.steps && syncResult.data.steps > 0) ||
+                                    (syncResult.data.heartRate && syncResult.data.heartRate > 0) ||
+                                    (syncResult.data.sleepHours && syncResult.data.sleepHours > 0) ||
+                                    (syncResult.data.hrv && syncResult.data.hrv > 0);
+                
+                if (hasRealData) {
+                  const data = await buildWidgetDataFromHealth(syncResult.data);
+                  setWidgetData(data);
+                }
+              } else if (hasHealthData && healthData) {
+                // Fallback: usa i dati già disponibili dal hook
+                const data = await buildWidgetDataFromHealth(healthData);
+                setWidgetData(data);
+              }
             }
             
             // Ricarica anche i dati del Daily Copilot
@@ -3350,10 +3398,11 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             console.error('Error syncing after permissions:', error);
             // Fallback: prova comunque a sincronizzare tramite hook
             try {
-              await refreshPermissions();
-              await syncData();
-              const data = await buildWidgetDataFromHealth();
-              setWidgetData(data);
+              const syncResult = await syncData();
+              if (syncResult.success && syncResult.data) {
+                const data = await buildWidgetDataFromHealth(syncResult.data);
+                setWidgetData(data);
+              }
             } catch (fallbackError) {
               console.error('Fallback sync also failed:', fallbackError);
             }
@@ -3507,7 +3556,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         }}
       />
 
-    </SafeAreaView>
+    </SafeAreaWrapper>
   );
 };
 

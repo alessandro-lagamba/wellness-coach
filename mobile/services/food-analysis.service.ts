@@ -64,6 +64,21 @@ export class FoodAnalysisService {
       imageUrl?: string;
     }
   ): Promise<FoodAnalysis | null> {
+    // 🔥 FIX: Carica l'immagine in Supabase Storage se fornita
+    let finalImageUrl = analysis.imageUrl;
+    if (analysis.imageUrl && !analysis.imageUrl.startsWith('http')) {
+      // Se è un URI locale, caricalo in Supabase Storage
+      try {
+        const { foodImageStorageService } = await import('./food-image-storage.service');
+        // Carica l'immagine (l'analysisId verrà aggiunto dopo il salvataggio)
+        finalImageUrl = await foodImageStorageService.uploadFoodImage(analysis.imageUrl);
+        console.log('[FoodAnalysis] Image uploaded to Supabase Storage:', finalImageUrl);
+      } catch (uploadError) {
+        console.error('[FoodAnalysis] Failed to upload image to Supabase Storage:', uploadError);
+        // Continua con l'URI locale come fallback
+        console.warn('[FoodAnalysis] Using local URI as fallback:', analysis.imageUrl);
+      }
+    }
     // 🆕 Validazione dati prima del salvataggio
     const validation = DataValidationService.validateFoodAnalysis(analysis);
     if (!validation.valid) {
@@ -134,7 +149,7 @@ export class FoodAnalysisService {
                       observations: encryptedObservations || analysis.observations,
                       confidence: analysis.confidence,
                       analysis_data: analysis.analysisData || {},
-                      image_url: analysis.imageUrl || recentAnalysis.image_url,
+                      image_url: finalImageUrl || recentAnalysis.image_url, // 🔥 FIX: Usa l'URL pubblico di Supabase Storage
                     })
                     .eq('id', recentAnalysis.id)
                     .select()
@@ -207,7 +222,7 @@ export class FoodAnalysisService {
                   observations: encryptedObservations || analysis.observations,
                   confidence: analysis.confidence,
                   analysis_data: analysis.analysisData || {},
-                  image_url: analysis.imageUrl,
+                  image_url: finalImageUrl, // 🔥 FIX: Usa l'URL pubblico di Supabase Storage
                 })
                 .select()
                 .single();

@@ -34,6 +34,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaWrapper } from './shared/SafeAreaWrapper';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
 // import { AvoidSoftInput, AvoidSoftInputView } from 'react-native-avoid-softinput';
 import WellnessSuggestionPopup from './WellnessSuggestionPopup';
@@ -2100,8 +2101,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const safeAreaBackground = colors?.background || fallbackBackground;
 
   return (
-    <SafeAreaView
-      edges={['top', 'left', 'right']}
+    <SafeAreaWrapper
       style={[styles.container, dynamicStyles.container, { backgroundColor: safeAreaBackground }]}
     >
       {/* HEADER FISSO - Fuori da AvoidSoftInputView */}
@@ -3140,7 +3140,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </SafeAreaWrapper>
   );
 };
 

@@ -1539,9 +1539,24 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     );
                     const todayISO = toISODate(new Date());
 
+                    // 🔥 FIX: Helper per capitalizzare il titolo (prima lettera maiuscola di ogni parola)
+                    const capitalizeTitle = (foods: string[]): string => {
+                      if (!foods || foods.length === 0) return 'Pasto analizzato';
+                      return foods
+                        .map(food => {
+                          if (!food) return '';
+                          return food.charAt(0).toUpperCase() + food.slice(1).toLowerCase();
+                        })
+                        .join(', ');
+                    };
+
+                    // 🔥 FIX: Usa SOLO l'image_url dall'analisi salvata (URL pubblico di Supabase Storage)
+                    // L'immagine è già stata caricata in Supabase Storage durante il salvataggio dell'analisi
+                    const imageUrl = savedAnalysis.image_url;
+
                     // Crea un custom_recipe con tutte le informazioni dell'analisi
                     const customRecipe = {
-                      title: analysisResult.data.identified_foods?.join(', ') || 'Pasto analizzato',
+                      title: capitalizeTitle(analysisResult.data.identified_foods || savedAnalysis.identified_foods || []),
                       source: 'food_analysis',
                       analysis_id: savedAnalysis.id,
                       calories: analysisResult.data.macronutrients?.calories || savedAnalysis.calories || 0,
@@ -1551,9 +1566,9 @@ const FoodAnalysisScreenContent: React.FC = () => {
                         fat: analysisResult.data.macronutrients?.fats || savedAnalysis.fats || 0,
                         fiber: analysisResult.data.macronutrients?.fiber || savedAnalysis.fiber || 0,
                       },
-                      identified_foods: analysisResult.data.identified_foods || [],
+                      identified_foods: analysisResult.data.identified_foods || savedAnalysis.identified_foods || [],
                       health_score: analysisResult.data.health_score || savedAnalysis.health_score || 70,
-                      image_url: asset.uri,
+                      image_url: imageUrl, // 🔥 FIX: Usa l'URL persistente da Supabase
                     };
 
                     await mealPlanService.upsertEntry({
@@ -2054,9 +2069,24 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
                 const todayISO = toISODate(new Date());
 
+                // 🔥 FIX: Helper per capitalizzare il titolo (prima lettera maiuscola di ogni parola)
+                const capitalizeTitle = (foods: string[]): string => {
+                  if (!foods || foods.length === 0) return 'Pasto analizzato';
+                  return foods
+                    .map(food => {
+                      if (!food) return '';
+                      return food.charAt(0).toUpperCase() + food.slice(1).toLowerCase();
+                    })
+                    .join(', ');
+                };
+
+                // 🔥 FIX: Usa SOLO l'image_url dall'analisi salvata (URL pubblico di Supabase Storage)
+                // L'immagine è già stata caricata in Supabase Storage durante il salvataggio dell'analisi
+                const imageUrl = savedAnalysis.image_url;
+
                 // Crea un custom_recipe con tutte le informazioni dell'analisi
                 const customRecipe = {
-                  title: result.data.identified_foods?.join(', ') || 'Pasto analizzato',
+                  title: capitalizeTitle(result.data.identified_foods || savedAnalysis.identified_foods || []),
                   source: 'food_analysis',
                   analysis_id: savedAnalysis.id,
                   calories: result.data.macronutrients?.calories || savedAnalysis.calories || 0,
@@ -2066,9 +2096,9 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     fat: result.data.macronutrients?.fats || savedAnalysis.fats || 0,
                     fiber: result.data.macronutrients?.fiber || savedAnalysis.fiber || 0,
                   },
-                  identified_foods: result.data.identified_foods || [],
+                  identified_foods: result.data.identified_foods || savedAnalysis.identified_foods || [],
                   health_score: result.data.health_score || savedAnalysis.health_score || 70,
-                  image_url: photo.uri,
+                  image_url: imageUrl, // 🔥 FIX: Usa l'URL persistente da Supabase
                 };
 
                 await mealPlanService.upsertEntry({
@@ -2846,16 +2876,26 @@ const FoodAnalysisScreenContent: React.FC = () => {
                       }}
                     >
                       {/* Mostra immagine se disponibile (da recipe o custom_recipe) */}
-                      {entry.recipe?.image || (entry.custom_recipe as any)?.image_url ? (
-                        <Image
-                          source={{ uri: entry.recipe?.image || (entry.custom_recipe as any)?.image_url }}
-                          style={{ width: 56, height: 56, borderRadius: 12, marginRight: 12 }}
-                        />
-                      ) : (
-                        <View style={{ width: 56, height: 56, borderRadius: 12, backgroundColor: colors.surfaceElevated, marginRight: 12, alignItems: 'center', justifyContent: 'center' }}>
-                          <MaterialCommunityIcons name="silverware-fork-knife" size={24} color={colors.textSecondary} />
-                        </View>
-                      )}
+                      {(() => {
+                        // 🔥 FIX: Recupera l'immagine da custom_recipe, recipe, o dall'analisi salvata
+                        const customRecipe = entry.custom_recipe as any;
+                        const imageUri = entry.recipe?.image || customRecipe?.image_url;
+                        
+                        if (imageUri) {
+                          return (
+                            <ImageWithFallback
+                              uri={imageUri}
+                              style={{ width: 56, height: 56, borderRadius: 12, marginRight: 12 }}
+                              fallbackColor={colors.surfaceElevated}
+                            />
+                          );
+                        }
+                        return (
+                          <View style={{ width: 56, height: 56, borderRadius: 12, backgroundColor: colors.surfaceElevated, marginRight: 12, alignItems: 'center', justifyContent: 'center' }}>
+                            <MaterialCommunityIcons name="silverware-fork-knife" size={24} color={colors.textSecondary} />
+                          </View>
+                        );
+                      })()}
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }} numberOfLines={1}>
                           {entry.recipe?.title || (entry.custom_recipe as any)?.title || 'Custom Meal'}

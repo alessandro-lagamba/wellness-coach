@@ -13,6 +13,7 @@ import {
     Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
@@ -123,8 +124,19 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
     toISODate,
     getDefaultMealType,
 }) => {
-    const { colors } = useTheme();
+    const { colors, mode } = useTheme();
+    const isDark = mode === 'dark';
     const { t, language } = useTranslation();
+
+    // Helper to convert hex color to rgba with alpha
+    const hexToRgba = (hex: string, alpha: number): string => {
+        // Remove # if present
+        const cleanHex = hex.replace('#', '');
+        const r = parseInt(cleanHex.slice(0, 2), 16);
+        const g = parseInt(cleanHex.slice(2, 4), 16);
+        const b = parseInt(cleanHex.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
     const [activeTab, setActiveTab] = useState<'library' | 'suggestions'>('library');
     const selectedMeals = MEAL_TYPES.filter((type) => mealTypeFilter[type]);
     const mealSummary =
@@ -544,18 +556,32 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
                             {activeTab === 'suggestions' && renderSuggestions()}
                         </ScrollView>
                         {activeTab === 'library' && (
-                            <TouchableOpacity
-                                style={styles.fabContainer}
-                                onPress={onCreateRecipe}
-                                activeOpacity={0.9}
-                            >
-                                <View style={[styles.fabButton, { backgroundColor: colors.primary, shadowColor: colors.primary }]}>
-                                    <MaterialCommunityIcons name="plus" size={30} color={colors.textInverse} />
-                                </View>
-                                <Text style={[styles.fabLabel, { color: colors.text }]}>
-                                    {t('analysis.food.recipes.addManual')}
-                                </Text>
-                            </TouchableOpacity>
+                            <>
+                                {/* Sfondo sfumato per migliorare la leggibilità del FAB */}
+                                <LinearGradient
+                                    colors={[
+                                        'transparent',
+                                        hexToRgba(colors.background, 0.6),
+                                        hexToRgba(colors.background, 0.95),
+                                        colors.background,
+                                    ]}
+                                    locations={[0, 0.3, 0.7, 1]}
+                                    style={styles.fabGradientBackground}
+                                    pointerEvents="none"
+                                />
+                                <TouchableOpacity
+                                    style={styles.fabContainer}
+                                    onPress={onCreateRecipe}
+                                    activeOpacity={0.9}
+                                >
+                                    <View style={[styles.fabButton, { backgroundColor: colors.primary, shadowColor: colors.primary }]}>
+                                        <MaterialCommunityIcons name="plus" size={30} color={colors.textInverse} />
+                                    </View>
+                                    <Text style={[styles.fabLabel, { color: colors.text }]}>
+                                        {t('analysis.food.recipes.addManual')}
+                                    </Text>
+                                </TouchableOpacity>
+                            </>
                         )}
                     </View>
                 </SafeAreaView>
@@ -818,11 +844,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    fabGradientBackground: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 140,
+        zIndex: 0,
+    },
     fabContainer: {
         position: 'absolute',
         bottom: 24,
         alignSelf: 'center',
         alignItems: 'center',
+        zIndex: 1,
     },
     fabButton: {
         width: 64,

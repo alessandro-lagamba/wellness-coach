@@ -126,7 +126,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
           return;
         }
         if (user) {
-          Alert.alert(t('common.success'), t('auth.loginSuccess'));
+          // 🔥 FIX: Rimuoviamo l'alert di successo - è ridondante, l'utente vede già che il login è riuscito
+          // quando viene portato alla schermata principale. Questo rende il login più veloce e fluido.
           onAuthSuccess(user);
         }
       } else {
