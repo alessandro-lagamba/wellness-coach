@@ -5,9 +5,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { SpotlightOverlay, SpotlightArea } from './shared/SpotlightOverlay';
 
 const { width, height } = Dimensions.get('window');
 
@@ -21,7 +19,6 @@ interface TutorialStep {
   actionText: string;
   highlightElement?: string;
   targetScreen?: string;
-  spotlightArea?: SpotlightArea | null; // 🆕 Area da evidenziare con spotlight
 }
 
 interface InteractiveTutorialProps {
@@ -45,14 +42,6 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     ],
     actionText: 'Iniziamo!',
     targetScreen: 'home',
-    // 🆕 Spotlight sull'header di HomeScreen (area superiore centrale)
-    spotlightArea: {
-      x: 0.1,      // 10% da sinistra
-      y: 0.08,     // 8% dall'alto (header)
-      width: 0.8,  // 80% della larghezza
-      height: 0.15, // 15% dell'altezza (header + greeting)
-      borderRadius: 24,
-    },
   },
   {
     id: 'dashboard',
@@ -68,14 +57,6 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     ],
     actionText: 'Scopri i Widget',
     targetScreen: 'home',
-    // 🆕 Spotlight sull'area dei widget (centro schermo)
-    spotlightArea: {
-      x: 0.05,     // 5% da sinistra
-      y: 0.35,     // 35% dall'alto (dopo header e hero card)
-      width: 0.9,  // 90% della larghezza
-      height: 0.25, // 25% dell'altezza (area widget)
-      borderRadius: 20,
-    },
   },
   {
     id: 'widgets',
@@ -184,28 +165,6 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   }
 ];
 
-// Utils: calcola luminanza per rilevare se gradiente è chiaro
-const hexToRgb = (hex: string) => {
-  const h = hex.replace('#','');
-  const b = h.length === 3 ? h.split('').map(x=>x+x).join('') : h;
-  const int = parseInt(b, 16);
-  return { r: (int>>16)&255, g: (int>>8)&255, b: int&255 };
-};
-
-const luminance = (hex: string) => {
-  const { r,g,b } = hexToRgb(hex);
-  const a = [r,g,b].map(v=>{
-    const s = v/255;
-    return s<=0.03928 ? s/12.92 : Math.pow((s+0.055)/1.055, 2.4);
-  });
-  return 0.2126*a[0] + 0.7152*a[1] + 0.0722*a[2];
-};
-
-const isLightGradient = (colors: string[]) => {
-  const avg = colors.reduce((acc,c)=>acc+luminance(c),0)/colors.length;
-  return avg > 0.7;
-};
-
 export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
   visible, onClose, onComplete, onNavigateToScreen
 }) => {
@@ -216,27 +175,77 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const modalFadeAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(height)).current;
+  const cardScale = useRef(new Animated.Value(0.95)).current;
 
   const current = TUTORIAL_STEPS[currentStep];
   const last = currentStep === TUTORIAL_STEPS.length - 1;
-
-  const useDarkText = useMemo(()=> isLightGradient(current.color), [current.color]);
-  const titleColor = '#0f172a'; // Always dark for visibility
-  const bodyColor  = '#334155'; // Always dark for visibility
+  const accent = current.color[0];
+  const accentSecondary = current.color[current.color.length - 1] || accent;
+  const accentSoft = `${accent}1A`;
+  const accentStroke = `${accent}33`;
+  
+  // Assicurati che colors sia sempre un array di almeno 2 colori
+  const gradientColors = React.useMemo(() => {
+    if (current.color.length >= 2) {
+      return current.color as [string, string, ...string[]];
+    }
+    return [current.color[0], current.color[0]] as [string, string];
+  }, [current.color]);
 
   React.useEffect(() => {
-    Animated.timing(modalFadeAnim, {
-      toValue: visible ? 1 : 0, 
-      duration: visible ? 280 : 180, 
-      useNativeDriver: true
-    }).start();
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(modalFadeAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          damping: 22,
+          stiffness: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(modalFadeAnim, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: height,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
   }, [visible]);
 
   React.useEffect(() => {
     Animated.timing(progressAnim, {
       toValue: (currentStep+1)/TUTORIAL_STEPS.length,
-      duration: 350,
+      duration: 300,
       useNativeDriver: false,
+    }).start();
+  }, [currentStep]);
+
+  React.useEffect(() => {
+    // Reset pan quando cambia lo step
+    pan.setValue(0);
+    
+    // Assicurati che fadeAnim sia sempre visibile quando cambia lo step
+    fadeAnim.setValue(1);
+    cardScale.setValue(1);
+    
+    // Animazione micro-bounce per la card
+    Animated.spring(cardScale, {
+      toValue: 1,
+      damping: 15,
+      stiffness: 200,
+      useNativeDriver: true,
     }).start();
   }, [currentStep]);
 
@@ -246,37 +255,40 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
     setIsAnimating(true);
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    // Reset pan a 0 prima di cambiare step
+    Animated.spring(pan, { toValue: 0, useNativeDriver: true }).start();
+    
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
-      Animated.timing(scaleAnim,{ toValue: 0.96, duration: 180, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 0, duration: 120, useNativeDriver: true }),
+      Animated.timing(cardScale, { toValue: 0.95, duration: 120, useNativeDriver: true }),
     ]).start(() => {
       setCurrentStep(next);
       const step = TUTORIAL_STEPS[next];
       if (step.targetScreen && onNavigateToScreen) {
-        // Handle special navigation cases
         if (step.id === 'completato') {
-          // Navigate to home to finish
           onNavigateToScreen('home');
         } else {
           onNavigateToScreen(step.targetScreen);
         }
         
-        // Scroll behavior based on step
         setTimeout(() => {
           if (next === 2) {
-            // Scroll to widgets section
             global.scrollToWidgets?.();
           } else if (next === 3) {
-            // Scroll to AI Daily Copilot section
             global.scrollToCoplot?.();
           }
-        }, 300);
+        }, 150);
       }
 
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
-        Animated.spring(scaleAnim,{ toValue: 1, useNativeDriver: true, damping: 14, stiffness: 180 }),
-      ]).start(() => setIsAnimating(false));
+      // L'animazione di fade-in viene gestita dal useEffect quando cambia currentStep
+      // Qui aspettiamo un piccolo delay per assicurarci che il componente si sia aggiornato
+      setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+          Animated.spring(cardScale, { toValue: 1, damping: 15, stiffness: 200, useNativeDriver: true }),
+        ]).start(() => setIsAnimating(false));
+      }, 10);
     });
   };
 
@@ -304,30 +316,37 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
 
   if (!visible) return null;
 
-  const modalMaxH = Math.min(height * 0.96, 700);
-
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
-      {/* 🆕 Spotlight Overlay - mostra alone luminoso sull'area evidenziata */}
-      <SpotlightOverlay
-        visible={visible && !!current.spotlightArea}
-        spotlightArea={current.spotlightArea || undefined}
-        overlayOpacity={0.5}
-        spotlightIntensity={0.4}
-        animationDuration={400}
-      />
+      {/* Backdrop scuro per contrasto */}
+      <Animated.View style={[styles.backdrop, { opacity: modalFadeAnim }]} />
       
-      <Animated.View style={[styles.overlay, { opacity: modalFadeAnim }]}>
-        <View style={[styles.shell, { maxHeight: modalMaxH }]}>
-          <BlurView intensity={20} tint="light" style={styles.blur}>
-            <LinearGradient colors={current.color as any} style={styles.gradient}>
-              {/* Header */}
-              <View style={styles.header}>
+      {/* Bottom sheet animato */}
+      <Animated.View
+        style={[
+          styles.bottomSheet,
+          {
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
+        <View style={styles.shell}>
+          {/* Gradient dinamico per ogni step */}
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradient}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.progressContainer}>
                 <View style={styles.progressTrack}>
                   <Animated.View
                     style={[
                       styles.progressFill,
-                      { width: progressAnim.interpolate({
+                      { 
+                        width: progressAnim.interpolate({
                           inputRange: [0,1],
                           outputRange: ['0%','100%']
                         })
@@ -335,60 +354,94 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
                     ]}
                   />
                 </View>
-                <TouchableOpacity onPress={skip} hitSlop={8}>
-                  <Text style={styles.skip}>Salta</Text>
-                </TouchableOpacity>
+                <Text style={styles.stepCounter}>
+                  {currentStep + 1} / {TUTORIAL_STEPS.length}
+                </Text>
               </View>
+              <TouchableOpacity 
+                onPress={skip} 
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={styles.skipBtn}
+              >
+                <Text style={styles.skip}>Salta</Text>
+                <MaterialCommunityIcons name="close" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
 
-              {/* Content Card */}
+            <ScrollView
+              style={styles.scrollArea}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              bounces
+            >
               <Animated.View
                 {...panResponder.panHandlers}
                 style={[
-                  styles.card, 
-                  { opacity: fadeAnim, transform: [{ scale: scaleAnim }, { translateX: pan }] }
+                  styles.cardContainer,
+                  { 
+                    opacity: fadeAnim,
+                    transform: [{ scale: cardScale }, { translateX: pan }]
+                  }
                 ]}
               >
-                <View style={styles.iconWrap}>
-                  <Text style={styles.iconText}>{current.icon}</Text>
-                </View>
+                <View style={[styles.card, { borderColor: accentStroke, backgroundColor: '#ffffff' }]}>
+                  <View style={styles.iconWrap}>
+                    <Text style={styles.iconText} allowFontScaling={false}>{current.icon}</Text>
+                  </View>
 
-                <Text style={[styles.title, { color: titleColor }]}>{current.title}</Text>
-                <Text style={[styles.desc,  { color: bodyColor }]}>{current.description}</Text>
+                  <Text style={styles.title}>{current.title}</Text>
+                  <Text style={styles.desc}>{current.description}</Text>
 
-                <ScrollView
-                  style={styles.featuresScroll}
-                  contentContainerStyle={styles.featuresContent}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {current.features.map((f, i) => (
-                    <View key={i} style={styles.featureRow}>
-                      <View style={styles.tick}>
-                        <MaterialCommunityIcons name="check" size={16} color="#16a34a" />
+                  <View style={styles.featureGrid}>
+                    {current.features.map((f, i) => (
+                      <View key={i} style={[styles.featurePill, { borderColor: accentStroke, backgroundColor: accentSoft }]}>
+                        <MaterialCommunityIcons name="radiobox-marked" size={14} color={accent} />
+                        <Text style={styles.featureTxt}>{f}</Text>
                       </View>
-                      <Text style={styles.featureText}>{f}</Text>
-                    </View>
-                  ))}
-                </ScrollView>
+                    ))}
+                  </View>
+                </View>
               </Animated.View>
+            </ScrollView>
 
-              {/* Footer */}
-              <View style={styles.footer}>
-                {currentStep > 0 ? (
-                  <TouchableOpacity onPress={prev} disabled={isAnimating} style={styles.secondaryBtn}>
-                    <MaterialCommunityIcons name="chevron-left" size={20} color="#0f172a" />
-                    <Text style={styles.secondaryTxt}>Indietro</Text>
-                  </TouchableOpacity>
-                ) : <View style={{ width: 110 }} />}
+            {/* Footer con bottoni migliorati */}
+            <View style={styles.footer}>
+              {currentStep > 0 ? (
+                <TouchableOpacity 
+                  onPress={prev} 
+                  disabled={isAnimating} 
+                  style={styles.secondaryBtn}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="chevron-left" size={22} color="#ffffff" />
+                  <Text style={styles.secondaryTxt}>Indietro</Text>
+                </TouchableOpacity>
+              ) : <View style={{ flex: 1 }} />}
 
-                <TouchableOpacity onPress={next} disabled={isAnimating} style={styles.primaryBtn}>
+              <TouchableOpacity 
+                onPress={next} 
+                disabled={isAnimating} 
+                style={styles.primaryBtn}
+                activeOpacity={0.9}
+              >
+                <LinearGradient
+                  colors={[accent, accentSecondary]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.primaryGradient}
+                >
                   <Text style={styles.primaryTxt}>
                     {last ? 'Scopri l\'App!' : current.actionText}
                   </Text>
-                  <MaterialCommunityIcons name={last ? 'rocket-launch' : 'arrow-right'} size={20} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            </LinearGradient>
-          </BlurView>
+                  <MaterialCommunityIcons 
+                    name={last ? 'rocket-launch' : 'arrow-right'} 
+                    size={18} 
+                    color="#ffffff" 
+                  />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
         </View>
       </Animated.View>
     </Modal>
@@ -396,73 +449,208 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
 };
 
 const styles = StyleSheet.create({
-  overlay:{ flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'center', alignItems:'center' }, // 🔥 Più chiaro per vedere meglio
-  shell:{ width: width*0.92, maxWidth: 420, borderRadius:22, overflow:'hidden' },
-  blur:{ borderRadius:22, overflow:'hidden' },
-  gradient:{ padding:16, paddingBottom:24 },
-
-  header:{
-    flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:12,
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 9997,
   },
-  progressTrack:{
-    flex:1, height:6, backgroundColor:'rgba(255,255,255,0.35)', borderRadius:999, marginRight:12, overflow:'hidden'
+  bottomSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 9998,
+    maxHeight: height * 0.78,
   },
-  progressFill:{
-    height:6, backgroundColor:'#fff', borderRadius:999,
+  shell: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: -10 },
+    elevation: 20,
   },
-  skip:{ fontSize:15, fontWeight:'700', opacity:0.9, color: '#fff' },
-
-  card:{
-    backgroundColor:'rgba(255,255,255,0.85)', // 🔥 Più trasparente per vedere meglio il contenuto
-    borderRadius:20, padding:24,
-    borderWidth:2, borderColor:'rgba(255,255,255,0.9)',
-    shadowColor:'#000', shadowOpacity:0.25, shadowRadius:20, shadowOffset:{width:0,height:12},
-    elevation: 12,
-    maxHeight: 580,
+  gradient: {
+    padding: 20,
+    paddingTop: 18,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
   },
-  iconWrap:{
-    width:90, height:90, borderRadius:45, alignSelf:'center',
-    alignItems:'center', justifyContent:'center',
-    backgroundColor:'rgba(15,23,42,0.08)', marginBottom:14,
-    borderWidth:2, borderColor:'rgba(15,23,42,0.1)',
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
   },
-  iconText:{ fontSize:48, lineHeight: 54 },
-  title:{ fontSize:24, fontWeight:'900', textAlign:'center', marginBottom:8, letterSpacing: -0.5 },
-  desc:{ fontSize:15, textAlign:'center', lineHeight:22, marginBottom:16, fontWeight: '500' },
-
-  featuresScroll:{ maxHeight: 240 },
-  featuresContent:{ paddingBottom:4 },
-  featureRow:{
-    flexDirection:'row', alignItems:'center', gap:12,
-    paddingVertical:12, paddingHorizontal:14,
-    backgroundColor:'#f8fafc', borderRadius:16, borderWidth:1, borderColor:'#e2e8f0',
-    marginBottom:11,
-  },
-  tick:{
-    width:32, height:32, borderRadius:16, backgroundColor:'#ecfdf5',
-    alignItems:'center', justifyContent:'center', borderWidth:2, borderColor:'#86efac', flexShrink: 0
-  },
-  featureText:{ flex:1, color:'#0f172a', fontSize:16, fontWeight:'700', lineHeight: 22 },
-
-  footer:{
-    flexDirection:'row', alignItems:'center', justifyContent:'space-between',
-    paddingTop:18, gap: 10
-  },
-  secondaryBtn:{
-    flexDirection:'row', alignItems:'center', gap:6,
-    paddingVertical:11, paddingHorizontal:16,
-    backgroundColor:'#f1f5f9',
-    borderRadius:12, borderWidth:1.5, borderColor:'#cbd5e1',
+  progressContainer: {
     flex: 1,
-    justifyContent: 'center'
+    marginRight: 16,
   },
-  secondaryTxt:{ color:'#0f172a', fontSize:15, fontWeight:'700' },
-
-  primaryBtn:{
-    flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8,
-    backgroundColor:'#0f172a', paddingVertical:11, paddingHorizontal:20, borderRadius:12,
+  progressTrack: {
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 999,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  progressFill: {
+    height: 4,
+    backgroundColor: '#fff',
+    borderRadius: 999,
+  },
+  stepCounter: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.85)',
+    textAlign: 'center',
+  },
+  skipBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  skip: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  cardContainer: {
+    marginTop: 2,
+    marginBottom: 14,
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    padding: 20,
+    paddingTop: 18,
+    paddingBottom: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+    borderWidth: 1.5,
+  },
+  iconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  iconText: {
+    fontSize: 36,
+    lineHeight: 42,
+  },
+  title: {
+    fontSize: 23,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 10,
+    letterSpacing: -0.5,
+    color: '#0f172a',
+  },
+  desc: {
+    fontSize: 15,
+    textAlign: 'left',
+    lineHeight: 23,
+    marginBottom: 6,
+    fontWeight: '500',
+    color: '#0f172a',
+    paddingHorizontal: 4,
+  },
+  scrollArea: {
+    maxHeight: height * 0.62,
+  },
+  scrollContent: {
+    paddingBottom: 10,
+  },
+  featureGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  featurePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  featureTxt: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0f172a',
+    flexShrink: 1,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
     flex: 1,
-    shadowColor:'#0f172a', shadowOpacity:0.3, shadowRadius:8, shadowOffset:{width:0,height:4}
+    justifyContent: 'center',
   },
-  primaryTxt:{ color:'#fff', fontSize:15, fontWeight:'800' },
+  secondaryTxt: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  primaryBtn: {
+    flex: 1,
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 10,
+  },
+  primaryGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+  },
+  primaryTxt: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
 });
