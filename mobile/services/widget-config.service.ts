@@ -68,7 +68,6 @@ class WidgetConfigService {
     { id: 'hydration',   enabled: true, size: 'small',  position: 2 },
     { id: 'sleep',       enabled: true, size: 'large',  position: 3 },
     { id: 'hrv',         enabled: true, size: 'small',  position: 4 },
-    { id: 'analyses',    enabled: true, size: 'small',  position: 5 },
     { id: 'cycle',       enabled: false, size: 'small', position: 0 }, // Disabilitato di default, può essere abilitato
   ];
 
@@ -178,6 +177,43 @@ class WidgetConfigService {
     if (!widget) return;
 
     const oldSize = widget.size;
+    const row = Math.floor(widget.position / 3);
+    
+    // 🔥 FIX: Simula la configurazione finale dopo il cambio e la gestione dei conflitti
+    const testCfg = cfg.map(w => ({ ...w }));
+    const testWidget = testCfg.find(w => w.id === widgetId)!;
+    testWidget.size = size;
+    
+    // Simula handleSizeConflict per vedere quali widget verrebbero disabilitati
+    const newWidth = this.getSizeWidth(size);
+    const col = widget.position % 3;
+    const widgetsInRow = testCfg.filter(w =>
+      w.enabled &&
+      Math.floor(w.position / 3) === row &&
+      w.id !== widgetId
+    );
+    
+    if (newWidth === 3) {
+      // Il large copre tutta la riga, disabilita tutti gli altri widget nella riga
+      widgetsInRow.forEach(w => { w.enabled = false; });
+    } else if (newWidth === 2) {
+      const startCol = col;
+      const endCol = startCol + 1;
+      widgetsInRow.forEach(w => {
+        const wCol = w.position % 3;
+        if (wCol >= startCol && wCol <= endCol) {
+          w.enabled = false;
+        }
+      });
+    }
+    
+    // 🔥 FIX: Valida che la configurazione finale sia valida
+    if (!this.isValidRowLayout(testCfg, widgetId, size, row)) {
+      console.warn('⚠️ Invalid widget layout: cannot have 2 medium widgets or other invalid combinations');
+      return; // Non applicare il cambio se la combinazione finale non è valida
+    }
+
+    // Applica il cambio
     widget.size = size;
 
     if (this.getSizeWidth(size) > this.getSizeWidth(oldSize)) {
@@ -186,6 +222,49 @@ class WidgetConfigService {
     }
 
     await this.save(cfg);
+  }
+
+  /** 🔥 FIX: Valida che la combinazione di widget in una riga sia valida
+   * Regole:
+   * - Massimo 3 slot per riga
+   * - 1 widget L = 3 slot ✅
+   * - 1 widget M + 1 widget S = 2 + 1 = 3 slot ✅
+   * - 3 widget S = 1 + 1 + 1 = 3 slot ✅
+   * - NON valido: 2 widget M = 2 + 2 = 4 slot ❌
+   */
+  private isValidRowLayout(cfg: WidgetConfig[], widgetId: string, newSize: WidgetSize, row: number): boolean {
+    // Simula la configurazione con il nuovo size
+    const widgetsInRow = cfg
+      .filter(w => w.enabled && Math.floor(w.position / 3) === row)
+      .map(w => ({
+        ...w,
+        size: w.id === widgetId ? newSize : w.size
+      }));
+
+    // Calcola la larghezza totale occupata nella riga
+    let totalWidth = 0;
+    for (const w of widgetsInRow) {
+      totalWidth += this.getSizeWidth(w.size);
+    }
+
+    // La larghezza totale non deve superare 3
+    if (totalWidth > 3) {
+      return false;
+    }
+
+    // Controlla che non ci siano 2 widget M insieme
+    const mediumWidgets = widgetsInRow.filter(w => w.size === 'medium');
+    if (mediumWidgets.length > 1) {
+      return false;
+    }
+
+    // Se c'è un widget L, non ci devono essere altri widget nella riga
+    const largeWidgets = widgetsInRow.filter(w => w.size === 'large');
+    if (largeWidgets.length > 0 && widgetsInRow.length > 1) {
+      return false;
+    }
+
+    return true;
   }
 
   // Gestisce i conflitti quando un widget viene allargato
@@ -268,6 +347,24 @@ class WidgetConfigService {
       // 👉 forza sempre la size alla richiesta (default 'small')
       exists.size = size;
       if (this.isValidPosition(preferredPos ?? -1)) exists.position = preferredPos as number;
+      
+      // 🔥 FIX: Valida che la combinazione di widget nella riga sia valida
+      const row = Math.floor((preferredPos ?? exists.position) / 3);
+      if (!this.isValidRowLayout(cfg, widgetId, size, row)) {
+        console.warn('⚠️ Invalid widget layout: cannot add widget with this size');
+        // Fallback: prova a trovare una posizione valida nella stessa riga o in un'altra
+        const used = new Set(this.getOccupiedPositions(cfg));
+        for (let p = 0; p < 6; p++) {
+          if (!used.has(p)) {
+            const testRow = Math.floor(p / 3);
+            if (this.isValidRowLayout(cfg, widgetId, size, testRow)) {
+              exists.position = p;
+              break;
+            }
+          }
+        }
+      }
+      
       await this.save(cfg);
       return;
     }
@@ -275,7 +372,14 @@ class WidgetConfigService {
     let pos = 0;
     const used = new Set(this.getOccupiedPositions(cfg)); // usa pos occupate reali
     for (let p = 0; p < 6; p++) {
-      if (!used.has(p)) { pos = p; break; }
+      if (!used.has(p)) {
+        const testRow = Math.floor(p / 3);
+        // 🔥 FIX: Verifica che la combinazione sia valida prima di assegnare la posizione
+        if (this.isValidRowLayout(cfg, widgetId, size, testRow)) {
+          pos = p;
+          break;
+        }
+      }
     }
     cfg.push({ id: widgetId, enabled: true, size, position: preferredPos ?? pos });
     await this.save(cfg);
@@ -366,8 +470,6 @@ export class WidgetDataService {
         sleep: { hours: mock.sleepHours, quality: mock.sleepQuality, goal: sleepGoal, deepSleep: '2h 15m', remSleep: '1h 45m', bedtime: '11:30 PM', wakeTime: '7:30 AM' } },
       { id: 'hrv', title: 'HRV', icon: '🫀', color: '#ef4444', backgroundColor: '#fef2f2', category: 'health',
         hrv: { value: mock.hrv, restingHR: mock.restingHR, currentHR: 72, avgHRV: 35, recovery: 'Good' } },
-      { id: 'analyses', title: 'Check-In', icon: '📊', color: '#10b981', backgroundColor: '#f0fdf4', category: 'analysis',
-        analyses: { completed: mock.analysesCompleted > 0, emotionAnalysis: true, skinAnalysis: true, lastCheckIn: 'Today', streak: 5 } },
       { id: 'cycle', title: 'Cycle', icon: '🌸', color: '#ec4899', backgroundColor: '#fdf2f8', category: 'health',
         cycle: { day: 5, phase: 'menstrual', phaseName: 'Menstrual', nextPeriodDays: 24, cycleLength: 28 } },
     ];

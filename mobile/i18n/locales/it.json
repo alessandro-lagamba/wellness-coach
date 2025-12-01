@@ -358,6 +358,23 @@
       "addError": "Errore durante l'aggiunta dell'acqua. Riprova più tardi.",
       "removeError": "Errore durante la rimozione dell'acqua. Riprova più tardi."
     },
+    "meditationActions": {
+      "menuTitle": "Gestisci Meditazione",
+      "menuMessage": "Quanti minuti vuoi aggiungere o rimuovere?",
+      "currentMinutes": "Attuali: {{minutes}} min",
+      "add": "Aggiungi",
+      "remove": "Rimuovi",
+      "quickSelect": "Selezione rapida:",
+      "customMinutes": "Minuti personalizzati:",
+      "confirmAdd": "Aggiungi",
+      "confirmRemove": "Rimuovi",
+      "addedTitle": "Meditazione aggiunta",
+      "addedSuccess": "Aggiunti {{minutes}} minuti! Totale: {{minutes}} min",
+      "removedTitle": "Meditazione rimossa",
+      "removedSuccess": "Rimossi {{minutes}} minuti! Totale: {{minutes}} min",
+      "addError": "Errore durante l'aggiunta della meditazione. Riprova più tardi.",
+      "removeError": "Errore durante la rimozione della meditazione. Riprova più tardi."
+    },
     "stats": {
       "streak": "Serie",
       "momentum": "Progresso",
@@ -1861,7 +1878,12 @@
       "female": "Donna",
       "other": "Altro",
       "preferNotToSay": "Preferisco non dire"
-    }
+    },
+    "emailConfirmationError": "Errore Conferma Email",
+    "emailConfirmationErrorMessage": "Si è verificato un errore durante la conferma dell'email. Riprova più tardi.",
+    "emailConfirmed": "Email confermata con successo!",
+    "confirmingEmail": "Conferma email in corso...",
+    "redirecting": "Reindirizzamento..."
   },
   "profile": {
     "title": "Informazioni Personali",

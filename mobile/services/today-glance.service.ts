@@ -438,6 +438,161 @@ export class TodayGlanceService {
   }
 
   /**
+   * Aggiunge minuti di meditazione
+   */
+  static async addMeditationMinutes(userId: string, minutes: number): Promise<{ success: boolean; error?: string; newMinutes?: number }> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+
+      // Recupera i dati esistenti per oggi
+      const { data: existingData, error: fetchError } = await supabase
+        .from('health_data')
+        .select('mindfulness_minutes, steps, distance, calories, active_minutes, heart_rate, resting_heart_rate, hrv, sleep_hours, sleep_quality, deep_sleep_minutes, rem_sleep_minutes, light_sleep_minutes, hydration')
+        .eq('user_id', userId)
+        .eq('date', today)
+        .maybeSingle();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        // PGRST116 = no rows returned, che è ok se non esiste ancora un record
+        console.error('❌ Error fetching existing meditation data:', fetchError);
+        return {
+          success: false,
+          error: fetchError.message,
+        };
+      }
+
+      // Calcola i nuovi minuti di meditazione
+      const currentMinutes = existingData?.mindfulness_minutes || 0;
+      const newMinutes = currentMinutes + minutes;
+
+      // Recupera tutti i dati di salute attuali (o usa valori di default)
+      const healthService = HealthDataService.getInstance();
+      const currentHealthData = await healthService.getLatestSyncedHealthData();
+
+      // Prepara i dati per il sync (preserva tutti i valori esistenti e aggiorna solo mindfulness_minutes)
+      const healthDataToSync = {
+        steps: existingData?.steps ?? currentHealthData.data?.steps ?? 0,
+        distance: existingData?.distance ?? currentHealthData.data?.distance ?? 0,
+        calories: existingData?.calories ?? currentHealthData.data?.calories ?? 0,
+        activeMinutes: existingData?.active_minutes ?? currentHealthData.data?.activeMinutes ?? 0,
+        heartRate: existingData?.heart_rate ?? currentHealthData.data?.heartRate ?? 0,
+        restingHeartRate: existingData?.resting_heart_rate ?? currentHealthData.data?.restingHeartRate ?? 0,
+        hrv: existingData?.hrv ?? currentHealthData.data?.hrv ?? 0,
+        sleepHours: existingData?.sleep_hours ?? currentHealthData.data?.sleepHours ?? 0,
+        sleepQuality: existingData?.sleep_quality ?? currentHealthData.data?.sleepQuality ?? 0,
+        deepSleepMinutes: existingData?.deep_sleep_minutes ?? currentHealthData.data?.deepSleepMinutes ?? 0,
+        remSleepMinutes: existingData?.rem_sleep_minutes ?? currentHealthData.data?.remSleepMinutes ?? 0,
+        lightSleepMinutes: existingData?.light_sleep_minutes ?? currentHealthData.data?.lightSleepMinutes ?? 0,
+        hydration: existingData?.hydration ?? currentHealthData.data?.hydration ?? 0,
+        mindfulnessMinutes: newMinutes, // 🔥 Aggiorna con il nuovo valore
+      };
+
+      // Sincronizza i dati aggiornati nel database (source: 'manual' perché aggiunto manualmente dall'utente)
+      const syncService = HealthDataSyncService.getInstance();
+      const syncResult = await syncService.syncHealthData(userId, healthDataToSync, 'manual');
+
+      if (syncResult.success) {
+        return {
+          success: true,
+          newMinutes,
+        };
+      } else {
+        return {
+          success: false,
+          error: syncResult.error || 'Errore durante il salvataggio',
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error adding meditation minutes:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Errore sconosciuto',
+      };
+    }
+  }
+
+  /**
+   * Rimuove minuti di meditazione
+   */
+  static async removeMeditationMinutes(userId: string, minutes: number): Promise<{ success: boolean; error?: string; newMinutes?: number }> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+
+      // Recupera i dati esistenti per oggi
+      const { data: existingData, error: fetchError } = await supabase
+        .from('health_data')
+        .select('mindfulness_minutes, steps, distance, calories, active_minutes, heart_rate, resting_heart_rate, hrv, sleep_hours, sleep_quality, deep_sleep_minutes, rem_sleep_minutes, light_sleep_minutes, hydration')
+        .eq('user_id', userId)
+        .eq('date', today)
+        .maybeSingle();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('❌ Error fetching existing meditation data:', fetchError);
+        return {
+          success: false,
+          error: fetchError.message,
+        };
+      }
+
+      // Calcola i nuovi minuti di meditazione (rimuovi i minuti, minimo 0)
+      const currentMinutes = existingData?.mindfulness_minutes || 0;
+      const newMinutes = Math.max(0, currentMinutes - minutes);
+
+      // Se i minuti sono già 0, non fare nulla
+      if (currentMinutes === 0) {
+        return {
+          success: true,
+          newMinutes: 0,
+        };
+      }
+
+      // Recupera tutti i dati di salute attuali (o usa valori di default)
+      const healthService = HealthDataService.getInstance();
+      const currentHealthData = await healthService.getLatestSyncedHealthData();
+
+      // Prepara i dati per il sync (preserva tutti i valori esistenti e aggiorna solo mindfulness_minutes)
+      const healthDataToSync = {
+        steps: existingData?.steps ?? currentHealthData.data?.steps ?? 0,
+        distance: existingData?.distance ?? currentHealthData.data?.distance ?? 0,
+        calories: existingData?.calories ?? currentHealthData.data?.calories ?? 0,
+        activeMinutes: existingData?.active_minutes ?? currentHealthData.data?.activeMinutes ?? 0,
+        heartRate: existingData?.heart_rate ?? currentHealthData.data?.heartRate ?? 0,
+        restingHeartRate: existingData?.resting_heart_rate ?? currentHealthData.data?.restingHeartRate ?? 0,
+        hrv: existingData?.hrv ?? currentHealthData.data?.hrv ?? 0,
+        sleepHours: existingData?.sleep_hours ?? currentHealthData.data?.sleepHours ?? 0,
+        sleepQuality: existingData?.sleep_quality ?? currentHealthData.data?.sleepQuality ?? 0,
+        deepSleepMinutes: existingData?.deep_sleep_minutes ?? currentHealthData.data?.deepSleepMinutes ?? 0,
+        remSleepMinutes: existingData?.rem_sleep_minutes ?? currentHealthData.data?.remSleepMinutes ?? 0,
+        lightSleepMinutes: existingData?.light_sleep_minutes ?? currentHealthData.data?.lightSleepMinutes ?? 0,
+        hydration: existingData?.hydration ?? currentHealthData.data?.hydration ?? 0,
+        mindfulnessMinutes: newMinutes, // 🔥 Aggiorna con il nuovo valore
+      };
+
+      // Sincronizza i dati aggiornati nel database (source: 'manual' perché modificato manualmente dall'utente)
+      const syncService = HealthDataSyncService.getInstance();
+      const syncResult = await syncService.syncHealthData(userId, healthDataToSync, 'manual');
+
+      if (syncResult.success) {
+        return {
+          success: true,
+          newMinutes,
+        };
+      } else {
+        return {
+          success: false,
+          error: syncResult.error || 'Errore durante il salvataggio',
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error removing meditation minutes:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Errore sconosciuto',
+      };
+    }
+  }
+
+  /**
    * Gestisce le azioni rapide per ogni widget
    */
   static async handleQuickAction(widgetId: string, action: string, userId?: string): Promise<boolean> {

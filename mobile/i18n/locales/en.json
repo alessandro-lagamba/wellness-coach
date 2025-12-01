@@ -356,6 +356,23 @@
       "addError": "Error adding water. Please try again later.",
       "removeError": "Error removing water. Please try again later."
     },
+    "meditationActions": {
+      "menuTitle": "Manage Meditation",
+      "menuMessage": "How many minutes would you like to add or remove?",
+      "currentMinutes": "Current: {{minutes}} min",
+      "add": "Add",
+      "remove": "Remove",
+      "quickSelect": "Quick select:",
+      "customMinutes": "Custom minutes:",
+      "confirmAdd": "Add",
+      "confirmRemove": "Remove",
+      "addedTitle": "Meditation added",
+      "addedSuccess": "Added {{minutes}} minutes! Total: {{minutes}} min",
+      "removedTitle": "Meditation removed",
+      "removedSuccess": "Removed {{minutes}} minutes! Total: {{minutes}} min",
+      "addError": "Error adding meditation. Please try again later.",
+      "removeError": "Error removing meditation. Please try again later."
+    },
     "stats": {
       "streak": "Streak",
       "momentum": "Progress",
@@ -1825,7 +1842,12 @@
       "female": "Female",
       "other": "Other",
       "preferNotToSay": "Prefer not to say"
-    }
+    },
+    "emailConfirmationError": "Email Confirmation Error",
+    "emailConfirmationErrorMessage": "An error occurred while confirming your email. Please try again later.",
+    "emailConfirmed": "Email confirmed successfully!",
+    "confirmingEmail": "Confirming email...",
+    "redirecting": "Redirecting..."
   },
   "profile": {
     "title": "Personal Information",

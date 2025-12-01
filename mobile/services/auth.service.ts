@@ -267,7 +267,11 @@ export class AuthService {
   static async createUserProfile(
     userId: string,
     email: string,
-    fullName?: string
+    fullName?: string,
+    firstName?: string,
+    lastName?: string,
+    age?: number,
+    gender?: string
   ): Promise<UserProfile | null> {
     try {
       // Ottieni l'utente autenticato corrente
@@ -285,14 +289,14 @@ export class AuthService {
         return null;
       }
 
-      // Parse first_name and last_name from fullName
-      let firstName: string | undefined;
-      let lastName: string | undefined;
+      // 🔥 FIX: Usa firstName/lastName passati come parametri, altrimenti parse da fullName
+      let finalFirstName: string | undefined = firstName;
+      let finalLastName: string | undefined = lastName;
       
-      if (fullName && fullName.trim()) {
+      if (!finalFirstName && !finalLastName && fullName && fullName.trim()) {
         const nameParts = fullName.trim().split(' ');
-        firstName = nameParts[0];
-        lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : undefined;
+        finalFirstName = nameParts[0];
+        finalLastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : undefined;
       }
 
       const { data, error } = await supabase
@@ -301,8 +305,10 @@ export class AuthService {
           id: user.id, // Usa l'ID dell'utente autenticato
           email,
           full_name: fullName, // Keep for backward compatibility
-          first_name: firstName,
-          last_name: lastName,
+          first_name: finalFirstName,
+          last_name: finalLastName,
+          age: age !== undefined && age !== null ? age : null,
+          gender: gender || null,
         })
         .select()
         .single();

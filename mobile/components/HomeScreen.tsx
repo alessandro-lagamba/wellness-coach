@@ -50,6 +50,7 @@ import DailyCopilotHistory from './DailyCopilotHistory';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
 import { HydrationActionModal } from './HydrationActionModal';
+import { MeditationActionModal } from './MeditationActionModal';
 import MoodCheckinCard from './MoodCheckinCard';
 import SleepCheckinCard from './SleepCheckinCard';
 import PrimaryCTA from './PrimaryCTA';
@@ -407,6 +408,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   const [chartEditMode, setChartEditMode] = useState<boolean>(false);
   const [chartSelectionModal, setChartSelectionModal] = useState<boolean>(false);
   const [hydrationActionModal, setHydrationActionModal] = useState<boolean>(false);
+  const [meditationActionModal, setMeditationActionModal] = useState<boolean>(false);
   const [chartDetailModal, setChartDetailModal] = useState<{ visible: boolean; chartType: ChartType | null; currentValue?: number; color: string }>({
     visible: false,
     chartType: null,
@@ -536,10 +538,6 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           recovery: 'Good',
         }
       },
-      {
-        id: 'analyses', title: t('widgets.analyses'), icon: '📊', color: '#10b981', backgroundColor: '#f0fdf4', category: 'analysis',
-        analyses: { completed: true, emotionAnalysis: true, skinAnalysis: true, lastCheckIn: t('home.analyses.today'), streak: 0 }
-      },
       // 🆕 Aggiungi widget ciclo solo se l'utente è di genere femminile E ci sono dati disponibili
       // 🔥 FIX: Includi il widget ciclo per utenti femminili anche se i dati del ciclo non sono ancora caricati
       ...(userGender === 'female' ? [{
@@ -626,7 +624,6 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       case 'hydration': return t('widgets.hydration');
       case 'sleep': return t('widgets.sleep');
       case 'hrv': return t('widgets.hrv');
-      case 'analyses': return t('widgets.analyses');
       case 'cycle': return t('widgets.cycle');
       default: return widgetId;
     }
@@ -881,8 +878,6 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             : (Math.round(rawValue * 10) / 10).toString();
         return t('home.hrv.value', { value: formatted });
       }
-      case 'analyses':
-        return info.analyses?.completed ? t('home.status.complete') : t('home.status.pending');
       case 'cycle':
         return info.cycle ? t('home.cycle.day', { day: info.cycle.day }) : '—';
       default:
@@ -900,8 +895,6 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         return `${t('home.hrv.currentHR')} • ${hasCurrent ? `${Math.round(currentHr)} ${t('home.bpm')}` : '—'
           }`;
       }
-      case 'analyses':
-        return info.analyses?.lastCheckIn ?? t('home.analyses.today');
       case 'cycle':
         if (!info.cycle) return '';
         const phaseKey = `home.cycle.phases.${info.cycle.phase}`;
@@ -926,8 +919,6 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         if (hrvScore >= 30) return t('home.status.good');
         return '!';
       }
-      case 'analyses':
-        return info.analyses?.completed ? '✓' : '!';
       case 'cycle':
         if (!info.cycle) return undefined;
         // Mostra i giorni fino al prossimo periodo come trend
@@ -966,11 +957,6 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                 : '—',
           },
           { icon: '🛡️', label: t('home.hrv.recovery'), value: info.hrv?.recovery ?? t('home.status.good') },
-        ];
-      case 'analyses':
-        return [
-          { icon: '🔥', label: t('home.analyses.streak'), value: t('home.analyses.days', { count: info.analyses?.streak ?? 0 }) },
-          { icon: info.analyses?.completed ? '✅' : '🕒', label: t('home.analyses.status'), value: info.analyses?.completed ? t('home.status.loggedToday') : t('home.status.completeCheckIns') },
         ];
       case 'cycle':
         if (!info.cycle) return undefined;
@@ -1519,15 +1505,28 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           );
         }
         break;
-      case 'meditation': // <-- id corretto
-        router.push('/breathing-exercise' as any);
+      case 'meditation':
+        // 🔥 FIX: Mostra modal per aggiungere/rimuovere minuti di meditazione quando si fa tap sul widget
+        try {
+          const currentUser = await AuthService.getCurrentUser();
+          if (!currentUser?.id) {
+            UserFeedbackService.showWarning('Devi essere loggato per gestire la meditazione.');
+            return;
+          }
+
+          // Mostra modal personalizzato
+          setMeditationActionModal(true);
+        } catch (error) {
+          console.error('❌ Error managing meditation:', error);
+          UserFeedbackService.showError(
+            t('home.meditationActions.addError') || 'Errore durante la gestione della meditazione',
+            t('common.error') || 'Errore'
+          );
+        }
         break;
       case 'hrv':
         break;
       case 'sleep':
-        break;
-      case 'analyses':
-        router.push('/(tabs)/emotion' as any);
         break;
       case 'cycle':
         // 🆕 Apri modal per configurare/visualizzare il ciclo mestruale
@@ -1567,7 +1566,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
   // 🔥 Lista di tutti i widget disponibili (filtra 'cycle' se l'utente non è di genere femminile)
   const ALL_AVAILABLE_WIDGETS = useMemo(() => {
-    const baseWidgets = ['steps', 'meditation', 'hydration', 'sleep', 'hrv', 'analyses'];
+    const baseWidgets = ['steps', 'meditation', 'hydration', 'sleep', 'hrv'];
     // Aggiungi 'cycle' solo se l'utente è di genere femminile
     if (userGender === 'female') {
       baseWidgets.push('cycle');
@@ -1641,6 +1640,82 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     return slots;
   };
 
+  // 🆕 Stato per lo streak
+  const [streakDays, setStreakDays] = useState<number>(0);
+
+  // 🆕 Calcola lo streak basato su daily_copilot_analyses
+  useEffect(() => {
+    const calculateStreak = async () => {
+      try {
+        const currentUser = await AuthService.getCurrentUser();
+        if (!currentUser?.id) {
+          setStreakDays(0);
+          return;
+        }
+
+        const { supabase } = await import('../lib/supabase');
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        
+        // Recupera tutti i check-in degli ultimi 90 giorni per calcolare lo streak
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 90);
+        const startDateStr = startDate.toISOString().split('T')[0];
+
+        const { data: checkins, error } = await supabase
+          .from('daily_copilot_analyses')
+          .select('date')
+          .eq('user_id', currentUser.id)
+          .gte('date', startDateStr)
+          .lte('date', todayStr)
+          .order('date', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching streak data:', error);
+          setStreakDays(0);
+          return;
+        }
+
+        if (!checkins || checkins.length === 0) {
+          setStreakDays(0);
+          return;
+        }
+
+        // Calcola giorni consecutivi partendo da oggi
+        const dates = new Set(checkins.map(c => c.date));
+        let streak = 0;
+        const checkDate = new Date(today);
+        
+        // Controlla se oggi c'è un check-in
+        if (dates.has(todayStr)) {
+          streak = 1;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          // Se oggi non c'è, controlla ieri
+          checkDate.setDate(checkDate.getDate() - 1);
+        }
+
+        // Continua a contare i giorni consecutivi andando indietro
+        while (checkDate >= startDate) {
+          const dateStr = checkDate.toISOString().split('T')[0];
+          if (dates.has(dateStr)) {
+            streak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+          } else {
+            break;
+          }
+        }
+
+        setStreakDays(streak);
+      } catch (error) {
+        console.error('Error calculating streak:', error);
+        setStreakDays(0);
+      }
+    };
+
+    calculateStreak();
+  }, [hasExistingMoodCheckin, hasExistingSleepCheckin]); // Ricarica quando cambiano i check-in
+
   // Generate stats dynamically based on momentum data
   const getStats = () => {
     const momentumValue = momentumData
@@ -1648,7 +1723,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       : t('home.stats.loading');
 
     return [
-      { id: 'streak', icon: 'fire', label: t('home.stats.streak'), value: t('home.stats.days', { count: 12 }) },
+      { id: 'streak', icon: 'fire', label: t('home.stats.streak'), value: t('home.stats.days', { count: streakDays }) },
       { id: 'momentum', icon: 'line-chart', label: t('home.stats.momentum'), value: momentumValue },
       { id: 'next-session', icon: 'calendar', label: t('home.stats.nextSession'), value: `${t('home.analyses.today')} • 6:00 PM` },
     ];
@@ -2449,7 +2524,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                       if (!widgetInfo) return null;
 
                       const WidgetComponent =
-                        widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'analyses' || widget.id === 'cycle'
+                        widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'cycle'
                           ? MiniInfoCard
                           : MiniGaugeChart;
 
@@ -2511,8 +2586,6 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                                 backgroundColor={widgetInfo.backgroundColor}
                                 trendValue={infoTrend}
                                 size={getWidgetSize(widget.size)}
-                                showStatus={widget.id === 'analyses'}
-                                status={widgetInfo.analyses?.completed ? 'completed' : 'pending'}
                                 detailChips={infoDetails}
                               />
                             )}
@@ -2543,7 +2616,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                       if (!widgetInfo) return null;
 
                       const WidgetComponent =
-                        widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'analyses' || widget.id === 'cycle'
+                        widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'cycle'
                           ? MiniInfoCard
                           : MiniGaugeChart;
 
@@ -2604,8 +2677,6 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                                 backgroundColor={widgetInfo.backgroundColor}
                                 trendValue={infoTrend}
                                 size={getWidgetSize(widget.size)}
-                                showStatus={widget.id === 'analyses'}
-                                status={widgetInfo.analyses?.completed ? 'completed' : 'pending'}
                                 detailChips={infoDetails}
                               />
                             )}
@@ -3574,6 +3645,63 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           } else {
             UserFeedbackService.showError(
               result.error || t('home.hydrationActions.removeError') || 'Errore durante la rimozione dell\'acqua',
+              t('common.error') || 'Errore'
+            );
+          }
+        }}
+      />
+
+      {/* Meditation Action Modal */}
+      <MeditationActionModal
+        visible={meditationActionModal}
+        onClose={() => setMeditationActionModal(false)}
+        currentMinutes={widgetData.find(w => w.id === 'meditation')?.meditation?.minutes || 0}
+        onAdd={async (minutes: number) => {
+          const currentUser = await AuthService.getCurrentUser();
+          if (!currentUser?.id) return;
+
+          const result = await TodayGlanceService.addMeditationMinutes(currentUser.id, minutes);
+          
+          if (result.success) {
+            UserFeedbackService.showSuccess(
+              t('home.meditationActions.addedSuccess', { 
+                minutes: result.newMinutes || 0
+              }) || `Aggiunti ${minutes} minuti! Totale: ${result.newMinutes || 0} min`,
+              t('home.meditationActions.addedTitle') || 'Meditazione aggiunta'
+            );
+
+            // Aggiorna i dati di salute e i widget
+            await syncData();
+            const updatedWidgetData = await buildWidgetDataFromHealth();
+            setWidgetData(updatedWidgetData);
+          } else {
+            UserFeedbackService.showError(
+              result.error || t('home.meditationActions.addError') || 'Errore durante l\'aggiunta della meditazione',
+              t('common.error') || 'Errore'
+            );
+          }
+        }}
+        onRemove={async (minutes: number) => {
+          const currentUser = await AuthService.getCurrentUser();
+          if (!currentUser?.id) return;
+
+          const result = await TodayGlanceService.removeMeditationMinutes(currentUser.id, minutes);
+          
+          if (result.success) {
+            UserFeedbackService.showSuccess(
+              t('home.meditationActions.removedSuccess', { 
+                minutes: result.newMinutes || 0
+              }) || `Rimossi ${minutes} minuti! Totale: ${result.newMinutes || 0} min`,
+              t('home.meditationActions.removedTitle') || 'Meditazione rimossa'
+            );
+
+            // Aggiorna i dati di salute e i widget
+            await syncData();
+            const updatedWidgetData = await buildWidgetDataFromHealth();
+            setWidgetData(updatedWidgetData);
+          } else {
+            UserFeedbackService.showError(
+              result.error || t('home.meditationActions.removeError') || 'Errore durante la rimozione della meditazione',
               t('common.error') || 'Errore'
             );
           }

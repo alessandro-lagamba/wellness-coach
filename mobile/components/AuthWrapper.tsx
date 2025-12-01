@@ -150,7 +150,9 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           // 🔥 FIX: Estrai i dati dai metadata PRIMA di creare/aggiornare il profilo
           const firstName = currentUser.user_metadata?.first_name;
           const lastName = currentUser.user_metadata?.last_name;
-          const age = currentUser.user_metadata?.age;
+          // 🔥 FIX: Gestisci age come numero o stringa (può essere salvato come numero nei metadata)
+          const ageValue = currentUser.user_metadata?.age;
+          const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : undefined);
           const gender = currentUser.user_metadata?.gender;
           
           if (!existingProfile) {
@@ -161,22 +163,16 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
                             currentUser.email?.split('@')[0] || 
                             'User';
             
+            // 🔥 FIX: Crea il profilo con tutti i dati disponibili, inclusi age e gender
             await AuthService.createUserProfile(
               currentUser.id,
               currentUser.email || '',
-              fullName
+              fullName,
+              firstName,
+              lastName,
+              age,
+              gender
             );
-            
-            // 🔥 FIX: Aggiorna sempre i dati aggiuntivi se presenti nei metadata
-            if (firstName || lastName || age || gender) {
-              await AuthService.updateUserProfile(currentUser.id, {
-                first_name: firstName,
-                last_name: lastName,
-                age: age ? parseInt(age) : undefined,
-                gender: gender,
-              });
-              console.log('✅ User profile metadata updated after creation');
-            }
             
             console.log('✅ User profile created successfully after email verification');
           } else {
@@ -187,18 +183,21 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
             const needsUpdate = 
               (firstName && existingProfile.first_name !== firstName) ||
               (lastName && existingProfile.last_name !== lastName) ||
-              (age && existingProfile.age !== parseInt(age)) ||
+              (age !== undefined && age !== null && existingProfile.age !== age) ||
               (gender && existingProfile.gender !== gender);
             
-            if (needsUpdate && (firstName || lastName || age || gender)) {
+            if (needsUpdate) {
               console.log('🔄 Updating existing profile with metadata...');
-              await AuthService.updateUserProfile(currentUser.id, {
-                first_name: firstName || existingProfile.first_name,
-                last_name: lastName || existingProfile.last_name,
-                age: age ? parseInt(age) : existingProfile.age,
-                gender: gender || existingProfile.gender,
-              });
-              console.log('✅ User profile updated with metadata');
+              const updateData: any = {};
+              if (firstName && existingProfile.first_name !== firstName) updateData.first_name = firstName;
+              if (lastName && existingProfile.last_name !== lastName) updateData.last_name = lastName;
+              if (age !== undefined && age !== null && existingProfile.age !== age) updateData.age = age;
+              if (gender && existingProfile.gender !== gender) updateData.gender = gender;
+              
+              if (Object.keys(updateData).length > 0) {
+                await AuthService.updateUserProfile(currentUser.id, updateData);
+                console.log('✅ User profile updated with metadata:', updateData);
+              }
             }
           }
         } else {

@@ -449,7 +449,7 @@ export class UnifiedAnalysisService {
   /**
    * Get API key status
    */
-  getApiKeyStatus(): { openai: boolean; configured: boolean } {
+  getApiKeyStatus(): { configured: boolean; valid: boolean } {
     return this.openaiService.getApiKeyStatus();
   }
 

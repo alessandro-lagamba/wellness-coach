@@ -769,10 +769,10 @@ Schema: {
   /**
    * Get API key status (without exposing the key)
    */
-  getApiKeyStatus(): { openai: boolean; configured: boolean } {
+  getApiKeyStatus(): { configured: boolean; valid: boolean } {
     return {
-      openai: this.isInitialized(),
       configured: !!this.apiKey,
+      valid: this.isInitialized() && !!this.apiKey,
     };
   }
 

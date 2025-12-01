@@ -331,7 +331,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
             >
               <MaterialCommunityIcons name="camera-retake" size={20} color={colors.text} />
               <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-                {t('analysis.skin.results.retake') || 'Retake'}
+                {t('analysis.skin.results.retake') || t('common.retake') || (language === 'it' ? 'Ripeti' : 'Retake')}
               </Text>
             </TouchableOpacity>
 

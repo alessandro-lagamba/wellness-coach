@@ -235,6 +235,7 @@ function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => v
               >
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="breathing-exercise" options={{ headerShown: false }} />
+                <Stack.Screen name="auth/confirm" options={{ headerShown: false }} />
               </Stack>
             </NavThemeProvider>
           </TabBarVisibilityProvider>

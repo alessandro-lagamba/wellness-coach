@@ -104,7 +104,6 @@ export const WidgetSelectionModal: React.FC<WidgetSelectionModalProps> = ({
       hydration: 'cup-water',
       sleep: 'sleep',
       hrv: 'heart-pulse',
-      analyses: 'chart-line',
       cycle: 'flower',
     };
     return icons[widgetId] || 'widget';
@@ -117,7 +116,6 @@ export const WidgetSelectionModal: React.FC<WidgetSelectionModalProps> = ({
       hydration: t('widgets.hydration'),
       sleep: t('widgets.sleep'),
       hrv: t('widgets.hrv'),
-      analyses: t('widgets.analyses'),
       cycle: t('widgets.cycle'),
     };
     return titles[widgetId] || widgetId;

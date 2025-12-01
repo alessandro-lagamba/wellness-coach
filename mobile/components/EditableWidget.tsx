@@ -215,7 +215,9 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
   });
 
   const handleTap = () => {
-    if (editMode) return;
+    // 🔥 FIX: Se siamo in edit mode, ignora il tap per evitare conflitti con il drag
+    if (editMode || isDragging) return;
+    // 🔥 FIX: Chiama onPress solo se non siamo in modalità di modifica
     onPress?.();
   };
 
@@ -237,13 +239,15 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
       onGestureEvent={onGestureEvent}
       onHandlerStateChange={onHandlerStateChange}
       activeOffsetY={[-10, 10]}
+      shouldCancelWhenOutside={true}
     >
       <Animated.View style={animatedStyle}>
         <TouchableOpacity
-          activeOpacity={0.9}
+          activeOpacity={editMode ? 1 : 0.9}
           onPress={handleTap}
           onLongPress={handleLongPress}
           delayLongPress={450}
+          disabled={editMode && isDragging}
           style={[
             { opacity: isEnabled ? 1 : 0.5 },
             editMode && styles.editModeIndicator,
