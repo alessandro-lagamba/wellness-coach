@@ -533,8 +533,8 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                       <ActivityIndicator size="small" color="#4facfe" />
                     ) : (
                       <>
-                        <MaterialCommunityIcons name="heart-pulse" size={20} color="#4facfe" />
-                        <Text style={styles.requestButtonText}>
+                        <MaterialCommunityIcons name="heart-pulse" size={18} color="#4facfe" style={{ flexShrink: 0 }} />
+                        <Text style={styles.requestButtonText} numberOfLines={1} ellipsizeMode="tail">
                           {t('modals.healthPermissions.requestPermissions', { count: selectedPermissions.length }) || 'Concedi i permessi consigliati'}
                         </Text>
                       </>
@@ -765,33 +765,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
   },
   skipButton: {
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    flexShrink: 1,
   },
   skipButtonText: {
     color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
   },
   requestButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#fff',
     paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    flex: 1,
+    minWidth: 0, // Permette al flex di funzionare correttamente
   },
   requestButtonText: {
     color: '#4facfe',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
-    marginLeft: 8,
+    marginLeft: 6,
+    flexShrink: 1,
+    textAlign: 'center',
   },
 });

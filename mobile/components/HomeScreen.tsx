@@ -541,15 +541,21 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         analyses: { completed: true, emotionAnalysis: true, skinAnalysis: true, lastCheckIn: t('home.analyses.today'), streak: 0 }
       },
       // 🆕 Aggiungi widget ciclo solo se l'utente è di genere femminile E ci sono dati disponibili
-      ...(userGender === 'female' && cycle ? [{
-        id: 'cycle', title: t('widgets.cycle'), icon: '🌸', color: '#ec4899', backgroundColor: '#fdf2f8', category: 'health' as const,
-        cycle: {
+      // 🔥 FIX: Includi il widget ciclo per utenti femminili anche se i dati del ciclo non sono ancora caricati
+      ...(userGender === 'female' ? [{
+        id: 'cycle', 
+        title: t('widgets.cycle'), 
+        icon: '🌸', 
+        color: '#ec4899', 
+        backgroundColor: '#fdf2f8', 
+        category: 'health' as const,
+        cycle: cycle ? {
           day: cycle.day,
           phase: cycle.phase,
           phaseName: cycle.phaseName,
           nextPeriodDays: cycle.nextPeriodDays,
           cycleLength: cycle.cycleLength,
-        }
+        } : undefined
       }] : []),
     ];
   };
@@ -566,6 +572,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       if (currentUser?.id) {
         const userProfile = await AuthService.getUserProfile(currentUser.id);
         const gender = userProfile?.gender || null;
+        console.log('[HomeScreen] User gender loaded:', gender); // 🔥 DEBUG
         setUserGender(gender);
 
         // Carica i dati del ciclo solo se l'utente è di genere femminile
@@ -574,14 +581,20 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           const { widgetConfigService } = await import('../services/widget-config.service');
           const config = await widgetConfigService.getWidgetConfig();
           const cycleWidget = config.find(w => w.id === 'cycle');
+          console.log('[HomeScreen] Cycle widget config:', cycleWidget); // 🔥 DEBUG
           if (cycleWidget && !cycleWidget.enabled) {
             // Abilita il widget se non è già abilitato
-            await widgetConfigService.enableWidget('cycle', 'small');
+            await widgetConfigService.enableWidget('cycle', 'small', 0); // 🔥 FIX: Aggiungi posizione 0
             console.log('✅ Cycle widget automatically enabled for female user');
+          } else if (!cycleWidget) {
+            // Se il widget non esiste nella config, crealo
+            await widgetConfigService.enableWidget('cycle', 'small', 0);
+            console.log('✅ Cycle widget created and enabled for female user');
           }
 
           const { menstrualCycleService } = await import('../services/menstrual-cycle.service');
           const cycle = await menstrualCycleService.getCycleData();
+          console.log('[HomeScreen] Cycle data loaded:', cycle); // 🔥 DEBUG
           setCycleData(cycle);
         } else {
           setCycleData(null);
@@ -1564,7 +1577,12 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
   // 🔥 Filtra i widget NON ancora mostrati (non presenti nella config o disabilitati)
   const getAvailableWidgets = (): string[] => {
+    // 🔥 FIX: Usa ALL_AVAILABLE_WIDGETS che include 'cycle' se userGender === 'female'
     return ALL_AVAILABLE_WIDGETS.filter(widgetId => {
+      // 🔥 FIX: Filtra il widget 'cycle' se l'utente non è di genere femminile
+      if (widgetId === 'cycle' && userGender !== 'female') {
+        return false;
+      }
       const widgetInConfig = widgetConfig.find(w => w.id === widgetId);
       // Mostra solo se NON è presente nella config OPPURE è disabilitato
       return !widgetInConfig || !widgetInConfig.enabled;
@@ -2414,15 +2432,18 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                 <View style={styles.widgetRow}>
                   {(rowHasLarge(0)
                     ? widgetConfig.filter(w => w.enabled && w.position === 0 && w.size === 'large')
-                    : widgetConfig.filter(w => w.enabled && w.position < 3)
+                    : widgetConfig.filter(w => w.enabled && w.position < 3 && w.position >= 0)
                   )
-                    .sort((a, b) => a.position - b.position)
-                    .map((widget) => {
-                      // 🆕 Filtra il widget 'cycle' se l'utente non è di genere femminile
-                      if (widget.id === 'cycle' && userGender !== 'female') {
-                        return null;
+                    .filter(w => {
+                      // 🔥 FIX: Filtra il widget 'cycle' se l'utente non è di genere femminile PRIMA del map
+                      if (w.id === 'cycle' && userGender !== 'female') {
+                        return false;
                       }
-
+                      return true;
+                    })
+                    .sort((a, b) => a.position - b.position)
+                    .slice(0, rowHasLarge(0) ? 1 : 3) // 🔥 FIX: Limita esplicitamente a 3 widget per riga (o 1 large)
+                    .map((widget) => {
                       // 👇 lascia esattamente il tuo map attuale (non serve cambiare la logica interna)
                       const widgetInfo = widgetData.find(w => w.id === widget.id);
                       if (!widgetInfo) return null;
@@ -2506,15 +2527,18 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                 <View style={styles.widgetRow}>
                   {(rowHasLarge(1)
                     ? widgetConfig.filter(w => w.enabled && w.position === 3 && w.size === 'large')
-                    : widgetConfig.filter(w => w.enabled && w.position >= 3)
+                    : widgetConfig.filter(w => w.enabled && w.position >= 3 && w.position < 6)
                   )
-                    .sort((a, b) => a.position - b.position)
-                    .map((widget) => {
-                      // 🆕 Filtra il widget 'cycle' se l'utente non è di genere femminile
-                      if (widget.id === 'cycle' && userGender !== 'female') {
-                        return null;
+                    .filter(w => {
+                      // 🔥 FIX: Filtra il widget 'cycle' se l'utente non è di genere femminile PRIMA del map
+                      if (w.id === 'cycle' && userGender !== 'female') {
+                        return false;
                       }
-
+                      return true;
+                    })
+                    .sort((a, b) => a.position - b.position)
+                    .slice(0, rowHasLarge(1) ? 1 : 3) // 🔥 FIX: Limita esplicitamente a 3 widget per riga (o 1 large)
+                    .map((widget) => {
                       const widgetInfo = widgetData.find(w => w.id === widget.id);
                       if (!widgetInfo) return null;
 
@@ -4008,6 +4032,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     marginBottom: 12,
     gap: 8,
+    overflow: 'hidden', // 🔥 FIX: Nasconde i widget che escono dai 3 slot
+    flexWrap: 'nowrap', // 🔥 FIX: Impedisce il wrap dei widget
   },
   dropIndicator: {
     position: 'absolute',

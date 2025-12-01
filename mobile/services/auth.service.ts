@@ -104,7 +104,10 @@ export class AuthService {
         options: {
           data: {
             full_name: fullName,
-          }
+          },
+          // ✅ Configurazione redirect URL per conferma email
+          // Usa lo schema deep link dell'app invece di localhost
+          emailRedirectTo: 'wellnesscoach://auth/confirm',
         }
       });
 

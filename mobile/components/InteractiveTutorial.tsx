@@ -6,6 +6,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
@@ -46,13 +47,13 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'dashboard',
     title: 'Dashboard Principale',
-    description: 'La tua dashboard mostra tutti i dati di benessere in un colpo d\'occhio. Accedi per visualizzare i tuoi ultimi dati.',
+    description: 'La tua dashboard mostra tutti i dati di benessere in un colpo d\'occhio. L\'AI Daily Copilot analizza i tuoi dati e fornisce consigli personalizzati ogni giorno.',
     icon: '📊',
     color: ['#f093fb', '#f5576c'],
     features: [
       'Widget personalizzabili',
       'Dati di salute in tempo reale',
-      'AI Daily Copilot',
+      'AI Daily Copilot attivo',
       'Check-in giornalieri'
     ],
     actionText: 'Scopri i Widget',
@@ -69,21 +70,6 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       'Metriche in tempo reale',
       'Tendenze e insights',
       'Personalizzazione completa'
-    ],
-    actionText: 'Scopri il Copilot',
-    targetScreen: 'home'
-  },
-  {
-    id: 'ai-copilot',
-    title: 'AI Daily Copilot',
-    description: 'Il tuo assistente AI analizza i tuoi dati e fornisce consigli personalizzati per migliorare il tuo benessere giornaliero.',
-    icon: '🤖',
-    color: ['#43e97b', '#38f9d7'],
-    features: [
-      'Analisi giornaliera automatica',
-      'Raccomandazioni personalizzate',
-      'Insights intelligenti',
-      'Piano di benessere adattivo'
     ],
     actionText: 'Le tue Emozioni',
     targetScreen: 'home'
@@ -108,15 +94,30 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'Analisi della Pelle',
     description: 'Strumenti avanzati per l\'analisi della salute della tua pelle. Monitora la tua pelle e ricevi consigli skincare personalizzati.',
     icon: '✨',
-    color: ['#a8edea', '#fed6e3'],
+    color: ['#4a90a4', '#6b5b95'],
     features: [
       'Analisi della pelle',
       'Raccomandazioni skincare',
       'Tracking del progresso',
       'Insights personalizzati'
     ],
-    actionText: 'Chat & Journal',
+    actionText: 'Analisi del Cibo',
     targetScreen: 'skin'
+  },
+  {
+    id: 'food-analysis',
+    title: 'Analisi del Cibo',
+    description: 'Scatta una foto del tuo pasto e ricevi un\'analisi completa dei macronutrienti, calorie e consigli nutrizionali personalizzati.',
+    icon: '🍎',
+    color: ['#43e97b', '#38f9d7'],
+    features: [
+      'Analisi nutrizionale automatica',
+      'Calcolo macronutrienti',
+      'Raccomandazioni personalizzate',
+      'Tracking delle calorie'
+    ],
+    actionText: 'Chat & Journal',
+    targetScreen: 'food'
   },
   {
     id: 'journal',
@@ -138,7 +139,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'Esercizi di Benessere',
     description: 'Scopri una libreria completa di esercizi di respirazione, meditazioni e wellness routines per migliorare il tuo benessere.',
     icon: '🧘',
-    color: ['#ffecd2', '#fcb69f'],
+    color: ['#d97757', '#b8624a'],
     features: [
       'Esercizi di respirazione guidati',
       'Meditazioni personalizzate',
@@ -170,6 +171,7 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const insets = useSafeAreaInsets(); // ✅ Gestione automatica safe area per Android/iOS
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -178,19 +180,23 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
   const slideAnim = useRef(new Animated.Value(height)).current;
   const cardScale = useRef(new Animated.Value(0.95)).current;
 
-  const current = TUTORIAL_STEPS[currentStep];
-  const last = currentStep === TUTORIAL_STEPS.length - 1;
-  const accent = current.color[0];
-  const accentSecondary = current.color[current.color.length - 1] || accent;
-  const accentSoft = `${accent}1A`;
-  const accentStroke = `${accent}33`;
+  // ✅ Memoization per evitare ricalcoli inutili
+  const current = useMemo(() => TUTORIAL_STEPS[currentStep], [currentStep]);
+  const last = useMemo(() => currentStep === TUTORIAL_STEPS.length - 1, [currentStep]);
   
-  // Assicurati che colors sia sempre un array di almeno 2 colori
-  const gradientColors = React.useMemo(() => {
-    if (current.color.length >= 2) {
-      return current.color as [string, string, ...string[]];
-    }
-    return [current.color[0], current.color[0]] as [string, string];
+  // ✅ Memoization dei colori derivati
+  const { accent, accentSecondary, accentSoft, accentStroke, gradientColors } = useMemo(() => {
+    const accent = current.color[0];
+    const accentSecondary = current.color[current.color.length - 1] || accent;
+    const accentSoft = `${accent}1A`;
+    const accentStroke = `${accent}33`;
+    
+    // Assicurati che colors sia sempre un array di almeno 2 colori
+    const gradientColors = current.color.length >= 2
+      ? (current.color as [string, string, ...string[]])
+      : ([current.color[0], current.color[0]] as [string, string]);
+    
+    return { accent, accentSecondary, accentSoft, accentStroke, gradientColors };
   }, [current.color]);
 
   React.useEffect(() => {
@@ -198,13 +204,13 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
       Animated.parallel([
         Animated.timing(modalFadeAnim, {
           toValue: 1,
-          duration: 250,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.spring(slideAnim, {
           toValue: 0,
-          damping: 22,
-          stiffness: 300,
+          damping: 25,
+          stiffness: 350,
           useNativeDriver: true,
         }),
       ]).start();
@@ -212,12 +218,12 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
       Animated.parallel([
         Animated.timing(modalFadeAnim, {
           toValue: 0,
-          duration: 180,
+          duration: 150,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: height,
-          duration: 200,
+          duration: 180,
           useNativeDriver: true,
         }),
       ]).start();
@@ -227,26 +233,17 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
   React.useEffect(() => {
     Animated.timing(progressAnim, {
       toValue: (currentStep+1)/TUTORIAL_STEPS.length,
-      duration: 300,
+      duration: 250,
       useNativeDriver: false,
     }).start();
   }, [currentStep]);
 
   React.useEffect(() => {
     // Reset pan quando cambia lo step
-    pan.setValue(0);
+    Animated.timing(pan, { toValue: 0, duration: 0, useNativeDriver: true }).start();
     
-    // Assicurati che fadeAnim sia sempre visibile quando cambia lo step
-    fadeAnim.setValue(1);
-    cardScale.setValue(1);
-    
-    // Animazione micro-bounce per la card
-    Animated.spring(cardScale, {
-      toValue: 1,
-      damping: 15,
-      stiffness: 200,
-      useNativeDriver: true,
-    }).start();
+    // NON impostare fadeAnim qui - viene gestito dalla funzione goTo
+    // Questo evita race conditions e flash del contenuto
   }, [currentStep]);
 
   const goTo = (next: number) => {
@@ -256,14 +253,17 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     
-    // Reset pan a 0 prima di cambiare step
-    Animated.spring(pan, { toValue: 0, useNativeDriver: true }).start();
+    // Reset pan a 0 immediatamente prima di cambiare step
+    Animated.timing(pan, { toValue: 0, duration: 0, useNativeDriver: true }).start();
     
+    // Animazione di fade-out più veloce e fluida
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 0, duration: 120, useNativeDriver: true }),
-      Animated.timing(cardScale, { toValue: 0.95, duration: 120, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 0, duration: 100, useNativeDriver: true }),
+      Animated.timing(cardScale, { toValue: 0.97, duration: 100, useNativeDriver: true }),
     ]).start(() => {
+      // Cambia lo step
       setCurrentStep(next);
+      
       const step = TUTORIAL_STEPS[next];
       if (step.targetScreen && onNavigateToScreen) {
         if (step.id === 'completato') {
@@ -272,23 +272,28 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
           onNavigateToScreen(step.targetScreen);
         }
         
+        // Scroll helpers con delay ottimizzato
         setTimeout(() => {
           if (next === 2) {
             global.scrollToWidgets?.();
           } else if (next === 3) {
             global.scrollToCoplot?.();
           }
-        }, 150);
+        }, 200);
       }
 
-      // L'animazione di fade-in viene gestita dal useEffect quando cambia currentStep
-      // Qui aspettiamo un piccolo delay per assicurarci che il componente si sia aggiornato
-      setTimeout(() => {
-        Animated.parallel([
-          Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
-          Animated.spring(cardScale, { toValue: 1, damping: 15, stiffness: 200, useNativeDriver: true }),
-        ]).start(() => setIsAnimating(false));
-      }, 10);
+      // Imposta immediatamente fadeAnim a 1 per rendere il contenuto visibile SUBITO
+      // Questo evita qualsiasi flash o scomparsa del contenuto
+      fadeAnim.setValue(1);
+      
+      // Poi anima solo il cardScale per un effetto visivo piacevole
+      // Il contenuto è già visibile, quindi non c'è rischio di flash
+      Animated.spring(cardScale, { 
+        toValue: 1, 
+        damping: 18, 
+        stiffness: 250, 
+        useNativeDriver: true 
+      }).start(() => setIsAnimating(false));
     });
   };
 
@@ -336,7 +341,19 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
             colors={gradientColors}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.gradient}
+            style={[
+              styles.gradient,
+              {
+                // ✅ Gestione automatica safe area: rispetta i pulsanti di navigazione Android
+                // Su Android con pulsanti fisici/software: insets.bottom sarà > 0 (es. 48px)
+                // Su Android con gesture navigation: insets.bottom sarà 0 o molto piccolo
+                // Su iOS: insets.bottom è gestito automaticamente se necessario
+                paddingBottom: Math.max(
+                  Platform.OS === 'ios' ? 34 : 20, // Padding minimo
+                  insets.bottom > 0 ? insets.bottom + 20 : 20 // Aggiungi padding extra se ci sono insets
+                ),
+              },
+            ]}
           >
             {/* Header */}
             <View style={styles.header}>
@@ -476,7 +493,7 @@ const styles = StyleSheet.create({
   gradient: {
     padding: 20,
     paddingTop: 18,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    // paddingBottom sarà applicato dinamicamente nel componente per rispettare safe area
   },
   header: {
     flexDirection: 'row',

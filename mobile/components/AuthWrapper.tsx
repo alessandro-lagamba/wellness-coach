@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Linking, Alert } from 'react-native';
 import { AuthService } from '../services/auth.service';
 import { OnboardingService } from '../services/onboarding.service';
 import { AuthScreen } from './auth/AuthScreen';
@@ -9,6 +9,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { TutorialProvider, useTutorial } from '../contexts/TutorialContext';
 import { useRouter } from 'expo-router';
 import PushNotificationService from '../services/push-notification.service'; // 🆕 Push notifications
+import { supabase } from '../lib/supabase';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -145,6 +147,12 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         if (emailVerified) {
           const existingProfile = await AuthService.getUserProfile(currentUser.id);
           
+          // 🔥 FIX: Estrai i dati dai metadata PRIMA di creare/aggiornare il profilo
+          const firstName = currentUser.user_metadata?.first_name;
+          const lastName = currentUser.user_metadata?.last_name;
+          const age = currentUser.user_metadata?.age;
+          const gender = currentUser.user_metadata?.gender;
+          
           if (!existingProfile) {
             console.log('✅ Email verified, creating user profile...');
             // Crea il profilo con i dati disponibili dall'utente
@@ -159,12 +167,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
               fullName
             );
             
-            // Se ci sono dati aggiuntivi nei metadata, aggiornali
-            const firstName = currentUser.user_metadata?.first_name;
-            const lastName = currentUser.user_metadata?.last_name;
-            const age = currentUser.user_metadata?.age;
-            const gender = currentUser.user_metadata?.gender;
-            
+            // 🔥 FIX: Aggiorna sempre i dati aggiuntivi se presenti nei metadata
             if (firstName || lastName || age || gender) {
               await AuthService.updateUserProfile(currentUser.id, {
                 first_name: firstName,
@@ -172,11 +175,31 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
                 age: age ? parseInt(age) : undefined,
                 gender: gender,
               });
+              console.log('✅ User profile metadata updated after creation');
             }
             
             console.log('✅ User profile created successfully after email verification');
           } else {
             console.log('✅ User profile already exists');
+            // 🔥 FIX: Aggiorna il profilo esistente se ci sono dati nei metadata che non sono nel profilo
+            // Questo è importante perché il genere potrebbe essere stato salvato durante la registrazione
+            // ma non essere stato applicato al profilo se è stato creato prima della verifica email
+            const needsUpdate = 
+              (firstName && existingProfile.first_name !== firstName) ||
+              (lastName && existingProfile.last_name !== lastName) ||
+              (age && existingProfile.age !== parseInt(age)) ||
+              (gender && existingProfile.gender !== gender);
+            
+            if (needsUpdate && (firstName || lastName || age || gender)) {
+              console.log('🔄 Updating existing profile with metadata...');
+              await AuthService.updateUserProfile(currentUser.id, {
+                first_name: firstName || existingProfile.first_name,
+                last_name: lastName || existingProfile.last_name,
+                age: age ? parseInt(age) : existingProfile.age,
+                gender: gender || existingProfile.gender,
+              });
+              console.log('✅ User profile updated with metadata');
+            }
           }
         } else {
           console.log('⚠️ Email not verified yet, profile will be created after verification');
@@ -291,6 +314,66 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       subscription.unsubscribe();
     };
   }, [checkAuthStatus, proceedAfterAuthentication]); // 🔥 FIX: Rimossi onAuthSuccess dalle dipendenze - usiamo ref
+
+  // ✅ Gestione Deep Links per conferma email
+  const { t } = useTranslation();
+  useEffect(() => {
+    // Gestisci deep link quando l'app si apre da un link (es. email di conferma)
+    const handleInitialURL = async () => {
+      try {
+        const initialUrl = await Linking.getInitialURL();
+        if (initialUrl && initialUrl.includes('auth/confirm')) {
+          console.log('📧 Email confirmation link detected:', initialUrl);
+          // Supabase gestirà automaticamente i parametri hash quando chiamiamo getSession()
+          // I parametri hash (#access_token=...) vengono processati automaticamente
+          const { data: { session }, error } = await supabase.auth.getSession();
+          if (session?.user && !error) {
+            console.log('✅ Email confirmed, session restored');
+            await proceedAfterAuthentication(session.user);
+          } else if (error) {
+            console.error('❌ Error confirming email:', error);
+            Alert.alert(
+              t('auth.emailConfirmationError') || 'Errore',
+              t('auth.emailConfirmationErrorMessage') || 'Si è verificato un errore durante la conferma dell\'email. Riprova più tardi.'
+            );
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error handling initial URL:', error);
+      }
+    };
+
+    // Gestisci deep link quando l'app è già aperta
+    const handleURL = (event: { url: string }) => {
+      const { url } = event;
+      if (url.includes('auth/confirm')) {
+        console.log('📧 Email confirmation link received while app is open:', url);
+        // Supabase gestirà automaticamente i parametri hash
+        supabase.auth.getSession().then(({ data: { session }, error }) => {
+          if (session?.user && !error) {
+            console.log('✅ Email confirmed, session restored');
+            proceedAfterAuthentication(session.user);
+          } else if (error) {
+            console.error('❌ Error confirming email:', error);
+            Alert.alert(
+              t('auth.emailConfirmationError') || 'Errore',
+              t('auth.emailConfirmationErrorMessage') || 'Si è verificato un errore durante la conferma dell\'email. Riprova più tardi.'
+            );
+          }
+        });
+      }
+    };
+
+    // Controlla URL iniziale quando l'app si apre
+    handleInitialURL();
+
+    // Ascolta nuovi deep links quando l'app è già aperta
+    const subscription = Linking.addEventListener('url', handleURL);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [proceedAfterAuthentication, t]);
 
   // 🆕 Inizializza push notifications quando l'utente è autenticato
   // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
@@ -446,6 +529,9 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
               break;
             case 'skin':
               router.push('/(tabs)/skin');
+              break;
+            case 'food':
+              router.push('/(tabs)/food');
               break;
             case 'chat':
               router.push('/coach/chat');
