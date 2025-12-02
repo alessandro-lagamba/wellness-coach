@@ -1,6 +1,7 @@
 {
   "common": {
     "save": "Salva",
+    "saving": "Salvataggio...",
     "cancel": "Annulla",
     "capture": "Scatta",
     "pickFromGallery": "Scegli dalla galleria",
@@ -301,7 +302,11 @@
       "outdoorWalk": "Passeggiata all'aperto di 20 minuti",
       "gratefulThings": "Scrivi 3 cose per cui sei grato",
       "ongoing": "In corso",
-      "completed": "Completato"
+      "completed": "Completato",
+      "loading": "Caricamento attività...",
+      "emptyTitle": "Nessuna attività pianificata",
+      "emptyDescription": "Le attività che aggiungerai dalla chat AI o dalle altre sezioni appariranno qui. Potrai attivare le notifiche per ricordarti di completarle!",
+      "askCoach": "Chiedi in chat le attività per te!"
     },
     "status": {
       "excellent": "Eccellente",
@@ -334,9 +339,9 @@
     "cycle": {
       "title": "Ciclo Mestruale",
       "day": "Giorno {{day}}",
-      "days": "giorni",
-      "nextPeriod": "Prossimo periodo",
-      "cycleLength": "durata ciclo",
+      "days": "{{count}} giorni",
+      "nextPeriod": "Prossimo ciclo",
+      "cycleLength": "Durata ciclo",
       "cycleLengthTitle": "Durata del ciclo",
       "cycleLengthSubtitle": "Seleziona la durata media del tuo ciclo",
       "lastPeriodStart": "Inizio ultimo ciclo",
@@ -398,9 +403,12 @@
     "stats": {
       "streak": "Serie",
       "momentum": "Progresso",
-      "nextSession": "Prossima Sessione",
+      "nextSession": "Prossima",
       "days": "{{count}} giorni",
-      "loading": "Caricamento..."
+      "daysLabel": "giorni",
+      "loading": "Caricamento...",
+      "noActivities": "Nessuna",
+      "allCompleted": "✓ Completate"
     },
     "emptySlot": {
       "addWidget": "Premi a lungo per aggiungere widget"
@@ -1477,7 +1485,22 @@
         "preparationDesc": "• Trova uno spazio tranquillo\n• Assicurati una buona illuminazione\n• Fai alcuni respiri profondi\n• Sii pronto a condividere come ti senti",
         "benefits": "Benefici",
         "stayConsistent": "Resta coerente!",
-        "benefitsDesc": "Sessioni regolari aiutano a tracciare il tuo percorso di benessere e forniscono insights preziosi per il miglioramento"
+        "benefitsDesc": "Sessioni regolari aiutano a tracciare il tuo percorso di benessere e forniscono insights preziosi per il miglioramento",
+        "noActivitiesSubtitle": "Nessuna attività programmata",
+        "noActivities": "Nessuna Attività",
+        "noActivitiesDesc": "Non hai ancora attività programmate per oggi. Parla con il tuo coach AI o esplora le sezioni dell'app per aggiungere attività al tuo programma giornaliero.",
+        "howToAdd": "Come Aggiungere Attività",
+        "explore": "Esplora",
+        "howToAddDesc": "Puoi aggiungere attività dalla chat con l'AI, dalle ricette, o dai suggerimenti personalizzati.",
+        "allDoneTitle": "Tutto Completato!",
+        "allDoneSubtitle": "Ottimo lavoro oggi!",
+        "completedToday": "Completate Oggi",
+        "completedTodayDesc": "Hai completato tutte le {{count}} attività programmate per oggi.",
+        "greatJob": "Ottimo Lavoro!",
+        "greatJobDesc": "Continua così! La costanza è la chiave per il benessere.",
+        "nextActivityDesc": "La tua prossima attività di benessere",
+        "progress": "Progresso Oggi",
+        "progressDesc": "Hai completato {{completed}} di {{total}} attività."
       }
     },
     "detailedAnalysis": {

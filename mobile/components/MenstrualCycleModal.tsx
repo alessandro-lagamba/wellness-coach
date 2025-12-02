@@ -28,7 +28,13 @@ interface MenstrualCycleModalProps {
   currentData: CycleData | null;
 }
 
-const CYCLE_LENGTH_OPTIONS = [21, 24, 26, 28, 30, 32, 35];
+// 🆕 Range completo per lo scroll picker (da 21 a 40 giorni)
+const CYCLE_LENGTH_MIN = 21;
+const CYCLE_LENGTH_MAX = 40;
+const CYCLE_LENGTH_OPTIONS = Array.from(
+  { length: CYCLE_LENGTH_MAX - CYCLE_LENGTH_MIN + 1 }, 
+  (_, i) => CYCLE_LENGTH_MIN + i
+);
 const PHASE_COLORS: Record<CyclePhase, string[]> = {
   menstrual: ['#ef4444', '#dc2626'],
   follicular: ['#f59e0b', '#d97706'],
@@ -55,6 +61,10 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
   // Animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+  
+  // 🆕 Ref per lo scroll picker della durata ciclo
+  const cycleLengthScrollRef = useRef<ScrollView>(null);
+  const ITEM_HEIGHT = 44; // Altezza di ogni item nello scroll picker
   
   // State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -88,21 +98,39 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
     }
   }, [visible]);
   
+  // 🆕 Funzione per scrollare allo cycle length selezionato
+  const scrollToCycleLength = (length: number) => {
+    const index = CYCLE_LENGTH_OPTIONS.indexOf(length);
+    if (index >= 0 && cycleLengthScrollRef.current) {
+      setTimeout(() => {
+        cycleLengthScrollRef.current?.scrollTo({
+          y: index * ITEM_HEIGHT,
+          animated: false,
+        });
+      }, 100);
+    }
+  };
+
   const loadExistingData = async () => {
     try {
+      let loadedLength = 28;
       if (currentData) {
-        setCycleLength(currentData.cycleLength);
+        loadedLength = currentData.cycleLength;
+        setCycleLength(loadedLength);
         setSelectedDate(new Date(currentData.lastPeriodDate));
         setPeriodStarted(true);
       } else {
-        const length = await menstrualCycleService.getCycleLength();
-        setCycleLength(length);
+        loadedLength = await menstrualCycleService.getCycleLength();
+        setCycleLength(loadedLength);
         const lastPeriod = await menstrualCycleService.getLastPeriodDate();
         if (lastPeriod) {
           setSelectedDate(new Date(lastPeriod));
           setPeriodStarted(true);
         }
       }
+      
+      // 🆕 Scroll allo cycle length caricato
+      scrollToCycleLength(loadedLength);
       
       // Load saved notes
       const { supabase } = await import('../lib/supabase');
@@ -423,48 +451,79 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
                 </View>
               </View>
               
-              {/* Cycle Length Section */}
-              <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                  {t('home.cycle.cycleLengthTitle') || 'Durata del ciclo'}
-                </Text>
-                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-                  {t('home.cycle.cycleLengthSubtitle') || 'Seleziona la durata media del tuo ciclo'}
-                </Text>
+              {/* Cycle Length Section - Vertical Scroll Picker */}
+              <View style={styles.sectionCompact}>
+                <View style={styles.cycleLengthHeader}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                    {t('home.cycle.cycleLengthTitle') || 'Durata del ciclo'}
+                  </Text>
+                </View>
                 
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.cycleLengthOptions}
-                >
-                  {CYCLE_LENGTH_OPTIONS.map((length) => (
-                    <Pressable
-                      key={length}
-                      style={({ pressed }) => [
-                        styles.cycleLengthOption,
-                        { backgroundColor: colors.surfaceMuted, borderColor: colors.border },
-                        cycleLength === length && styles.cycleLengthOptionSelected,
-                        pressed && { opacity: 0.7 },
-                      ]}
-                      onPress={() => handleCycleLengthChange(length)}
-                    >
-                      <Text style={[
-                        styles.cycleLengthText,
-                        { color: colors.text },
-                        cycleLength === length && styles.cycleLengthTextSelected,
-                      ]}>
-                        {length}
-                      </Text>
-                      <Text style={[
-                        styles.cycleLengthLabel,
-                        { color: colors.textSecondary },
-                        cycleLength === length && styles.cycleLengthLabelSelected,
-                      ]}>
-                        {t('home.cycle.days') || 'giorni'}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
+                {/* 🆕 Scroll Picker verticale */}
+                <View style={[styles.cycleLengthPickerContainer, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
+                  {/* Indicatore di selezione centrale */}
+                  <View style={[styles.cycleLengthPickerHighlight, { backgroundColor: `${'#ec4899'}20`, borderColor: '#ec4899' }]} />
+                  
+                  <ScrollView
+                    ref={cycleLengthScrollRef}
+                    style={styles.cycleLengthPicker}
+                    contentContainerStyle={styles.cycleLengthPickerContent}
+                    showsVerticalScrollIndicator={false}
+                    snapToInterval={ITEM_HEIGHT}
+                    decelerationRate="fast"
+                    onMomentumScrollEnd={(event) => {
+                      const offsetY = event.nativeEvent.contentOffset.y;
+                      const index = Math.round(offsetY / ITEM_HEIGHT);
+                      const clampedIndex = Math.max(0, Math.min(index, CYCLE_LENGTH_OPTIONS.length - 1));
+                      const newLength = CYCLE_LENGTH_OPTIONS[clampedIndex];
+                      if (newLength !== cycleLength) {
+                        handleCycleLengthChange(newLength);
+                      }
+                    }}
+                  >
+                    {/* Padding top per centrare il primo elemento */}
+                    <View style={{ height: ITEM_HEIGHT }} />
+                    
+                    {CYCLE_LENGTH_OPTIONS.map((length, index) => {
+                      const isSelected = cycleLength === length;
+                      return (
+                        <TouchableOpacity
+                          key={length}
+                          style={[
+                            styles.cycleLengthPickerItem,
+                            { height: ITEM_HEIGHT },
+                          ]}
+                          onPress={() => {
+                            handleCycleLengthChange(length);
+                            cycleLengthScrollRef.current?.scrollTo({
+                              y: index * ITEM_HEIGHT,
+                              animated: true,
+                            });
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[
+                            styles.cycleLengthPickerNumber,
+                            { color: isSelected ? '#ec4899' : colors.textSecondary },
+                            isSelected && styles.cycleLengthPickerNumberSelected,
+                          ]}>
+                            {length}
+                          </Text>
+                          <Text style={[
+                            styles.cycleLengthPickerLabel,
+                            { color: isSelected ? '#ec4899' : colors.textTertiary },
+                            isSelected && styles.cycleLengthPickerLabelSelected,
+                          ]}>
+                            {language === 'it' ? 'giorni' : 'days'}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                    
+                    {/* Padding bottom per centrare l'ultimo elemento */}
+                    <View style={{ height: ITEM_HEIGHT }} />
+                  </ScrollView>
+                </View>
               </View>
               
               {/* Notes Section */}
@@ -649,7 +708,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 12, // 🔥 Ridotto da 16 a 12
+  },
+  sectionCompact: {
+    marginBottom: 16, // 🔥 Ridotto da 20 a 16
   },
   sectionTitle: {
     fontSize: 16,
@@ -659,6 +721,10 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     fontSize: 13,
     marginBottom: 12,
+  },
+  sectionSubtitleSmall: {
+    fontSize: 12,
+    marginTop: 2,
   },
   monthNav: {
     flexDirection: 'row',
@@ -697,7 +763,8 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: 20,
+    padding: 2,
   },
   calendarDaySelected: {
     backgroundColor: '#ec4899',
@@ -726,35 +793,54 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 4,
   },
-  cycleLengthOptions: {
-    gap: 10,
-    paddingVertical: 4,
+  cycleLengthHeader: {
+    marginBottom: 12,
   },
-  cycleLengthOption: {
-    width: 70,
-    height: 70,
+  // 🆕 Stili per lo scroll picker verticale
+  cycleLengthPickerContainer: {
+    height: 132, // 3 items visibili (44 * 3)
     borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  cycleLengthPickerHighlight: {
+    position: 'absolute',
+    top: 44, // Posizione centrale (ITEM_HEIGHT)
+    left: 8,
+    right: 8,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    zIndex: 0,
+  },
+  cycleLengthPicker: {
+    flex: 1,
+  },
+  cycleLengthPickerContent: {
+    paddingHorizontal: 16,
+  },
+  cycleLengthPickerItem: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    gap: 8,
   },
-  cycleLengthOptionSelected: {
-    backgroundColor: '#ec4899',
-    borderColor: '#ec4899',
-  },
-  cycleLengthText: {
+  cycleLengthPickerNumber: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '600',
   },
-  cycleLengthTextSelected: {
-    color: '#fff',
+  cycleLengthPickerNumberSelected: {
+    fontSize: 26,
+    fontWeight: '800',
   },
-  cycleLengthLabel: {
-    fontSize: 11,
-    marginTop: 2,
+  cycleLengthPickerLabel: {
+    fontSize: 14,
+    fontWeight: '500',
   },
-  cycleLengthLabelSelected: {
-    color: 'rgba(255, 255, 255, 0.9)',
+  cycleLengthPickerLabelSelected: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   noteInput: {
     borderRadius: 12,

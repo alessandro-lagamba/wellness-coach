@@ -48,6 +48,7 @@ import { WellnessPermissionsModal } from './WellnessPermissionsModal';
 import PushNotificationService from '../services/push-notification.service';
 import DailyCopilotHistory from './DailyCopilotHistory';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import Slider from '@react-native-community/slider';
 import { HydrationActionModal } from './HydrationActionModal';
 import { MeditationActionModal } from './MeditationActionModal';
@@ -158,54 +159,30 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   const { setShowTutorial } = useTutorial();
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
-  // 🆕 Attività hardcoded di default (sempre presenti)
-  const defaultActivities = useMemo<DailyActivity[]>(() => [
-    {
-      id: 'morning-meditation',
-      title: t('home.activities.morningMeditation'),
-      description: t('home.activities.breathingExercise'),
-      icon: 'leaf',
-      completed: true,
-      time: '8:00 AM',
-      category: 'mindfulness',
-    },
-    {
-      id: 'water-intake',
-      title: t('home.activities.hydrationGoal'),
-      description: t('home.activities.drinkGlasses', { count: 8 }),
-      icon: 'tint',
-      completed: false,
-      progress: 62,
-      time: t('home.activities.ongoing'),
-      category: 'nutrition',
-    },
-    {
-      id: 'walk',
-      title: t('home.activities.eveningWalk'),
-      description: t('home.activities.outdoorWalk'),
-      icon: 'road',
-      completed: false,
-      time: '6:00 PM',
-      category: 'movement',
-    },
-    {
-      id: 'journal',
-      title: t('home.activities.gratitudeJournal'),
-      description: t('home.activities.gratefulThings'),
-      icon: 'book',
-      completed: false,
-      time: '9:00 PM',
-      category: 'mindfulness',
-    },
-  ], [t, language]);
 
-  // 🆕 Attività caricate dal database
+  // 🆕 Attività caricate dal database (rimosse le mock hardcoded)
   const [wellnessActivities, setWellnessActivities] = useState<DailyActivity[]>([]);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(true);
 
-  // 🆕 Combina attività default con quelle dal database
+  // 🆕 Toast di successo per feedback elegante
+  const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
+  const successToastTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showSuccessToast = useCallback((message: string, duration: number = 3000) => {
+    // Cancella timeout precedente se esiste
+    if (successToastTimeout.current) {
+      clearTimeout(successToastTimeout.current);
+    }
+    setSuccessToast({ visible: true, message });
+    successToastTimeout.current = setTimeout(() => {
+      setSuccessToast({ visible: false, message: '' });
+    }, duration);
+  }, []);
+
+  // 🆕 Usa solo le attività dal database (niente più mock)
   const todaysActivities = useMemo<DailyActivity[]>(() => {
     // Mappa le attività wellness dal database a DailyActivity
-    const mappedWellnessActivities: DailyActivity[] = wellnessActivities.map((activity) => ({
+    return wellnessActivities.map((activity) => ({
       id: activity.id,
       title: activity.title,
       description: activity.description,
@@ -216,10 +193,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       syncedToCalendar: activity.syncedToCalendar,
       syncedToReminders: activity.syncedToReminders,
     }));
-
-    // Combina: prima le default, poi quelle dal database
-    return [...defaultActivities, ...mappedWellnessActivities];
-  }, [defaultActivities, wellnessActivities]);
+  }, [wellnessActivities]);
 
   const placeholderMessages = useMemo(
     () => ({
@@ -934,6 +908,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         return t('home.hrv.value', { value: formatted });
       }
       case 'cycle':
+        // 🆕 Mostra "Giorno X" come valore principale
         return info.cycle ? t('home.cycle.day', { day: info.cycle.day }) : '—';
       default:
         return info.value ?? '--';
@@ -952,8 +927,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       }
       case 'cycle':
         if (!info.cycle) return '';
+        // 🆕 Mostra la fase del ciclo come subtitle
         const phaseKey = `home.cycle.phases.${info.cycle.phase}`;
-        return t(phaseKey, { defaultValue: info.cycle.phaseName });
+        const phaseName = t(phaseKey, { defaultValue: info.cycle.phaseName });
+        return phaseName;
       default:
         return info.subtitle ?? '';
     }
@@ -1015,9 +992,18 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         ];
       case 'cycle':
         if (!info.cycle) return undefined;
+        // 🆕 Mostra informazioni più utili: giorni al prossimo ciclo e durata ciclo
         return [
-          { icon: '📅', label: t('home.cycle.nextPeriod'), value: t('home.cycle.days', { count: info.cycle.nextPeriodDays }) },
-          { icon: '🔄', label: t('home.cycle.cycleLength'), value: t('home.cycle.days', { count: info.cycle.cycleLength }) },
+          { 
+            icon: '📅', 
+            label: t('home.cycle.nextPeriod'), 
+            value: `${info.cycle.nextPeriodDays} ${info.cycle.nextPeriodDays === 1 ? (language === 'it' ? 'giorno' : 'day') : (language === 'it' ? 'giorni' : 'days')}`
+          },
+          { 
+            icon: '🔄', 
+            label: t('home.cycle.cycleLength'), 
+            value: `${info.cycle.cycleLength} ${language === 'it' ? 'giorni' : 'days'}`
+          },
         ];
       default:
         return undefined;
@@ -1757,16 +1743,44 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     calculateStreak();
   }, [hasExistingMoodCheckin, hasExistingSleepCheckin]); // Ricarica quando cambiano i check-in
 
+  // 🆕 Calcola la prossima attività non completata
+  const getNextActivity = useMemo(() => {
+    // Filtra le attività non completate
+    const incompleteActivities = todaysActivities.filter(a => !a.completed);
+    
+    if (incompleteActivities.length === 0) {
+      return null;
+    }
+    
+    // Prendi la prima attività non completata (assumendo siano ordinate per priorità/tempo)
+    return incompleteActivities[0];
+  }, [todaysActivities]);
+
   // Generate stats dynamically based on momentum data
   const getStats = () => {
     const momentumValue = momentumData
       ? MomentumService.formatMomentumValue(momentumData)
       : t('home.stats.loading');
 
+    // 🆕 Calcola il valore per "Prossima Sessione" in base alle attività reali
+    let nextSessionValue: string;
+    if (isLoadingActivities) {
+      nextSessionValue = t('common.loading') || 'Caricamento...';
+    } else if (getNextActivity) {
+      // Mostra il titolo dell'attività (troncato se troppo lungo)
+      const title = getNextActivity.title;
+      const time = getNextActivity.time || '';
+      nextSessionValue = time ? `${time}` : (title.length > 15 ? title.substring(0, 12) + '...' : title);
+    } else if (todaysActivities.length > 0 && todaysActivities.every(a => a.completed)) {
+      nextSessionValue = t('home.stats.allCompleted') || '✓ Completate';
+    } else {
+      nextSessionValue = t('home.stats.noActivities') || 'Nessuna';
+    }
+
     return [
       { id: 'streak', icon: 'fire', label: t('home.stats.streak'), value: t('home.stats.days', { count: streakDays }) },
       { id: 'momentum', icon: 'line-chart', label: t('home.stats.momentum'), value: momentumValue },
-      { id: 'next-session', icon: 'calendar', label: t('home.stats.nextSession'), value: `${t('home.analyses.today')} • 6:00 PM` },
+      { id: 'next-session', icon: 'calendar', label: t('home.stats.nextSession'), value: nextSessionValue },
     ];
   };
 
@@ -1880,8 +1894,12 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   // 🆕 Funzione per caricare le attività (esportata per essere riutilizzata)
   const loadWellnessActivities = useCallback(async () => {
     try {
+      setIsLoadingActivities(true);
       const currentUser = await AuthService.getCurrentUser();
-      if (!currentUser?.id) return;
+      if (!currentUser?.id) {
+        setIsLoadingActivities(false);
+        return;
+      }
 
       const WellnessActivitiesService = (await import('../services/wellness-activities.service')).default;
       const activities = await WellnessActivitiesService.getTodayActivities();
@@ -1920,6 +1938,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       setWellnessActivities(mappedActivities);
     } catch (error) {
       console.error('Error loading wellness activities:', error);
+    } finally {
+      setIsLoadingActivities(false);
     }
   }, []);
 
@@ -2332,6 +2352,28 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
   return (
     <SafeAreaWrapper style={[styles.container, { backgroundColor: themeColors.background }]}>
+      {/* 🆕 Toast di successo elegante */}
+      {successToast.visible && (
+        <Animated.View 
+          style={[
+            styles.successToast,
+            { 
+              opacity: successToast.visible ? 1 : 0,
+            }
+          ]}
+        >
+          <LinearGradient
+            colors={['#10b981', '#059669']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.successToastGradient}
+          >
+            <FontAwesome name="check-circle" size={20} color="#fff" />
+            <Text style={styles.successToastText}>{successToast.message}</Text>
+          </LinearGradient>
+        </Animated.View>
+      )}
+
       <ScrollView style={{ backgroundColor: themeColors.background }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} ref={scrollViewRef}>
         <LinearGradient colors={[themeColors.primaryDark, themeColors.primary]} style={styles.heroCard}>
           {/* Header with buttons inside the purple box */}
@@ -2781,24 +2823,62 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.activities.title')}</Text>
-          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
-            {t('home.calendar.ofCompleted', {
-              completed: todaysActivities.filter(a => a.completed).length,
-              total: todaysActivities.length
-            })}
-          </Text>
+          {todaysActivities.length > 0 && (
+            <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
+              {t('home.calendar.ofCompleted', {
+                completed: todaysActivities.filter(a => a.completed).length,
+                total: todaysActivities.length
+              })}
+            </Text>
+          )}
         </View>
         <View style={styles.activityContainer}>
-          {todaysActivities.map((activity, index) => (
-            <ActivityItem
-              key={activity.id}
-              activity={activity}
-              index={index}
-              onSync={syncActivityToCalendar}
-              permissions={permissions}
-              onActivityUpdated={loadWellnessActivities}
-            />
-          ))}
+          {isLoadingActivities ? (
+            // 🆕 Stato di caricamento
+            <View style={[styles.emptyActivitiesCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+              <View style={styles.emptyActivitiesIconContainer}>
+                <MaterialCommunityIcons name="loading" size={32} color={themeColors.textTertiary} />
+              </View>
+              <Text style={[styles.emptyActivitiesText, { color: themeColors.textSecondary }]}>
+                {t('home.activities.loading') || 'Caricamento attività...'}
+              </Text>
+            </View>
+          ) : todaysActivities.length === 0 ? (
+            // 🆕 Stato vuoto con messaggio informativo
+            <View style={[styles.emptyActivitiesCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+              <View style={[styles.emptyActivitiesIconContainer, { backgroundColor: `${themeColors.primary}15` }]}>
+                <MaterialCommunityIcons name="calendar-check-outline" size={36} color={themeColors.primary} />
+              </View>
+              <Text style={[styles.emptyActivitiesTitle, { color: themeColors.text }]}>
+                {t('home.activities.emptyTitle') || 'Nessuna attività pianificata'}
+              </Text>
+              <Text style={[styles.emptyActivitiesText, { color: themeColors.textSecondary }]}>
+                {t('home.activities.emptyDescription') || 'Le attività che aggiungerai dalla chat AI o dalle altre sezioni appariranno qui. Potrai attivare le notifiche per ricordarti di completarle!'}
+              </Text>
+              <TouchableOpacity 
+                style={[styles.emptyActivitiesButton, { backgroundColor: themeColors.primary }]}
+                onPress={() => router.push('/(tabs)/coach')}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons name="robot-outline" size={18} color="#fff" />
+                <Text style={styles.emptyActivitiesButtonText}>
+                  {t('home.activities.askCoach') || 'Chiedi al Coach AI'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            // 🆕 Lista attività normali
+            todaysActivities.map((activity, index) => (
+              <ActivityItem
+                key={activity.id}
+                activity={activity}
+                index={index}
+                onSync={syncActivityToCalendar}
+                permissions={permissions}
+                onActivityUpdated={loadWellnessActivities}
+              />
+            ))
+          )}
         </View>
 
         {/* AI Daily Copilot Section */}
@@ -3427,6 +3507,9 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         onClose={closePillPopup}
         type={selectedPill || 'streak'}
         momentumData={momentumData}
+        nextActivity={getNextActivity}
+        todaysActivities={todaysActivities}
+        streakDays={streakDays}
       />
 
       {/* Widget Goal Modal */}
@@ -3487,11 +3570,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           // 🔥 FIX: Chiudi il modal PRIMA di fare sync per evitare loop
           setHealthPermissionsModal(false);
           
-          // 🔥 Mostra feedback all'utente
-          UserFeedbackService.showInfo(
-            t('home.permissions.syncing') || 'Stiamo sincronizzando i tuoi dati di salute...',
-            t('common.loading') || 'Caricamento'
-          );
+          // 🆕 Rimosso feedback "syncing" - la UI già mostra il loading state
 
           // 🔥 FIX: Forza sync immediata dei dati dopo concessione permessi
           try {
@@ -3537,28 +3616,26 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                 const data = await buildWidgetDataFromHealth(syncResult.data);
                 setWidgetData(data);
                 
-                UserFeedbackService.showSuccess(
-                  t('home.permissions.syncSuccess') || 'Dati sincronizzati con successo!',
-                  t('common.success') || 'Successo'
-                );
+                // 🆕 Feedback discreto di successo con haptic e toast elegante
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                showSuccessToast(t('home.permissions.syncSuccess') || '✨ Dati sincronizzati con successo!');
               } else {
                 console.log('⚠️ Data appears to be mock or empty');
-                // 🔥 Mostra comunque un messaggio se non ci sono dati
-                UserFeedbackService.showInfo(
-                  'Permessi concessi. I dati appariranno quando saranno disponibili.',
-                  'Info'
-                );
+                // 🆕 Feedback discreto - permessi ok ma dati non ancora disponibili
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               }
             } else if (hasHealthData && healthData) {
               // Fallback: usa i dati già disponibili dal hook
               const data = await buildWidgetDataFromHealth(healthData);
               setWidgetData(data);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
             
             // Ricarica anche i dati del Daily Copilot
             loadTodayGlanceData();
           } catch (error) {
             console.error('Error syncing after permissions:', error);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             UserFeedbackService.showError(
               t('home.permissions.syncError') || 'Errore durante la sincronizzazione. Riprova più tardi.',
               t('common.error') || 'Errore'
@@ -4061,6 +4138,34 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 120,
   },
+  // 🆕 Toast di successo elegante
+  successToast: {
+    position: 'absolute',
+    top: 50, // 🔥 FIX: Abbassato per evitare sovrapposizione con icone di sistema Android
+    left: 20,
+    right: 20,
+    zIndex: 9999,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  successToastGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    gap: 12,
+  },
+  successToastText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+    flex: 1,
+  },
   heroCard: {
     borderRadius: 32,
     paddingHorizontal: 24,
@@ -4387,6 +4492,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 24,
     gap: 12,
+  },
+  emptyActivitiesCard: {
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  emptyActivitiesIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyActivitiesTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyActivitiesText: {
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 12,
+  },
+  emptyActivitiesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  emptyActivitiesButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
   activityCard: {
     borderRadius: 20,

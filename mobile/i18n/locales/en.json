@@ -1,6 +1,7 @@
 {
   "common": {
     "save": "Save",
+    "saving": "Saving...",
     "cancel": "Cancel",
     "capture": "Capture",
     "pickFromGallery": "Pick from Gallery",
@@ -299,7 +300,11 @@
       "outdoorWalk": "20-minute outdoor walk",
       "gratefulThings": "Write 3 things you're grateful for",
       "ongoing": "Ongoing",
-      "completed": "Completed"
+      "completed": "Completed",
+      "loading": "Loading activities...",
+      "emptyTitle": "No activities planned",
+      "emptyDescription": "Activities you add from the AI chat or other sections will appear here. You can enable notifications to remind you to complete them!",
+      "askCoach": "Ask in chat about activities for you!"
     },
     "status": {
       "excellent": "Excellent",
@@ -332,9 +337,9 @@
     "cycle": {
       "title": "Menstrual Cycle",
       "day": "Day {{day}}",
-      "days": "days",
-      "nextPeriod": "Next period",
-      "cycleLength": "cycle length",
+      "days": "{{count}} days",
+      "nextPeriod": "Next cycle",
+      "cycleLength": "Cycle length",
       "cycleLengthTitle": "Cycle Length",
       "cycleLengthSubtitle": "Select your average cycle length",
       "lastPeriodStart": "Last Period Start",
@@ -391,9 +396,12 @@
     "stats": {
       "streak": "Streak",
       "momentum": "Progress",
-      "nextSession": "Next Session",
+      "nextSession": "Next",
       "days": "{{count}} days",
-      "loading": "Loading..."
+      "daysLabel": "days",
+      "loading": "Loading...",
+      "noActivities": "None",
+      "allCompleted": "✓ Done"
     },
     "emptySlot": {
       "addWidget": "Long press to add widget"
@@ -1585,7 +1593,22 @@
         "preparationDesc": "• Find a quiet space\n• Ensure good lighting\n• Take a few deep breaths\n• Be ready to share how you feel",
         "benefits": "Benefits",
         "stayConsistent": "Stay consistent!",
-        "benefitsDesc": "Regular sessions help track your wellness journey and provide valuable insights for improvement"
+        "benefitsDesc": "Regular sessions help track your wellness journey and provide valuable insights for improvement",
+        "noActivitiesSubtitle": "No activities scheduled",
+        "noActivities": "No Activities",
+        "noActivitiesDesc": "You don't have any activities scheduled for today. Talk to your AI coach or explore the app sections to add activities to your daily schedule.",
+        "howToAdd": "How to Add Activities",
+        "explore": "Explore",
+        "howToAddDesc": "You can add activities from the AI chat, recipes, or personalized suggestions.",
+        "allDoneTitle": "All Done!",
+        "allDoneSubtitle": "Great work today!",
+        "completedToday": "Completed Today",
+        "completedTodayDesc": "You've completed all {{count}} activities scheduled for today.",
+        "greatJob": "Great Job!",
+        "greatJobDesc": "Keep it up! Consistency is the key to wellness.",
+        "nextActivityDesc": "Your next wellness activity",
+        "progress": "Today's Progress",
+        "progressDesc": "You've completed {{completed}} of {{total}} activities."
       }
     },
     "detailedAnalysis": {

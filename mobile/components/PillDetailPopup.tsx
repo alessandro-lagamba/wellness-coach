@@ -22,12 +22,29 @@ import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 
 const { width, height } = Dimensions.get('window');
 
+// 🆕 Interfaccia per le attività
+interface DailyActivity {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  completed: boolean;
+  progress?: number;
+  time?: string;
+  category: 'mindfulness' | 'movement' | 'nutrition' | 'recovery';
+  syncedToCalendar?: boolean;
+  syncedToReminders?: boolean;
+}
+
 interface PillDetailPopupProps {
   visible: boolean;
   onClose: () => void;
   type: 'streak' | 'momentum' | 'next-session';
   data?: any;
   momentumData?: MomentumData;
+  nextActivity?: DailyActivity | null;
+  todaysActivities?: DailyActivity[];
+  streakDays?: number;
 }
 
 const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
@@ -35,7 +52,10 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
   onClose,
   type,
   data,
-  momentumData
+  momentumData,
+  nextActivity,
+  todaysActivities = [],
+  streakDays = 0
 }) => {
   const { t } = useTranslation(); // 🆕 i18n hook
   const opacity = useSharedValue(0);
@@ -66,6 +86,17 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
     opacity: opacity.value,
   }));
 
+  // 🆕 Helper per ottenere l'icona della categoria
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'mindfulness': return '🧘';
+      case 'movement': return '🏃';
+      case 'nutrition': return '🥗';
+      case 'recovery': return '😴';
+      default: return '📋';
+    }
+  };
+
   const getContent = () => {
     switch (type) {
       case 'streak':
@@ -78,18 +109,18 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
           details: [
             {
               title: t('popups.pillDetail.streak.currentStreak'),
-              value: '12 days',
-              description: t('popups.pillDetail.streak.currentStreakDesc', { days: 12 })
+              value: t('home.stats.days', { count: streakDays }),
+              description: t('popups.pillDetail.streak.currentStreakDesc', { days: streakDays })
             },
             {
               title: t('popups.pillDetail.streak.bestStreak'),
-              value: '28 days',
-              description: t('popups.pillDetail.streak.bestStreakDesc', { days: 28 })
+              value: '—',
+              description: t('popups.pillDetail.streak.bestStreakDesc', { days: streakDays })
             },
             {
               title: t('popups.pillDetail.streak.goal'),
-              value: '30 days',
-              description: t('popups.pillDetail.streak.goalDesc', { percent: 60 })
+              value: '30 ' + t('home.stats.daysLabel'),
+              description: t('popups.pillDetail.streak.goalDesc', { percent: Math.min(100, Math.round((streakDays / 30) * 100)) })
             },
             {
               title: t('popups.pillDetail.streak.tips'),
@@ -137,31 +168,86 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
         };
 
       case 'next-session':
+        // 🆕 Calcola statistiche attività
+        const completedCount = todaysActivities.filter(a => a.completed).length;
+        const totalCount = todaysActivities.length;
+        const hasActivities = totalCount > 0;
+        const allCompleted = hasActivities && completedCount === totalCount;
+
+        // 🆕 Se non ci sono attività, mostra stato vuoto
+        if (!hasActivities) {
+          return {
+            title: `📅 ${t('popups.pillDetail.nextSession.title')}`,
+            subtitle: t('popups.pillDetail.nextSession.noActivitiesSubtitle') || 'Nessuna attività programmata',
+            icon: 'calendar',
+            color: '#8b5cf6',
+            gradient: ['#6b7280', '#4b5563'], // Gray gradient
+            details: [
+              {
+                title: t('popups.pillDetail.nextSession.noActivities') || 'Nessuna Attività',
+                value: '—',
+                description: t('popups.pillDetail.nextSession.noActivitiesDesc') || 'Non hai ancora attività programmate per oggi. Parla con il tuo coach AI o esplora le sezioni dell\'app per aggiungere attività al tuo programma giornaliero.'
+              },
+              {
+                title: t('popups.pillDetail.nextSession.howToAdd') || 'Come Aggiungere Attività',
+                value: t('popups.pillDetail.nextSession.explore') || 'Esplora',
+                description: t('popups.pillDetail.nextSession.howToAddDesc') || 'Puoi aggiungere attività dalla chat con l\'AI, dalle ricette, o dai suggerimenti personalizzati.'
+              }
+            ]
+          };
+        }
+
+        // 🆕 Se tutte le attività sono completate
+        if (allCompleted) {
+          return {
+            title: `✅ ${t('popups.pillDetail.nextSession.allDoneTitle') || 'Tutto Completato!'}`,
+            subtitle: t('popups.pillDetail.nextSession.allDoneSubtitle') || 'Ottimo lavoro oggi!',
+            icon: 'check-circle',
+            color: '#10b981',
+            gradient: ['#10b981', '#059669'], // Green gradient
+            details: [
+              {
+                title: t('popups.pillDetail.nextSession.completedToday') || 'Completate Oggi',
+                value: `${completedCount}/${totalCount}`,
+                description: t('popups.pillDetail.nextSession.completedTodayDesc', { count: completedCount }) || `Hai completato tutte le ${completedCount} attività programmate per oggi.`
+              },
+              {
+                title: t('popups.pillDetail.nextSession.greatJob') || 'Ottimo Lavoro!',
+                value: '🎉',
+                description: t('popups.pillDetail.nextSession.greatJobDesc') || 'Continua così! La costanza è la chiave per il benessere.'
+              }
+            ]
+          };
+        }
+
+        // 🆕 Mostra la prossima attività reale
         return {
           title: `📅 ${t('popups.pillDetail.nextSession.title')}`,
-          subtitle: t('popups.pillDetail.nextSession.subtitle'),
+          subtitle: nextActivity ? nextActivity.title : t('popups.pillDetail.nextSession.subtitle'),
           icon: 'calendar',
           color: '#8b5cf6',
           gradient: ['#3b82f6', '#1d4ed8'], // Blue gradient
           details: [
             {
-              title: t('popups.pillDetail.nextSession.scheduledTime'),
-              value: `${t('home.analyses.today')} • 6:00 PM`,
-              description: t('popups.pillDetail.nextSession.scheduledTimeDesc')
+              title: t('popups.pillDetail.nextSession.scheduledTime') || 'Orario Programmato',
+              value: nextActivity?.time ? `${t('home.analyses.today')} • ${nextActivity.time}` : t('home.analyses.today'),
+              description: nextActivity 
+                ? (t('popups.pillDetail.nextSession.nextActivityDesc') || 'La tua prossima attività di benessere')
+                : t('popups.pillDetail.nextSession.scheduledTimeDesc')
             },
             {
-              title: t('popups.pillDetail.nextSession.sessionType'),
-              value: t('analysis.emotion.title'),
-              description: t('popups.pillDetail.nextSession.sessionTypeDesc')
+              title: t('popups.pillDetail.nextSession.sessionType') || 'Tipo di Sessione',
+              value: nextActivity ? `${getCategoryIcon(nextActivity.category)} ${nextActivity.title}` : t('analysis.emotion.title'),
+              description: nextActivity?.description || t('popups.pillDetail.nextSession.sessionTypeDesc')
             },
             {
-              title: t('popups.pillDetail.nextSession.preparation'),
-              value: t('popups.pillDetail.nextSession.getReady'),
-              description: t('popups.pillDetail.nextSession.preparationDesc')
+              title: t('popups.pillDetail.nextSession.progress') || 'Progresso Oggi',
+              value: `${completedCount}/${totalCount}`,
+              description: t('popups.pillDetail.nextSession.progressDesc', { completed: completedCount, total: totalCount }) || `Hai completato ${completedCount} di ${totalCount} attività.`
             },
             {
-              title: t('popups.pillDetail.nextSession.benefits'),
-              value: t('popups.pillDetail.nextSession.stayConsistent'),
+              title: t('popups.pillDetail.nextSession.benefits') || 'Benefici',
+              value: t('popups.pillDetail.nextSession.stayConsistent') || 'Resta coerente!',
               description: t('popups.pillDetail.nextSession.benefitsDesc')
             }
           ]
