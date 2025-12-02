@@ -256,10 +256,11 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
     // Reset pan a 0 immediatamente prima di cambiare step
     Animated.timing(pan, { toValue: 0, duration: 0, useNativeDriver: true }).start();
     
-    // Animazione di fade-out più veloce e fluida
+    // 🔥 FIX: Animazione più fluida senza flash
+    // Fade-out veloce ma non troppo per evitare flash
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 0, duration: 100, useNativeDriver: true }),
-      Animated.timing(cardScale, { toValue: 0.97, duration: 100, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
+      Animated.timing(cardScale, { toValue: 0.98, duration: 150, useNativeDriver: true }),
     ]).start(() => {
       // Cambia lo step
       setCurrentStep(next);
@@ -282,18 +283,24 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
         }, 200);
       }
 
-      // Imposta immediatamente fadeAnim a 1 per rendere il contenuto visibile SUBITO
-      // Questo evita qualsiasi flash o scomparsa del contenuto
-      fadeAnim.setValue(1);
-      
-      // Poi anima solo il cardScale per un effetto visivo piacevole
-      // Il contenuto è già visibile, quindi non c'è rischio di flash
-      Animated.spring(cardScale, { 
-        toValue: 1, 
-        damping: 18, 
-        stiffness: 250, 
-        useNativeDriver: true 
-      }).start(() => setIsAnimating(false));
+      // 🔥 FIX: Usa requestAnimationFrame per sincronizzare meglio le animazioni
+      // Questo evita il flash tra le card
+      requestAnimationFrame(() => {
+        // Fade-in e scale-up simultanei e più veloci
+        Animated.parallel([
+          Animated.timing(fadeAnim, { 
+            toValue: 1, 
+            duration: 200, 
+            useNativeDriver: true 
+          }),
+          Animated.spring(cardScale, { 
+            toValue: 1, 
+            damping: 20, 
+            stiffness: 300, 
+            useNativeDriver: true 
+          }),
+        ]).start(() => setIsAnimating(false));
+      });
     });
   };
 

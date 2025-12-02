@@ -325,9 +325,25 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         const initialUrl = await Linking.getInitialURL();
         if (initialUrl && initialUrl.includes('auth/confirm')) {
           console.log('📧 Email confirmation link detected:', initialUrl);
+          
+          // 🔥 FIX: Mostra un messaggio di conferma mentre processiamo
+          Alert.alert(
+            t('auth.confirmingEmail') || 'Conferma email in corso...',
+            t('auth.pleaseWait') || 'Stiamo verificando la tua email. Attendi un momento.',
+            [],
+            { cancelable: false }
+          );
+          
+          // Aspetta un momento per permettere a Supabase di processare il link
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
           // Supabase gestirà automaticamente i parametri hash quando chiamiamo getSession()
           // I parametri hash (#access_token=...) vengono processati automaticamente
           const { data: { session }, error } = await supabase.auth.getSession();
+          
+          // Chiudi l'alert di loading
+          Alert.alert('', '', [], { cancelable: true });
+          
           if (session?.user && !error) {
             console.log('✅ Email confirmed, session restored');
             // 🔥 FIX: Forza il refresh dell'utente per ottenere i metadata aggiornati
@@ -341,7 +357,16 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
                 last_name: refreshedUser.user_metadata?.last_name,
                 age: refreshedUser.user_metadata?.age,
                 gender: refreshedUser.user_metadata?.gender,
+                email_confirmed_at: refreshedUser.email_confirmed_at,
               });
+              
+              // 🔥 NEW: Mostra un messaggio di successo
+              Alert.alert(
+                t('auth.emailConfirmed') || 'Email confermata!',
+                t('auth.emailConfirmedSuccess') || 'La tua email è stata confermata con successo. Benvenuto!',
+                [{ text: t('common.ok') || 'OK' }]
+              );
+              
               await proceedAfterAuthentication(refreshedUser);
             } else {
               await proceedAfterAuthentication(session.user);
@@ -364,34 +389,70 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       const { url } = event;
       if (url.includes('auth/confirm')) {
         console.log('📧 Email confirmation link received while app is open:', url);
-        // Supabase gestirà automaticamente i parametri hash
-        supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-          if (session?.user && !error) {
-            console.log('✅ Email confirmed, session restored');
-            // 🔥 FIX: Forza il refresh dell'utente per ottenere i metadata aggiornati
-            const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
-            if (refreshError) {
-              console.warn('⚠️ Could not refresh user, using session user:', refreshError);
-              proceedAfterAuthentication(session.user);
-            } else if (refreshedUser) {
-              console.log('✅ User refreshed with metadata:', {
-                first_name: refreshedUser.user_metadata?.first_name,
-                last_name: refreshedUser.user_metadata?.last_name,
-                age: refreshedUser.user_metadata?.age,
-                gender: refreshedUser.user_metadata?.gender,
-              });
-              proceedAfterAuthentication(refreshedUser);
-            } else {
-              proceedAfterAuthentication(session.user);
+        
+        // 🔥 FIX: Mostra un messaggio di conferma mentre processiamo
+        Alert.alert(
+          t('auth.confirmingEmail') || 'Conferma email in corso...',
+          t('auth.pleaseWait') || 'Stiamo verificando la tua email. Attendi un momento.',
+          [],
+          { cancelable: false }
+        );
+        
+        // Aspetta un momento per permettere a Supabase di processare il link
+        setTimeout(() => {
+          // Supabase gestirà automaticamente i parametri hash
+          supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+            // Chiudi l'alert di loading
+            Alert.alert('', '', [], { cancelable: true });
+            
+            if (session?.user && !error) {
+              console.log('✅ Email confirmed, session restored');
+              // 🔥 FIX: Forza il refresh dell'utente per ottenere i metadata aggiornati
+              const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
+              if (refreshError) {
+                console.warn('⚠️ Could not refresh user, using session user:', refreshError);
+                proceedAfterAuthentication(session.user);
+              } else if (refreshedUser) {
+                console.log('✅ User refreshed with metadata:', {
+                  first_name: refreshedUser.user_metadata?.first_name,
+                  last_name: refreshedUser.user_metadata?.last_name,
+                  age: refreshedUser.user_metadata?.age,
+                  gender: refreshedUser.user_metadata?.gender,
+                  email_confirmed_at: refreshedUser.email_confirmed_at,
+                });
+                
+                // 🔥 NEW: Mostra un messaggio di successo e chiudi il modal di verifica se aperto
+                Alert.alert(
+                  t('auth.emailConfirmed') || 'Email confermata!',
+                  t('auth.emailConfirmedSuccess') || 'La tua email è stata confermata con successo. Puoi continuare con il tutorial!',
+                  [{ 
+                    text: t('common.ok') || 'OK',
+                    onPress: () => {
+                      // Chiudi il modal di verifica email se è aperto
+                      setShowEmailVerificationModal(false);
+                      // Aggiorna lo stato dell'utente
+                      setUser(refreshedUser);
+                    }
+                  }]
+                );
+                
+                // Non chiamare proceedAfterAuthentication se l'utente è già autenticato
+                // Questo evita di riavviare il tutorial
+                if (!isAuthenticated) {
+                  proceedAfterAuthentication(refreshedUser);
+                }
+              } else {
+                proceedAfterAuthentication(session.user);
+              }
+            } else if (error) {
+              console.error('❌ Error confirming email:', error);
+              Alert.alert(
+                t('auth.emailConfirmationError') || 'Errore',
+                t('auth.emailConfirmationErrorMessage') || 'Si è verificato un errore durante la conferma dell\'email. Riprova più tardi.'
+              );
             }
-          } else if (error) {
-            console.error('❌ Error confirming email:', error);
-            Alert.alert(
-              t('auth.emailConfirmationError') || 'Errore',
-              t('auth.emailConfirmationErrorMessage') || 'Si è verificato un errore durante la conferma dell\'email. Riprova più tardi.'
-            );
-          }
-        });
+          });
+        }, 1500);
       }
     };
 

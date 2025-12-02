@@ -106,11 +106,22 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
           t('auth.emailNotVerifiedMessage') || 'L\'email non è ancora stata verificata. Controlla la tua casella di posta e clicca sul link di conferma.'
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error checking email verification:', error);
+      console.error('❌ Error details:', error?.message, error?.status);
+      
+      // 🔥 FIX: Messaggio di errore più specifico
+      let errorMessage = t('auth.emailCheckError') || 'Impossibile verificare lo stato dell\'email. Riprova più tardi.';
+      
+      if (error?.message?.includes('Auth session missing') || error?.message?.includes('session')) {
+        errorMessage = 'Sessione non valida. Prova a fare logout e login di nuovo.';
+      } else if (error?.message) {
+        errorMessage = `Errore: ${error.message}`;
+      }
+      
       Alert.alert(
         t('common.error') || 'Errore',
-        t('auth.emailCheckError') || 'Impossibile verificare lo stato dell\'email. Riprova più tardi.'
+        errorMessage
       );
     } finally {
       setIsChecking(false);

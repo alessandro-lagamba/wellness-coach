@@ -1865,7 +1865,9 @@
     "emailNotVerified": "Email not yet verified",
     "emailNotVerifiedMessage": "The email has not been verified yet. Check your inbox and click the confirmation link.",
     "emailCheckError": "Unable to check email status. Please try again later.",
-    "emailVerifiedMessage": "Your email has been verified successfully. You can now access all app features."
+    "emailVerifiedMessage": "Your email has been verified successfully. You can now access all app features.",
+    "pleaseWait": "We're verifying your email. Please wait a moment.",
+    "emailConfirmedSuccess": "Your email has been confirmed successfully. You can continue with the tutorial!"
   },
   "profile": {
     "title": "Personal Information",

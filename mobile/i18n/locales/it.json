@@ -1901,7 +1901,9 @@
     "emailNotVerified": "Email non ancora verificata",
     "emailNotVerifiedMessage": "L'email non è ancora stata verificata. Controlla la tua casella di posta e clicca sul link di conferma.",
     "emailCheckError": "Impossibile verificare lo stato dell'email. Riprova più tardi.",
-    "emailVerifiedMessage": "La tua email è stata verificata con successo. Ora puoi accedere a tutte le funzionalità dell'app."
+    "emailVerifiedMessage": "La tua email è stata verificata con successo. Ora puoi accedere a tutte le funzionalità dell'app.",
+    "pleaseWait": "Stiamo verificando la tua email. Attendi un momento.",
+    "emailConfirmedSuccess": "La tua email è stata confermata con successo. Puoi continuare con il tutorial!"
   },
   "profile": {
     "title": "Informazioni Personali",
