@@ -1,23 +1,28 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Animated,
+  Pressable,
+  Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
+import * as Haptics from 'expo-haptics';
+
+const { width, height } = Dimensions.get('window');
 
 interface HydrationActionModalProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: () => void;
-  onRemove: () => void;
+  onAdd: (quantity: number) => void;
+  onRemove: (quantity: number) => void;
+  currentGlasses?: number;
+  goalGlasses?: number;
 }
 
 export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
@@ -25,58 +30,62 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
   onClose,
   onAdd,
   onRemove,
+  currentGlasses = 0,
+  goalGlasses = 8,
 }) => {
   const { colors, mode } = useTheme();
   const { t } = useTranslation();
   const isDark = mode === 'dark';
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const scaleAnim = React.useRef(new Animated.Value(0.9)).current;
+  const slideAnim = useRef(new Animated.Value(height)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+  
+  const [quantity, setQuantity] = useState(1);
+  const [isAdding, setIsAdding] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (visible) {
+      setQuantity(1);
+      setIsAdding(true);
       Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          damping: 25,
+          stiffness: 300,
           useNativeDriver: true,
         }),
-        Animated.spring(scaleAnim, {
+        Animated.timing(backdropAnim, {
           toValue: 1,
-          tension: 50,
-          friction: 7,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
+        Animated.timing(slideAnim, {
+          toValue: height,
+          duration: 250,
           useNativeDriver: true,
         }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.9,
-          duration: 150,
+        Animated.timing(backdropAnim, {
+          toValue: 0,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start();
     }
   }, [visible]);
 
-  const animatedStyle = {
-    opacity: fadeAnim,
-    transform: [{ scale: scaleAnim }],
-  };
-
-  const handleAdd = () => {
-    onAdd();
+  const handleConfirm = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (isAdding) {
+      onAdd(quantity);
+    } else {
+      onRemove(quantity);
+    }
     onClose();
   };
 
-  const handleRemove = () => {
-    onRemove();
-    onClose();
-  };
+  const progressPercent = Math.min((currentGlasses / goalGlasses) * 100, 100);
 
   return (
     <Modal
@@ -86,95 +95,181 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <BlurView
-        intensity={isDark ? 30 : 20}
-        tint={isDark ? 'dark' : 'light'}
-        style={styles.overlay}
-      >
-        <TouchableOpacity
-          style={styles.backdropTouchable}
-          activeOpacity={1}
-          onPress={onClose}
-        />
-        <Animated.View style={[styles.container, animatedStyle]}>
-          <LinearGradient
-            colors={['#06b6d4', '#0891b2']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.header}
-          >
-            <View style={styles.iconContainer}>
-              <MaterialCommunityIcons
-                name="water"
-                size={48}
-                color="#ffffff"
-              />
-            </View>
-            <Text style={styles.title}>
-              {t('home.hydrationActions.menuTitle') || 'Gestisci Idratazione'}
-            </Text>
-            <Text style={styles.subtitle}>
-              {t('home.hydrationActions.menuMessage') || 'Cosa vuoi fare?'}
-            </Text>
-          </LinearGradient>
+      <View style={styles.overlay}>
+        <Animated.View 
+          style={[
+            styles.backdrop,
+            { opacity: backdropAnim }
+          ]}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        </Animated.View>
+        
+        <Animated.View 
+          style={[
+            styles.bottomSheet,
+            { 
+              backgroundColor: colors.surface,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          {/* Handle bar */}
+          <View style={styles.handleBar}>
+            <View style={[styles.handle, { backgroundColor: colors.border }]} />
+          </View>
 
-          <View style={[styles.content, { backgroundColor: colors.surface }]}>
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.removeButton, { borderColor: colors.error + '40' }]}
-                onPress={handleRemove}
-                activeOpacity={0.8}
-              >
-                <MaterialCommunityIcons
-                  name="water-minus"
-                  size={24}
-                  color={colors.error}
-                />
-                <Text style={[styles.actionButtonText, { color: colors.error }]}>
-                  {t('home.hydrationActions.remove') || 'Rimuovi'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionButton, styles.addButton]}
-                onPress={handleAdd}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#06b6d4', '#0891b2']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.addButtonGradient}
-                >
-                  <MaterialCommunityIcons
-                    name="water-plus"
-                    size={24}
-                    color="#ffffff"
-                  />
-                  <Text style={styles.addButtonText}>
-                    {t('home.hydrationActions.add') || 'Aggiungi'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionButton, styles.cancelButton, { borderColor: colors.border }]}
-                onPress={onClose}
-                activeOpacity={0.8}
-              >
-                <MaterialCommunityIcons
-                  name="close"
-                  size={24}
-                  color={colors.textSecondary}
-                />
-                <Text style={[styles.actionButtonText, { color: colors.textSecondary }]}>
-                  {t('common.cancel') || 'Annulla'}
-                </Text>
-              </TouchableOpacity>
+          {/* Compact Header */}
+          <View style={styles.header}>
+            <LinearGradient
+              colors={['#0ea5e9', '#06b6d4']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.iconBadge}
+            >
+              <MaterialCommunityIcons name="water" size={24} color="#fff" />
+            </LinearGradient>
+            <View style={styles.headerText}>
+              <Text style={[styles.title, { color: colors.text }]}>
+                {t('home.hydrationActions.menuTitle') || 'Idratazione'}
+              </Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+                {currentGlasses} / {goalGlasses} {t('home.hydrationActions.glasses') || 'bicchieri'}
+              </Text>
             </View>
           </View>
+
+          {/* Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
+              <LinearGradient
+                colors={['#0ea5e9', '#06b6d4']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.progressFill, { width: `${progressPercent}%` }]}
+              />
+            </View>
+          </View>
+
+          {/* Toggle Add/Remove - Compact */}
+          <View style={styles.toggleRow}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.toggleBtn,
+                { borderColor: isAdding ? '#0ea5e9' : colors.border },
+                isAdding && { backgroundColor: '#0ea5e9' },
+                pressed && { opacity: 0.8 },
+              ]}
+              onPress={() => { setIsAdding(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            >
+              <MaterialCommunityIcons 
+                name="plus" 
+                size={18} 
+                color={isAdding ? '#fff' : colors.textSecondary} 
+              />
+              <Text style={[styles.toggleText, { color: isAdding ? '#fff' : colors.textSecondary }]}>
+                {t('home.hydrationActions.add') || 'Aggiungi'}
+              </Text>
+            </Pressable>
+            
+            <Pressable
+              style={({ pressed }) => [
+                styles.toggleBtn,
+                { borderColor: !isAdding ? '#ef4444' : colors.border },
+                !isAdding && { backgroundColor: '#ef4444' },
+                pressed && { opacity: 0.8 },
+              ]}
+              onPress={() => { setIsAdding(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            >
+              <MaterialCommunityIcons 
+                name="minus" 
+                size={18} 
+                color={!isAdding ? '#fff' : colors.textSecondary} 
+              />
+              <Text style={[styles.toggleText, { color: !isAdding ? '#fff' : colors.textSecondary }]}>
+                {t('home.hydrationActions.remove') || 'Rimuovi'}
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Quick Select Buttons */}
+          <View style={styles.quickSelectSection}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+              {t('home.hydrationActions.quantity') || 'Quantità'}
+            </Text>
+            <View style={styles.quickSelectRow}>
+              {[1, 2, 3, 4, 5].map((num) => (
+                <Pressable
+                  key={num}
+                  style={({ pressed }) => [
+                    styles.quickBtn,
+                    { 
+                      backgroundColor: quantity === num ? '#0ea5e9' : colors.background,
+                      borderColor: quantity === num ? '#0ea5e9' : colors.border,
+                    },
+                    pressed && { transform: [{ scale: 0.95 }] },
+                  ]}
+                  onPress={() => { setQuantity(num); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                >
+                  <MaterialCommunityIcons 
+                    name="cup-water" 
+                    size={20} 
+                    color={quantity === num ? '#fff' : '#0ea5e9'} 
+                  />
+                  <Text style={[
+                    styles.quickBtnText, 
+                    { color: quantity === num ? '#fff' : colors.text }
+                  ]}>
+                    {num}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Action Button */}
+          <View style={styles.actions}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.confirmBtn,
+                pressed && { transform: [{ scale: 0.98 }], opacity: 0.9 },
+              ]}
+              onPress={handleConfirm}
+            >
+              <LinearGradient
+                colors={isAdding ? ['#0ea5e9', '#06b6d4'] : ['#ef4444', '#dc2626']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.confirmGradient}
+              >
+                <MaterialCommunityIcons 
+                  name={isAdding ? 'water-plus' : 'water-minus'} 
+                  size={22} 
+                  color="#fff" 
+                />
+                <Text style={styles.confirmText}>
+                  {isAdding 
+                    ? `${t('home.hydrationActions.add') || 'Aggiungi'} ${quantity} ${quantity === 1 ? t('home.hydrationActions.glass') || 'bicchiere' : t('home.hydrationActions.glasses') || 'bicchieri'}`
+                    : `${t('home.hydrationActions.remove') || 'Rimuovi'} ${quantity} ${quantity === 1 ? t('home.hydrationActions.glass') || 'bicchiere' : t('home.hydrationActions.glasses') || 'bicchieri'}`
+                  }
+                </Text>
+              </LinearGradient>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.cancelBtn,
+                pressed && { opacity: 0.7 },
+              ]}
+              onPress={onClose}
+            >
+              <Text style={[styles.cancelText, { color: colors.textSecondary }]}>
+                {t('common.cancel') || 'Annulla'}
+              </Text>
+            </Pressable>
+          </View>
         </Animated.View>
-      </BlurView>
+      </View>
     </Modal>
   );
 };
@@ -182,109 +277,138 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    justifyContent: 'flex-end',
   },
-  backdropTouchable: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  container: {
-    width: '100%',
-    maxWidth: 400,
-    borderRadius: 28,
-    overflow: 'hidden',
+  bottomSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 34,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.3,
-    shadowRadius: 30,
-    elevation: 15,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 20,
+  },
+  handleBar: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
   },
   header: {
-    padding: 32,
-    paddingBottom: 28,
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  iconBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  headerText: {
+    flex: 1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#ffffff',
-    marginBottom: 8,
-    textAlign: 'center',
-    letterSpacing: -0.5,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.95)',
-    textAlign: 'center',
-    fontWeight: '500',
+    fontSize: 14,
+    marginTop: 2,
   },
-  content: {
-    padding: 24,
-    paddingTop: 28,
+  progressContainer: {
+    marginBottom: 20,
+  },
+  progressBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  toggleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6,
+    borderWidth: 1.5,
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  quickSelectSection: {
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  quickSelectRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  quickBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    gap: 4,
+  },
+  quickBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   actions: {
-    gap: 12,
+    gap: 10,
   },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    gap: 12,
-    minHeight: 56,
-  },
-  removeButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-  },
-  addButton: {
+  confirmBtn: {
+    borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#06b6d4',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
   },
-  addButtonGradient: {
+  confirmGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    gap: 12,
-    width: '100%',
+    gap: 8,
   },
-  addButtonText: {
+  confirmText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#fff',
   },
-  cancelButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
+  cancelBtn: {
+    paddingVertical: 12,
+    alignItems: 'center',
   },
-  actionButtonText: {
-    fontSize: 16,
+  cancelText: {
+    fontSize: 15,
     fontWeight: '600',
   },
 });
-

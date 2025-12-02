@@ -87,9 +87,28 @@ export class AuthService {
   }
 
   /**
-   * Registra un nuovo utente
+   * Registra un nuovo utente (legacy - usa signUpWithMetadata per nuove registrazioni)
    */
   static async signUp(email: string, password: string, fullName?: string): Promise<{ user: User | null; error: any }> {
+    return this.signUpWithMetadata(email, password, { full_name: fullName });
+  }
+
+  /**
+   * 🔥 NEW: Registra un nuovo utente con tutti i metadata
+   * Questo metodo salva TUTTI i dati utente direttamente nella chiamata signUp,
+   * garantendo che siano disponibili nei user_metadata dopo la conferma email.
+   */
+  static async signUpWithMetadata(
+    email: string, 
+    password: string, 
+    metadata: {
+      full_name?: string;
+      first_name?: string;
+      last_name?: string;
+      age?: number;
+      gender?: string;
+    }
+  ): Promise<{ user: User | null; error: any }> {
     // 🆕 Track signup attempt
     try {
       const { AnalyticsService } = require('./analytics.service');
@@ -98,12 +117,26 @@ export class AuthService {
       // Analytics not available, ignore
     }
     try {
+      console.log('📝 SignUp with metadata:', {
+        email,
+        first_name: metadata.first_name,
+        last_name: metadata.last_name,
+        age: metadata.age,
+        gender: metadata.gender,
+      });
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            full_name: fullName,
+            // 🔥 CRITICAL: Include ALL user data in the signup call
+            // This ensures metadata is saved even before email verification
+            full_name: metadata.full_name,
+            first_name: metadata.first_name,
+            last_name: metadata.last_name,
+            age: metadata.age,
+            gender: metadata.gender,
           },
           // ✅ Configurazione redirect URL per conferma email
           // Usa lo schema deep link dell'app invece di localhost
@@ -124,6 +157,7 @@ export class AuthService {
       console.log('✅ Signup successful!');
       console.log('📧 User email:', data.user?.email);
       console.log('📧 Email confirmed:', data.user?.email_confirmed_at);
+      console.log('📧 User metadata:', data.user?.user_metadata);
       console.log('📧 Confirmation email should be sent to:', email);
       
       if (data.user) {
@@ -151,7 +185,7 @@ export class AuthService {
 
       return { user: data.user, error: null };
     } catch (error) {
-      console.error('Error in signUp:', error);
+      console.error('Error in signUpWithMetadata:', error);
       return { user: null, error };
     }
   }

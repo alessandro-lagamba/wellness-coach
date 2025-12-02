@@ -100,13 +100,15 @@ export class HealthDataService {
         const { HealthPermissionsService } = await import('./health-permissions.service');
         
         // 🔥 Aspetta un breve momento per assicurarci che Health Connect abbia processato i permessi
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // 🔥 Forza il refresh leggendo direttamente da Health Connect
         const grantedPermissions = await HealthPermissionsService.getGrantedPermissions();
         
+        console.log('🔄 Refreshed permissions from Health Connect:', grantedPermissions);
+        
         // Aggiorna i permessi locali basandosi su quelli concessi
-        this.permissions = {
+        const newPermissions = {
           steps: grantedPermissions.includes('steps'),
           heartRate: grantedPermissions.includes('heart_rate'),
           sleep: grantedPermissions.includes('sleep'),
@@ -117,6 +119,21 @@ export class HealthDataService {
           hydration: false, // Not directly available
           mindfulness: false, // Not directly available
         };
+        
+        // 🔥 CRITICO: Verifica se c'è stato un cambiamento nei permessi
+        const hadPermissions = Object.values(this.permissions).some(Boolean);
+        const hasPermissions = Object.values(newPermissions).some(Boolean);
+        
+        if (!hadPermissions && hasPermissions) {
+          console.log('✅ NEW PERMISSIONS DETECTED! Clearing cached data to force fresh sync');
+          // 🔥 Reset dati cached per forzare una nuova sincronizzazione
+          this.lastHealthData = null;
+          this.lastHealthDataSource = null;
+          this.lastSyncAt = null;
+        }
+        
+        this.permissions = newPermissions;
+        console.log('📋 Updated local permissions:', this.permissions);
       } else if (Platform.OS === 'ios') {
         // Per iOS, i permessi vengono gestiti direttamente da HealthKit
         // Non serve refresh esplicito

@@ -21,6 +21,7 @@ export interface UseHealthDataReturn {
   requestPermissions: () => Promise<HealthPermissions>;
   syncData: () => Promise<HealthDataSyncResult>;
   refreshData: () => Promise<void>;
+  refreshPermissions: () => Promise<HealthPermissions>; // 🔥 NEW: Refresh permissions state
   
   // Status
   isPermissionGranted: (metric: string) => boolean;
@@ -84,14 +85,30 @@ export function useHealthData(): UseHealthDataReturn {
       
       const newPermissions = await healthService.requestPermissions();
       
+      // 🔥 CRITICO: Aspetta un momento per assicurarci che Health Connect abbia processato i permessi
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       // 🔥 CRITICO: Aggiorna i permessi nel servizio prima di sincronizzare
       await healthService.refreshPermissions();
       const refreshedPermissions = healthService.getPermissions();
+      
+      console.log('🔄 Permissions after refresh:', refreshedPermissions);
       setPermissions(refreshedPermissions);
       
       // Sync data after getting permissions
       if (Object.values(refreshedPermissions).some(Boolean)) {
-        await syncData();
+        console.log('🔄 Starting data sync after permission grant...');
+        // 🔥 Forza una nuova sync pulita
+        const result = await healthService.syncHealthData(true);
+        if (result.success && result.data) {
+          console.log('✅ Data synced successfully:', {
+            steps: result.data.steps,
+            heartRate: result.data.heartRate,
+            sleepHours: result.data.sleepHours,
+          });
+          setHealthData(result.data);
+          setLastSyncDate(result.lastSyncDate || new Date());
+        }
       }
       
       return refreshedPermissions;
@@ -102,7 +119,7 @@ export function useHealthData(): UseHealthDataReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [healthService, permissions, syncData]);
+  }, [healthService, permissions]);
 
   const hasMeaningfulData = (data?: HealthData | null) => {
     if (!data) return false;
@@ -223,6 +240,30 @@ export function useHealthData(): UseHealthDataReturn {
     await syncData();
   }, [syncData]);
 
+  // 🔥 NEW: Refresh permissions state from the service
+  const refreshPermissions = useCallback(async (): Promise<HealthPermissions> => {
+    try {
+      setIsLoading(true);
+      
+      // Refresh permissions in the service
+      await healthService.refreshPermissions();
+      
+      // Get updated permissions
+      const updatedPermissions = healthService.getPermissions();
+      console.log('🔄 Permissions refreshed in hook:', updatedPermissions);
+      
+      // Update state
+      setPermissions(updatedPermissions);
+      
+      return updatedPermissions;
+    } catch (err) {
+      console.error('Failed to refresh permissions:', err);
+      return permissions;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [healthService, permissions]);
+
   // Check if permission is granted for a specific metric
   const isPermissionGranted = useCallback((metric: string): boolean => {
     return healthService.isMetricAvailable(metric as any);
@@ -296,6 +337,7 @@ export function useHealthData(): UseHealthDataReturn {
     requestPermissions,
     syncData,
     refreshData,
+    refreshPermissions, // 🔥 NEW
     
     // Status
     isPermissionGranted,

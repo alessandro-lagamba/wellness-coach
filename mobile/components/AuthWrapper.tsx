@@ -736,6 +736,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         visible={showEmailVerifiedSuccess}
         onClose={() => setShowEmailVerifiedSuccess(false)}
         userName={user?.user_metadata?.first_name || user?.user_metadata?.full_name?.split(' ')[0]}
+        userGender={user?.user_metadata?.gender}
       />
     </View>
   );

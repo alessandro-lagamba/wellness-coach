@@ -1248,6 +1248,15 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       const analysisIntent = AnalysisIntentService.detectAnalysisIntent(voiceText);
       // 🆕 Rimosso log per performance
 
+      // 🆕 Recupera contesto ciclo mestruale se disponibile
+      let cycleContext = '';
+      try {
+        const { menstrualCycleService } = await import('../services/menstrual-cycle.service');
+        cycleContext = await menstrualCycleService.getRecentNotesForAI();
+      } catch (error) {
+        // Ignora errori - il ciclo è opzionale
+      }
+
       // Prepare context for AI (same as text chat)
       const userContext = aiContext ? {
         emotionHistory: aiContext.emotionHistory,
@@ -1259,6 +1268,8 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         temporalPatterns: aiContext.temporalPatterns,
         behavioralInsights: aiContext.behavioralInsights,
         contextualFactors: aiContext.contextualFactors,
+        // 🆕 Contesto ciclo mestruale
+        menstrualCycleContext: cycleContext || undefined,
         // 🔧 Aggiungi nome utente per personalizzazione (usa first_name se disponibile)
         firstName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
         lastName: currentUserProfile?.last_name || currentUser?.user_metadata?.full_name?.split(' ').slice(1).join(' ') || undefined,
@@ -1273,6 +1284,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         temporalPatterns: null,
         behavioralInsights: null,
         contextualFactors: null,
+        menstrualCycleContext: undefined,
         userName: 'Utente',
         isAnonymous: true
       };
@@ -1478,6 +1490,15 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       // 🆕 Rileva intent di analisi dal messaggio dell'utente
       const analysisIntent = AnalysisIntentService.detectAnalysisIntent(trimmed);
 
+      // 🆕 Recupera contesto ciclo mestruale se disponibile
+      let cycleContextForChat = '';
+      try {
+        const { menstrualCycleService } = await import('../services/menstrual-cycle.service');
+        cycleContextForChat = await menstrualCycleService.getRecentNotesForAI();
+      } catch (error) {
+        // Ignora errori - il ciclo è opzionale
+      }
+
       // Prepare context for AI
       const userContext = aiContext ? {
         emotionHistory: aiContext.emotionHistory,
@@ -1490,6 +1511,8 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         temporalPatterns: aiContext.temporalPatterns,
         behavioralInsights: aiContext.behavioralInsights,
         contextualFactors: aiContext.contextualFactors,
+        // 🆕 Contesto ciclo mestruale
+        menstrualCycleContext: cycleContextForChat || undefined,
         // 🔧 Aggiungi nome utente per personalizzazione (usa first_name se disponibile)
         firstName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
         lastName: currentUserProfile?.last_name || currentUser?.user_metadata?.full_name?.split(' ').slice(1).join(' ') || undefined,
@@ -1506,6 +1529,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         temporalPatterns: null,
         behavioralInsights: null,
         contextualFactors: null,
+        menstrualCycleContext: undefined,
         userName: 'Utente',
         isAnonymous: true,
         language: language // 🔥 FIX: Includi la lingua anche per utenti anonimi

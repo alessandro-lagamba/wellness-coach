@@ -3,6 +3,7 @@
  * 
  * Gestisce il tracking del ciclo mestruale per il widget.
  * Calcola giorno del ciclo, fase corrente, e prossimo periodo.
+ * Supporta note giornaliere per sintomi e umore.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,6 +19,15 @@ export interface CycleData {
   nextPeriodDays: number; // Giorni fino al prossimo periodo
   cycleLength: number; // Lunghezza media del ciclo (default 28)
   lastPeriodDate: string; // Data ultimo periodo (ISO)
+}
+
+export interface CycleNote {
+  id?: string;
+  date: string;
+  note: string;
+  symptoms?: string[];
+  mood?: string;
+  flowIntensity?: 'light' | 'medium' | 'heavy';
 }
 
 const STORAGE_KEY = 'menstrual_cycle_data';
@@ -222,6 +232,191 @@ export class MenstrualCycleService {
   async isConfigured(): Promise<boolean> {
     const lastPeriodDate = await this.getLastPeriodDate();
     return lastPeriodDate !== null;
+  }
+
+  /**
+   * Salva una nota per un giorno specifico
+   */
+  async saveNote(note: CycleNote): Promise<boolean> {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) {
+        console.warn('[Cycle] Cannot save note: user not authenticated');
+        return false;
+      }
+
+      const { error } = await supabase
+        .from('menstrual_cycle_notes')
+        .upsert({
+          user_id: currentUser.id,
+          date: note.date,
+          note: note.note,
+          symptoms: note.symptoms || [],
+          mood: note.mood || null,
+          flow_intensity: note.flowIntensity || null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,date' });
+
+      if (error) {
+        console.error('[Cycle] Error saving note:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[Cycle] Error saving note:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Recupera le note per un intervallo di date
+   */
+  async getNotes(startDate: string, endDate: string): Promise<CycleNote[]> {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('menstrual_cycle_notes')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('[Cycle] Error getting notes:', error);
+        return [];
+      }
+
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        date: item.date,
+        note: item.note,
+        symptoms: item.symptoms,
+        mood: item.mood,
+        flowIntensity: item.flow_intensity,
+      }));
+    } catch (error) {
+      console.error('[Cycle] Error getting notes:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Recupera la nota per una data specifica
+   */
+  async getNoteForDate(date: string): Promise<CycleNote | null> {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) {
+        return null;
+      }
+
+      const { data, error } = await supabase
+        .from('menstrual_cycle_notes')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .eq('date', date)
+        .maybeSingle();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return {
+        id: data.id,
+        date: data.date,
+        note: data.note,
+        symptoms: data.symptoms,
+        mood: data.mood,
+        flowIntensity: data.flow_intensity,
+      };
+    } catch (error) {
+      console.error('[Cycle] Error getting note for date:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Recupera le note recenti (ultimi 30 giorni) per l'AI context
+   */
+  async getRecentNotesForAI(): Promise<string> {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) {
+        return '';
+      }
+
+      const today = new Date();
+      const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      
+      const notes = await this.getNotes(
+        thirtyDaysAgo.toISOString().split('T')[0],
+        today.toISOString().split('T')[0]
+      );
+
+      if (notes.length === 0) {
+        return '';
+      }
+
+      // Formatta le note per l'AI
+      const cycleData = await this.getCycleData();
+      let context = '';
+      
+      if (cycleData) {
+        context += `Ciclo mestruale: Giorno ${cycleData.day}, fase ${cycleData.phaseName}. `;
+        context += `Prossimo ciclo tra ${cycleData.nextPeriodDays} giorni. `;
+      }
+
+      context += 'Note recenti sul ciclo: ';
+      notes.slice(0, 5).forEach((note) => {
+        context += `[${note.date}] ${note.note}`;
+        if (note.symptoms && note.symptoms.length > 0) {
+          context += ` (sintomi: ${note.symptoms.join(', ')})`;
+        }
+        if (note.mood) {
+          context += ` (umore: ${note.mood})`;
+        }
+        context += '. ';
+      });
+
+      return context.trim();
+    } catch (error) {
+      console.error('[Cycle] Error getting notes for AI:', error);
+      return '';
+    }
+  }
+
+  /**
+   * Elimina una nota
+   */
+  async deleteNote(date: string): Promise<boolean> {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) {
+        return false;
+      }
+
+      const { error } = await supabase
+        .from('menstrual_cycle_notes')
+        .delete()
+        .eq('user_id', currentUser.id)
+        .eq('date', date);
+
+      if (error) {
+        console.error('[Cycle] Error deleting note:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[Cycle] Error deleting note:', error);
+      return false;
+    }
   }
 }
 

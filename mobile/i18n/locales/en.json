@@ -330,16 +330,31 @@
       "today": "Today"
     },
     "cycle": {
+      "title": "Menstrual Cycle",
       "day": "Day {{day}}",
-      "days": "{{count}} days",
+      "days": "days",
       "nextPeriod": "Next period",
-      "cycleLength": "Cycle length",
-      "notConfigured": "Configure your menstrual cycle in settings to see information here.",
+      "cycleLength": "cycle length",
+      "cycleLengthTitle": "Cycle Length",
+      "cycleLengthSubtitle": "Select your average cycle length",
+      "lastPeriodStart": "Last Period Start",
+      "daysUntilNext": "days until next",
+      "notConfigured": "Tap to set up cycle tracking",
+      "addNote": "Add a Note",
+      "noteSubtitle": "Record symptoms, mood, or other details",
+      "notePlaceholder": "E.g.: Light cramps, fatigue...",
+      "infoText": "Your notes will be available to the AI assistant to give you personalized advice.",
       "phases": {
         "menstrual": "Menstrual",
         "follicular": "Follicular",
         "ovulation": "Ovulation",
         "luteal": "Luteal"
+      },
+      "descriptions": {
+        "menstrual": "Menstrual phase. Rest and self-care are important.",
+        "follicular": "Growth phase. Energy increasing, great time for new projects.",
+        "ovulation": "Ovulation phase. Peak energy and fertility.",
+        "luteal": "Luteal phase. Possible mood swings, take care of yourself."
       }
     },
     "goal": "Goal",
@@ -1874,6 +1889,7 @@
     "emailVerifiedSuccessTitle": "Email Verified!",
     "emailVerifiedSuccessMessage": "Your account has been successfully verified. You can now access all app features.",
     "emailVerifiedSuccessMessageWithName": "Welcome ${name}! Your account is now active.",
+    "emailVerifiedSuccessMessageWithNameFemale": "Welcome ${name}! Your account is now active.",
     "featureUnlocked1": "Complete AI analysis",
     "featureUnlocked2": "Data synchronization",
     "featureUnlocked3": "Personalized coaching",

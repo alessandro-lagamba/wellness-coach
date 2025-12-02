@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Animated,
+  Pressable,
   TextInput,
+  Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
+import * as Haptics from 'expo-haptics';
+
+const { width, height } = Dimensions.get('window');
 
 interface MeditationActionModalProps {
   visible: boolean;
@@ -20,6 +23,7 @@ interface MeditationActionModalProps {
   onAdd: (minutes: number) => void;
   onRemove: (minutes: number) => void;
   currentMinutes?: number;
+  goalMinutes?: number;
 }
 
 export const MeditationActionModal: React.FC<MeditationActionModalProps> = ({
@@ -28,67 +32,79 @@ export const MeditationActionModal: React.FC<MeditationActionModalProps> = ({
   onAdd,
   onRemove,
   currentMinutes = 0,
+  goalMinutes = 30,
 }) => {
   const { colors, mode } = useTheme();
   const { t } = useTranslation();
   const isDark = mode === 'dark';
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const scaleAnim = React.useRef(new Animated.Value(0.9)).current;
-  const [minutes, setMinutes] = useState<string>('5');
-  const [isAdding, setIsAdding] = useState<boolean>(true);
+  const slideAnim = useRef(new Animated.Value(height)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+  
+  const [minutes, setMinutes] = useState(5);
+  const [customMinutes, setCustomMinutes] = useState('');
+  const [isAdding, setIsAdding] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (visible) {
-      setMinutes('5'); // Reset to default when modal opens
+      setMinutes(5);
+      setCustomMinutes('');
       setIsAdding(true);
       Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          damping: 25,
+          stiffness: 300,
           useNativeDriver: true,
         }),
-        Animated.spring(scaleAnim, {
+        Animated.timing(backdropAnim, {
           toValue: 1,
-          tension: 50,
-          friction: 7,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
+        Animated.timing(slideAnim, {
+          toValue: height,
+          duration: 250,
           useNativeDriver: true,
         }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.9,
-          duration: 150,
+        Animated.timing(backdropAnim, {
+          toValue: 0,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start();
     }
   }, [visible]);
 
-  const animatedStyle = {
-    opacity: fadeAnim,
-    transform: [{ scale: scaleAnim }],
+  const handleQuickSelect = (mins: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setMinutes(mins);
+    setCustomMinutes('');
+  };
+
+  const handleCustomChange = (text: string) => {
+    setCustomMinutes(text);
+    const num = parseInt(text, 10);
+    if (!isNaN(num) && num > 0) {
+      setMinutes(num);
+    }
   };
 
   const handleConfirm = () => {
-    const minutesNum = parseInt(minutes, 10);
-    if (isNaN(minutesNum) || minutesNum <= 0) {
-      return;
-    }
+    if (minutes <= 0) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (isAdding) {
-      onAdd(minutesNum);
+      onAdd(minutes);
     } else {
-      onRemove(minutesNum);
+      onRemove(minutes);
     }
     onClose();
   };
 
-  const quickMinutes = [5, 10, 15, 20, 30];
+  const quickOptions = [5, 10, 15, 20, 30];
+  const progressPercent = Math.min((currentMinutes / goalMinutes) * 100, 100);
 
   return (
     <Modal
@@ -98,195 +114,203 @@ export const MeditationActionModal: React.FC<MeditationActionModalProps> = ({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <BlurView
-        intensity={isDark ? 30 : 20}
-        tint={isDark ? 'dark' : 'light'}
-        style={styles.overlay}
-      >
-        <TouchableOpacity
-          style={styles.backdropTouchable}
-          activeOpacity={1}
-          onPress={onClose}
-        />
-        <Animated.View style={[styles.container, animatedStyle]}>
-          <LinearGradient
-            colors={['#8b5cf6', '#7c3aed']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.header}
-          >
-            <View style={styles.iconContainer}>
-              <MaterialCommunityIcons
-                name="meditation"
-                size={48}
-                color="#ffffff"
-              />
-            </View>
-            <Text style={styles.title}>
-              {t('home.meditationActions.menuTitle') || 'Gestisci Meditazione'}
-            </Text>
-            <Text style={styles.subtitle}>
-              {t('home.meditationActions.menuMessage') || 'Quanti minuti vuoi aggiungere o rimuovere?'}
-            </Text>
-            {currentMinutes > 0 && (
-              <Text style={styles.currentMinutes}>
-                {t('home.meditationActions.currentMinutes', { minutes: currentMinutes }) || `Attuali: ${currentMinutes} min`}
+      <View style={styles.overlay}>
+        <Animated.View 
+          style={[
+            styles.backdrop,
+            { opacity: backdropAnim }
+          ]}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        </Animated.View>
+        
+        <Animated.View 
+          style={[
+            styles.bottomSheet,
+            { 
+              backgroundColor: colors.surface,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          {/* Handle bar */}
+          <View style={styles.handleBar}>
+            <View style={[styles.handle, { backgroundColor: colors.border }]} />
+          </View>
+
+          {/* Compact Header */}
+          <View style={styles.header}>
+            <LinearGradient
+              colors={['#a855f7', '#8b5cf6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.iconBadge}
+            >
+              <MaterialCommunityIcons name="meditation" size={24} color="#fff" />
+            </LinearGradient>
+            <View style={styles.headerText}>
+              <Text style={[styles.title, { color: colors.text }]}>
+                {t('home.meditationActions.menuTitle') || 'Meditazione'}
               </Text>
-            )}
-          </LinearGradient>
-
-          <View style={[styles.content, { backgroundColor: colors.surface }]}>
-            {/* Toggle Add/Remove */}
-            <View style={styles.toggleContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.toggleButton,
-                  isAdding && styles.toggleButtonActive,
-                  isAdding && { backgroundColor: '#8b5cf6' },
-                ]}
-                onPress={() => setIsAdding(true)}
-                activeOpacity={0.8}
-              >
-                <MaterialCommunityIcons
-                  name="plus-circle"
-                  size={20}
-                  color={isAdding ? '#ffffff' : colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.toggleButtonText,
-                    isAdding && styles.toggleButtonTextActive,
-                    { color: isAdding ? '#ffffff' : colors.textSecondary },
-                  ]}
-                >
-                  {t('home.meditationActions.add') || 'Aggiungi'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.toggleButton,
-                  !isAdding && styles.toggleButtonActive,
-                  !isAdding && { backgroundColor: colors.error },
-                ]}
-                onPress={() => setIsAdding(false)}
-                activeOpacity={0.8}
-              >
-                <MaterialCommunityIcons
-                  name="minus-circle"
-                  size={20}
-                  color={!isAdding ? '#ffffff' : colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.toggleButtonText,
-                    !isAdding && styles.toggleButtonTextActive,
-                    { color: !isAdding ? '#ffffff' : colors.textSecondary },
-                  ]}
-                >
-                  {t('home.meditationActions.remove') || 'Rimuovi'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Quick Minutes Buttons */}
-            <View style={styles.quickMinutesContainer}>
-              <Text style={[styles.quickMinutesLabel, { color: colors.textSecondary }]}>
-                {t('home.meditationActions.quickSelect') || 'Selezione rapida:'}
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+                {currentMinutes} / {goalMinutes} {t('home.minutes') || 'min'}
               </Text>
-              <View style={styles.quickMinutesRow}>
-                {quickMinutes.map((min) => (
-                  <TouchableOpacity
-                    key={min}
-                    style={[
-                      styles.quickMinuteButton,
-                      { borderColor: colors.border },
-                      minutes === min.toString() && {
-                        backgroundColor: '#8b5cf6',
-                        borderColor: '#8b5cf6',
-                      },
-                    ]}
-                    onPress={() => setMinutes(min.toString())}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.quickMinuteText,
-                        { color: minutes === min.toString() ? '#ffffff' : colors.text },
-                      ]}
-                    >
-                      {min}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Custom Input */}
-            <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>
-                {t('home.meditationActions.customMinutes') || 'Minuti personalizzati:'}
-              </Text>
-              <View style={[styles.inputWrapper, { borderColor: colors.border }]}>
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  value={minutes}
-                  onChangeText={setMinutes}
-                  keyboardType="number-pad"
-                  placeholder="0"
-                  placeholderTextColor={colors.textSecondary}
-                  maxLength={3}
-                />
-                <Text style={[styles.inputUnit, { color: colors.textSecondary }]}>
-                  {t('home.minutes') || 'min'}
-                </Text>
-              </View>
-            </View>
-
-            {/* Action Buttons */}
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.confirmButton]}
-                onPress={handleConfirm}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={isAdding ? ['#8b5cf6', '#7c3aed'] : [colors.error, colors.error + 'dd']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.confirmButtonGradient}
-                >
-                  <MaterialCommunityIcons
-                    name={isAdding ? 'plus-circle' : 'minus-circle'}
-                    size={24}
-                    color="#ffffff"
-                  />
-                  <Text style={styles.confirmButtonText}>
-                    {isAdding
-                      ? t('home.meditationActions.confirmAdd') || 'Aggiungi'
-                      : t('home.meditationActions.confirmRemove') || 'Rimuovi'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionButton, styles.cancelButton, { borderColor: colors.border }]}
-                onPress={onClose}
-                activeOpacity={0.8}
-              >
-                <MaterialCommunityIcons
-                  name="close"
-                  size={24}
-                  color={colors.textSecondary}
-                />
-                <Text style={[styles.actionButtonText, { color: colors.textSecondary }]}>
-                  {t('common.cancel') || 'Annulla'}
-                </Text>
-              </TouchableOpacity>
             </View>
           </View>
+
+          {/* Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
+              <LinearGradient
+                colors={['#a855f7', '#8b5cf6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.progressFill, { width: `${progressPercent}%` }]}
+              />
+            </View>
+          </View>
+
+          {/* Toggle Add/Remove - Compact */}
+          <View style={styles.toggleRow}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.toggleBtn,
+                { borderColor: isAdding ? '#8b5cf6' : colors.border },
+                isAdding && { backgroundColor: '#8b5cf6' },
+                pressed && { opacity: 0.8 },
+              ]}
+              onPress={() => { setIsAdding(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            >
+              <MaterialCommunityIcons 
+                name="plus" 
+                size={18} 
+                color={isAdding ? '#fff' : colors.textSecondary} 
+              />
+              <Text style={[styles.toggleText, { color: isAdding ? '#fff' : colors.textSecondary }]}>
+                {t('home.meditationActions.add') || 'Aggiungi'}
+              </Text>
+            </Pressable>
+            
+            <Pressable
+              style={({ pressed }) => [
+                styles.toggleBtn,
+                { borderColor: !isAdding ? '#ef4444' : colors.border },
+                !isAdding && { backgroundColor: '#ef4444' },
+                pressed && { opacity: 0.8 },
+              ]}
+              onPress={() => { setIsAdding(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            >
+              <MaterialCommunityIcons 
+                name="minus" 
+                size={18} 
+                color={!isAdding ? '#fff' : colors.textSecondary} 
+              />
+              <Text style={[styles.toggleText, { color: !isAdding ? '#fff' : colors.textSecondary }]}>
+                {t('home.meditationActions.remove') || 'Rimuovi'}
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Quick Select */}
+          <View style={styles.quickSelectSection}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+              {t('home.meditationActions.quickSelect') || 'Selezione rapida'}
+            </Text>
+            <View style={styles.quickSelectRow}>
+              {quickOptions.map((mins) => (
+                <Pressable
+                  key={mins}
+                  style={({ pressed }) => [
+                    styles.quickBtn,
+                    { 
+                      backgroundColor: minutes === mins && !customMinutes ? '#8b5cf6' : colors.background,
+                      borderColor: minutes === mins && !customMinutes ? '#8b5cf6' : colors.border,
+                    },
+                    pressed && { transform: [{ scale: 0.95 }] },
+                  ]}
+                  onPress={() => handleQuickSelect(mins)}
+                >
+                  <Text style={[
+                    styles.quickBtnNumber,
+                    { color: minutes === mins && !customMinutes ? '#fff' : colors.text }
+                  ]}>
+                    {mins}
+                  </Text>
+                  <Text style={[
+                    styles.quickBtnUnit,
+                    { color: minutes === mins && !customMinutes ? 'rgba(255,255,255,0.8)' : colors.textSecondary }
+                  ]}>
+                    min
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Custom Input */}
+          <View style={styles.customSection}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+              {t('home.meditationActions.customMinutes') || 'Personalizzato'}
+            </Text>
+            <View style={[styles.customInputRow, { borderColor: customMinutes ? '#8b5cf6' : colors.border, backgroundColor: colors.background }]}>
+              <TextInput
+                style={[styles.customInput, { color: colors.text }]}
+                value={customMinutes}
+                onChangeText={handleCustomChange}
+                keyboardType="number-pad"
+                placeholder="0"
+                placeholderTextColor={colors.textTertiary}
+                maxLength={3}
+              />
+              <Text style={[styles.customUnit, { color: colors.textSecondary }]}>
+                {t('home.minutes') || 'min'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Action Button */}
+          <View style={styles.actions}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.confirmBtn,
+                pressed && { transform: [{ scale: 0.98 }], opacity: 0.9 },
+              ]}
+              onPress={handleConfirm}
+            >
+              <LinearGradient
+                colors={isAdding ? ['#a855f7', '#8b5cf6'] : ['#ef4444', '#dc2626']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.confirmGradient}
+              >
+                <MaterialCommunityIcons 
+                  name="meditation" 
+                  size={22} 
+                  color="#fff" 
+                />
+                <Text style={styles.confirmText}>
+                  {isAdding 
+                    ? `${t('home.meditationActions.add') || 'Aggiungi'} ${minutes} ${t('home.minutes') || 'min'}`
+                    : `${t('home.meditationActions.remove') || 'Rimuovi'} ${minutes} ${t('home.minutes') || 'min'}`
+                  }
+                </Text>
+              </LinearGradient>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.cancelBtn,
+                pressed && { opacity: 0.7 },
+              ]}
+              onPress={onClose}
+            >
+              <Text style={[styles.cancelText, { color: colors.textSecondary }]}>
+                {t('common.cancel') || 'Annulla'}
+              </Text>
+            </Pressable>
+          </View>
         </Animated.View>
-      </BlurView>
+      </View>
     </Modal>
   );
 };
@@ -294,190 +318,163 @@ export const MeditationActionModal: React.FC<MeditationActionModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    justifyContent: 'flex-end',
   },
-  backdropTouchable: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  container: {
-    width: '100%',
-    maxWidth: 400,
-    borderRadius: 28,
-    overflow: 'hidden',
+  bottomSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 34,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.3,
-    shadowRadius: 30,
-    elevation: 15,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 20,
+  },
+  handleBar: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
   },
   header: {
-    padding: 32,
-    paddingBottom: 28,
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  iconBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  headerText: {
+    flex: 1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#ffffff',
-    marginBottom: 8,
-    textAlign: 'center',
-    letterSpacing: -0.5,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.95)',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  currentMinutes: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginTop: 8,
-    fontWeight: '600',
+    marginTop: 2,
   },
-  content: {
-    padding: 24,
-    paddingTop: 28,
+  progressContainer: {
+    marginBottom: 20,
   },
-  toggleContainer: {
+  progressBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  toggleRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
+    gap: 10,
+    marginBottom: 20,
   },
-  toggleButton: {
+  toggleBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 16,
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    gap: 8,
+    gap: 6,
+    borderWidth: 1.5,
   },
-  toggleButtonActive: {
-    borderColor: 'transparent',
-  },
-  toggleButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  toggleButtonTextActive: {
-    fontWeight: '700',
-  },
-  quickMinutesContainer: {
-    marginBottom: 24,
-  },
-  quickMinutesLabel: {
+  toggleText: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 12,
   },
-  quickMinutesRow: {
+  quickSelectSection: {
+    marginBottom: 16,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  quickSelectRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
-  quickMinuteButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    minWidth: 50,
-    alignItems: 'center',
-  },
-  quickMinuteText: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  inputContainer: {
-    marginBottom: 24,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-  },
-  input: {
+  quickBtn: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  quickBtnNumber: {
     fontSize: 18,
     fontWeight: '700',
-    paddingVertical: 12,
   },
-  inputUnit: {
+  quickBtnUnit: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  customSection: {
+    marginBottom: 20,
+  },
+  customInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+  },
+  customInput: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
+    paddingVertical: 10,
+  },
+  customUnit: {
     fontSize: 14,
     fontWeight: '600',
-    marginLeft: 8,
   },
   actions: {
-    gap: 12,
+    gap: 10,
   },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    gap: 12,
-    minHeight: 56,
-  },
-  confirmButton: {
+  confirmBtn: {
+    borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#8b5cf6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
   },
-  confirmButtonGradient: {
+  confirmGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    gap: 12,
-    width: '100%',
+    gap: 8,
   },
-  confirmButtonText: {
+  confirmText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#fff',
   },
-  cancelButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
+  cancelBtn: {
+    paddingVertical: 12,
+    alignItems: 'center',
   },
-  actionButtonText: {
-    fontSize: 16,
+  cancelText: {
+    fontSize: 15,
     fontWeight: '600',
   },
 });
-

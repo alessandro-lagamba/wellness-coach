@@ -137,34 +137,30 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
         await OnboardingService.resetOnboarding();
         console.log('🔄 Onboarding and tutorial reset for new signup');
 
-        const { user, error } = await AuthService.signUp(email, password, `${firstName} ${lastName}`);
+        // 🔥 FIX: Passa TUTTI i metadata direttamente nella chiamata signUp
+        // Questo è più affidabile che chiamare updateUser dopo
+        const { user, error } = await AuthService.signUpWithMetadata(
+          email, 
+          password, 
+          {
+            full_name: `${firstName} ${lastName}`,
+            first_name: firstName,
+            last_name: lastName,
+            age: age ? parseInt(age) : undefined,
+            gender: gender,
+          }
+        );
         if (error) {
           Alert.alert(t('auth.signupError'), error.message || t('auth.signupFailed'));
           return;
         }
         if (user) {
-          // 🔥 FIX: Non creiamo il profilo durante la registrazione
-          // Il profilo verrà creato automaticamente quando l'utente verifica l'email
-          // I dati aggiuntivi (first_name, last_name, age, gender) vengono salvati
-          // nei metadata dell'utente per essere applicati quando il profilo viene creato
-          
-          // Salva i dati aggiuntivi nei metadata dell'utente
-          try {
-            const { supabase } = await import('../../lib/supabase');
-            await supabase.auth.updateUser({
-              data: {
-                full_name: `${firstName} ${lastName}`,
-                first_name: firstName,
-                last_name: lastName,
-                age: age ? parseInt(age) : undefined,
-                gender: gender,
-              }
-            });
-            console.log('✅ User metadata saved for profile creation after email verification');
-          } catch (metadataError) {
-            console.warn('⚠️ Failed to save user metadata (non-critical):', metadataError);
-            // Non blocchiamo la registrazione se il salvataggio dei metadata fallisce
-          }
+          console.log('✅ User registered with metadata:', {
+            first_name: firstName,
+            last_name: lastName,
+            age: age ? parseInt(age) : undefined,
+            gender: gender,
+          });
 
           Alert.alert(
             t('auth.signupCompleted'),

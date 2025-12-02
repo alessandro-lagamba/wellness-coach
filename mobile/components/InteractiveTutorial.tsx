@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions,
-  Animated, ScrollView, Platform, PanResponder, Easing
+  View, Text, StyleSheet, Modal, Pressable, Dimensions,
+  Animated, ScrollView, Platform, PanResponder
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -362,14 +362,17 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
                   {currentStep + 1} / {TUTORIAL_STEPS.length}
                 </Text>
               </View>
-              <TouchableOpacity 
+              <Pressable 
                 onPress={skip} 
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                style={styles.skipBtn}
+                style={({ pressed }) => [
+                  styles.skipBtn,
+                  pressed && styles.skipBtnPressed
+                ]}
               >
                 <Text style={styles.skip}>Salta</Text>
                 <MaterialCommunityIcons name="close" size={18} color="#fff" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             <ScrollView
@@ -402,25 +405,29 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
               </View>
             </ScrollView>
 
-            {/* Footer con bottoni migliorati */}
+            {/* Footer con bottoni migliorati e feedback visivo */}
             <View style={styles.footer}>
               {currentStep > 0 ? (
-                <TouchableOpacity 
+                <Pressable 
                   onPress={prev} 
                   disabled={isAnimating} 
-                  style={styles.secondaryBtn}
-                  activeOpacity={0.7}
+                  style={({ pressed }) => [
+                    styles.secondaryBtn,
+                    pressed && styles.secondaryBtnPressed
+                  ]}
                 >
                   <MaterialCommunityIcons name="chevron-left" size={22} color="#ffffff" />
                   <Text style={styles.secondaryTxt}>Indietro</Text>
-                </TouchableOpacity>
+                </Pressable>
               ) : <View style={{ flex: 1 }} />}
 
-              <TouchableOpacity 
+              <Pressable 
                 onPress={next} 
                 disabled={isAnimating} 
-                style={styles.primaryBtn}
-                activeOpacity={0.9}
+                style={({ pressed }) => [
+                  styles.primaryBtn,
+                  pressed && styles.primaryBtnPressed
+                ]}
               >
                 <LinearGradient
                   colors={[accent, accentSecondary]}
@@ -437,7 +444,7 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
                     color="#ffffff" 
                   />
                 </LinearGradient>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </LinearGradient>
         </View>
@@ -514,6 +521,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
+  },
+  skipBtnPressed: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    transform: [{ scale: 0.96 }],
   },
   skip: {
     fontSize: 14,
@@ -621,6 +632,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  secondaryBtnPressed: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    transform: [{ scale: 0.97 }],
+  },
   secondaryTxt: {
     color: '#ffffff',
     fontSize: 15,
@@ -635,6 +650,10 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 5 },
     elevation: 10,
+  },
+  primaryBtnPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.97 }],
   },
   primaryGradient: {
     flex: 1,

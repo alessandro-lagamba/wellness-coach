@@ -22,6 +22,8 @@ interface AvatarProps {
   avatarUri?: string | null;
   /** Mostra stato di generazione avatar */
   isGenerating?: boolean;
+  /** Mostra loader animato mentre si caricano i dati utente */
+  isLoadingUser?: boolean;
   /** Callback per avviare il flusso di creazione avatar */
   onCreateAvatar?: () => void;
   /** Callback per aprire la community di avatar */
@@ -32,6 +34,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   onMicPress,
   avatarUri,
   isGenerating = false,
+  isLoadingUser = false,
   onCreateAvatar,
   onOpenCommunity,
 }) => {
@@ -41,10 +44,31 @@ export const Avatar: React.FC<AvatarProps> = ({
   const micScale = useSharedValue(1);
   const micOpacity = useSharedValue(1);
   const micRotation = useSharedValue(0);
+  const pulseScale = useSharedValue(1);
+  const pulseOpacity = useSharedValue(0.6);
 
   useEffect(() => {
     floatY.value = withRepeat(withTiming(-6, { duration: 1600 }), -1, true);
   }, [floatY]);
+
+  // 🆕 Animazione pulsante per il loader utente
+  useEffect(() => {
+    if (isLoadingUser) {
+      pulseScale.value = withRepeat(
+        withTiming(1.08, { duration: 800 }),
+        -1,
+        true
+      );
+      pulseOpacity.value = withRepeat(
+        withTiming(1, { duration: 800 }),
+        -1,
+        true
+      );
+    } else {
+      pulseScale.value = withTiming(1, { duration: 200 });
+      pulseOpacity.value = withTiming(0.6, { duration: 200 });
+    }
+  }, [isLoadingUser, pulseScale, pulseOpacity]);
 
   useEffect(() => {
     const loadUserEmail = async () => {
@@ -74,6 +98,12 @@ export const Avatar: React.FC<AvatarProps> = ({
       { rotate: `${micRotation.value}deg` }
     ] as any,
     opacity: micOpacity.value,
+  }));
+
+  // 🆕 Stile animato per il loader pulsante
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+    opacity: pulseOpacity.value,
   }));
 
   const handleMicPress = () => {
@@ -182,6 +212,22 @@ export const Avatar: React.FC<AvatarProps> = ({
   );
 
   const renderAvatarContent = () => {
+    // 🆕 Mostra loader animato mentre si caricano i dati utente
+    if (isLoadingUser) {
+      return (
+        <LinearGradient
+          colors={['#a855f7', '#8b5cf6']}
+          style={styles.userPlusBackground}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Animated.View style={[styles.loadingUserContainer, pulseStyle]}>
+            <ActivityIndicator size="large" color="#fff" />
+          </Animated.View>
+        </LinearGradient>
+      );
+    }
+
     if (isGenerating) {
       return (
         <View style={styles.generatingWrap}>
@@ -453,6 +499,12 @@ const styles = StyleSheet.create({
     height: '60%',
     tintColor: '#ffffff',
     opacity: 0.9,
+  },
+  loadingUserContainer: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   micButtonContainer: {
     position: 'absolute',

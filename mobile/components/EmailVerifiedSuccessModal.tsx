@@ -20,12 +20,14 @@ interface EmailVerifiedSuccessModalProps {
   visible: boolean;
   onClose: () => void;
   userName?: string;
+  userGender?: string;
 }
 
 export const EmailVerifiedSuccessModal: React.FC<EmailVerifiedSuccessModalProps> = ({
   visible,
   onClose,
   userName,
+  userGender,
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -138,7 +140,10 @@ export const EmailVerifiedSuccessModal: React.FC<EmailVerifiedSuccessModalProps>
             {/* Message */}
             <Text style={styles.message}>
               {userName 
-                ? (t('auth.emailVerifiedSuccessMessageWithName') || `Benvenuto ${userName}! Il tuo account è ora attivo.`).replace('${name}', userName)
+                ? (userGender === 'female' 
+                    ? (t('auth.emailVerifiedSuccessMessageWithNameFemale') || `Benvenuta ${userName}! Il tuo account è ora attivo.`).replace('${name}', userName)
+                    : (t('auth.emailVerifiedSuccessMessageWithName') || `Benvenuto ${userName}! Il tuo account è ora attivo.`).replace('${name}', userName)
+                  )
                 : (t('auth.emailVerifiedSuccessMessage') || 'Il tuo account è stato verificato con successo. Ora puoi accedere a tutte le funzionalità dell\'app.')
               }
             </Text>

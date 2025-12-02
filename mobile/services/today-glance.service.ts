@@ -1,5 +1,6 @@
 import { supabase, Tables } from '../lib/supabase';
 import { HealthDataService } from './health-data.service';
+import { HealthDataSyncService } from './health-data-sync.service';
 import { HealthData as RealHealthData } from '../types/health.types';
 
 export interface WidgetData {
