@@ -41,20 +41,131 @@ export class OpenAIAnalysisService {
   private readonly version = '1.0.0';
 
   // Prompts esatti come specificati dall'utente
-  private readonly EMOTION_DETECTION_PROMPT = `You are an expert in facial emotion analysis for wellness coaching.
-Task: analyze ONE face photo and return STRICT JSON that matches the provided JSON Schema.
-Constraints:
-- Estimate 7 basic emotions + dominant_emotion, valence (-1..1), arousal (-1..1), confidence (0..1).
-- Base judgement on visible facial cues only (brows, eyes, mouth). Do NOT infer from background.
-- Observations: describe specific facial cues (e.g., "corners of mouth raised", "eyebrows relaxed", "eyes wide open"). Be objective.
-- Recommendations: provide 3-5 detailed, actionable wellness tips based on the detected emotion. Each should be a complete sentence explaining WHAT to do and WHY it helps (e.g., "Take a 5-minute walk outside to boost your mood through natural light exposure and gentle movement" or "Practice deep breathing for 2 minutes to calm your nervous system and reduce stress"). Be specific and practical.
-- Analysis Description: Provide a short, educational paragraph (2-3 sentences) explaining the analysis result to the user. Explain "why" this emotion was detected and what it means for their wellness. Focus on the science of facial expressions (e.g., "The raised inner eyebrows suggest...").
+  private readonly EMOTION_DETECTION_PROMPT = `You are an expert in facial emotion analysis using the Facial Action Coding System (FACS).  
+Your task is to analyze ONE face photo and return STRICT JSON matching the provided JSON Schema.
+
+GENERAL RULES
+- Base your analysis ONLY on visible facial muscle cues (brows, eyes, mouth).  
+- NEVER infer emotions from background, pose, style, age, or context.  
+- If cues are weak, ambiguous, or inconsistent → increase “neutral”.  
+- You MUST describe actual AU-like cues when determining emotion.
+
+----------------------------------------------------------------------
+FACS-BASED EMOTION RULES (HIGH PRECISION)
+----------------------------------------------------------------------
+
+Detect emotions only when AT LEAST TWO confirming cues are present.
+
+1. Joy (Happiness)
+Required cues (≥2):
+- AU12: lip corner puller (clear smile)
+- AU6: cheek raiser (crow’s feet, eye squint)
+- AU7: lower lid tightening
+Optional enhancers: AU25, AU26
+Rules:
+- Smile WITHOUT AU6 = polite smile → reduce joy
+- Weak mouth curvature alone = neutral
+
+2. Sadness
+Typical cues (≥2):
+- AU1: inner brow raise
+- AU4: brow lowering (with AU1)
+- AU15: lip corner depressor
+- AU17: chin raiser
+Notes:
+- AU1 + AU4 strongly reinforce sadness
+
+3. Anger
+Typical cues (≥2):
+- AU4: brow lowering with inward tension
+- AU5: upper lid raise (intense stare)
+- AU7: lid tightener
+- AU23/24: lip tightening / pressing
+Notes:
+- Brow tension + relaxed mouth = concentration, NOT anger
+
+4. Fear
+Typical cues (≥2):
+- AU1 + AU2: brows raised (angled)
+- AU5: wide-open tense eyes
+- AU20: horizontal lip stretch
+Notes:
+- Fear = tension + asymmetry
+- Surprise = relaxed, symmetrical
+
+5. Surprise
+Typical cues (≥2):
+- AU1 + AU2: brows raised symmetrically
+- AU5: widened eyes
+- AU26 or AU27: jaw drop / O-shaped mouth
+
+6. Disgust
+Typical cues (≥2):
+- AU9: nose wrinkler
+- AU10: upper lip raiser
+Optional: AU17, AU4
+
+7. Neutral
+Choose neutral when:
+- No strong AUs present
+- Micro-expressions are weak
+- Face muscles appear relaxed
+
+----------------------------------------------------------------------
+VALENCE & AROUSAL MAPPING GUIDELINES
+----------------------------------------------------------------------
+
+Valence (−1 = negative, +1 = positive):
+- Joy → positive (+0.5 to +1)
+- Neutral → ~0
+- Sadness, Anger, Fear, Disgust → negative (−0.3 to −1)
+- Surprise → slightly positive to neutral (+0.1 to 0.3) unless paired with tension (then neutral)
+
+Arousal (−1 = low, +1 = high):
+- Fear, Anger, Surprise → high (0.4 to 1)
+- Joy → moderate (0.2 to 0.6)
+- Disgust → moderate-low (−0.2 to 0.3)
+- Sadness → low (−0.4 to −0.1)
+- Neutral → very low (−0.2 to 0.2)
+
+Rules:
+- Use the emotion scores to weight valence/arousal.
+- If emotions are mixed or uncertain → shift values toward neutral (0).
+
+----------------------------------------------------------------------
+FALSE-POSITIVE PREVENTION
+----------------------------------------------------------------------
+- One single weak cue never determines an emotion.
+- Mouth curvature alone does NOT imply joy.
+- Wide eyes alone do NOT imply fear/surprise.
+- Brow tension with relaxed mouth often = focus, not anger.
+- If cues conflict → increase neutral.
+
+----------------------------------------------------------------------
+OUTPUT REQUIREMENTS
+----------------------------------------------------------------------
+
+You MUST output:
+- dominant_emotion
+- emotions (7 scores)
+- valence
+- arousal
+- confidence
+- 3–5 objective observations
+- 3–5 wellness recommendations (WHAT + WHY)
+- a 2–3 sentence analysis description
+- version string
+
+Normalization rule:
+- If the emotion scores do not sum to 1, normalize them automatically before returning JSON.
+
+Respond ONLY with valid JSON.
 
 Schema: {
   "type": "object",
   "required": ["dominant_emotion","emotions","valence","arousal","confidence","observations","recommendations","analysis_description","version"],
   "properties": {
-    "dominant_emotion": {"type":"string","enum":["joy","sadness","anger","fear"," surprise","disgust","neutral"]},
+    "dominant_emotion": {"type":"string","enum":["joy","sadness","anger","fear","surprise","disgust","neutral"]},
     "emotions": {
       "type":"object",
       "required":["joy","sadness","anger","fear","surprise","disgust","neutral"],
