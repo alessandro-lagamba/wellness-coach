@@ -375,7 +375,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
     loadUserProfile(resolvedUser);
   }, [resolvedUser?.id]);
 
-  const loadUserProfile = async (targetUser: any) => {
+  const loadUserProfile = async (targetUser: any, retryCount = 0) => {
     if (!targetUser?.id) {
       setUserProfile(null);
       setIsLoading(false);
@@ -385,18 +385,80 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
     try {
       setIsLoading(true);
       const profile = await AuthService.getUserProfile(targetUser.id);
-      setUserProfile(profile);
+      
+      if (profile) {
+        setUserProfile(profile);
+      } else {
+        // 🔥 FIX: Se il profilo non esiste ancora, usa i metadata dell'utente
+        // Questo può succedere subito dopo la conferma email
+        console.log('📝 Profile not found, using user metadata...');
+        
+        const firstName = targetUser.user_metadata?.first_name;
+        const lastName = targetUser.user_metadata?.last_name;
+        const ageValue = targetUser.user_metadata?.age;
+        const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : null);
+        const gender = targetUser.user_metadata?.gender || 'prefer_not_to_say';
+        const fullName = targetUser.user_metadata?.full_name || 
+                        (firstName && lastName ? `${firstName} ${lastName}` : null) ||
+                        targetUser.email?.split('@')[0] || 
+                        'User';
+        
+        setUserProfile({
+          id: targetUser.id,
+          email: targetUser.email,
+          full_name: fullName,
+          first_name: firstName,
+          last_name: lastName,
+          age: age,
+          gender: gender as any,
+          created_at: targetUser.created_at || new Date().toISOString(),
+          updated_at: targetUser.updated_at || new Date().toISOString(),
+        } as UserProfile);
+        
+        // 🔥 FIX: Se il profilo non esiste, prova a crearlo
+        if (retryCount < 2) {
+          console.log('📝 Attempting to create profile...');
+          try {
+            await AuthService.createUserProfile(
+              targetUser.id,
+              targetUser.email || '',
+              fullName,
+              firstName,
+              lastName,
+              age || undefined,
+              gender
+            );
+            console.log('✅ Profile created, reloading...');
+            // Ricarica il profilo dopo la creazione
+            setTimeout(() => loadUserProfile(targetUser, retryCount + 1), 500);
+          } catch (createError) {
+            console.log('⚠️ Profile creation failed (may already exist):', createError);
+          }
+        }
+      }
     } catch (error) {
       console.error('Error loading user profile:', error);
       // In caso di errore, mostra i dati di base dell'utente
+      const firstName = targetUser.user_metadata?.first_name;
+      const lastName = targetUser.user_metadata?.last_name;
+      const ageValue = targetUser.user_metadata?.age;
+      const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : null);
+      const gender = targetUser.user_metadata?.gender || 'prefer_not_to_say';
+      const fullName = targetUser.user_metadata?.full_name || 
+                      (firstName && lastName ? `${firstName} ${lastName}` : null) ||
+                      targetUser.email?.split('@')[0] || 
+                      'User';
+      
       setUserProfile({
         id: targetUser.id,
         email: targetUser.email,
-        full_name: targetUser.user_metadata?.full_name || targetUser.email || 'User',
-        age: null,
-        gender: 'prefer_not_to_say',
-        created_at: targetUser.created_at,
-        updated_at: targetUser.updated_at,
+        full_name: fullName,
+        first_name: firstName,
+        last_name: lastName,
+        age: age,
+        gender: gender as any,
+        created_at: targetUser.created_at || new Date().toISOString(),
+        updated_at: targetUser.updated_at || new Date().toISOString(),
       } as UserProfile);
     } finally {
       setIsLoading(false);

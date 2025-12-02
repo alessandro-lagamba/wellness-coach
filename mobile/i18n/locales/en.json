@@ -1865,9 +1865,21 @@
     "emailNotVerified": "Email not yet verified",
     "emailNotVerifiedMessage": "The email has not been verified yet. Check your inbox and click the confirmation link.",
     "emailCheckError": "Unable to check email status. Please try again later.",
+    "emailCheckErrorRetry": "An error occurred. Try closing and reopening the app, then click \"I verified\" again.",
     "emailVerifiedMessage": "Your email has been verified successfully. You can now access all app features.",
     "pleaseWait": "We're verifying your email. Please wait a moment.",
-    "emailConfirmedSuccess": "Your email has been confirmed successfully. You can continue with the tutorial!"
+    "emailConfirmedSuccess": "Your email has been confirmed successfully. You can continue with the tutorial!",
+    "sessionExpired": "Session expired",
+    "sessionExpiredMessage": "Click the confirmation link in your email to continue.",
+    "emailVerifiedSuccessTitle": "Email Verified!",
+    "emailVerifiedSuccessMessage": "Your account has been successfully verified. You can now access all app features.",
+    "emailVerifiedSuccessMessageWithName": "Welcome ${name}! Your account is now active.",
+    "featureUnlocked1": "Complete AI analysis",
+    "featureUnlocked2": "Data synchronization",
+    "featureUnlocked3": "Personalized coaching",
+    "continueToApp": "Continue",
+    "autoCloseHint": "Auto-closing in 3 seconds...",
+    "verifyEmailStep3": "The app will open automatically"
   },
   "profile": {
     "title": "Personal Information",

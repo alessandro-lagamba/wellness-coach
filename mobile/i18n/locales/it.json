@@ -1901,9 +1901,21 @@
     "emailNotVerified": "Email non ancora verificata",
     "emailNotVerifiedMessage": "L'email non è ancora stata verificata. Controlla la tua casella di posta e clicca sul link di conferma.",
     "emailCheckError": "Impossibile verificare lo stato dell'email. Riprova più tardi.",
+    "emailCheckErrorRetry": "Si è verificato un errore. Prova a chiudere e riaprire l'app, poi clicca di nuovo su \"Ho verificato\".",
     "emailVerifiedMessage": "La tua email è stata verificata con successo. Ora puoi accedere a tutte le funzionalità dell'app.",
     "pleaseWait": "Stiamo verificando la tua email. Attendi un momento.",
-    "emailConfirmedSuccess": "La tua email è stata confermata con successo. Puoi continuare con il tutorial!"
+    "emailConfirmedSuccess": "La tua email è stata confermata con successo. Puoi continuare con il tutorial!",
+    "sessionExpired": "Sessione scaduta",
+    "sessionExpiredMessage": "Clicca sul link di conferma nella tua email per continuare.",
+    "emailVerifiedSuccessTitle": "Email Verificata!",
+    "emailVerifiedSuccessMessage": "Il tuo account è stato verificato con successo. Ora puoi accedere a tutte le funzionalità dell'app.",
+    "emailVerifiedSuccessMessageWithName": "Benvenuto ${name}! Il tuo account è ora attivo.",
+    "featureUnlocked1": "Analisi AI complete",
+    "featureUnlocked2": "Sincronizzazione dati",
+    "featureUnlocked3": "Coaching personalizzato",
+    "continueToApp": "Continua",
+    "autoCloseHint": "Chiusura automatica in 3 secondi...",
+    "verifyEmailStep3": "L'app si aprirà automaticamente"
   },
   "profile": {
     "title": "Informazioni Personali",

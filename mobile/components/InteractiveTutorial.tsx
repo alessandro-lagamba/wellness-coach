@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions,
-  Animated, ScrollView, Platform, PanResponder
+  Animated, ScrollView, Platform, PanResponder, Easing
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -174,11 +174,10 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
   const insets = useSafeAreaInsets(); // ✅ Gestione automatica safe area per Android/iOS
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
   const modalFadeAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(height)).current;
-  const cardScale = useRef(new Animated.Value(0.95)).current;
+  const cardOpacity = useRef(new Animated.Value(1)).current;
 
   // ✅ Memoization per evitare ricalcoli inutili
   const current = useMemo(() => TUTORIAL_STEPS[currentStep], [currentStep]);
@@ -201,16 +200,20 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
 
   React.useEffect(() => {
     if (visible) {
+      // Reset initial states
+      cardOpacity.setValue(1);
+      
       Animated.parallel([
         Animated.timing(modalFadeAnim, {
           toValue: 1,
-          duration: 200,
+          duration: 250,
           useNativeDriver: true,
         }),
         Animated.spring(slideAnim, {
           toValue: 0,
-          damping: 25,
-          stiffness: 350,
+          damping: 28,
+          stiffness: 320,
+          mass: 0.9,
           useNativeDriver: true,
         }),
       ]).start();
@@ -218,12 +221,12 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
       Animated.parallel([
         Animated.timing(modalFadeAnim, {
           toValue: 0,
-          duration: 150,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: height,
-          duration: 180,
+          duration: 220,
           useNativeDriver: true,
         }),
       ]).start();
@@ -239,11 +242,10 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
   }, [currentStep]);
 
   React.useEffect(() => {
-    // Reset pan quando cambia lo step
-    Animated.timing(pan, { toValue: 0, duration: 0, useNativeDriver: true }).start();
-    
-    // NON impostare fadeAnim qui - viene gestito dalla funzione goTo
-    // Questo evita race conditions e flash del contenuto
+    // Reset pan when step changes
+    pan.setValue(0);
+    // Ensure card is always visible
+    cardOpacity.setValue(1);
   }, [currentStep]);
 
   const goTo = (next: number) => {
@@ -253,55 +255,33 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     
-    // Reset pan a 0 immediatamente prima di cambiare step
-    Animated.timing(pan, { toValue: 0, duration: 0, useNativeDriver: true }).start();
+    // Reset pan immediately
+    pan.setValue(0);
     
-    // 🔥 FIX: Animazione più fluida senza flash
-    // Fade-out veloce ma non troppo per evitare flash
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
-      Animated.timing(cardScale, { toValue: 0.98, duration: 150, useNativeDriver: true }),
-    ]).start(() => {
-      // Cambia lo step
-      setCurrentStep(next);
-      
-      const step = TUTORIAL_STEPS[next];
-      if (step.targetScreen && onNavigateToScreen) {
-        if (step.id === 'completato') {
-          onNavigateToScreen('home');
-        } else {
-          onNavigateToScreen(step.targetScreen);
-        }
-        
-        // Scroll helpers con delay ottimizzato
-        setTimeout(() => {
-          if (next === 2) {
-            global.scrollToWidgets?.();
-          } else if (next === 3) {
-            global.scrollToCoplot?.();
-          }
-        }, 200);
+    // Change step immediately - NO animation on opacity
+    // This prevents the flash/invisible card issue
+    setCurrentStep(next);
+    
+    const step = TUTORIAL_STEPS[next];
+    if (step.targetScreen && onNavigateToScreen) {
+      if (step.id === 'completato') {
+        onNavigateToScreen('home');
+      } else {
+        onNavigateToScreen(step.targetScreen);
       }
+      
+      // Scroll helpers
+      setTimeout(() => {
+        if (next === 2) {
+          global.scrollToWidgets?.();
+        } else if (next === 3) {
+          global.scrollToCoplot?.();
+        }
+      }, 200);
+    }
 
-      // 🔥 FIX: Usa requestAnimationFrame per sincronizzare meglio le animazioni
-      // Questo evita il flash tra le card
-      requestAnimationFrame(() => {
-        // Fade-in e scale-up simultanei e più veloci
-        Animated.parallel([
-          Animated.timing(fadeAnim, { 
-            toValue: 1, 
-            duration: 200, 
-            useNativeDriver: true 
-          }),
-          Animated.spring(cardScale, { 
-            toValue: 1, 
-            damping: 20, 
-            stiffness: 300, 
-            useNativeDriver: true 
-          }),
-        ]).start(() => setIsAnimating(false));
-      });
-    });
+    // Small delay then unlock
+    setTimeout(() => setIsAnimating(false), 100);
   };
 
   const next = () => last ? onComplete() : goTo(currentStep+1);
@@ -398,15 +378,9 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
               showsVerticalScrollIndicator={false}
               bounces
             >
-              <Animated.View
+              <View
                 {...panResponder.panHandlers}
-                style={[
-                  styles.cardContainer,
-                  { 
-                    opacity: fadeAnim,
-                    transform: [{ scale: cardScale }, { translateX: pan }]
-                  }
-                ]}
+                style={styles.cardContainer}
               >
                 <View style={[styles.card, { borderColor: accentStroke, backgroundColor: '#ffffff' }]}>
                   <View style={styles.iconWrap}>
@@ -425,7 +399,7 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
                     ))}
                   </View>
                 </View>
-              </Animated.View>
+              </View>
             </ScrollView>
 
             {/* Footer con bottoni migliorati */}

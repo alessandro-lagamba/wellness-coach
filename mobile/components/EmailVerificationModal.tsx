@@ -63,65 +63,75 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
     try {
       setIsChecking(true);
       
-      // 🔥 FIX: Forza il refresh della sessione da Supabase prima di controllare
-      const { supabase } = await import('../lib/supabase');
-      console.log('🔄 Refreshing session from Supabase...');
+      console.log('🔄 Checking email verification status...');
       
-      // Prima ottieni la sessione corrente
+      const { supabase } = await import('../lib/supabase');
+      
+      // 🔥 FIX: First check if we have a session at all
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
       if (sessionError) {
-        console.error('❌ Error getting session:', sessionError);
-      } else {
-        console.log('📧 Current session user email_confirmed_at:', session?.user?.email_confirmed_at);
+        console.error('❌ Session error:', sessionError.message);
       }
       
-      // Poi forza un refresh dell'utente
-      const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
+      if (!session) {
+        console.log('⚠️ No session found, user needs to re-authenticate');
+        Alert.alert(
+          t('auth.sessionExpired') || 'Sessione scaduta',
+          t('auth.sessionExpiredMessage') || 'La sessione è scaduta. Per favore clicca sul link di conferma nella tua email per riautenticarti automaticamente.',
+          [{ text: t('common.ok') || 'OK' }]
+        );
+        return;
+      }
+      
+      // Try to refresh the session to get updated user data
+      console.log('🔄 Refreshing session...');
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       
       if (refreshError) {
-        console.error('❌ Error refreshing user:', refreshError);
-        throw refreshError;
+        console.warn('⚠️ Session refresh failed:', refreshError.message);
+        // Don't return, try to get user anyway
       }
       
-      console.log('✅ User refreshed, email_confirmed_at:', refreshedUser?.email_confirmed_at);
+      // Get user with fresh data
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      if (refreshedUser?.email_confirmed_at) {
-        // Email verificata!
+      if (userError) {
+        console.error('❌ Failed to get user:', userError.message);
         Alert.alert(
-          t('auth.emailVerified') || 'Email verificata!',
-          t('auth.emailVerifiedMessage') || 'La tua email è stata verificata con successo. Ora puoi accedere a tutte le funzionalità dell\'app.',
-          [
-            {
-              text: t('common.ok') || 'OK',
-              onPress: () => {
-                onEmailVerified?.();
-                onClose();
-              },
-            },
-          ]
+          t('common.error') || 'Errore',
+          t('auth.emailCheckErrorRetry') || 'Si è verificato un errore. Clicca sul link di conferma nella tua email per continuare.'
         );
+        return;
+      }
+      
+      if (!user) {
+        console.error('❌ No user returned');
+        Alert.alert(
+          t('auth.sessionExpired') || 'Sessione scaduta',
+          t('auth.sessionExpiredMessage') || 'Clicca sul link di conferma nella tua email per continuare.'
+        );
+        return;
+      }
+      
+      console.log('✅ User retrieved, email_confirmed_at:', user.email_confirmed_at);
+      
+      if (user.email_confirmed_at) {
+        // Email verified! Close modal silently
+        console.log('✅ Email verified, closing modal');
+        onEmailVerified?.();
+        onClose();
       } else {
         Alert.alert(
           t('auth.emailNotVerified') || 'Email non ancora verificata',
-          t('auth.emailNotVerifiedMessage') || 'L\'email non è ancora stata verificata. Controlla la tua casella di posta e clicca sul link di conferma.'
+          t('auth.emailNotVerifiedMessage') || 'L\'email non è ancora stata verificata. Clicca sul link di conferma nella tua email.'
         );
       }
     } catch (error: any) {
       console.error('❌ Error checking email verification:', error);
-      console.error('❌ Error details:', error?.message, error?.status);
-      
-      // 🔥 FIX: Messaggio di errore più specifico
-      let errorMessage = t('auth.emailCheckError') || 'Impossibile verificare lo stato dell\'email. Riprova più tardi.';
-      
-      if (error?.message?.includes('Auth session missing') || error?.message?.includes('session')) {
-        errorMessage = 'Sessione non valida. Prova a fare logout e login di nuovo.';
-      } else if (error?.message) {
-        errorMessage = `Errore: ${error.message}`;
-      }
-      
       Alert.alert(
         t('common.error') || 'Errore',
-        errorMessage
+        t('auth.emailCheckErrorRetry') || 'Si è verificato un errore. Clicca sul link di conferma nella tua email per continuare.'
       );
     } finally {
       setIsChecking(false);
@@ -149,7 +159,7 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
 
           {/* Description */}
           <Text style={[styles.description, { color: colors.textSecondary }]}>
-            {t('auth.verifyEmailRequiredMessage') || `Per accedere a tutte le funzionalità dell'app, devi confermare la tua email.\n\nAbbiamo inviato un'email di conferma a:`}
+            {t('auth.verifyEmailRequiredMessage') || `Per accedere a tutte le funzionalità dell'app, devi confermare la tua email. Una volta cliccato sul link, l'app si aprirà automaticamente.\n\nAbbiamo inviato un'email di conferma a:`}
           </Text>
 
           {/* Email */}
@@ -178,7 +188,7 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
             <View style={styles.instructionRow}>
               <MaterialCommunityIcons name="numeric-3-circle" size={20} color={colors.primary} />
               <Text style={[styles.instructionText, { color: colors.textSecondary }]}>
-                {t('auth.verifyEmailStep3') || 'Torna nell\'app e clicca su "Ho verificato"'}
+                {t('auth.verifyEmailStep3') || 'L\'app si aprirà automaticamente'}
               </Text>
             </View>
           </View>

@@ -6,6 +6,7 @@ import { AuthScreen } from './auth/AuthScreen';
 // 🔥 REMOVED: OnboardingScreen - non lo usiamo più, andiamo direttamente a InteractiveTutorial
 import { InteractiveTutorial } from './InteractiveTutorial';
 import { EmailVerificationModal } from './EmailVerificationModal';
+import { EmailVerifiedSuccessModal } from './EmailVerifiedSuccessModal';
 import { useTheme } from '../contexts/ThemeContext';
 import { TutorialProvider, useTutorial } from '../contexts/TutorialContext';
 import { useRouter } from 'expo-router';
@@ -147,8 +148,6 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         const emailVerified = Boolean(currentUser.email_confirmed_at);
         
         if (emailVerified) {
-          const existingProfile = await AuthService.getUserProfile(currentUser.id);
-          
           // 🔥 FIX: Estrai i dati dai metadata PRIMA di creare/aggiornare il profilo
           const firstName = currentUser.user_metadata?.first_name;
           const lastName = currentUser.user_metadata?.last_name;
@@ -157,15 +156,19 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : undefined);
           const gender = currentUser.user_metadata?.gender;
           
+          console.log('📋 User metadata:', { firstName, lastName, age, gender, ageValue });
+          
+          const existingProfile = await AuthService.getUserProfile(currentUser.id);
+          
           if (!existingProfile) {
-            console.log('✅ Email verified, creating user profile...');
+            console.log('✅ Email verified, creating user profile with metadata...');
             // Crea il profilo con i dati disponibili dall'utente
             const fullName = currentUser.user_metadata?.full_name || 
                             currentUser.user_metadata?.name || 
                             currentUser.email?.split('@')[0] || 
                             'User';
             
-            // 🔥 FIX: Crea il profilo con tutti i dati disponibili, inclusi age e gender
+            // 🔥 CRITICAL: Crea il profilo con TUTTI i dati disponibili
             await AuthService.createUserProfile(
               currentUser.id,
               currentUser.email || '',
@@ -176,30 +179,27 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
               gender
             );
             
-            console.log('✅ User profile created successfully after email verification');
+            console.log('✅ User profile created successfully with:', { firstName, lastName, age, gender });
           } else {
-            console.log('✅ User profile already exists');
-            // 🔥 FIX: Aggiorna il profilo esistente se ci sono dati nei metadata che non sono nel profilo
-            // Questo è importante perché il genere potrebbe essere stato salvato durante la registrazione
-            // ma non essere stato applicato al profilo se è stato creato prima della verifica email
-            const needsUpdate = 
-              (firstName && existingProfile.first_name !== firstName) ||
-              (lastName && existingProfile.last_name !== lastName) ||
-              (age !== undefined && age !== null && existingProfile.age !== age) ||
-              (gender && existingProfile.gender !== gender);
+            console.log('✅ User profile already exists, checking for updates...');
+            console.log('📋 Existing profile:', { 
+              first_name: existingProfile.first_name, 
+              last_name: existingProfile.last_name, 
+              age: existingProfile.age, 
+              gender: existingProfile.gender 
+            });
             
-            if (needsUpdate) {
-              console.log('🔄 Updating existing profile with metadata...');
-              const updateData: any = {};
-              if (firstName && existingProfile.first_name !== firstName) updateData.first_name = firstName;
-              if (lastName && existingProfile.last_name !== lastName) updateData.last_name = lastName;
-              if (age !== undefined && age !== null && existingProfile.age !== age) updateData.age = age;
-              if (gender && existingProfile.gender !== gender) updateData.gender = gender;
-              
-              if (Object.keys(updateData).length > 0) {
-                await AuthService.updateUserProfile(currentUser.id, updateData);
-                console.log('✅ User profile updated with metadata:', updateData);
-              }
+            // 🔥 CRITICAL: SEMPRE aggiorna il profilo con i metadata se sono disponibili
+            const updateData: any = {};
+            if (firstName) updateData.first_name = firstName;
+            if (lastName) updateData.last_name = lastName;
+            if (age !== undefined && age !== null) updateData.age = age;
+            if (gender) updateData.gender = gender;
+            
+            if (Object.keys(updateData).length > 0) {
+              console.log('🔄 Updating profile with metadata:', updateData);
+              await AuthService.updateUserProfile(currentUser.id, updateData);
+              console.log('✅ User profile updated successfully');
             }
           }
         } else {
@@ -237,9 +237,9 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       
       // 🔥 FIX: Mostra il tutorial SOLO se:
       // 1. Il tutorial non è completato E
-      // 2. L'utente è nuovo (non ha un profilo esistente)
-      // Questo previene che utenti esistenti vedano il tutorial dopo aver eliminato l'app
-      if (!tutorialCompleted && !isExistingUser) {
+      // 2. L'utente è nuovo (non ha un profilo esistente) E
+      // 3. Non stiamo processando un deep link
+      if (!tutorialCompleted && !isExistingUser && !isProcessingDeepLink.current) {
         // Delay più lungo per permettere all'app di renderizzarsi completamente
         console.log('🎓 New user detected, scheduling InteractiveTutorial to show in 2s after authentication...');
         setTimeout(() => {
@@ -252,7 +252,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         console.log('✅ Existing user detected, marking tutorial as completed automatically');
         await OnboardingService.completeTutorial();
       } else {
-        console.log('⚠️ Tutorial already completed or user is existing, skipping...');
+        console.log('⚠️ Tutorial already completed or user is existing, skipping... (processingDeepLink:', isProcessingDeepLink.current, ')');
       }
 
       onAuthSuccessRef.current(currentUser);
@@ -271,6 +271,12 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
       if (isAuth && currentUser) {
         await proceedAfterAuthentication(currentUser);
+        
+        // 🔥 FIX: Mostra il modal di verifica email solo se necessario
+        if (!currentUser.email_confirmed_at && !isProcessingDeepLink.current) {
+          console.log('⚠️ Email not verified, showing verification modal...');
+          setShowEmailVerificationModal(true);
+        }
       } else {
         setIsAuthenticated(false);
         setUser(null);
@@ -318,141 +324,154 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
   // ✅ Gestione Deep Links per conferma email
   const { t } = useTranslation();
+  const isProcessingDeepLink = useRef(false);
+  
+  // State for showing email verified success modal
+  const [showEmailVerifiedSuccess, setShowEmailVerifiedSuccess] = useState(false);
+  
+  // 🔥 CRITICAL FIX: Extract tokens from URL and set session manually
+  const handleEmailConfirmationDeepLink = async (url: string) => {
+    if (isProcessingDeepLink.current) {
+      console.log('⚠️ Already processing deep link, skipping...');
+      return;
+    }
+    isProcessingDeepLink.current = true;
+    
+    console.log('📧 Processing email confirmation deep link:', url);
+    
+    try {
+      // Extract tokens from URL fragment (after #)
+      // URL format: wellnesscoach://auth/confirm#access_token=xxx&refresh_token=xxx&type=signup
+      const hashIndex = url.indexOf('#');
+      if (hashIndex !== -1) {
+        const fragment = url.substring(hashIndex + 1);
+        const params = new URLSearchParams(fragment);
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        const type = params.get('type');
+        
+        console.log('🔑 Extracted tokens - type:', type, 'hasAccess:', !!accessToken, 'hasRefresh:', !!refreshToken);
+        
+        if (accessToken && refreshToken) {
+          // 🔥 CRITICAL: Set the session manually with the tokens from the URL
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          
+          if (error) {
+            console.error('❌ Error setting session from tokens:', error);
+            isProcessingDeepLink.current = false;
+            return;
+          }
+          
+          if (data.user) {
+            console.log('✅ Session set successfully, email_confirmed_at:', data.user.email_confirmed_at);
+            
+            // Update app state
+            setUser(data.user);
+            setIsAuthenticated(true);
+            setShowEmailVerificationModal(false);
+            
+            // 🔥 FIX: Create/update user profile immediately after email confirmation
+            try {
+              const { AuthService } = await import('../services/auth.service');
+              const existingProfile = await AuthService.getUserProfile(data.user.id);
+              
+              if (!existingProfile) {
+                console.log('📝 Creating user profile after email confirmation...');
+                const firstName = data.user.user_metadata?.first_name;
+                const lastName = data.user.user_metadata?.last_name;
+                const ageValue = data.user.user_metadata?.age;
+                const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : undefined);
+                const gender = data.user.user_metadata?.gender;
+                const fullName = data.user.user_metadata?.full_name || 
+                                data.user.user_metadata?.name || 
+                                data.user.email?.split('@')[0] || 
+                                'User';
+                
+                await AuthService.createUserProfile(
+                  data.user.id,
+                  data.user.email || '',
+                  fullName,
+                  firstName,
+                  lastName,
+                  age,
+                  gender
+                );
+                console.log('✅ User profile created successfully');
+              } else {
+                console.log('✅ User profile already exists');
+                // Update profile with metadata if needed
+                const firstName = data.user.user_metadata?.first_name;
+                const lastName = data.user.user_metadata?.last_name;
+                const ageValue = data.user.user_metadata?.age;
+                const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : undefined);
+                const gender = data.user.user_metadata?.gender;
+                
+                const updateData: any = {};
+                if (firstName) updateData.first_name = firstName;
+                if (lastName) updateData.last_name = lastName;
+                if (age !== undefined && age !== null) updateData.age = age;
+                if (gender) updateData.gender = gender;
+                
+                if (Object.keys(updateData).length > 0) {
+                  await AuthService.updateUserProfile(data.user.id, updateData);
+                  console.log('✅ User profile updated with metadata');
+                }
+              }
+            } catch (profileError) {
+              console.error('❌ Error creating/updating profile:', profileError);
+            }
+            
+            // 🔥 NEW: Show success modal
+            setShowEmailVerifiedSuccess(true);
+            
+            // Proceed with authentication (but skip tutorial since user is returning)
+            await proceedAfterAuthentication(data.user);
+            
+            console.log('✅ Email confirmation complete, user authenticated');
+          }
+        } else {
+          console.warn('⚠️ No tokens found in URL fragment');
+        }
+      } else {
+        console.warn('⚠️ No fragment found in URL');
+        // Try to get existing session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.email_confirmed_at) {
+          console.log('✅ Found existing confirmed session');
+          setUser(session.user);
+          setIsAuthenticated(true);
+          setShowEmailVerificationModal(false);
+          await proceedAfterAuthentication(session.user);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error processing deep link:', error);
+    } finally {
+      isProcessingDeepLink.current = false;
+    }
+  };
+  
   useEffect(() => {
-    // Gestisci deep link quando l'app si apre da un link (es. email di conferma)
+    // Handle deep link when app opens from a link
     const handleInitialURL = async () => {
       try {
         const initialUrl = await Linking.getInitialURL();
         if (initialUrl && initialUrl.includes('auth/confirm')) {
-          console.log('📧 Email confirmation link detected:', initialUrl);
-          
-          // 🔥 FIX: Mostra un messaggio di conferma mentre processiamo
-          Alert.alert(
-            t('auth.confirmingEmail') || 'Conferma email in corso...',
-            t('auth.pleaseWait') || 'Stiamo verificando la tua email. Attendi un momento.',
-            [],
-            { cancelable: false }
-          );
-          
-          // Aspetta un momento per permettere a Supabase di processare il link
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          
-          // Supabase gestirà automaticamente i parametri hash quando chiamiamo getSession()
-          // I parametri hash (#access_token=...) vengono processati automaticamente
-          const { data: { session }, error } = await supabase.auth.getSession();
-          
-          // Chiudi l'alert di loading
-          Alert.alert('', '', [], { cancelable: true });
-          
-          if (session?.user && !error) {
-            console.log('✅ Email confirmed, session restored');
-            // 🔥 FIX: Forza il refresh dell'utente per ottenere i metadata aggiornati
-            const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
-            if (refreshError) {
-              console.warn('⚠️ Could not refresh user, using session user:', refreshError);
-              await proceedAfterAuthentication(session.user);
-            } else if (refreshedUser) {
-              console.log('✅ User refreshed with metadata:', {
-                first_name: refreshedUser.user_metadata?.first_name,
-                last_name: refreshedUser.user_metadata?.last_name,
-                age: refreshedUser.user_metadata?.age,
-                gender: refreshedUser.user_metadata?.gender,
-                email_confirmed_at: refreshedUser.email_confirmed_at,
-              });
-              
-              // 🔥 NEW: Mostra un messaggio di successo
-              Alert.alert(
-                t('auth.emailConfirmed') || 'Email confermata!',
-                t('auth.emailConfirmedSuccess') || 'La tua email è stata confermata con successo. Benvenuto!',
-                [{ text: t('common.ok') || 'OK' }]
-              );
-              
-              await proceedAfterAuthentication(refreshedUser);
-            } else {
-              await proceedAfterAuthentication(session.user);
-            }
-          } else if (error) {
-            console.error('❌ Error confirming email:', error);
-            Alert.alert(
-              t('auth.emailConfirmationError') || 'Errore',
-              t('auth.emailConfirmationErrorMessage') || 'Si è verificato un errore durante la conferma dell\'email. Riprova più tardi.'
-            );
-          }
+          await handleEmailConfirmationDeepLink(initialUrl);
         }
       } catch (error) {
         console.error('❌ Error handling initial URL:', error);
       }
     };
 
-    // Gestisci deep link quando l'app è già aperta
+    // Handle deep link when app is already open
     const handleURL = (event: { url: string }) => {
       const { url } = event;
       if (url.includes('auth/confirm')) {
-        console.log('📧 Email confirmation link received while app is open:', url);
-        
-        // 🔥 FIX: Mostra un messaggio di conferma mentre processiamo
-        Alert.alert(
-          t('auth.confirmingEmail') || 'Conferma email in corso...',
-          t('auth.pleaseWait') || 'Stiamo verificando la tua email. Attendi un momento.',
-          [],
-          { cancelable: false }
-        );
-        
-        // Aspetta un momento per permettere a Supabase di processare il link
-        setTimeout(() => {
-          // Supabase gestirà automaticamente i parametri hash
-          supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-            // Chiudi l'alert di loading
-            Alert.alert('', '', [], { cancelable: true });
-            
-            if (session?.user && !error) {
-              console.log('✅ Email confirmed, session restored');
-              // 🔥 FIX: Forza il refresh dell'utente per ottenere i metadata aggiornati
-              const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
-              if (refreshError) {
-                console.warn('⚠️ Could not refresh user, using session user:', refreshError);
-                proceedAfterAuthentication(session.user);
-              } else if (refreshedUser) {
-                console.log('✅ User refreshed with metadata:', {
-                  first_name: refreshedUser.user_metadata?.first_name,
-                  last_name: refreshedUser.user_metadata?.last_name,
-                  age: refreshedUser.user_metadata?.age,
-                  gender: refreshedUser.user_metadata?.gender,
-                  email_confirmed_at: refreshedUser.email_confirmed_at,
-                });
-                
-                // 🔥 NEW: Mostra un messaggio di successo e chiudi il modal di verifica se aperto
-                Alert.alert(
-                  t('auth.emailConfirmed') || 'Email confermata!',
-                  t('auth.emailConfirmedSuccess') || 'La tua email è stata confermata con successo. Puoi continuare con il tutorial!',
-                  [{ 
-                    text: t('common.ok') || 'OK',
-                    onPress: () => {
-                      // Chiudi il modal di verifica email se è aperto
-                      setShowEmailVerificationModal(false);
-                      // Aggiorna lo stato dell'utente
-                      setUser(refreshedUser);
-                    }
-                  }]
-                );
-                
-                // Non chiamare proceedAfterAuthentication se l'utente è già autenticato
-                // Questo evita di riavviare il tutorial
-                if (!isAuthenticated) {
-                  proceedAfterAuthentication(refreshedUser);
-                }
-              } else {
-                proceedAfterAuthentication(session.user);
-              }
-            } else if (error) {
-              console.error('❌ Error confirming email:', error);
-              Alert.alert(
-                t('auth.emailConfirmationError') || 'Errore',
-                t('auth.emailConfirmationErrorMessage') || 'Si è verificato un errore durante la conferma dell\'email. Riprova più tardi.'
-              );
-            }
-          });
-        }, 1500);
+        handleEmailConfirmationDeepLink(url);
       }
     };
 
@@ -710,6 +729,13 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
             }
           }
         }}
+      />
+      
+      {/* 🆕 Email Verified Success Modal */}
+      <EmailVerifiedSuccessModal
+        visible={showEmailVerifiedSuccess}
+        onClose={() => setShowEmailVerifiedSuccess(false)}
+        userName={user?.user_metadata?.first_name || user?.user_metadata?.full_name?.split(' ')[0]}
       />
     </View>
   );

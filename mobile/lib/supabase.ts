@@ -3,11 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = 'https://nxxuhadbyoznzivktoje.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54eHVoYWRieW96bnppdmt0b2plIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NjAxODgsImV4cCI6MjA3NTQzNjE4OH0.1q0I6mZ_00V6kvTz5kNcFOn8ce0PyOItlTIzYTG2piM';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: true, // 🔥 FIX: Enable URL detection for deep links
+    storage: AsyncStorage, // 🔥 FIX: Use AsyncStorage for session persistence
   },
 });
 
