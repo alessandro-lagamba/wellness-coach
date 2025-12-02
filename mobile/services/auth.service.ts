@@ -112,13 +112,19 @@ export class AuthService {
       });
 
       if (error) {
-        console.error('Error signing up:', error);
+        console.error('❌ Error signing up:', error);
+        console.error('❌ Error details:', JSON.stringify(error, null, 2));
         return { user: null, error };
       }
 
       // 🔥 FIX: Non creiamo il profilo durante la registrazione
       // Il profilo verrà creato automaticamente quando l'utente verifica l'email
       // Questo evita di avere profili per utenti che non completano la verifica
+      
+      console.log('✅ Signup successful!');
+      console.log('📧 User email:', data.user?.email);
+      console.log('📧 Email confirmed:', data.user?.email_confirmed_at);
+      console.log('📧 Confirmation email should be sent to:', email);
       
       if (data.user) {
         // Inizializza la chiave di cifratura E2E per il nuovo utente
@@ -475,6 +481,31 @@ export class AuthService {
         .eq('id', user.id);
     } catch (error) {
       console.error('[Auth] Error saving push token:', error);
+    }
+  }
+
+  /**
+   * Reinvia l'email di conferma
+   */
+  static async resendConfirmationEmail(email: string): Promise<{ error: any }> {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: 'wellnesscoach://auth/confirm',
+        },
+      });
+
+      if (error) {
+        console.error('Error resending confirmation email:', error);
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Error in resendConfirmationEmail:', error);
+      return { error };
     }
   }
 

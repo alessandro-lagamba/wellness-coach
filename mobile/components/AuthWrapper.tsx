@@ -5,6 +5,7 @@ import { OnboardingService } from '../services/onboarding.service';
 import { AuthScreen } from './auth/AuthScreen';
 // 🔥 REMOVED: OnboardingScreen - non lo usiamo più, andiamo direttamente a InteractiveTutorial
 import { InteractiveTutorial } from './InteractiveTutorial';
+import { EmailVerificationModal } from './EmailVerificationModal';
 import { useTheme } from '../contexts/ThemeContext';
 import { TutorialProvider, useTutorial } from '../contexts/TutorialContext';
 import { useRouter } from 'expo-router';
@@ -27,6 +28,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   const [user, setUser] = useState<any>(null);
   // 🔥 REMOVED: showOnboarding - non mostriamo più OnboardingScreen, solo InteractiveTutorial
   const { showTutorial, setShowTutorial } = useTutorial();
+  const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false);
   const router = useRouter();
   const { colors, mode } = useTheme(); // 🆕 Theme colors
 
@@ -328,7 +330,22 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           const { data: { session }, error } = await supabase.auth.getSession();
           if (session?.user && !error) {
             console.log('✅ Email confirmed, session restored');
-            await proceedAfterAuthentication(session.user);
+            // 🔥 FIX: Forza il refresh dell'utente per ottenere i metadata aggiornati
+            const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
+            if (refreshError) {
+              console.warn('⚠️ Could not refresh user, using session user:', refreshError);
+              await proceedAfterAuthentication(session.user);
+            } else if (refreshedUser) {
+              console.log('✅ User refreshed with metadata:', {
+                first_name: refreshedUser.user_metadata?.first_name,
+                last_name: refreshedUser.user_metadata?.last_name,
+                age: refreshedUser.user_metadata?.age,
+                gender: refreshedUser.user_metadata?.gender,
+              });
+              await proceedAfterAuthentication(refreshedUser);
+            } else {
+              await proceedAfterAuthentication(session.user);
+            }
           } else if (error) {
             console.error('❌ Error confirming email:', error);
             Alert.alert(
@@ -348,10 +365,25 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       if (url.includes('auth/confirm')) {
         console.log('📧 Email confirmation link received while app is open:', url);
         // Supabase gestirà automaticamente i parametri hash
-        supabase.auth.getSession().then(({ data: { session }, error }) => {
+        supabase.auth.getSession().then(async ({ data: { session }, error }) => {
           if (session?.user && !error) {
             console.log('✅ Email confirmed, session restored');
-            proceedAfterAuthentication(session.user);
+            // 🔥 FIX: Forza il refresh dell'utente per ottenere i metadata aggiornati
+            const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
+            if (refreshError) {
+              console.warn('⚠️ Could not refresh user, using session user:', refreshError);
+              proceedAfterAuthentication(session.user);
+            } else if (refreshedUser) {
+              console.log('✅ User refreshed with metadata:', {
+                first_name: refreshedUser.user_metadata?.first_name,
+                last_name: refreshedUser.user_metadata?.last_name,
+                age: refreshedUser.user_metadata?.age,
+                gender: refreshedUser.user_metadata?.gender,
+              });
+              proceedAfterAuthentication(refreshedUser);
+            } else {
+              proceedAfterAuthentication(session.user);
+            }
           } else if (error) {
             console.error('❌ Error confirming email:', error);
             Alert.alert(
@@ -510,12 +542,28 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           setShowTutorial(false);
           // Mark tutorial as completed even if closed early
           await OnboardingService.completeTutorial();
+          
+          // 🔥 NEW: Se l'email non è verificata, mostra il modal di verifica
+          if (user && !user.email_confirmed_at) {
+            console.log('📧 Email not verified, showing verification modal');
+            setTimeout(() => {
+              setShowEmailVerificationModal(true);
+            }, 500);
+          }
         }}
         onComplete={async () => {
           console.log('✅ Tutorial completed by user');
           setShowTutorial(false);
           // Mark tutorial as completed
           await OnboardingService.completeTutorial();
+          
+          // 🔥 NEW: Se l'email non è verificata, mostra il modal di verifica
+          if (user && !user.email_confirmed_at) {
+            console.log('📧 Email not verified, showing verification modal');
+            setTimeout(() => {
+              setShowEmailVerificationModal(true);
+            }, 500);
+          }
         }}
         onNavigateToScreen={(screen) => {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
@@ -542,6 +590,63 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
             default:
               // 🔥 FIX: Solo errori critici in console
               console.error('Unknown screen:', screen);
+          }
+        }}
+      />
+
+      {/* Email Verification Modal - mostra dopo il tutorial se l'email non è verificata */}
+      <EmailVerificationModal
+        visible={showEmailVerificationModal}
+        userEmail={user?.email || ''}
+        onClose={() => {
+          // Non permettere di chiudere il modal senza verificare l'email
+          // L'utente può solo verificare o reinviare l'email
+          Alert.alert(
+            t('auth.verifyEmailRequired') || 'Conferma email richiesta',
+            t('auth.verifyEmailRequiredCloseMessage') || 'Per utilizzare l\'app, devi confermare la tua email. Controlla la tua casella di posta e clicca sul link di conferma.',
+            [{ text: t('common.ok') || 'OK' }]
+          );
+        }}
+        onEmailVerified={async () => {
+          // Email verificata! Ricarica l'utente per aggiornare lo stato
+          console.log('✅ Email verified, reloading user...');
+          setShowEmailVerificationModal(false);
+          
+          try {
+            // 🔥 FIX: Forza il refresh dell'utente per ottenere i metadata aggiornati
+            const { supabase } = await import('../lib/supabase');
+            const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
+            
+            if (refreshError) {
+              console.error('Error refreshing user after email verification:', refreshError);
+              // Fallback: usa getCurrentUser
+              const currentUser = await AuthService.getCurrentUser();
+              if (currentUser) {
+                await proceedAfterAuthentication(currentUser);
+              }
+              return;
+            }
+            
+            if (refreshedUser) {
+              console.log('✅ User refreshed with metadata:', {
+                first_name: refreshedUser.user_metadata?.first_name,
+                last_name: refreshedUser.user_metadata?.last_name,
+                age: refreshedUser.user_metadata?.age,
+                gender: refreshedUser.user_metadata?.gender,
+              });
+              await proceedAfterAuthentication(refreshedUser);
+            }
+          } catch (error) {
+            console.error('Error reloading user after email verification:', error);
+            // Fallback: prova con getCurrentUser
+            try {
+              const currentUser = await AuthService.getCurrentUser();
+              if (currentUser) {
+                await proceedAfterAuthentication(currentUser);
+              }
+            } catch (fallbackError) {
+              console.error('Fallback error:', fallbackError);
+            }
           }
         }}
       />
