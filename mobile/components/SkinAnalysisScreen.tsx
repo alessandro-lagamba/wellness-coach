@@ -807,17 +807,11 @@ const SkinAnalysisScreenContent: React.FC = () => {
                   const store = useAnalysisStore.getState();
                   store.addSkinCapture(skinCapture);
 
-                  // 🆕 Check if this is the first analysis and show celebration
+                  // 🔥 FIX: Rimosso modal FirstAnalysisCelebration - utente lo trova brutto
                   if (isMountedRef.current) {
                     const isFirstTime = await OnboardingService.isFirstTime('skin');
                     if (isFirstTime) {
                       await OnboardingService.markFirstTimeCompleted('skin');
-                      // Delay to allow results screen to show first
-                      setTimeout(() => {
-                        if (isMountedRef.current) {
-                          setShowFirstAnalysisCelebration(true);
-                        }
-                      }, 1500);
                     }
                   }
                 } else {
@@ -2149,12 +2143,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
           onClose={() => setShowSkinTrendModal(false)}
         />
 
-        {/* First Analysis Celebration */}
-        <FirstAnalysisCelebration
-          visible={showFirstAnalysisCelebration}
-          type="skin"
-          onClose={() => setShowFirstAnalysisCelebration(false)}
-        />
+        {/* First Analysis Celebration - RIMOSSO: utente lo trova brutto */}
 
         {/* 🔥 FIX: Modal rimosso - non serve più */}
       </SafeAreaView>

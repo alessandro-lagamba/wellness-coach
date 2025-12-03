@@ -825,17 +825,12 @@ export const EmotionDetectionScreen: React.FC = () => {
                 console.error('Error reloading emotion data after save:', reloadError);
               }
 
-              // 🆕 Check if this is the first analysis and show celebration
+              // 🔥 FIX: Rimosso modal FirstAnalysisCelebration - utente lo trova brutto
+              // Ora segniamo solo il completamento della prima analisi senza mostrare il modal
               if (isMountedRef.current) {
                 const isFirstTime = await OnboardingService.isFirstTime('emotion');
                 if (isFirstTime) {
                   await OnboardingService.markFirstTimeCompleted('emotion');
-                  // Delay to allow results screen to show first
-                  setTimeout(() => {
-                    if (isMountedRef.current) {
-                      setShowFirstAnalysisCelebration(true);
-                    }
-                  }, 1500);
                 }
               }
             } else {
@@ -1542,12 +1537,7 @@ export const EmotionDetectionScreen: React.FC = () => {
           onClose={() => setShowTrendDetailModal(false)}
         />
 
-        {/* First Analysis Celebration */}
-        <FirstAnalysisCelebration
-          visible={showFirstAnalysisCelebration}
-          type="emotion"
-          onClose={() => setShowFirstAnalysisCelebration(false)}
-        />
+        {/* First Analysis Celebration - RIMOSSO: utente lo trova brutto */}
 
         {/* Contextual Permission Modal */}
         {/* 🔥 FIX: Modal rimosso - non serve più */}

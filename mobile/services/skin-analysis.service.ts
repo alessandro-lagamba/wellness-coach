@@ -182,23 +182,27 @@ export class SkinAnalysisService {
         }
       }
       
+      // 🔥 FIX: Usa maybeSingle() invece di single() per evitare errori quando non ci sono risultati
       const { data, error } = await supabase
         .from(Tables.SKIN_ANALYSES)
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error getting latest skin analysis:', error);
         return null;
       }
 
-      // 🆕 Cache per 5 minuti
-      if (data) {
-        await cacheService.set(cacheKey, data, 5 * 60 * 1000);
+      // Se non ci sono risultati, data sarà null (non un errore)
+      if (!data) {
+        return null;
       }
+
+      // 🆕 Cache per 5 minuti
+      await cacheService.set(cacheKey, data, 5 * 60 * 1000);
 
       return data;
     } catch (error) {

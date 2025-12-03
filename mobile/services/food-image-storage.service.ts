@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
-import * as FileSystem from 'expo-file-system';
+// 🔥 FIX: Usa l'API legacy di expo-file-system per evitare errori di deprecazione
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { AuthService } from './auth.service';
 

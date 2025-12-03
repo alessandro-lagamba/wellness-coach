@@ -109,21 +109,38 @@ export class HealthPermissionsService {
   }> {
     try {
       if (Platform.OS === 'ios') {
+        // 🔥 FIX: Verifica che la funzione isAvailable esista prima di chiamarla
+        if (typeof AppleHealthKit?.isAvailable !== 'function') {
+          console.warn('[HealthPermissions] AppleHealthKit.isAvailable is not available - HealthKit may not be properly linked');
+          return {
+            isHealthKitAvailable: false,
+            isGoogleFitAvailable: false,
+          };
+        }
+        
         return new Promise((resolve) => {
-          AppleHealthKit.isAvailable((error: Object, results: boolean) => {
-            if (error) {
-              console.error('Error checking HealthKit availability:', error);
-              resolve({
-                isHealthKitAvailable: false,
-                isGoogleFitAvailable: false,
-              });
-            } else {
-              resolve({
-                isHealthKitAvailable: results,
-                isGoogleFitAvailable: false,
-              });
-            }
-          });
+          try {
+            AppleHealthKit.isAvailable((error: Object, results: boolean) => {
+              if (error) {
+                console.error('Error checking HealthKit availability:', error);
+                resolve({
+                  isHealthKitAvailable: false,
+                  isGoogleFitAvailable: false,
+                });
+              } else {
+                resolve({
+                  isHealthKitAvailable: results,
+                  isGoogleFitAvailable: false,
+                });
+              }
+            });
+          } catch (callbackError) {
+            console.error('Error calling AppleHealthKit.isAvailable:', callbackError);
+            resolve({
+              isHealthKitAvailable: false,
+              isGoogleFitAvailable: false,
+            });
+          }
         });
       } else {
         // Per Android, verifica Health Connect

@@ -1,6 +1,7 @@
 /**
  * First Analysis Celebration Component
  * Mostra un modal di congratulazioni quando l'utente completa la prima analisi
+ * Design migliorato con animazioni più elaborate e aspetto premium
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -21,7 +22,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 interface FirstAnalysisCelebrationProps {
   visible: boolean;
@@ -37,18 +38,23 @@ export const FirstAnalysisCelebration: React.FC<FirstAnalysisCelebrationProps> =
   onNextAction,
 }) => {
   const { t } = useTranslation();
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
+  const isDark = mode === 'dark';
   const router = useRouter();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const slideUpAnim = useRef(new Animated.Value(50)).current;
+  const confettiAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
-      // Haptic feedback
+      // Haptic feedback più intenso
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 200);
       
-      // Animations
+      // Animazioni elaborate
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -57,23 +63,50 @@ export const FirstAnalysisCelebration: React.FC<FirstAnalysisCelebrationProps> =
         }),
         Animated.spring(scaleAnim, {
           toValue: 1,
-          tension: 50,
-          friction: 7,
+          tension: 60,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideUpAnim, {
+          toValue: 0,
+          duration: 500,
           useNativeDriver: true,
         }),
         Animated.sequence([
           Animated.timing(rotateAnim, {
             toValue: 1,
-            duration: 600,
+            duration: 400,
             useNativeDriver: true,
           }),
           Animated.timing(rotateAnim, {
             toValue: 0,
-            duration: 600,
+            duration: 400,
             useNativeDriver: true,
           }),
         ]),
+        // Animazione confetti
+        Animated.timing(confettiAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
       ]).start();
+
+      // Pulse animation continua
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.05,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
     } else {
       Animated.parallel([
         Animated.timing(fadeAnim, {
@@ -128,7 +161,7 @@ export const FirstAnalysisCelebration: React.FC<FirstAnalysisCelebrationProps> =
   const config = getConfig();
   const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '10deg'],
+    outputRange: ['0deg', '15deg'],
   });
 
   if (!visible) return null;
@@ -148,89 +181,103 @@ export const FirstAnalysisCelebration: React.FC<FirstAnalysisCelebrationProps> =
           },
         ]}
       >
-        <BlurView intensity={20} tint="dark" style={styles.blur}>
+        <BlurView intensity={40} tint={isDark ? 'dark' : 'light'} style={styles.blur}>
           <Animated.View
             style={[
               styles.container,
               {
-                transform: [{ scale: scaleAnim }],
+                backgroundColor: colors.surface,
+                transform: [
+                  { scale: scaleAnim },
+                  { translateY: slideUpAnim },
+                ],
               },
             ]}
           >
+            {/* Header con gradiente migliorato */}
             <LinearGradient
-              colors={config.gradient}
+              colors={[...config.gradient, `${config.gradient[1]}dd`]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.header}
             >
+              {/* Decorazioni di sfondo */}
+              <View style={styles.headerDecorations}>
+                <View style={[styles.decorCircle, styles.decorCircle1]} />
+                <View style={[styles.decorCircle, styles.decorCircle2]} />
+                <View style={[styles.decorCircle, styles.decorCircle3]} />
+              </View>
+
+              {/* Icona con animazione pulse */}
               <Animated.View
                 style={[
                   styles.iconContainer,
                   {
-                    transform: [{ rotate }],
+                    transform: [
+                      { rotate },
+                      { scale: pulseAnim },
+                    ],
                   },
                 ]}
               >
-                <MaterialCommunityIcons
-                  name={config.icon as any}
-                  size={64}
-                  color="#fff"
-                />
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']}
+                  style={styles.iconGradient}
+                >
+                  <MaterialCommunityIcons
+                    name={config.icon as any}
+                    size={56}
+                    color="#fff"
+                  />
+                </LinearGradient>
               </Animated.View>
+
+              {/* Emoji celebrazione */}
+              <Text style={styles.celebrationEmoji}>🎉</Text>
+
               <Text style={styles.title}>{config.title}</Text>
               <Text style={styles.subtitle}>{config.description}</Text>
             </LinearGradient>
 
+            {/* Contenuto migliorato */}
             <View style={[styles.content, { backgroundColor: colors.surface }]}>
-              <View style={styles.achievementBadge}>
-                <MaterialCommunityIcons name="trophy" size={32} color={config.gradient[0]} />
+              {/* Badge achievement con sfondo colorato */}
+              <View style={[styles.achievementBadge, { backgroundColor: `${config.gradient[0]}15` }]}>
+                <View style={[styles.trophyCircle, { backgroundColor: `${config.gradient[0]}20` }]}>
+                  <MaterialCommunityIcons name="trophy" size={28} color={config.gradient[0]} />
+                </View>
                 <Text style={[styles.achievementText, { color: colors.text }]}>
                   {t('firstAnalysis.achievement')}
                 </Text>
               </View>
 
-              <Text style={[styles.nextStepTitle, { color: colors.text }]}>
-                {t('firstAnalysis.whatsNext')}
-              </Text>
-              <Text style={[styles.nextStepText, { color: colors.textSecondary }]}>
-                {config.nextStep}
-              </Text>
+              {/* Sezione "Cosa puoi fare ora" */}
+              <View style={[styles.nextStepCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }]}>
+                <Text style={[styles.nextStepTitle, { color: colors.text }]}>
+                  {t('firstAnalysis.whatsNext')}
+                </Text>
+                <Text style={[styles.nextStepText, { color: colors.textSecondary }]}>
+                  {config.nextStep}
+                </Text>
+              </View>
 
-              <View style={styles.actions}>
-                {onNextAction && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      onClose();
-                      setTimeout(() => {
-                        config.nextAction();
-                        onNextAction?.();
-                      }, 300);
-                    }}
-                    style={styles.nextButton}
-                    activeOpacity={0.8}
-                  >
-                    <LinearGradient
-                      colors={config.gradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.nextButtonGradient}
-                    >
-                      <Text style={styles.nextButtonText}>{config.nextActionLabel}</Text>
-                      <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
-                    </LinearGradient>
-                  </TouchableOpacity>
-                )}
-
-                <TouchableOpacity
-                  onPress={onClose}
-                  style={[styles.closeButton, { borderColor: colors.border }]}
-                  activeOpacity={0.8}
+              {/* Pulsante principale con gradiente */}
+              <TouchableOpacity
+                onPress={onClose}
+                style={styles.primaryButton}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={config.gradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.primaryButtonGradient}
                 >
-                  <Text style={[styles.closeButtonText, { color: colors.textSecondary }]}>
+                  <Text style={styles.primaryButtonText}>
                     {t('firstAnalysis.continue')}
                   </Text>
-                </TouchableOpacity>
-              </View>
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
           </Animated.View>
         </BlurView>
@@ -250,85 +297,146 @@ const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
   container: {
     width: '100%',
-    maxWidth: 400,
-    borderRadius: 24,
+    maxWidth: 360,
+    borderRadius: 28,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.35,
+    shadowRadius: 30,
+    elevation: 15,
   },
   header: {
-    padding: 32,
-    paddingBottom: 24,
+    padding: 28,
+    paddingTop: 36,
+    paddingBottom: 28,
     alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  headerDecorations: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  decorCircle: {
+    position: 'absolute',
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  decorCircle1: {
+    width: 100,
+    height: 100,
+    top: -30,
+    right: -20,
+  },
+  decorCircle2: {
+    width: 60,
+    height: 60,
+    bottom: 20,
+    left: -20,
+  },
+  decorCircle3: {
+    width: 40,
+    height: 40,
+    top: 40,
+    left: 30,
   },
   iconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+  },
+  iconGradient: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  celebrationEmoji: {
+    fontSize: 28,
+    marginBottom: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#fff',
-    marginBottom: 8,
+    marginBottom: 10,
     textAlign: 'center',
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
+    paddingHorizontal: 8,
   },
   content: {
-    padding: 24,
+    padding: 20,
+    paddingTop: 16,
   },
   achievementBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
     padding: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    gap: 10,
+  },
+  trophyCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   achievementText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  nextStepCard: {
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
   },
   nextStepTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: -0.2,
   },
   nextStepText: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
-    marginBottom: 24,
   },
-  actions: {
-    gap: 12,
-  },
-  nextButton: {
+  primaryButton: {
     borderRadius: 16,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  nextButtonGradient: {
+  primaryButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -336,21 +444,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     gap: 8,
   },
-  nextButtonText: {
+  primaryButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#fff',
-  },
-  closeButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
+    letterSpacing: -0.2,
   },
 });
 

@@ -74,16 +74,31 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
     if (!text || language === 'en') return text;
 
     const translations: { [key: string]: string } = {
-      // Exact matches
+      // Exact matches - Observations
       'Facial expression appears neutral.': 'L\'espressione facciale appare neutra.',
       'No strong emotional cues from eyebrows or mouth.': 'Nessun segnale emotivo forte da sopracciglia o bocca.',
       'Eyes are relaxed, indicating low arousal.': 'Gli occhi sono rilassati, indicando bassa attivazione.',
-      'Consider engaging in activities that promote positive emotions.': 'Considera di impegnarti in attività che promuovono emozioni positive.',
-      'Monitor for any changes in emotional expression.': 'Monitora eventuali cambiamenti nell\'espressione emotiva.',
       'Face is partially occluded by a cap.': 'Il viso è parzialmente coperto da un cappello.',
       'Facial expression is mostly neutral.': 'L\'espressione facciale è principalmente neutra.',
       'Mouth is slightly downturned.': 'La bocca è leggermente rivolta verso il basso.',
       'Lighting is uneven, affecting visibility of facial features.': 'L\'illuminazione è irregolare, influenzando la visibilità dei tratti facciali.',
+      'Eyes appear tired or fatigued.': 'Gli occhi appaiono stanchi o affaticati.',
+      'Slight tension detected in forehead.': 'Leggera tensione rilevata nella fronte.',
+      'Relaxed facial muscles detected.': 'Muscoli facciali rilassati rilevati.',
+      'Eyebrows are slightly raised.': 'Le sopracciglia sono leggermente sollevate.',
+      'Signs of stress detected.': 'Segni di stress rilevati.',
+      
+      // Exact matches - Recommendations
+      'Consider engaging in activities that promote positive emotions.': 'Considera di impegnarti in attività che promuovono emozioni positive.',
+      'Monitor for any changes in emotional expression.': 'Monitora eventuali cambiamenti nell\'espressione emotiva.',
+      'Take a few deep breaths to relax.': 'Fai qualche respiro profondo per rilassarti.',
+      'Try a short meditation session.': 'Prova una breve sessione di meditazione.',
+      'Consider a walk in nature.': 'Considera una passeggiata nella natura.',
+      'Listen to calming music.': 'Ascolta musica rilassante.',
+      'Practice gratitude journaling.': 'Pratica il diario della gratitudine.',
+      'Get some fresh air.': 'Prendi un po\' d\'aria fresca.',
+      'Take a break from screens.': 'Fai una pausa dagli schermi.',
+      'Stay hydrated.': 'Mantieniti idratato.',
     };
 
     // Check exact match first
@@ -94,23 +109,33 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
     let translated = text;
 
     // Common patterns
-    if (lowerText.includes('face is partially occluded')) {
-      translated = translated.replace(/face is partially occluded by/i, 'il viso è parzialmente coperto da');
-    }
-    if (lowerText.includes('facial expression is mostly')) {
-      translated = translated.replace(/facial expression is mostly/i, 'l\'espressione facciale è principalmente');
-    }
-    if (lowerText.includes('mouth is slightly')) {
-      translated = translated.replace(/mouth is slightly/i, 'la bocca è leggermente');
-    }
-    if (lowerText.includes('lighting is uneven')) {
-      translated = translated.replace(/lighting is uneven/i, 'l\'illuminazione è irregolare');
-    }
-    if (lowerText.includes('affecting visibility')) {
-      translated = translated.replace(/affecting visibility of facial features/i, 'influenzando la visibilità dei tratti facciali');
-    }
-    if (lowerText.includes('neutral')) {
-      translated = translated.replace(/neutral/gi, 'neutra');
+    const patterns: { pattern: RegExp; replacement: string }[] = [
+      { pattern: /face is partially occluded by/gi, replacement: 'il viso è parzialmente coperto da' },
+      { pattern: /facial expression is mostly/gi, replacement: 'l\'espressione facciale è principalmente' },
+      { pattern: /facial expression appears/gi, replacement: 'l\'espressione facciale appare' },
+      { pattern: /mouth is slightly/gi, replacement: 'la bocca è leggermente' },
+      { pattern: /lighting is uneven/gi, replacement: 'l\'illuminazione è irregolare' },
+      { pattern: /affecting visibility of facial features/gi, replacement: 'influenzando la visibilità dei tratti facciali' },
+      { pattern: /eyes are relaxed/gi, replacement: 'gli occhi sono rilassati' },
+      { pattern: /eyes appear/gi, replacement: 'gli occhi appaiono' },
+      { pattern: /indicating low arousal/gi, replacement: 'indicando bassa attivazione' },
+      { pattern: /indicating high arousal/gi, replacement: 'indicando alta attivazione' },
+      { pattern: /no strong emotional cues/gi, replacement: 'nessun segnale emotivo forte' },
+      { pattern: /consider engaging in/gi, replacement: 'considera di impegnarti in' },
+      { pattern: /activities that promote/gi, replacement: 'attività che promuovono' },
+      { pattern: /positive emotions/gi, replacement: 'emozioni positive' },
+      { pattern: /negative emotions/gi, replacement: 'emozioni negative' },
+      { pattern: /neutral/gi, replacement: 'neutra' },
+      { pattern: /stress/gi, replacement: 'stress' },
+      { pattern: /relaxed/gi, replacement: 'rilassato' },
+      { pattern: /tired/gi, replacement: 'stanco' },
+      { pattern: /fatigued/gi, replacement: 'affaticato' },
+    ];
+
+    for (const { pattern, replacement } of patterns) {
+      if (pattern.test(translated)) {
+        translated = translated.replace(pattern, replacement);
+      }
     }
 
     return translated;
@@ -313,14 +338,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
   };
 
   return (
-    <SafeAreaWrapper style={styles.container}>
-      <LinearGradient
-        colors={isDark 
-          ? [hexToRgba(heroColor, 0), hexToRgba(heroColor, 0.25), 'rgba(31, 41, 55, 1)'] 
-          : [hexToRgba(heroColor, 0), hexToRgba(heroColor, 0.19), 'rgba(226, 232, 240, 1)']}
-        locations={[0, 0.3, 1]}
-        style={StyleSheet.absoluteFill}
-      >
+    <SafeAreaWrapper style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -501,7 +519,6 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
           </View>
         </View>
       </View>
-      </LinearGradient>
     </SafeAreaWrapper>
   );
 };

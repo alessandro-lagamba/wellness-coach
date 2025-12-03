@@ -83,29 +83,70 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
   // Helper for translation (keeping existing logic)
   const translateAIText = (text: string): string => {
     if (!text || language === 'en') return text;
-    const translations: { [key: string]: string } = {
-      'visible redness': 'rossore visibile',
-      'slight oiliness': 'leggera oleosità',
-      'lighting is slightly uneven': 'l\'illuminazione è leggermente irregolare',
-      'image is in focus': 'l\'immagine è a fuoco',
-      'use gentle cleanser': 'usa un detergente delicato',
-      'apply moisturizer': 'applica una crema idratante',
-      'consider soothing products': 'considera prodotti lenitivi',
-      'use sunscreen daily': 'usa la protezione solare quotidianamente',
-      'slight redness': 'leggero rossore',
-      'visible pores': 'pori visibili',
-      'dark circles': 'occhiaie',
-      'dry skin': 'pelle secca',
-      'oily skin': 'pelle grassa',
+    
+    // Exact match translations
+    const exactTranslations: { [key: string]: string } = {
+      // Issues - exact matches
+      'mild acne-like breakouts': 'Lievi eruzioni simili all\'acne',
+      'post-shave redness': 'Rossore post-rasatura',
+      'uneven texture': 'Texture irregolare',
+      'oiliness': 'Oleosità',
+      'visible redness': 'Rossore visibile',
+      'slight oiliness': 'Leggera oleosità',
+      'slight redness': 'Leggero rossore',
+      'visible pores': 'Pori visibili',
+      'dark circles': 'Occhiaie',
+      'dry skin': 'Pelle secca',
+      'oily skin': 'Pelle grassa',
+      'acne': 'Acne',
+      'wrinkles': 'Rughe',
+      'fine lines': 'Linee sottili',
+      'dullness': 'Opacità',
+      'uneven skin tone': 'Tono della pelle irregolare',
+      'dehydration': 'Disidratazione',
+      'enlarged pores': 'Pori dilatati',
+      'blackheads': 'Punti neri',
+      'whiteheads': 'Punti bianchi',
+      'sun damage': 'Danni solari',
+      'hyperpigmentation': 'Iperpigmentazione',
+      
+      // Notes/observations
+      'lighting is slightly uneven': 'L\'illuminazione è leggermente irregolare',
+      'image is in focus': 'L\'immagine è a fuoco',
+      'face is partially covered': 'Il viso è parzialmente coperto',
+      'lighting may affect skin appearance': 'L\'illuminazione potrebbe influenzare l\'aspetto della pelle',
+      'shadows may hide some imperfections': 'Le ombre possono nascondere alcune imperfezioni',
+      
+      // Recommendations
+      'use gentle cleanser': 'Usa un detergente delicato',
+      'apply moisturizer': 'Applica una crema idratante',
+      'consider soothing products': 'Considera prodotti lenitivi',
+      'use sunscreen daily': 'Usa la protezione solare quotidianamente',
+      'drink more water': 'Bevi più acqua',
+      'get enough sleep': 'Dormi a sufficienza',
+      'avoid touching your face': 'Evita di toccarti il viso',
+      'use a toner': 'Usa un tonico',
+      'exfoliate regularly': 'Esfolia regolarmente',
+      'use retinol': 'Usa retinolo',
+      'apply vitamin c serum': 'Applica siero alla vitamina C',
     };
+    
     const lowerText = text.toLowerCase();
-    if (translations[lowerText]) return translations[lowerText];
-    for (const [key, value] of Object.entries(translations)) {
+    
+    // Check exact match first
+    if (exactTranslations[lowerText]) {
+      return exactTranslations[lowerText];
+    }
+    
+    // Try partial matches
+    let translatedText = text;
+    for (const [key, value] of Object.entries(exactTranslations)) {
       if (lowerText.includes(key)) {
-        return text.replace(new RegExp(key, 'gi'), value);
+        translatedText = translatedText.replace(new RegExp(key, 'gi'), value);
       }
     }
-    return text;
+    
+    return translatedText;
   };
 
   // Helper to capitalize first letter
@@ -155,14 +196,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
   };
 
   return (
-    <SafeAreaWrapper style={styles.container}>
-      <LinearGradient
-        colors={isDark 
-          ? [hexToRgba(heroColor, 0), hexToRgba(heroColor, 0.25), 'rgba(31, 41, 55, 1)'] 
-          : [hexToRgba(heroColor, 0), hexToRgba(heroColor, 0.19), 'rgba(226, 232, 240, 1)']}
-        locations={[0, 0.3, 1]}
-        style={StyleSheet.absoluteFill}
-      >
+    <SafeAreaWrapper style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -331,7 +365,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
             >
               <MaterialCommunityIcons name="camera-retake" size={20} color={colors.text} />
               <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-                {t('analysis.skin.results.retake') || t('common.retake') || (language === 'it' ? 'Ripeti' : 'Retake')}
+                {t('analysis.skin.retake') || (language === 'it' ? 'Ripeti' : 'Retake')}
               </Text>
             </TouchableOpacity>
 
@@ -351,7 +385,6 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
           </View>
         </View>
       </View>
-      </LinearGradient>
     </SafeAreaWrapper>
   );
 };

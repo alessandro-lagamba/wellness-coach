@@ -11,6 +11,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BucketInfo, TrendInfo } from '../services/metrics.service';
 import { ActionInfo } from '../services/actions.service';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface EnhancedScoreTileProps {
   metric: string;
@@ -39,6 +40,8 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
   onExpandPress,
   expanded = false,
 }) => {
+  const { colors, mode } = useTheme();
+  const isDark = mode === 'dark';
   const [isExpanded, setIsExpanded] = useState(expanded);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -76,7 +79,14 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
   };
 
   return (
-    <View style={[styles.container, { shadowColor: color }]}>
+    <View style={[
+      styles.container, 
+      { 
+        shadowColor: color,
+        backgroundColor: isDark ? '#1f2937' : '#ffffff',
+        borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6',
+      }
+    ]}>
       <TouchableOpacity style={styles.header} onPress={handleExpandPress} activeOpacity={0.7}>
         <View style={styles.leftSection}>
           <LinearGradient
@@ -89,8 +99,8 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
           </LinearGradient>
 
           <View style={styles.metricInfo}>
-            <Text style={styles.label}>{label}</Text>
-            <Text style={[styles.value, { color: '#1f2937' }]}>{Math.round(value)}</Text>
+            <Text style={[styles.label, { color: isDark ? '#9ca3af' : '#6b7280' }]}>{label}</Text>
+            <Text style={[styles.value, { color: isDark ? '#f3f4f6' : '#1f2937' }]}>{Math.round(value)}</Text>
           </View>
         </View>
 
@@ -112,7 +122,7 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
           <MaterialCommunityIcons
             name={isExpanded ? 'chevron-up' : 'chevron-down'}
             size={20}
-            color="#9ca3af"
+            color={isDark ? '#6b7280' : '#9ca3af'}
           />
         </View>
       </TouchableOpacity>
@@ -127,11 +137,11 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
           }
         ]}
       >
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6' }]} />
 
         {trend && (
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Trend</Text>
+            <Text style={[styles.detailLabel, { color: isDark ? '#6b7280' : '#9ca3af' }]}>Trend</Text>
             <Text style={[styles.detailValue, { color: getTrendColor(trend) }]}>
               {trend.trend} {trend.percentage}% {trend.text}
             </Text>
@@ -140,22 +150,22 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
 
         {bucket && (
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Status</Text>
-            <Text style={styles.detailValue}>{bucket.description}</Text>
+            <Text style={[styles.detailLabel, { color: isDark ? '#6b7280' : '#9ca3af' }]}>Status</Text>
+            <Text style={[styles.detailValue, { color: isDark ? '#d1d5db' : '#374151' }]}>{bucket.description}</Text>
           </View>
         )}
 
         {action && action.actionable && (
-          <View style={styles.actionContainer}>
+          <View style={[styles.actionContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb' }]}>
             <View style={styles.actionHeader}>
               <MaterialCommunityIcons name="lightbulb-on-outline" size={16} color={getPriorityColor(action.priority)} />
               <Text style={[styles.actionTitle, { color: getPriorityColor(action.priority) }]}>Recommendation</Text>
             </View>
 
-            <Text style={styles.actionDescription}>{action.description}</Text>
+            <Text style={[styles.actionDescription, { color: isDark ? '#9ca3af' : '#4b5563' }]}>{action.description}</Text>
 
             {action.estimatedTime && (
-              <Text style={styles.actionTime}>⏱️ {action.estimatedTime}</Text>
+              <Text style={[styles.actionTime, { color: isDark ? '#6b7280' : '#6b7280' }]}>⏱️ {action.estimatedTime}</Text>
             )}
 
             <TouchableOpacity
@@ -174,7 +184,6 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
     borderRadius: 20,
     marginVertical: 6,
     shadowOffset: { width: 0, height: 4 },
@@ -182,7 +191,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
   },
   header: {
     flexDirection: 'row',

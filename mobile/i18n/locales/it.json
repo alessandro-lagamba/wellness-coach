@@ -198,11 +198,6 @@
     "suggestionFeedback": {
       "title": "Ottimo!",
       "message": "Suggerimento applicato. Come ti senti dopo averlo provato?",
-    "activityAdded": {
-      "title": "Attività aggiunta",
-      "message": "Attività aggiunta per le {{time}}. Riceverai un promemoria 15 minuti prima.",
-      "error": "Errore durante il salvataggio dell'attività"
-    },
       "veryGood": "Molto bene",
       "good": "Bene",
       "soSo": "Così così",
@@ -211,6 +206,11 @@
       "useful": "Utile",
       "neutral": "Neutrale",
       "notUseful": "Non utile"
+    },
+    "activityAdded": {
+      "title": "Attività aggiunta",
+      "message": "Attività aggiunta per le {{time}}. Riceverai un promemoria 15 minuti prima.",
+      "error": "Errore durante il salvataggio dell'attività"
     },
     "speechError": "Scusa, non ho capito cosa hai detto. Riprova.",
     "sessionName": "Chat {{date}}",

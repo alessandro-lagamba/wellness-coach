@@ -1472,17 +1472,11 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     UserFeedbackService.showSaveSuccess('analisi');
                   }
 
-                  // 🆕 Check if this is the first analysis and show celebration
+                  // 🔥 FIX: Rimosso modal FirstAnalysisCelebration - utente lo trova brutto
                   if (isMountedRef.current) {
                     const isFirstTime = await OnboardingService.isFirstTime('food');
                     if (isFirstTime) {
                       await OnboardingService.markFirstTimeCompleted('food');
-                      // Delay to allow results screen to show first
-                      setTimeout(() => {
-                        if (isMountedRef.current) {
-                          setShowFirstAnalysisCelebration(true);
-                        }
-                      }, 1500);
                     }
                   }
 
@@ -2723,16 +2717,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
             );
           })()}
 
-          {/* Quality Badge */}
-          {qualityInfo && (
-            <QualityBadge
-              confidence={qualityInfo}
-              qualityMessage="Analysis quality is good. Results are reliable."
-              onRetakePress={() => alert('Retake analysis')}
-              showRetakeButton={false}
-              compact={true}
-            />
-          )}
+          {/* Quality Badge - RIMOSSO: utente non lo trova utile */}
 
           {/* Intelligent Insights Section - Food */}
           {fullAnalysisResult && (
@@ -3258,12 +3243,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
           </View>
         </Modal>
 
-        {/* First Analysis Celebration */}
-        <FirstAnalysisCelebration
-          visible={showFirstAnalysisCelebration}
-          type="food"
-          onClose={() => setShowFirstAnalysisCelebration(false)}
-        />
+        {/* First Analysis Celebration - RIMOSSO: utente lo trova brutto */}
 
         {/* Contextual Permission Modal */}
         {/* 🔥 FIX: Modal rimosso - non serve più */}

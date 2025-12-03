@@ -18,7 +18,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.wellnesscoach.app",
+      "bundleIdentifier": "com.neurotracer.wellnesscoach",
       "infoPlist": {
         "NSCameraUsageDescription": "This app uses the camera to analyze your skin and detect emotions for personalized wellness coaching.",
         "NSMicrophoneUsageDescription": "Allow Wellness Coach to access your microphone for voice interactions.",

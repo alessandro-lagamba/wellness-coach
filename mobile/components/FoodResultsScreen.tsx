@@ -355,14 +355,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
   };
   
   return (
-    <SafeAreaWrapper style={styles.container}>
-      <LinearGradient
-        colors={isDark 
-          ? [hexToRgba(heroColor, 0), hexToRgba(heroColor, 0.25), 'rgba(31, 41, 55, 1)'] 
-          : [hexToRgba(heroColor, 0), hexToRgba(heroColor, 0.19), 'rgba(226, 232, 240, 1)']}
-        locations={[0, 0.3, 1]}
-        style={StyleSheet.absoluteFill}
-      >
+    <SafeAreaWrapper style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -538,7 +531,6 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
           </View>
         </View>
       </View>
-      </LinearGradient>
     </SafeAreaWrapper>
   );
 };

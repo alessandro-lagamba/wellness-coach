@@ -196,11 +196,6 @@
     "suggestionFeedback": {
       "title": "Great!",
       "message": "Suggestion applied. How do you feel after trying it?",
-    "activityAdded": {
-      "title": "Activity added",
-      "message": "Activity added for {{time}}. You will receive a reminder 15 minutes before.",
-      "error": "Error saving activity"
-    },
       "veryGood": "Very good",
       "good": "Good",
       "soSo": "So-so",
@@ -209,6 +204,11 @@
       "useful": "Useful",
       "neutral": "Neutral",
       "notUseful": "Not useful"
+    },
+    "activityAdded": {
+      "title": "Activity added",
+      "message": "Activity added for {{time}}. You will receive a reminder 15 minutes before.",
+      "error": "Error saving activity"
     },
     "speechError": "Sorry, I couldn't understand what you said. Please try again.",
     "sessionName": "Chat {{date}}",

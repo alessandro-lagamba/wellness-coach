@@ -892,7 +892,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
   const isHealthDataReady = healthStatus === 'ready';
 
-  const getInfoCardValue = (id: string, info: any) => {
+  const getInfoCardValue = (id: string, info: any, size: 'small' | 'medium' | 'large' = 'small') => {
     switch (id) {
       case 'sleep':
         return t('home.sleep.hours', { hours: info.sleep?.hours ?? 7.5 });
@@ -908,8 +908,13 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         return t('home.hrv.value', { value: formatted });
       }
       case 'cycle':
-        // 🆕 Mostra "Giorno X" come valore principale
-        return info.cycle ? t('home.cycle.day', { day: info.cycle.day }) : '—';
+        // 🆕 Per size S, mostra solo il numero del giorno per evitare troncamento
+        if (!info.cycle) return '—';
+        if (size === 'small') {
+          // Abbrevia "Giorno" a "G." per size S
+          return `G. ${info.cycle.day}`;
+        }
+        return t('home.cycle.day', { day: info.cycle.day });
       default:
         return info.value ?? '--';
     }
@@ -2626,7 +2631,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                       const gaugeProgress = computeGaugeProgress(widgetInfo);
                       const gaugeSubtitle = computeGaugeSubtitle(widgetInfo);
                       const gaugeTrend = computeGaugeTrend(gaugeProgress);
-                      const infoValue = getInfoCardValue(widget.id, widgetInfo);
+                      const infoValue = getInfoCardValue(widget.id, widgetInfo, widget.size);
                       const infoSubtitle = getInfoCardSubtitle(widget.id, widgetInfo);
                       const infoTrend = getInfoCardTrend(widget.id, widgetInfo);
                       const infoDetails = getInfoCardDetails(widget.id, widgetInfo);
@@ -2718,7 +2723,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                       const gaugeProgress = computeGaugeProgress(widgetInfo);
                       const gaugeSubtitle = computeGaugeSubtitle(widgetInfo);
                       const gaugeTrend = computeGaugeTrend(gaugeProgress);
-                      const infoValue = getInfoCardValue(widget.id, widgetInfo);
+                      const infoValue = getInfoCardValue(widget.id, widgetInfo, widget.size);
                       const infoSubtitle = getInfoCardSubtitle(widget.id, widgetInfo);
                       const infoTrend = getInfoCardTrend(widget.id, widgetInfo);
                       const infoDetails = getInfoCardDetails(widget.id, widgetInfo);

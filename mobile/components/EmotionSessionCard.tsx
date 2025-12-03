@@ -245,7 +245,6 @@ const DominantBanner: React.FC<{ emotion?: string }> = ({ emotion }) => {
 export const EmotionSessionCard: React.FC<EmotionSessionCardProps> = ({ session }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const confidence = session.confidence ?? 0.8;
 
   // Check if this is fallback data
   const isFallback = session.id === 'fallback' || session.id === 'error-fallback';
@@ -266,12 +265,6 @@ export const EmotionSessionCard: React.FC<EmotionSessionCardProps> = ({ session 
           <Text style={[styles.title, { color: colors.text }]}>
             {isFallback ? t('analysis.emotion.card.sampleTitle') : t('analysis.emotion.card.lastTitle')}
           </Text>
-          <View style={[styles.confidenceBadge, { backgroundColor: colors.surfaceMuted }]}>
-            <View style={[styles.confidenceDot, { backgroundColor: getConfidenceColor(confidence) }]} />
-            <Text style={[styles.confidenceText, { color: colors.text }]}>
-              {isFallback ? t('analysis.common.sample') : getConfidenceLabel(confidence, t)} ({Math.round(confidence * 100)}%)
-            </Text>
-          </View>
         </View>
         {isFallback && (
           <Text style={[styles.fallbackText, { color: colors.textSecondary }]}>

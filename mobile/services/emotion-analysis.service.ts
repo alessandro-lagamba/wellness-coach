@@ -168,16 +168,22 @@ export class EmotionAnalysisService {
         }
       }
       
+      // 🔥 FIX: Usa maybeSingle() invece di single() per evitare errori quando non ci sono risultati
       const { data, error } = await supabase
         .from(Tables.EMOTION_ANALYSES)
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error getting latest emotion analysis:', error);
+        return null;
+      }
+      
+      // Se non ci sono risultati, data sarà null (non un errore)
+      if (!data) {
         return null;
       }
 
