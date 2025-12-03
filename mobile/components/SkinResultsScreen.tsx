@@ -9,9 +9,9 @@ import {
   Dimensions,
   Platform,
   BackHandler,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SafeAreaWrapper } from './shared/SafeAreaWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SkinCapture } from '../stores/analysis.store';
@@ -196,7 +196,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
   };
 
   return (
-    <SafeAreaWrapper style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -339,13 +339,13 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
       </ScrollView>
 
       {/* Bottom Action Bar */}
-      <View
+      <SafeAreaView
+        edges={['bottom']}
         style={[
           styles.bottomBar,
           { 
             backgroundColor: colors.background, 
             borderTopColor: isDark ? 'rgba(148,163,184,0.18)' : 'rgba(15,23,42,0.08)',
-            paddingBottom: insets.bottom, // 🔥 FIX: Rispetta gli insets bottom per i tasti di navigazione Android
           },
         ]}
       >
@@ -363,9 +363,9 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
               style={[styles.secondaryButton, { borderColor: colors.border }]}
               onPress={onRetake}
             >
-              <MaterialCommunityIcons name="camera-retake" size={20} color={colors.text} />
+              <MaterialCommunityIcons name="camera-retake" size={18} color={colors.text} />
               <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-                {t('analysis.skin.retake') || (language === 'it' ? 'Ripeti' : 'Retake')}
+                {language === 'it' ? 'Ripeti' : 'Retake'}
               </Text>
             </TouchableOpacity>
 
@@ -384,8 +384,8 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
-    </SafeAreaWrapper>
+      </SafeAreaView>
+    </View>
   );
 };
 
@@ -435,14 +435,13 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     borderWidth: 1,
     marginHorizontal: 16,
-    marginBottom: Platform.OS === 'ios' ? 18 : 12,
+    marginBottom: 12,
     overflow: 'hidden',
   },
   bottomBarContent: {
     flexDirection: 'row',
-    padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    gap: 16,
+    padding: 16,
+    gap: 12,
   },
   secondaryButton: {
     flex: 1,

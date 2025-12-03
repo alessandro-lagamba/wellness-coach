@@ -51,7 +51,11 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
   const [aiLoading, setAiLoading] = useState(false);
   const [mode, setMode] = useState<'input' | 'ai'>('input');
   const [dietGoal, setDietGoal] = useState<DietGoal>(currentGoals?.diet_goal ?? 'maintenance');
-  
+  const [currentBMI, setCurrentBMI] = useState<{ value: number; category: string; color: string } | null>(null);
+
+  // Store base TDEE calories separately
+  const [baseCalories, setBaseCalories] = useState<number>(2000);
+
   const [goals, setGoals] = useState<NutritionalGoals>({
     daily_calories: currentGoals?.daily_calories ?? 2000,
     carbs_percentage: currentGoals?.carbs_percentage ?? 50,
@@ -73,31 +77,97 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
       });
       setDietGoal(currentGoals.diet_goal ?? 'maintenance');
     }
-  }, [currentGoals]);
 
-  // Apply diet goal presets
+    // Always fetch profile to get accurate TDEE and BMI
+    fetchProfileData();
+  }, [currentGoals, visible]);
+
+  const fetchProfileData = async () => {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (currentUser) {
+        const profile = await AuthService.getUserProfile(currentUser.id);
+        if (profile) {
+          // Calculate TDEE
+          const tdee = calculateCalories(profile);
+          setBaseCalories(tdee);
+
+          // Calculate BMI
+          if (profile.weight && profile.height) {
+            const heightM = profile.height / 100;
+            const bmi = profile.weight / (heightM * heightM);
+            let category = '';
+            let color = colors.text;
+
+            if (bmi < 18.5) { category = t('analysis.food.goals.bmi.underweight'); color = '#3b82f6'; }
+            else if (bmi < 25) { category = t('analysis.food.goals.bmi.normal'); color = '#10b981'; }
+            else if (bmi < 30) { category = t('analysis.food.goals.bmi.overweight'); color = '#f59e0b'; }
+            else { category = t('analysis.food.goals.bmi.obese'); color = '#ef4444'; }
+
+            setCurrentBMI({ value: parseFloat(bmi.toFixed(1)), category, color });
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Error fetching profile for goals:', error);
+    }
+  };
+
+  // 🔥 FIX: Auto-calculate TDEE when modal opens if no goals are set
+  useEffect(() => {
+    const autoCalculate = async () => {
+      if (!visible || currentGoals) return;
+
+      try {
+        const currentUser = await AuthService.getCurrentUser();
+        if (currentUser) {
+          const profile = await AuthService.getUserProfile(currentUser.id);
+          if (profile?.age && profile?.weight && profile?.height && profile?.gender && profile.gender !== 'prefer_not_to_say') {
+            const calculatedCalories = calculateCalories(profile);
+            setBaseCalories(calculatedCalories);
+            setGoals(prev => ({
+              ...prev,
+              daily_calories: calculatedCalories,
+            }));
+          }
+        }
+      } catch (error) {
+        console.warn('Auto-calculate TDEE failed:', error);
+      }
+    };
+
+    autoCalculate();
+  }, [visible]);
+
+  // 🔥 FIX: Apply diet goal presets based on BASE calories, not current adjusted calories
   const applyDietGoal = (goal: DietGoal) => {
     setDietGoal(goal);
-    let adjustedCalories = goals.daily_calories ?? 2000;
+
+    // Always use base calories (TDEE) as the reference point
+    const tdee = baseCalories || 2000;
+    let adjustedCalories = tdee;
     let carbs = 50;
     let proteins = 30;
     let fats = 20;
 
     switch (goal) {
       case 'weight_loss':
-        adjustedCalories = Math.round(adjustedCalories * 0.85); // -15% deficit
+        // 🔥 FIX: Apply 20% deficit from TDEE (safe calorie deficit for weight loss)
+        adjustedCalories = Math.max(1200, Math.round(tdee * 0.80)); // -20% deficit, minimum 1200
         carbs = 40;
-        proteins = 35;
+        proteins = 35; // Higher protein to preserve muscle
         fats = 25;
         break;
       case 'bulk':
-        adjustedCalories = Math.round(adjustedCalories * 1.15); // +15% surplus
+        // 🔥 FIX: Apply 15% surplus from TDEE
+        adjustedCalories = Math.round(tdee * 1.15); // +15% surplus
         carbs = 50;
         proteins = 30;
         fats = 20;
         break;
       case 'maintenance':
-        // Keep current calories, balanced macros
+        // 🔥 FIX: Use exact TDEE
+        adjustedCalories = tdee;
         carbs = 50;
         proteins = 30;
         fats = 20;
@@ -113,6 +183,7 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
       carbs_percentage: carbs,
       proteins_percentage: proteins,
       fats_percentage: fats,
+      diet_goal: goal,
     });
   };
 
@@ -147,8 +218,8 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
           t('analysis.food.goals.missingActivityLevelDesc'),
           [
             { text: t('common.cancel'), style: 'cancel' },
-            { 
-              text: t('analysis.food.goals.setActivityLevel'), 
+            {
+              text: t('analysis.food.goals.setActivityLevel'),
               onPress: () => {
                 // Show activity level selector
                 Alert.alert(
@@ -169,18 +240,24 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
         );
         return;
       }
-      
+
       // Calculate suggested calories using BMR + activity level
       const suggestedCalories = calculateCalories(profile);
+
+      // 🔥 FIX: Store base calories for diet goal calculations
+      setBaseCalories(suggestedCalories);
+
       const suggestedGoals: NutritionalGoals = {
         daily_calories: suggestedCalories,
         carbs_percentage: 50,
         proteins_percentage: 30,
         fats_percentage: 20,
         source: 'ai_suggested',
+        diet_goal: 'maintenance',
       };
 
       setGoals(suggestedGoals);
+      setDietGoal('maintenance');
       setMode('input');
       Alert.alert(t('analysis.food.goals.aiSuggestionReady'), t('analysis.food.goals.aiSuggestionDesc'));
     } catch (error) {
@@ -198,21 +275,27 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
         await AuthService.updateUserProfile(currentUser.id, {
           activity_level: activityLevel as any,
         });
-        
+
         // Update profile with new activity level
         const updatedProfile = { ...profile, activity_level: activityLevel };
-        
+
         // Calculate suggested calories
         const suggestedCalories = calculateCalories(updatedProfile);
+
+        // 🔥 FIX: Store base calories for diet goal calculations
+        setBaseCalories(suggestedCalories);
+
         const suggestedGoals: NutritionalGoals = {
           daily_calories: suggestedCalories,
           carbs_percentage: 50,
           proteins_percentage: 30,
           fats_percentage: 20,
           source: 'ai_suggested',
+          diet_goal: 'maintenance',
         };
 
         setGoals(suggestedGoals);
+        setDietGoal('maintenance');
         setMode('input');
         Alert.alert(t('analysis.food.goals.aiSuggestionReady'), t('analysis.food.goals.aiSuggestionDesc'));
       }
@@ -231,7 +314,7 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
     const weight = profile.weight;
     const height = profile.height;
     const age = profile.age;
-    
+
     // BMR calculation (Mifflin-St Jeor Equation)
     let bmr = 10 * weight + 6.25 * height - 5 * age;
     if (profile.gender === 'male') {
@@ -274,29 +357,29 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
 
   const updatePercentage = (field: 'carbs_percentage' | 'proteins_percentage' | 'fats_percentage', value: number) => {
     const newValue = Math.max(0, Math.min(100, value));
-    
+
     // Calculate current total without the field being changed
     const otherFields = ['carbs_percentage', 'proteins_percentage', 'fats_percentage'].filter(f => f !== field) as Array<'carbs_percentage' | 'proteins_percentage' | 'fats_percentage'>;
     const defaultValue1 = otherFields[0] === 'carbs_percentage' ? 50 : otherFields[0] === 'proteins_percentage' ? 30 : 20;
     const defaultValue2 = otherFields[1] === 'carbs_percentage' ? 50 : otherFields[1] === 'proteins_percentage' ? 30 : 20;
     const currentOtherTotal = (goals[otherFields[0]] ?? defaultValue1) + (goals[otherFields[1]] ?? defaultValue2);
     const remainingTotal = 100 - newValue;
-    
+
     // Distribute remaining percentage proportionally
     const ratio = currentOtherTotal > 0 ? remainingTotal / currentOtherTotal : 0.5;
-    
+
     setGoals(prev => {
       const updated = { ...prev, [field]: newValue };
       updated[otherFields[0]] = Math.max(0, Math.min(100, Math.round(prev[otherFields[0]] * ratio)));
       updated[otherFields[1]] = Math.max(0, Math.min(100, Math.round(prev[otherFields[1]] * ratio)));
-      
+
       // Ensure total is exactly 100
       const total = updated[field] + updated[otherFields[0]] + updated[otherFields[1]];
       if (total !== 100) {
         const diff = 100 - total;
         updated[otherFields[0]] = Math.max(0, Math.min(100, updated[otherFields[0]] + diff));
       }
-      
+
       return updated;
     });
   };
@@ -322,239 +405,275 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                 </TouchableOpacity>
               </View>
 
-              <ScrollView 
-                style={styles.scrollView} 
+              <ScrollView
+                style={styles.scrollView}
                 contentContainerStyle={styles.scrollViewContent}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
               >
-            {/* Diet Goal Selector */}
-            <View style={styles.dietGoalSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                {t('analysis.food.goals.dietGoal')}
-              </Text>
-              <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-                {t('analysis.food.goals.dietGoalDesc')}
-              </Text>
-              <View style={styles.dietGoalGrid}>
-                {(['maintenance', 'weight_loss', 'bulk', 'custom'] as DietGoal[]).map((goal) => (
+                {/* Diet Goal Selector */}
+                <View style={styles.dietGoalSection}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                    {t('analysis.food.goals.dietGoal')}
+                  </Text>
+                  <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+                    {t('analysis.food.goals.dietGoalDesc')}
+                  </Text>
+                  <View style={styles.dietGoalGrid}>
+                    {(['maintenance', 'weight_loss', 'bulk', 'custom'] as DietGoal[]).map((goal) => (
+                      <TouchableOpacity
+                        key={goal}
+                        style={[
+                          styles.dietGoalCard,
+                          dietGoal === goal && { backgroundColor: colors.primary + '20', borderColor: colors.primary },
+                          { borderColor: colors.border, backgroundColor: colors.surfaceElevated }
+                        ]}
+                        onPress={() => applyDietGoal(goal)}
+                      >
+                        <MaterialCommunityIcons
+                          name={
+                            goal === 'maintenance' ? 'scale-balance' :
+                              goal === 'weight_loss' ? 'trending-down' :
+                                goal === 'bulk' ? 'trending-up' :
+                                  'tune'
+                          }
+                          size={24}
+                          color={dietGoal === goal ? colors.primary : colors.textSecondary}
+                        />
+                        <Text style={[
+                          styles.dietGoalText,
+                          { color: dietGoal === goal ? colors.primary : colors.text }
+                        ]}>
+                          {t(`analysis.food.goals.dietGoals.${goal}`)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+
+
+                {/* Mode Selector */}
+                <View style={styles.modeSelector}>
                   <TouchableOpacity
-                    key={goal}
                     style={[
-                      styles.dietGoalCard,
-                      dietGoal === goal && { backgroundColor: colors.primary + '20', borderColor: colors.primary },
-                      { borderColor: colors.border, backgroundColor: colors.surfaceElevated }
+                      styles.modeButton,
+                      mode === 'input' && { backgroundColor: colors.primary + '20' },
+                      { borderColor: colors.border }
                     ]}
-                    onPress={() => applyDietGoal(goal)}
+                    onPress={() => setMode('input')}
                   >
-                    <MaterialCommunityIcons
-                      name={
-                        goal === 'maintenance' ? 'scale-balance' :
-                        goal === 'weight_loss' ? 'trending-down' :
-                        goal === 'bulk' ? 'trending-up' :
-                        'tune'
-                      }
-                      size={24}
-                      color={dietGoal === goal ? colors.primary : colors.textSecondary}
-                    />
-                    <Text style={[
-                      styles.dietGoalText,
-                      { color: dietGoal === goal ? colors.primary : colors.text }
-                    ]}>
-                      {t(`analysis.food.goals.dietGoals.${goal}`)}
+                    <FontAwesome name="edit" size={16} color={mode === 'input' ? colors.primary : colors.textSecondary} />
+                    <Text style={[styles.modeButtonText, { color: mode === 'input' ? colors.primary : colors.textSecondary }]}>
+                      {t('analysis.food.goals.manual')}
                     </Text>
                   </TouchableOpacity>
-                ))}
-              </View>
-            </View>
 
-            {/* Mode Selector */}
-            <View style={styles.modeSelector}>
-              <TouchableOpacity
-                style={[
-                  styles.modeButton,
-                  mode === 'input' && { backgroundColor: colors.primary + '20' },
-                  { borderColor: colors.border }
-                ]}
-                onPress={() => setMode('input')}
-              >
-                <FontAwesome name="edit" size={16} color={mode === 'input' ? colors.primary : colors.textSecondary} />
-                <Text style={[styles.modeButtonText, { color: mode === 'input' ? colors.primary : colors.textSecondary }]}>
-                  {t('analysis.food.goals.manual')}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.modeButton,
-                  mode === 'ai' && { backgroundColor: colors.accent + '20' },
-                  { borderColor: colors.border }
-                ]}
-                onPress={() => setMode('ai')}
-                disabled={aiLoading}
-              >
-                {aiLoading ? (
-                  <ActivityIndicator size="small" color={colors.accent} />
-                ) : (
-                  <FontAwesome name="magic" size={16} color={mode === 'ai' ? colors.accent : colors.textSecondary} />
+                  <TouchableOpacity
+                    style={[
+                      styles.modeButton,
+                      mode === 'ai' && { backgroundColor: colors.accent + '20' },
+                      { borderColor: colors.border }
+                    ]}
+                    onPress={() => setMode('ai')}
+                    disabled={aiLoading}
+                  >
+                    {aiLoading ? (
+                      <ActivityIndicator size="small" color={colors.accent} />
+                    ) : (
+                      <FontAwesome name="magic" size={16} color={mode === 'ai' ? colors.accent : colors.textSecondary} />
+                    )}
+                    <Text style={[styles.modeButtonText, { color: mode === 'ai' ? colors.accent : colors.textSecondary }]}>
+                      {t('analysis.food.goals.aiSuggestion')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {mode === 'ai' && (
+                  <View style={[styles.aiSection, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                    <MaterialCommunityIcons name="robot" size={32} color={colors.accent} />
+                    <Text style={[styles.aiSectionTitle, { color: colors.text }]}>{t('analysis.food.goals.aiTitle')}</Text>
+                    <Text style={[styles.aiSectionDesc, { color: colors.textSecondary }]}>{t('analysis.food.goals.aiDesc')}</Text>
+                    <TouchableOpacity
+                      style={[styles.aiButton, { backgroundColor: colors.accent }]}
+                      onPress={handleAISuggestion}
+                      disabled={aiLoading}
+                    >
+                      {aiLoading ? (
+                        <ActivityIndicator size="small" color={colors.textInverse} />
+                      ) : (
+                        <>
+                          <FontAwesome name="magic" size={16} color={colors.textInverse} />
+                          <Text style={[styles.aiButtonText, { color: colors.textInverse }]}>
+                            {t('analysis.food.goals.getAISuggestion')}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 )}
-                <Text style={[styles.modeButtonText, { color: mode === 'ai' ? colors.accent : colors.textSecondary }]}>
-                  {t('analysis.food.goals.aiSuggestion')}
-                </Text>
-              </TouchableOpacity>
-            </View>
 
-            {mode === 'ai' && (
-              <View style={[styles.aiSection, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                <MaterialCommunityIcons name="robot" size={32} color={colors.accent} />
-                <Text style={[styles.aiSectionTitle, { color: colors.text }]}>{t('analysis.food.goals.aiTitle')}</Text>
-                <Text style={[styles.aiSectionDesc, { color: colors.textSecondary }]}>{t('analysis.food.goals.aiDesc')}</Text>
-                <TouchableOpacity
-                  style={[styles.aiButton, { backgroundColor: colors.accent }]}
-                  onPress={handleAISuggestion}
-                  disabled={aiLoading}
-                >
-                  {aiLoading ? (
-                    <ActivityIndicator size="small" color={colors.textInverse} />
-                  ) : (
-                    <>
-                      <FontAwesome name="magic" size={16} color={colors.textInverse} />
-                      <Text style={[styles.aiButtonText, { color: colors.textInverse }]}>
-                        {t('analysis.food.goals.getAISuggestion')}
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
+                {/* Daily Calories */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.label, { color: colors.text }]}>{t('analysis.food.goals.dailyCalories')}</Text>
+                  <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                    <TextInput
+                      style={[styles.input, { color: colors.text }]}
+                      value={(goals.daily_calories ?? 2000).toString()}
+                      onChangeText={(text) => {
+                        const num = parseInt(text) || 0;
+                        setGoals({ ...goals, daily_calories: num });
+                      }}
+                      keyboardType="numeric"
+                      placeholder="2000"
+                      placeholderTextColor={colors.textTertiary}
+                    />
+                    <Text style={[styles.unitText, { color: colors.textSecondary }]}>kcal</Text>
+                  </View>
+                </View>
 
-            {/* Daily Calories */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>{t('analysis.food.goals.dailyCalories')}</Text>
-              <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  value={(goals.daily_calories ?? 2000).toString()}
-                  onChangeText={(text) => {
-                    const num = parseInt(text) || 0;
-                    setGoals({ ...goals, daily_calories: num });
-                  }}
-                  keyboardType="numeric"
-                  placeholder="2000"
-                  placeholderTextColor={colors.textTertiary}
-                />
-                <Text style={[styles.unitText, { color: colors.textSecondary }]}>kcal</Text>
-              </View>
-            </View>
+                {/* Macronutrient Percentages */}
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.goals.macronutrients')}</Text>
+                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.goals.macronutrientsDesc')}</Text>
 
-            {/* Macronutrient Percentages */}
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.goals.macronutrients')}</Text>
-            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.goals.macronutrientsDesc')}</Text>
+                {/* Carbohydrates */}
+                <View style={styles.inputGroup}>
+                  <View style={styles.labelRow}>
+                    <Text style={[styles.label, { color: colors.text }]}>{t('analysis.food.metrics.carbohydrates')}</Text>
+                    <Text style={[styles.percentageDisplay, { color: colors.primary }]}>{goals.carbs_percentage ?? 50}%</Text>
+                  </View>
+                  <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                    <TextInput
+                      style={[styles.input, { color: colors.text }]}
+                      value={(goals.carbs_percentage ?? 50).toString()}
+                      onChangeText={(text) => {
+                        const num = parseFloat(text) || 0;
+                        updatePercentage('carbs_percentage', num);
+                      }}
+                      keyboardType="decimal-pad"
+                      placeholder="50"
+                      placeholderTextColor={colors.textTertiary}
+                    />
+                    <Text style={[styles.unitText, { color: colors.textSecondary }]}>%</Text>
+                  </View>
+                  <Text style={[styles.helperText, { color: colors.textTertiary }]}>
+                    {t('analysis.food.goals.carbsDesc')}
+                  </Text>
+                </View>
 
-            {/* Carbohydrates */}
-            <View style={styles.inputGroup}>
-              <View style={styles.labelRow}>
-                <Text style={[styles.label, { color: colors.text }]}>{t('analysis.food.metrics.carbohydrates')}</Text>
-                <Text style={[styles.percentageDisplay, { color: colors.primary }]}>{goals.carbs_percentage ?? 50}%</Text>
-              </View>
-              <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  value={(goals.carbs_percentage ?? 50).toString()}
-                  onChangeText={(text) => {
-                    const num = parseFloat(text) || 0;
-                    updatePercentage('carbs_percentage', num);
-                  }}
-                  keyboardType="decimal-pad"
-                  placeholder="50"
-                  placeholderTextColor={colors.textTertiary}
-                />
-                <Text style={[styles.unitText, { color: colors.textSecondary }]}>%</Text>
-              </View>
-              <Text style={[styles.helperText, { color: colors.textTertiary }]}>
-                {t('analysis.food.goals.carbsDesc')}
-              </Text>
-            </View>
+                {/* Proteins */}
+                <View style={styles.inputGroup}>
+                  <View style={styles.labelRow}>
+                    <Text style={[styles.label, { color: colors.text }]}>{t('analysis.food.metrics.proteins')}</Text>
+                    <Text style={[styles.percentageDisplay, { color: colors.error }]}>{goals.proteins_percentage ?? 30}%</Text>
+                  </View>
+                  <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                    <TextInput
+                      style={[styles.input, { color: colors.text }]}
+                      value={(goals.proteins_percentage ?? 30).toString()}
+                      onChangeText={(text) => {
+                        const num = parseFloat(text) || 0;
+                        updatePercentage('proteins_percentage', num);
+                      }}
+                      keyboardType="decimal-pad"
+                      placeholder="30"
+                      placeholderTextColor={colors.textTertiary}
+                    />
+                    <Text style={[styles.unitText, { color: colors.textSecondary }]}>%</Text>
+                  </View>
+                  <Text style={[styles.helperText, { color: colors.textTertiary }]}>
+                    {t('analysis.food.goals.proteinsDesc')}
+                  </Text>
+                </View>
 
-            {/* Proteins */}
-            <View style={styles.inputGroup}>
-              <View style={styles.labelRow}>
-                <Text style={[styles.label, { color: colors.text }]}>{t('analysis.food.metrics.proteins')}</Text>
-                <Text style={[styles.percentageDisplay, { color: colors.error }]}>{goals.proteins_percentage ?? 30}%</Text>
-              </View>
-              <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  value={(goals.proteins_percentage ?? 30).toString()}
-                  onChangeText={(text) => {
-                    const num = parseFloat(text) || 0;
-                    updatePercentage('proteins_percentage', num);
-                  }}
-                  keyboardType="decimal-pad"
-                  placeholder="30"
-                  placeholderTextColor={colors.textTertiary}
-                />
-                <Text style={[styles.unitText, { color: colors.textSecondary }]}>%</Text>
-              </View>
-              <Text style={[styles.helperText, { color: colors.textTertiary }]}>
-                {t('analysis.food.goals.proteinsDesc')}
-              </Text>
-            </View>
+                {/* Fats */}
+                <View style={styles.inputGroup}>
+                  <View style={styles.labelRow}>
+                    <Text style={[styles.label, { color: colors.text }]}>{t('analysis.food.metrics.fats')}</Text>
+                    <Text style={[styles.percentageDisplay, { color: colors.accent }]}>{goals.fats_percentage ?? 20}%</Text>
+                  </View>
+                  <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                    <TextInput
+                      style={[styles.input, { color: colors.text }]}
+                      value={(goals.fats_percentage ?? 20).toString()}
+                      onChangeText={(text) => {
+                        const num = parseFloat(text) || 0;
+                        updatePercentage('fats_percentage', num);
+                      }}
+                      keyboardType="decimal-pad"
+                      placeholder="20"
+                      placeholderTextColor={colors.textTertiary}
+                    />
+                    <Text style={[styles.unitText, { color: colors.textSecondary }]}>%</Text>
+                  </View>
+                  <Text style={[styles.helperText, { color: colors.textTertiary }]}>
+                    {t('analysis.food.goals.fatsDesc')}
+                  </Text>
+                </View>
 
-            {/* Fats */}
-            <View style={styles.inputGroup}>
-              <View style={styles.labelRow}>
-                <Text style={[styles.label, { color: colors.text }]}>{t('analysis.food.metrics.fats')}</Text>
-                <Text style={[styles.percentageDisplay, { color: colors.accent }]}>{goals.fats_percentage ?? 20}%</Text>
-              </View>
-              <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  value={(goals.fats_percentage ?? 20).toString()}
-                  onChangeText={(text) => {
-                    const num = parseFloat(text) || 0;
-                    updatePercentage('fats_percentage', num);
-                  }}
-                  keyboardType="decimal-pad"
-                  placeholder="20"
-                  placeholderTextColor={colors.textTertiary}
-                />
-                <Text style={[styles.unitText, { color: colors.textSecondary }]}>%</Text>
-              </View>
-              <Text style={[styles.helperText, { color: colors.textTertiary }]}>
-                {t('analysis.food.goals.fatsDesc')}
-              </Text>
-            </View>
+                {/* Total Percentage Display */}
+                <View style={[styles.totalDisplay, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                  <Text style={[styles.totalLabel, { color: colors.text }]}>{t('analysis.food.goals.total')}</Text>
+                  <Text style={[
+                    styles.totalValue,
+                    { color: Math.abs(((goals.carbs_percentage ?? 50) + (goals.proteins_percentage ?? 30) + (goals.fats_percentage ?? 20)) - 100) < 1 ? colors.success : colors.error }
+                  ]}>
+                    {(goals.carbs_percentage ?? 50) + (goals.proteins_percentage ?? 30) + (goals.fats_percentage ?? 20)}%
+                  </Text>
+                </View>
 
-            {/* Total Percentage Display */}
-            <View style={[styles.totalDisplay, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-              <Text style={[styles.totalLabel, { color: colors.text }]}>{t('analysis.food.goals.total')}</Text>
-              <Text style={[
-                styles.totalValue,
-                { color: Math.abs(((goals.carbs_percentage ?? 50) + (goals.proteins_percentage ?? 30) + (goals.fats_percentage ?? 20)) - 100) < 1 ? colors.success : colors.error }
-              ]}>
-                {(goals.carbs_percentage ?? 50) + (goals.proteins_percentage ?? 30) + (goals.fats_percentage ?? 20)}%
-              </Text>
-            </View>
+                {/* Nutritionist Option */}
+                <View style={[styles.nutritionistSection, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                  <MaterialCommunityIcons name="doctor" size={24} color={colors.info} />
+                  <Text style={[styles.nutritionistTitle, { color: colors.text }]}>{t('analysis.food.goals.nutritionistTitle')}</Text>
+                  <Text style={[styles.nutritionistDesc, { color: colors.textSecondary }]}>{t('analysis.food.goals.nutritionistDesc')}</Text>
+                  <TouchableOpacity
+                    style={[styles.nutritionistButton, { borderColor: colors.info }]}
+                    onPress={() => {
+                      setGoals({ ...goals, source: 'nutritionist' });
+                      Alert.alert(t('analysis.food.goals.nutritionistSet'), t('analysis.food.goals.nutritionistSetDesc'));
+                    }}
+                  >
+                    <FontAwesome name="check" size={14} color={colors.info} />
+                    <Text style={[styles.nutritionistButtonText, { color: colors.info }]}>
+                      {t('analysis.food.goals.markAsNutritionist')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
-            {/* Nutritionist Option */}
-            <View style={[styles.nutritionistSection, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-              <MaterialCommunityIcons name="doctor" size={24} color={colors.info} />
-              <Text style={[styles.nutritionistTitle, { color: colors.text }]}>{t('analysis.food.goals.nutritionistTitle')}</Text>
-              <Text style={[styles.nutritionistDesc, { color: colors.textSecondary }]}>{t('analysis.food.goals.nutritionistDesc')}</Text>
-              <TouchableOpacity
-                style={[styles.nutritionistButton, { borderColor: colors.info }]}
-                onPress={() => {
-                  setGoals({ ...goals, source: 'nutritionist' });
-                  Alert.alert(t('analysis.food.goals.nutritionistSet'), t('analysis.food.goals.nutritionistSetDesc'));
-                }}
-              >
-                <FontAwesome name="check" size={14} color={colors.info} />
-                <Text style={[styles.nutritionistButtonText, { color: colors.info }]}>
-                  {t('analysis.food.goals.markAsNutritionist')}
-                </Text>
-              </TouchableOpacity>
-            </View>
+                {/* BMI Section - Moved to bottom */}
+                {currentBMI && (
+                  <View style={[styles.bmiSection, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                    <View style={styles.bmiHeader}>
+                      <View>
+                        <Text style={[styles.bmiTitle, { color: colors.text }]}>BMI</Text>
+                        <Text style={[styles.bmiValue, { color: currentBMI.color }]}>
+                          {currentBMI.value} <Text style={{ fontSize: 16, fontWeight: '600' }}>- {currentBMI.category}</Text>
+                        </Text>
+                      </View>
+                      <MaterialCommunityIcons name="human-male-height" size={32} color={colors.primary} />
+                    </View>
+
+                    <View style={styles.bmiTable}>
+                      <View style={styles.bmiRow}>
+                        <Text style={[styles.bmiRowLabel, { color: colors.textSecondary }]}>&lt; 18.5</Text>
+                        <Text style={[styles.bmiRowValue, { color: '#3b82f6' }]}>{t('analysis.food.goals.bmi.underweight')}</Text>
+                      </View>
+                      <View style={styles.bmiRow}>
+                        <Text style={[styles.bmiRowLabel, { color: colors.textSecondary }]}>18.5 - 24.9</Text>
+                        <Text style={[styles.bmiRowValue, { color: '#10b981' }]}>{t('analysis.food.goals.bmi.normal')}</Text>
+                      </View>
+                      <View style={styles.bmiRow}>
+                        <Text style={[styles.bmiRowLabel, { color: colors.textSecondary }]}>25 - 29.9</Text>
+                        <Text style={[styles.bmiRowValue, { color: '#f59e0b' }]}>{t('analysis.food.goals.bmi.overweight')}</Text>
+                      </View>
+                      <View style={styles.bmiRow}>
+                        <Text style={[styles.bmiRowLabel, { color: colors.textSecondary }]}>&gt; 30</Text>
+                        <Text style={[styles.bmiRowValue, { color: '#ef4444' }]}>{t('analysis.food.goals.bmi.obese')}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
               </ScrollView>
 
               {/* Save Button */}
@@ -741,10 +860,50 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   unitText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  bmiSection: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+  bmiHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  bmiTitle: {
     fontSize: 14,
-    marginLeft: 8,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  bmiValue: {
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  bmiTable: {
+    gap: 8,
+  },
+  bmiRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(150,150,150,0.2)',
+  },
+  bmiRowLabel: {
+    fontSize: 13,
     fontWeight: '500',
   },
+  bmiRowValue: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
   helperText: {
     fontSize: 12,
     marginTop: 4,

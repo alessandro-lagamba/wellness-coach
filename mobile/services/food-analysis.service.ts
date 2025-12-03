@@ -110,13 +110,13 @@ export class FoodAnalysisService {
 
               // Se esiste un'analisi recente con stesso imageUrl o calorie molto simili, aggiornala
               if (recentAnalysis && !checkError) {
-                const isSimilar = 
+                const isSimilar =
                   (analysis.imageUrl && recentAnalysis.image_url === analysis.imageUrl) || // Stessa immagine
                   (Math.abs(recentAnalysis.calories - analysis.calories) < 50 && !analysis.imageUrl); // Calorie simili e senza nuova immagine
 
                 if (isSimilar) {
                   EnhancedLoggingService.logDatabaseOperation('update', 'food_analysis', true);
-                  
+
                   // Cifra observations prima di salvare
                   let encryptedObservations: string[] | null = null;
                   if (analysis.observations && analysis.observations.length > 0) {
@@ -131,7 +131,7 @@ export class FoodAnalysisService {
                       encryptedObservations = analysis.observations; // Fallback
                     }
                   }
-                  
+
                   const { data: updated, error: updateError } = await supabase
                     .from(Tables.FOOD_ANALYSES)
                     .update({
@@ -162,11 +162,11 @@ export class FoodAnalysisService {
                   }
 
                   EnhancedLoggingService.logSaveOperation('food_analysis', userId, true, undefined, updated.id);
-                  
+
                   // Invalida cache quando si aggiorna un'analisi
                   await cacheService.invalidatePrefix(`food:${userId}`);
                   await cacheService.invalidate(`ai_context:${userId}`);
-                  
+
                   // 🆕 Verifica post-salvataggio che i dati siano nel database
                   if (updated?.id) {
                     const verification = await DatabaseVerificationService.verifyFoodAnalysis(userId, updated.id);
@@ -174,7 +174,7 @@ export class FoodAnalysisService {
                       EnhancedLoggingService.logVerification('food_analysis', userId, false, new Error('Data not found after update'));
                     }
                   }
-                  
+
                   // Decifra observations prima di restituire
                   const result = updated as FoodAnalysis;
                   if (result.observations && result.observations.length > 0) {
@@ -183,7 +183,7 @@ export class FoodAnalysisService {
                       result.observations = decrypted;
                     }
                   }
-                  
+
                   return result;
                 }
               }
@@ -234,11 +234,11 @@ export class FoodAnalysisService {
               }
 
               EnhancedLoggingService.logSaveOperation('food_analysis', userId, true, undefined, data.id);
-              
+
               // Invalida cache quando si salva una nuova analisi
               await cacheService.invalidatePrefix(`food:${userId}`);
               await cacheService.invalidate(`ai_context:${userId}`);
-              
+
               // 🆕 Verifica post-salvataggio che i dati siano nel database
               if (data?.id) {
                 const verification = await DatabaseVerificationService.verifyFoodAnalysis(userId, data.id);
@@ -246,7 +246,7 @@ export class FoodAnalysisService {
                   EnhancedLoggingService.logVerification('food_analysis', userId, false, new Error('Data not found after save'));
                 }
               }
-              
+
               // Decifra observations prima di restituire
               const result = data as FoodAnalysis;
               if (result.observations && result.observations.length > 0) {
@@ -255,7 +255,7 @@ export class FoodAnalysisService {
                   result.observations = decrypted;
                 }
               }
-              
+
               return result;
             } catch (error) {
               const err = error instanceof Error ? error : new Error('Unknown error');
@@ -282,7 +282,7 @@ export class FoodAnalysisService {
   static async getLatestFoodAnalysis(userId: string, forceRefresh: boolean = false): Promise<FoodAnalysis | null> {
     try {
       const cacheKey = `food:${userId}:latest`;
-      
+
       // Prova cache prima
       if (!forceRefresh) {
         const cached = await cacheService.get<FoodAnalysis>(cacheKey);
@@ -290,7 +290,7 @@ export class FoodAnalysisService {
           return cached;
         }
       }
-      
+
       const { data, error } = await supabase
         .from(Tables.FOOD_ANALYSES)
         .select('*')
@@ -312,7 +312,7 @@ export class FoodAnalysisService {
             data.observations = decrypted;
           }
         }
-        
+
         // Cache per 5 minuti (dopo decifratura)
         await cacheService.set(cacheKey, data, 5 * 60 * 1000);
       }
@@ -439,7 +439,7 @@ export class FoodAnalysisService {
    * Ottiene statistiche del cibo per un periodo
    */
   static async getFoodStats(
-    userId: string, 
+    userId: string,
     days: number = 30
   ): Promise<{
     totalAnalyses: number;
@@ -491,7 +491,7 @@ export class FoodAnalysisService {
         totalCarbs += analysis.carbohydrates || 0;
         totalProteins += analysis.proteins || 0;
         totalFats += analysis.fats || 0;
-        
+
         if (analysis.health_score !== null && analysis.health_score !== undefined) {
           totalHealthScore += analysis.health_score;
           healthScoreCount++;
@@ -525,6 +525,47 @@ export class FoodAnalysisService {
           fats: 0,
         },
       };
+    }
+  }
+  /**
+   * Ottiene le analisi del cibo per gli ultimi N giorni
+   */
+  static async getRecentAnalyses(
+    userId: string,
+    days: number = 30
+  ): Promise<FoodAnalysis[]> {
+    try {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      startDate.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from(Tables.FOOD_ANALYSES)
+        .select('*')
+        .eq('user_id', userId)
+        .gte('created_at', startDate.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting recent analyses:', error);
+        return [];
+      }
+
+      // Decifra observations per tutti i record
+      const analyses = (data || []) as FoodAnalysis[];
+      for (const analysis of analyses) {
+        if (analysis.observations && analysis.observations.length > 0) {
+          const decrypted = await decryptStringArray(analysis.observations[0], userId);
+          if (decrypted !== null) {
+            analysis.observations = decrypted;
+          }
+        }
+      }
+
+      return analyses;
+    } catch (error) {
+      console.error('Error in getRecentAnalyses:', error);
+      return [];
     }
   }
 }

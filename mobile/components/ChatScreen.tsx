@@ -356,7 +356,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       // ✅ FIX: Verifica se copilotEvents esiste prima di usarlo
       const copilotModule = require('react-native-copilot');
       const copilotEvents = copilotModule.copilotEvents;
-      
+
       if (copilotEvents && typeof copilotEvents.on === 'function') {
         const listener = copilotEvents.on('stop', async () => {
           await OnboardingService.completeChatWalkthrough();
@@ -1492,11 +1492,48 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
       // 🆕 Recupera contesto ciclo mestruale se disponibile
       let cycleContextForChat = '';
+      let cyclePhaseInfo = null;
       try {
         const { menstrualCycleService } = await import('../services/menstrual-cycle.service');
         cycleContextForChat = await menstrualCycleService.getRecentNotesForAI();
+        // 🔥 FIX: Ottieni info precise sulla fase del ciclo
+        const cycleData = await menstrualCycleService.getCycleData();
+        if (cycleData && cycleData.phase) {
+          cyclePhaseInfo = {
+            currentPhase: cycleData.phase,
+            dayOfCycle: cycleData.day,
+            daysUntilNext: cycleData.nextPeriodDays,
+            cycleLength: cycleData.cycleLength
+          };
+        }
       } catch (error) {
         // Ignora errori - il ciclo è opzionale
+      }
+
+      // 🆕 Recupera contesto alimentazione se disponibile
+      let foodContextForChat = null;
+      try {
+        const { FoodAnalysisService } = await import('../services/food-analysis.service');
+        if (currentUser?.id) {
+          const latestFood = await FoodAnalysisService.getLatestFoodAnalysis(currentUser.id);
+          if (latestFood) {
+            foodContextForChat = {
+              lastMeal: {
+                timestamp: latestFood.created_at,
+                mealType: latestFood.meal_type,
+                calories: latestFood.calories,
+                carbs: latestFood.carbohydrates,
+                proteins: latestFood.proteins,
+                fats: latestFood.fats,
+                fiber: latestFood.fiber,
+                healthScore: latestFood.health_score,
+                identifiedFoods: latestFood.identified_foods,
+              }
+            };
+          }
+        }
+      } catch (error) {
+        // Ignora errori - i dati alimentari sono opzionali
       }
 
       // Prepare context for AI
@@ -1511,8 +1548,11 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         temporalPatterns: aiContext.temporalPatterns,
         behavioralInsights: aiContext.behavioralInsights,
         contextualFactors: aiContext.contextualFactors,
-        // 🆕 Contesto ciclo mestruale
+        // 🆕 Contesto ciclo mestruale con info dettagliate
         menstrualCycleContext: cycleContextForChat || undefined,
+        menstrualCyclePhase: cyclePhaseInfo || undefined,
+        // 🆕 Contesto alimentazione
+        foodContext: foodContextForChat || undefined,
         // 🔧 Aggiungi nome utente per personalizzazione (usa first_name se disponibile)
         firstName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
         lastName: currentUserProfile?.last_name || currentUser?.user_metadata?.full_name?.split(' ').slice(1).join(' ') || undefined,
@@ -1530,6 +1570,8 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         behavioralInsights: null,
         contextualFactors: null,
         menstrualCycleContext: undefined,
+        menstrualCyclePhase: undefined,
+        foodContext: undefined,
         userName: 'Utente',
         isAnonymous: true,
         language: language // 🔥 FIX: Includi la lingua anche per utenti anonimi

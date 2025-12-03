@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useMemo, useState } from 'react';
 import { HealthDataStatus } from '../types/health.types';
+import { CycleData } from './menstrual-cycle.service';
 
 /** ================= Types ================= */
 export type WidgetSize = 'small' | 'medium' | 'large'; // 1/3, 2/3, 3/3 (della row)
@@ -22,10 +23,10 @@ export interface WidgetData {
   category: 'health' | 'wellness' | 'analysis';
   // Dati opzionali per widget specifici
   steps?: { current: number; goal: number; km: number; calories: number };
-  hydration?: { 
+  hydration?: {
     glasses: number; // 🔥 FIX: Ora contiene il valore in unità preferita (non sempre bicchieri)
     goal: number; // 🔥 FIX: Goal in unità preferita
-    ml: number; 
+    ml: number;
     lastDrink: string;
     preferredUnit?: 'glass' | 'bottle' | 'liter'; // 🆕 Unità preferita
     unitLabel?: string; // 🆕 Etichetta unità (es. "bicchiere", "bottiglia", "litro")
@@ -34,7 +35,8 @@ export interface WidgetData {
   sleep?: { hours: number; quality: number; goal: number; deepSleep: string; remSleep: string; bedtime: string; wakeTime: string };
   hrv?: { value: number; restingHR: number; currentHR?: number; avgHRV: number; recovery: string };
   analyses?: { completed: boolean; emotionAnalysis: boolean; skinAnalysis: boolean; lastCheckIn: string; streak: number };
-  cycle?: { day: number; phase: string; phaseName: string; nextPeriodDays: number; cycleLength: number };
+  cycle?: CycleData;
+  calories?: { current: number; goal: number; carbs: number; protein: number; fat: number };
   placeholder?: {
     status: HealthDataStatus;
     message: string;
@@ -57,18 +59,19 @@ class WidgetConfigService {
   }
   private notifyAll() {
     for (const cb of Array.from(this.subscribers)) {
-      try { cb(); } catch {}
+      try { cb(); } catch { }
     }
   }
 
   // Config di default (2 righe, 3 colonne)
   private defaultConfig: WidgetConfig[] = [
-    { id: 'steps',       enabled: true, size: 'small',  position: 0 },
-    { id: 'meditation',  enabled: true, size: 'medium', position: 1 },
-    { id: 'hydration',   enabled: true, size: 'small',  position: 2 },
-    { id: 'sleep',       enabled: true, size: 'large',  position: 3 },
-    { id: 'hrv',         enabled: true, size: 'small',  position: 4 },
-    { id: 'cycle',       enabled: false, size: 'small', position: 0 }, // Disabilitato di default, può essere abilitato
+    { id: 'steps', enabled: true, size: 'small', position: 0 },
+    { id: 'meditation', enabled: true, size: 'medium', position: 1 },
+    { id: 'hydration', enabled: true, size: 'small', position: 2 },
+    { id: 'sleep', enabled: true, size: 'large', position: 3 },
+    { id: 'hrv', enabled: true, size: 'small', position: 4 },
+    { id: 'calories', enabled: true, size: 'small', position: 5 },
+    { id: 'cycle', enabled: false, size: 'small', position: 0 }, // Disabilitato di default, può essere abilitato
   ];
 
   static getInstance(): WidgetConfigService {
@@ -98,7 +101,23 @@ class WidgetConfigService {
     try {
       const stored = await AsyncStorage.getItem(this.STORAGE_KEY);
       const parsed: WidgetConfig[] | null = stored ? JSON.parse(stored) : null;
-      return parsed?.length ? parsed : this.defaultConfig;
+
+      if (!parsed || parsed.length === 0) {
+        return this.defaultConfig;
+      }
+
+      // Merge with default config to ensure new widgets appear
+      const currentIds = new Set(parsed.map(w => w.id));
+      const missingWidgets = this.defaultConfig.filter(w => !currentIds.has(w.id));
+
+      if (missingWidgets.length > 0) {
+        const merged = [...parsed, ...missingWidgets];
+        // Save the merged config so it persists and UI updates
+        await this.save(merged);
+        return merged;
+      }
+
+      return parsed;
     } catch {
       return this.defaultConfig;
     }
@@ -178,12 +197,12 @@ class WidgetConfigService {
 
     const oldSize = widget.size;
     const row = Math.floor(widget.position / 3);
-    
+
     // 🔥 FIX: Simula la configurazione finale dopo il cambio e la gestione dei conflitti
     const testCfg = cfg.map(w => ({ ...w }));
     const testWidget = testCfg.find(w => w.id === widgetId)!;
     testWidget.size = size;
-    
+
     // Simula handleSizeConflict per vedere quali widget verrebbero disabilitati
     const newWidth = this.getSizeWidth(size);
     const col = widget.position % 3;
@@ -192,7 +211,7 @@ class WidgetConfigService {
       Math.floor(w.position / 3) === row &&
       w.id !== widgetId
     );
-    
+
     if (newWidth === 3) {
       // Il large copre tutta la riga, disabilita tutti gli altri widget nella riga
       widgetsInRow.forEach(w => { w.enabled = false; });
@@ -206,7 +225,7 @@ class WidgetConfigService {
         }
       });
     }
-    
+
     // 🔥 FIX: Valida che la configurazione finale sia valida
     if (!this.isValidRowLayout(testCfg, widgetId, size, row)) {
       console.warn('⚠️ Invalid widget layout: cannot have 2 medium widgets or other invalid combinations');
@@ -347,7 +366,7 @@ class WidgetConfigService {
       // 👉 forza sempre la size alla richiesta (default 'small')
       exists.size = size;
       if (this.isValidPosition(preferredPos ?? -1)) exists.position = preferredPos as number;
-      
+
       // 🔥 FIX: Valida che la combinazione di widget nella riga sia valida
       const row = Math.floor((preferredPos ?? exists.position) / 3);
       if (!this.isValidRowLayout(cfg, widgetId, size, row)) {
@@ -364,7 +383,7 @@ class WidgetConfigService {
           }
         }
       }
-      
+
       await this.save(cfg);
       return;
     }
@@ -414,29 +433,29 @@ export const useWidgetConfig = () => {
   // Helpers derivati in hook (comodi in UI)
   const isSlotUsable = (pos: number) => widgetConfigService.isSlotUsable(config, pos);
 
-  const updateConfig    = async (id: string, updates: Partial<WidgetConfig>) => widgetConfigService.updateWidgetConfig(id, updates);
-  const toggleWidget    = async (id: string) => widgetConfigService.toggleWidget(id);
-  const changeSize      = async (id: string, size: WidgetSize) => widgetConfigService.changeWidgetSize(id, size);
-  const reorderWidgets  = async (order: WidgetConfig[]) => widgetConfigService.reorderWidgets(order);
-  const moveToPosition  = async (id: string, pos: number) => widgetConfigService.moveToPosition(id, pos);
-  const swapPositions   = async (aId: string, bId: string) => widgetConfigService.swapPositions(aId, bId);
-  const addWidget       = async (id: string, size: WidgetSize = 'small', pos?: number) => widgetConfigService.addWidget(id, size, pos);
-  const enableWidget    = async (id: string, size: WidgetSize = 'small', pos?: number) => widgetConfigService.enableWidget(id, size, pos); // opzionale
-  const removeWidget    = async (id: string) => widgetConfigService.removeWidget(id);
+  const updateConfig = async (id: string, updates: Partial<WidgetConfig>) => widgetConfigService.updateWidgetConfig(id, updates);
+  const toggleWidget = async (id: string) => widgetConfigService.toggleWidget(id);
+  const changeSize = async (id: string, size: WidgetSize) => widgetConfigService.changeWidgetSize(id, size);
+  const reorderWidgets = async (order: WidgetConfig[]) => widgetConfigService.reorderWidgets(order);
+  const moveToPosition = async (id: string, pos: number) => widgetConfigService.moveToPosition(id, pos);
+  const swapPositions = async (aId: string, bId: string) => widgetConfigService.swapPositions(aId, bId);
+  const addWidget = async (id: string, size: WidgetSize = 'small', pos?: number) => widgetConfigService.addWidget(id, size, pos);
+  const enableWidget = async (id: string, size: WidgetSize = 'small', pos?: number) => widgetConfigService.enableWidget(id, size, pos); // opzionale
+  const removeWidget = async (id: string) => widgetConfigService.removeWidget(id);
 
   // set "memo" di posizioni occupate se mai ti servisse in UI (non obbligatorio)
   const occupiedPositions = useMemo(() => widgetConfigService.getOccupiedPositions(config), [config]);
 
-  return { 
-    config, 
-    loading, 
+  return {
+    config,
+    loading,
     reload: load,
     // helpers di layout
-    isSlotUsable, 
+    isSlotUsable,
     occupiedPositions,
     // mutations
     updateConfig, toggleWidget, changeSize, reorderWidgets, moveToPosition,
-    swapPositions, addWidget, enableWidget, removeWidget 
+    swapPositions, addWidget, enableWidget, removeWidget
   };
 };
 
@@ -447,31 +466,50 @@ export class WidgetDataService {
     hydration?: number;
     meditation?: number;
     sleep?: number;
+    calories?: number;
   }): WidgetData[] {
     // mock dei valori correnti (solo per la demo)
     const mock = {
       steps: 6777, hydration: 3, mindfulness: 7,
-      sleepHours: 7.5, sleepQuality: 82, hrv: 35, restingHR: 66, analysesCompleted: 2
+      sleepHours: 7.5, sleepQuality: 82, hrv: 35, restingHR: 66, analysesCompleted: 2,
+      calories: 1450, carbs: 180, protein: 110, fat: 45
     };
 
     const stepsGoal = goals?.steps ?? 10000;
     const hydrationGoal = goals?.hydration ?? 8;
     const meditationGoal = goals?.meditation ?? 30;
     const sleepGoal = goals?.sleep ?? 8;
+    const caloriesGoal = goals?.calories ?? 2000;
 
     return [
-      { id: 'steps', title: 'Steps', icon: '🚶', color: '#10b981', backgroundColor: '#f0fdf4', category: 'health',
-        steps: { current: mock.steps, goal: stepsGoal, km: Math.round(mock.steps * 0.0008 * 100) / 100, calories: Math.round(mock.steps * 0.04) } },
-      { id: 'meditation', title: 'Meditation', icon: '🧘', color: '#8b5cf6', backgroundColor: '#f3f4f6', category: 'wellness',
-        meditation: { minutes: mock.mindfulness, goal: meditationGoal, sessions: 2, streak: 5, favoriteType: 'Breathing' } },
-      { id: 'hydration', title: 'Hydration', icon: '💧', color: '#3b82f6', backgroundColor: '#eff6ff', category: 'health',
-        hydration: { glasses: mock.hydration, goal: hydrationGoal, ml: mock.hydration * 250, lastDrink: '2h ago' } },
-      { id: 'sleep', title: 'Sleep', icon: '🌙', color: '#6366f1', backgroundColor: '#eef2ff', category: 'health',
-        sleep: { hours: mock.sleepHours, quality: mock.sleepQuality, goal: sleepGoal, deepSleep: '2h 15m', remSleep: '1h 45m', bedtime: '11:30 PM', wakeTime: '7:30 AM' } },
-      { id: 'hrv', title: 'HRV', icon: '🫀', color: '#ef4444', backgroundColor: '#fef2f2', category: 'health',
-        hrv: { value: mock.hrv, restingHR: mock.restingHR, currentHR: 72, avgHRV: 35, recovery: 'Good' } },
-      { id: 'cycle', title: 'Cycle', icon: '🌸', color: '#ec4899', backgroundColor: '#fdf2f8', category: 'health',
-        cycle: { day: 5, phase: 'menstrual', phaseName: 'Menstrual', nextPeriodDays: 24, cycleLength: 28 } },
+      {
+        id: 'steps', title: 'Steps', icon: '🚶', color: '#10b981', backgroundColor: '#f0fdf4', category: 'health',
+        steps: { current: mock.steps, goal: stepsGoal, km: Math.round(mock.steps * 0.0008 * 100) / 100, calories: Math.round(mock.steps * 0.04) }
+      },
+      {
+        id: 'meditation', title: 'Meditation', icon: '🧘', color: '#8b5cf6', backgroundColor: '#f3f4f6', category: 'wellness',
+        meditation: { minutes: mock.mindfulness, goal: meditationGoal, sessions: 2, streak: 5, favoriteType: 'Breathing' }
+      },
+      {
+        id: 'hydration', title: 'Hydration', icon: '💧', color: '#3b82f6', backgroundColor: '#eff6ff', category: 'health',
+        hydration: { glasses: mock.hydration, goal: hydrationGoal, ml: mock.hydration * 250, lastDrink: '2h ago' }
+      },
+      {
+        id: 'sleep', title: 'Sleep', icon: '🌙', color: '#6366f1', backgroundColor: '#eef2ff', category: 'health',
+        sleep: { hours: mock.sleepHours, quality: mock.sleepQuality, goal: sleepGoal, deepSleep: '2h 15m', remSleep: '1h 45m', bedtime: '11:30 PM', wakeTime: '7:30 AM' }
+      },
+      {
+        id: 'hrv', title: 'HRV', icon: '🫀', color: '#ef4444', backgroundColor: '#fef2f2', category: 'health',
+        hrv: { value: mock.hrv, restingHR: mock.restingHR, currentHR: 72, avgHRV: 35, recovery: 'Good' }
+      },
+      {
+        id: 'calories', title: 'Calories', icon: '🔥', color: '#f97316', backgroundColor: '#fff7ed', category: 'health',
+        calories: { current: mock.calories, goal: caloriesGoal, carbs: mock.carbs, protein: mock.protein, fat: mock.fat }
+      },
+      {
+        id: 'cycle', title: 'Cycle', icon: '🌸', color: '#ec4899', backgroundColor: '#fdf2f8', category: 'health',
+        cycle: { day: 5, phase: 'menstrual', phaseName: 'Menstrual', nextPeriodDays: 24, cycleLength: 28, lastPeriodDate: new Date().toISOString() }
+      },
     ];
   }
 }

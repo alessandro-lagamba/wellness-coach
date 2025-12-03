@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { GaugePopup } from './GaugePopup';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const { width } = Dimensions.get('window');
 
@@ -21,11 +22,11 @@ interface GaugeChartProps {
   icon?: string;
 }
 
-export const GaugeChart: React.FC<GaugeChartProps> = ({ 
-  value, 
-  maxValue, 
-  label, 
-  color, 
+export const GaugeChart: React.FC<GaugeChartProps> = ({
+  value,
+  maxValue,
+  label,
+  color,
   subtitle,
   trend,
   description,
@@ -34,8 +35,9 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
   icon
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [showPopup, setShowPopup] = useState(false);
-  
+
   // ✅ FIX: Robust value validation and fallback
   const safeValue = (() => {
     if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
@@ -44,14 +46,14 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
     }
     return Math.max(0, Math.min(value, maxValue)); // Clamp between 0 and maxValue
   })();
-  
+
   const safeTrend = (() => {
     if (typeof trend !== 'number' || isNaN(trend) || !isFinite(trend)) {
       return 0;
     }
     return trend;
   })();
-  
+
   const percentage = Math.min((safeValue / maxValue) * 100, 100);
   const radius = 40;
   const strokeWidth = 6;
@@ -67,15 +69,15 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
   };
 
   const getScoreLabel = (score: number) => {
-    if (score >= 80) return 'Excellent';
-    if (score >= 60) return 'Good';
-    if (score >= 40) return 'Fair';
-    return 'Poor';
+    if (score >= 80) return t('analysis.gauge.excellent');
+    if (score >= 60) return t('analysis.gauge.good');
+    if (score >= 40) return t('analysis.gauge.fair');
+    return t('analysis.gauge.poor');
   };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
+      <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => setShowPopup(true)}
         style={[styles.gaugeCard, { borderColor: colors.border }]}
@@ -86,87 +88,87 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
           end={{ x: 1, y: 1 }}
           style={styles.gaugeCardInner}
         >
-        <View style={styles.header}>
-          <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-          {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
-        </View>
-
-        <View style={styles.chartContainer}>
-          <Svg width={100} height={100} viewBox="0 0 100 100">
-            <Defs>
-              <SvgLinearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <Stop offset="0%" stopColor={color} stopOpacity="0.8" />
-                <Stop offset="100%" stopColor={color} stopOpacity="1" />
-              </SvgLinearGradient>
-            </Defs>
-            
-            {/* Background circle */}
-            <Circle
-              cx="50"
-              cy="50"
-              r={40}
-              stroke={colors.borderLight}
-              strokeWidth={6}
-              fill="none"
-            />
-            
-            {/* Progress circle */}
-            <Circle
-              cx="50"
-              cy="50"
-              r={40}
-              stroke="url(#gradient)"
-              strokeWidth={6}
-              fill="none"
-              strokeDasharray={strokeDasharray}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              transform="rotate(-90 50 50)"
-            />
-            
-            {/* Center text */}
-            <SvgText
-              x="50"
-              y="48"
-              textAnchor="middle"
-              fontSize="18"
-              fontWeight="700"
-              fill={getScoreColor(safeValue)}
-            >
-              {safeValue}
-            </SvgText>
-            <SvgText
-              x="50"
-              y="60"
-              textAnchor="middle"
-              fontSize="10"
-              fill={colors.textSecondary}
-            >
-              /<TSpan dx="8">{maxValue}</TSpan>
-            </SvgText>
-          </Svg>
-        </View>
-
-        <View style={styles.footer}>
-          <View style={styles.scoreContainer}>
-            <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(safeValue) }]}>
-              <Text style={styles.scoreText}>{getScoreLabel(safeValue)}</Text>
-            </View>
-            
-            {safeTrend !== undefined && safeTrend !== 0 && (
-              <View style={styles.trendContainer}>
-                <FontAwesome
-                  name={safeTrend > 0 ? 'arrow-up' : 'arrow-down'}
-                  size={10}
-                  color={safeTrend > 0 ? '#10b981' : '#ef4444'}
-                />
-                <Text style={[styles.trendText, { color: safeTrend > 0 ? '#10b981' : '#ef4444' }]}>
-                  {Math.abs(safeTrend)}
-                </Text>
-              </View>
-            )}
+          <View style={styles.header}>
+            <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+            {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
           </View>
-        </View>
+
+          <View style={styles.chartContainer}>
+            <Svg width={100} height={100} viewBox="0 0 100 100">
+              <Defs>
+                <SvgLinearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <Stop offset="0%" stopColor={color} stopOpacity="0.8" />
+                  <Stop offset="100%" stopColor={color} stopOpacity="1" />
+                </SvgLinearGradient>
+              </Defs>
+
+              {/* Background circle */}
+              <Circle
+                cx="50"
+                cy="50"
+                r={40}
+                stroke={colors.borderLight}
+                strokeWidth={6}
+                fill="none"
+              />
+
+              {/* Progress circle */}
+              <Circle
+                cx="50"
+                cy="50"
+                r={40}
+                stroke="url(#gradient)"
+                strokeWidth={6}
+                fill="none"
+                strokeDasharray={strokeDasharray}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                transform="rotate(-90 50 50)"
+              />
+
+              {/* Center text */}
+              <SvgText
+                x="50"
+                y="48"
+                textAnchor="middle"
+                fontSize="18"
+                fontWeight="700"
+                fill={getScoreColor(safeValue)}
+              >
+                {safeValue}
+              </SvgText>
+              <SvgText
+                x="50"
+                y="60"
+                textAnchor="middle"
+                fontSize="10"
+                fill={colors.textSecondary}
+              >
+                /<TSpan dx="8">{maxValue}</TSpan>
+              </SvgText>
+            </Svg>
+          </View>
+
+          <View style={styles.footer}>
+            <View style={styles.scoreContainer}>
+              <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(safeValue) }]}>
+                <Text style={styles.scoreText}>{getScoreLabel(safeValue)}</Text>
+              </View>
+
+              {safeTrend !== undefined && safeTrend !== 0 && (
+                <View style={styles.trendContainer}>
+                  <FontAwesome
+                    name={safeTrend > 0 ? 'arrow-up' : 'arrow-down'}
+                    size={10}
+                    color={safeTrend > 0 ? '#10b981' : '#ef4444'}
+                  />
+                  <Text style={[styles.trendText, { color: safeTrend > 0 ? '#10b981' : '#ef4444' }]}>
+                    {Math.abs(safeTrend)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
         </LinearGradient>
       </TouchableOpacity>
 

@@ -135,8 +135,26 @@ export class HealthDataService {
         this.permissions = newPermissions;
         console.log('📋 Updated local permissions:', this.permissions);
       } else if (Platform.OS === 'ios') {
-        // Per iOS, i permessi vengono gestiti direttamente da HealthKit
-        // Non serve refresh esplicito
+        // 🔥 FIX: Per iOS, leggi i permessi da HealthPermissionsService
+        const { HealthPermissionsService } = await import('./health-permissions.service');
+        const grantedPermissions = await HealthPermissionsService.getGrantedPermissions();
+        
+        console.log('🔄 Refreshed permissions from HealthKit:', grantedPermissions);
+        
+        const newPermissions = {
+          steps: grantedPermissions.includes('steps'),
+          heartRate: grantedPermissions.includes('heart_rate'),
+          sleep: grantedPermissions.includes('sleep'),
+          hrv: grantedPermissions.includes('hrv'),
+          bloodPressure: grantedPermissions.includes('blood_pressure'),
+          weight: grantedPermissions.includes('weight'),
+          bodyFat: grantedPermissions.includes('body_fat'),
+          hydration: false, // Not directly available
+          mindfulness: false, // Not directly available
+        };
+        
+        this.permissions = newPermissions;
+        console.log('📋 Updated local permissions (iOS):', this.permissions);
       }
     } catch (error) {
       console.error('❌ Could not refresh permissions:', error);
@@ -148,13 +166,38 @@ export class HealthDataService {
    */
   private async initializeHealthKit(): Promise<boolean> {
     if (!AppleHealthKit) {
+      console.log('⚠️ AppleHealthKit not available');
       return false;
     }
 
     try {
-      // Check if HealthKit is available
-      const isAvailable = await AppleHealthKit.isAvailable();
+      // 🔥 FIX: Verifica che isAvailable sia una funzione prima di chiamarla
+      if (typeof AppleHealthKit.isAvailable !== 'function') {
+        console.log('⚠️ AppleHealthKit.isAvailable is not a function');
+        // Su simulatore potrebbe non essere disponibile - consideriamo comunque inizializzato
+        // per permettere il testing dell'UI
+        return true;
+      }
+      
+      // Check if HealthKit is available using callback pattern
+      const isAvailable = await new Promise<boolean>((resolve) => {
+        try {
+          AppleHealthKit.isAvailable((error: any, results: boolean) => {
+            if (error) {
+              console.error('Error checking HealthKit availability:', error);
+              resolve(false);
+            } else {
+              resolve(results === true);
+            }
+          });
+        } catch (e) {
+          console.error('Exception calling isAvailable:', e);
+          resolve(false);
+        }
+      });
+      
       if (!isAvailable) {
+        console.log('⚠️ HealthKit not available on this device');
         return false;
       }
 

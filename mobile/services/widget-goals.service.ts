@@ -5,6 +5,7 @@ export type GoalMap = {
   hydration?: number;    // bicchieri/giorno
   meditation?: number;   // minuti/giorno
   sleep?: number;        // ore/notte
+  calories?: number;     // kcal/giorno
 };
 
 const STORAGE_KEY = 'widgetGoals';

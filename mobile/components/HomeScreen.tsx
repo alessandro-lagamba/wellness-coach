@@ -37,6 +37,7 @@ import { HealthPermissionsModal } from './HealthPermissionsModal';
 // WelcomeOverlay rimosso - usiamo solo InteractiveTutorial
 import { useHealthData } from '../hooks/useHealthData';
 import { useChartConfig, ChartType } from '../services/chart-config.service';
+import { FoodAnalysisService } from '../services/food-analysis.service';
 import { ChartSelectionModal } from './ChartSelectionModal';
 import { CopilotProvider, walkthroughable, CopilotStep, useCopilot } from 'react-native-copilot';
 import { TutorialTooltip } from './TutorialTooltip';
@@ -69,6 +70,7 @@ import { OperationLockService } from '../services/operation-lock.service';
 import { AvatarService } from '../services/avatar.service';
 import AvatarCommunityModal from './AvatarCommunityModal';
 import { ChartDetailModal } from './ChartDetailModal';
+import { CycleData } from '../services/menstrual-cycle.service';
 
 const { width } = Dimensions.get('window');
 // 🔥 FIX: Calcola larghezza dinamica per il grafico.
@@ -444,10 +446,28 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     hydrationGoalInGlasses: number, // 🔥 FIX: Goal sempre in bicchieri internamente
     meditationGoal: number,
     sleepGoal: number,
-    cycle?: { day: number; phase: string; phaseName: string; nextPeriodDays: number; cycleLength: number } | null
+    cycle?: CycleData | null,
+    dailyIntake?: { calories: number; carbohydrates: number; proteins: number; fats: number } | null
   ): Promise<WidgetData[]> => {
     // 🔥 FIX: Converti goal e valore corrente all'unità preferita per la visualizzazione
     const { hydrationUnitService } = await import('../services/hydration-unit.service');
+    const { widgetGoalsService } = await import('../services/widget-goals.service');
+    const goals = await widgetGoalsService.getGoals();
+
+    // 🔥 FIX: Fetch nutritional goals from profile for accurate calorie target
+    let caloriesGoal = goals?.calories ?? 2000;
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (currentUser) {
+        const profile = await AuthService.getUserProfile(currentUser.id);
+        if (profile?.nutritional_goals?.daily_calories) {
+          caloriesGoal = profile.nutritional_goals.daily_calories;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load nutritional goals for widget:', e);
+    }
+
     const preferredUnit = await hydrationUnitService.getPreferredUnit();
     const unitConfig = hydrationUnitService.getUnitConfig(preferredUnit);
     const hydrationMl = hd.hydration || 0;
@@ -492,10 +512,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       },
       {
         id: 'hydration', title: t('widgets.hydration'), icon: '💧', color: '#3b82f6', backgroundColor: '#eff6ff', category: 'health',
-        hydration: { 
+        hydration: {
           glasses: Math.round(hydrationInPreferredUnit * 10) / 10, // 🔥 FIX: Usa unità preferita (anche se si chiama "glasses" per retrocompatibilità)
           goal: Math.round(hydrationGoalInPreferredUnit * 10) / 10, // 🔥 FIX: Goal in unità preferita
-          ml: Math.max(0, hydrationMl), 
+          ml: Math.max(0, hydrationMl),
           lastDrink: '',
           preferredUnit: preferredUnit, // 🆕 Aggiungi unità preferita
           unitLabel: unitConfig.label, // 🆕 Aggiungi etichetta unità
@@ -518,11 +538,11 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       // 🆕 Aggiungi widget ciclo solo se l'utente è di genere femminile E ci sono dati disponibili
       // 🔥 FIX: Includi il widget ciclo per utenti femminili anche se i dati del ciclo non sono ancora caricati
       ...(userGender === 'female' ? [{
-        id: 'cycle', 
-        title: t('widgets.cycle'), 
-        icon: '🌸', 
-        color: '#ec4899', 
-        backgroundColor: '#fdf2f8', 
+        id: 'cycle',
+        title: t('widgets.cycle'),
+        icon: '🌸',
+        color: '#ec4899',
+        backgroundColor: '#fdf2f8',
         category: 'health' as const,
         cycle: cycle ? {
           day: cycle.day,
@@ -530,15 +550,57 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           phaseName: cycle.phaseName,
           nextPeriodDays: cycle.nextPeriodDays,
           cycleLength: cycle.cycleLength,
+          lastPeriodDate: cycle.lastPeriodDate,
         } : undefined
       }] : []),
+      {
+        id: 'calories',
+        title: t('widgets.calories'),
+        icon: '🔥',
+        color: '#f97316',
+        backgroundColor: '#fff7ed',
+        category: 'health',
+        calories: {
+          current: dailyIntake?.calories || 0,
+          goal: caloriesGoal,
+          carbs: dailyIntake?.carbohydrates || 0,
+          protein: dailyIntake?.proteins || 0,
+          fat: dailyIntake?.fats || 0
+        }
+      }
     ];
   };
 
   // 🆕 Stato per i dati del ciclo mestruale
-  const [cycleData, setCycleData] = useState<{ day: number; phase: string; phaseName: string; nextPeriodDays: number; cycleLength: number } | null>(null);
+  const [cycleData, setCycleData] = useState<CycleData | null>(null);
   // 🆕 Stato per il genere dell'utente (per filtrare il widget ciclo)
   const [userGender, setUserGender] = useState<'male' | 'female' | 'other' | 'prefer_not_to_say' | null>(null);
+
+  // 🆕 Stato per daily intake (calorie)
+  const [dailyIntake, setDailyIntake] = useState<{ calories: number; carbohydrates: number; proteins: number; fats: number } | null>(null);
+
+  // 🆕 Funzione per caricare daily intake
+  const loadDailyIntake = useCallback(async () => {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (currentUser?.id) {
+        const intake = await FoodAnalysisService.getDailyIntake(currentUser.id);
+        setDailyIntake(intake);
+      }
+    } catch (error) {
+      console.warn('[HomeScreen] Failed to load daily intake:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDailyIntake();
+  }, [loadDailyIntake]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDailyIntake();
+    }, [loadDailyIntake])
+  );
 
   // 🆕 Funzione per caricare genere e dati del ciclo
   const loadUserGenderAndCycle = useCallback(async () => {
@@ -602,6 +664,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       case 'sleep': return t('widgets.sleep');
       case 'hrv': return t('widgets.hrv');
       case 'cycle': return t('widgets.cycle');
+      case 'calories': return t('widgets.calories');
       default: return widgetId;
     }
   }, [t]);
@@ -624,7 +687,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       const { hydrationUnitService } = await import('../services/hydration-unit.service');
       const preferredUnit = await hydrationUnitService.getPreferredUnit();
       const hydrationGoalForDisplay = hydrationUnitService.mlToUnit(hydrationGoalInGlasses * 250, preferredUnit);
-      
+
       const placeholderData = WidgetDataService.generateWidgetData({
         steps: stepsGoal,
         hydration: Math.round(hydrationGoalForDisplay), // Usa unità preferita per placeholder
@@ -665,8 +728,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     const hd = dataToUse;
     // 🆕 Passa cycleData solo se l'utente è di genere femminile
     const cycleForWidget = userGender === 'female' ? cycleData : null;
-    return await buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoalInGlasses, meditationGoal, sleepGoal, cycleForWidget);
-  }, [healthData, healthStatus, placeholderMessages, translateWidgetTitle, cycleData, userGender, t]);
+    return await buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoalInGlasses, meditationGoal, sleepGoal, cycleForWidget, dailyIntake);
+  }, [healthData, healthStatus, placeholderMessages, translateWidgetTitle, cycleData, userGender, t, dailyIntake]);
 
   // 🔥 NEW: Funzione per ricaricare i dati dal database e aggiornare i widget
   // Questa funzione è necessaria perché i dati di idratazione e meditazione sono salvati
@@ -779,10 +842,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       if (healthData !== null && healthData !== undefined && hasAnyHealthPermission) {
         // 🔥 CRITICO: Verifica che i dati siano reali (non mock) prima di aggiornare i widget
         const hasRealData = (healthData.steps && healthData.steps > 0) ||
-                            (healthData.heartRate && healthData.heartRate > 0) ||
-                            (healthData.sleepHours && healthData.sleepHours > 0) ||
-                            (healthData.hrv && healthData.hrv > 0);
-        
+          (healthData.heartRate && healthData.heartRate > 0) ||
+          (healthData.sleepHours && healthData.sleepHours > 0) ||
+          (healthData.hrv && healthData.hrv > 0);
+
         // 🔥 Aggiorna i widget SOLO se i dati sono reali o se non abbiamo ancora dati
         // Questo previene che i widget vengano aggiornati con dati mock
         if (hasRealData || !lastProcessedHealthDataRef.current || lastProcessedHealthDataRef.current.startsWith('placeholder-')) {
@@ -869,6 +932,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     if (info?.steps) return Math.min(100, (info.steps.current / info.steps.goal) * 100);
     if (info?.hydration) return Math.min(100, (info.hydration.glasses / info.hydration.goal) * 100);
     if (info?.meditation) return Math.min(100, (info.meditation.minutes / info.meditation.goal) * 100);
+    if (info?.calories) return Math.min(100, (info.calories.current / info.calories.goal) * 100);
     return 0;
   };
 
@@ -880,6 +944,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       return `${t('home.goal')} • ${info.hydration.goal} ${unitLabel}`;
     }
     if (info?.meditation) return `${t('home.goal')} • ${info.meditation.goal} mins`;
+    if (info?.calories) return `${info.calories.current} kcal`;
     return '';
   };
 
@@ -999,14 +1064,14 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         if (!info.cycle) return undefined;
         // 🆕 Mostra informazioni più utili: giorni al prossimo ciclo e durata ciclo
         return [
-          { 
-            icon: '📅', 
-            label: t('home.cycle.nextPeriod'), 
+          {
+            icon: '📅',
+            label: t('home.cycle.nextPeriod'),
             value: `${info.cycle.nextPeriodDays} ${info.cycle.nextPeriodDays === 1 ? (language === 'it' ? 'giorno' : 'day') : (language === 'it' ? 'giorni' : 'days')}`
           },
-          { 
-            icon: '🔄', 
-            label: t('home.cycle.cycleLength'), 
+          {
+            icon: '🔄',
+            label: t('home.cycle.cycleLength'),
             value: `${info.cycle.cycleLength} ${language === 'it' ? 'giorni' : 'days'}`
           },
         ];
@@ -1598,7 +1663,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
   // 🔥 Lista di tutti i widget disponibili (filtra 'cycle' se l'utente non è di genere femminile)
   const ALL_AVAILABLE_WIDGETS = useMemo(() => {
-    const baseWidgets = ['steps', 'meditation', 'hydration', 'sleep', 'hrv'];
+    const baseWidgets = ['steps', 'meditation', 'hydration', 'sleep', 'hrv', 'calories'];
     // Aggiungi 'cycle' solo se l'utente è di genere femminile
     if (userGender === 'female') {
       baseWidgets.push('cycle');
@@ -1688,7 +1753,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         const { supabase } = await import('../lib/supabase');
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
-        
+
         // Recupera tutti i check-in degli ultimi 90 giorni per calcolare lo streak
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - 90);
@@ -1717,7 +1782,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         const dates = new Set(checkins.map(c => c.date));
         let streak = 0;
         const checkDate = new Date(today);
-        
+
         // Controlla se oggi c'è un check-in
         if (dates.has(todayStr)) {
           streak = 1;
@@ -1752,11 +1817,11 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   const getNextActivity = useMemo(() => {
     // Filtra le attività non completate
     const incompleteActivities = todaysActivities.filter(a => !a.completed);
-    
+
     if (incompleteActivities.length === 0) {
       return null;
     }
-    
+
     // Prendi la prima attività non completata (assumendo siano ordinate per priorità/tempo)
     return incompleteActivities[0];
   }, [todaysActivities]);
@@ -2324,6 +2389,32 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     return size;
   };
 
+  // 🔥 FIX: Helper per calcolare quanti slot occupa un widget (S=1, M=2, L=3)
+  const getWidgetSlots = (size: 'small' | 'medium' | 'large'): number => {
+    switch (size) {
+      case 'small': return 1;
+      case 'medium': return 2;
+      case 'large': return 3;
+      default: return 1;
+    }
+  };
+
+  // 🔥 FIX: Filtra i widget per una riga rispettando il limite di 3 slot totali
+  const filterWidgetsForRow = (widgets: typeof widgetConfig, maxSlots: number = 3) => {
+    const result: typeof widgetConfig = [];
+    let usedSlots = 0;
+
+    for (const widget of widgets) {
+      const slots = getWidgetSlots(widget.size);
+      if (usedSlots + slots <= maxSlots) {
+        result.push(widget);
+        usedSlots += slots;
+      }
+    }
+
+    return result;
+  };
+
   // True se nella riga (0..1) c'è un widget large che parte in colonna 0
   const rowHasLarge = (rowIndex: 0 | 1) =>
     widgetConfig.some(w =>
@@ -2359,10 +2450,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     <SafeAreaWrapper style={[styles.container, { backgroundColor: themeColors.background }]}>
       {/* 🆕 Toast di successo elegante */}
       {successToast.visible && (
-        <Animated.View 
+        <Animated.View
           style={[
             styles.successToast,
-            { 
+            {
               opacity: successToast.visible ? 1 : 0,
             }
           ]}
@@ -2605,185 +2696,191 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               <>
                 {/* Riga 1: Posizioni 0, 1, 2 */}
                 <View style={styles.widgetRow}>
-                  {(rowHasLarge(0)
-                    ? widgetConfig.filter(w => w.enabled && w.position === 0 && w.size === 'large')
-                    : widgetConfig.filter(w => w.enabled && w.position < 3 && w.position >= 0)
-                  )
-                    .filter(w => {
-                      // 🔥 FIX: Filtra il widget 'cycle' se l'utente non è di genere femminile PRIMA del map
-                      if (w.id === 'cycle' && userGender !== 'female') {
-                        return false;
-                      }
-                      return true;
-                    })
-                    .sort((a, b) => a.position - b.position)
-                    .slice(0, rowHasLarge(0) ? 1 : 3) // 🔥 FIX: Limita esplicitamente a 3 widget per riga (o 1 large)
-                    .map((widget) => {
-                      // 👇 lascia esattamente il tuo map attuale (non serve cambiare la logica interna)
-                      const widgetInfo = widgetData.find(w => w.id === widget.id);
-                      if (!widgetInfo) return null;
+                  {filterWidgetsForRow(
+                    (rowHasLarge(0)
+                      ? widgetConfig.filter(w => w.enabled && w.position === 0 && w.size === 'large')
+                      : widgetConfig.filter(w => w.enabled && w.position < 3 && w.position >= 0)
+                    )
+                      .filter(w => {
+                        // 🔥 FIX: Filtra il widget 'cycle' se l'utente non è di genere femminile PRIMA del map
+                        if (w.id === 'cycle' && userGender !== 'female') {
+                          return false;
+                        }
+                        return true;
+                      })
+                      .sort((a, b) => a.position - b.position),
+                    3 // Max 3 slot per riga
+                  ).map((widget) => {
+                    // 👇 lascia esattamente il tuo map attuale (non serve cambiare la logica interna)
+                    const widgetInfo = widgetData.find(w => w.id === widget.id);
+                    if (!widgetInfo) return null;
 
-                      const WidgetComponent =
-                        widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'cycle'
-                          ? MiniInfoCard
-                          : MiniGaugeChart;
+                    const WidgetComponent =
+                      widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'cycle'
+                        ? MiniInfoCard
+                        : MiniGaugeChart;
 
-                      const gaugeProgress = computeGaugeProgress(widgetInfo);
-                      const gaugeSubtitle = computeGaugeSubtitle(widgetInfo);
-                      const gaugeTrend = computeGaugeTrend(gaugeProgress);
-                      const infoValue = getInfoCardValue(widget.id, widgetInfo, widget.size);
-                      const infoSubtitle = getInfoCardSubtitle(widget.id, widgetInfo);
-                      const infoTrend = getInfoCardTrend(widget.id, widgetInfo);
-                      const infoDetails = getInfoCardDetails(widget.id, widgetInfo);
+                    const gaugeProgress = computeGaugeProgress(widgetInfo);
+                    const gaugeSubtitle = computeGaugeSubtitle(widgetInfo);
+                    const gaugeTrend = computeGaugeTrend(gaugeProgress);
+                    const infoValue = getInfoCardValue(widget.id, widgetInfo, widget.size);
+                    const infoSubtitle = getInfoCardSubtitle(widget.id, widgetInfo);
+                    const infoTrend = getInfoCardTrend(widget.id, widgetInfo);
+                    const infoDetails = getInfoCardDetails(widget.id, widgetInfo);
 
-                      return (
-                        <View key={widget.id} style={{ width: getWidgetWidth(widget.size) }}>
-                          {dragTargetPosition === widget.position && (
-                            <View style={styles.dropIndicator}>
-                              <View style={styles.dropIndicatorInner} />
-                            </View>
-                          )}
+                    return (
+                      <View key={widget.id} style={{ width: getWidgetWidth(widget.size) }}>
+                        {dragTargetPosition === widget.position && (
+                          <View style={styles.dropIndicator}>
+                            <View style={styles.dropIndicatorInner} />
+                          </View>
+                        )}
 
-                          <EditableWidget
-                            widgetId={widget.id}
-                            widgetTitle={widgetInfo.title}
-                            onPress={() => handleWidgetPress(widget.id)}
-                            onLongPress={() => handleWidgetLongPress(widget.id)}
-                            onEnterEditMode={() => setEditMode(true)}
-                            onDragTargetChange={setDragTargetPosition}
-                            onResize={async (newSize) => { try { await changeSize(widget.id, newSize); } catch { } }}
-                            onRemove={async () => { try { await toggleWidget(widget.id); } catch { } }}
-                            editMode={editMode}
-                          >
-                            {WidgetComponent === MiniGaugeChart ? (
-                              <MiniGaugeChart
-                                value={gaugeProgress}
-                                maxValue={100}
-                                label={widgetInfo.title}
-                                color={widgetInfo.color}
-                                subtitle={gaugeSubtitle}
-                                backgroundColor={widgetInfo.backgroundColor}
-                                trendValue={gaugeTrend}
-                                icon={widgetInfo.icon}
-                                size={getWidgetSize(widget.size)}
-                                additionalData={
-                                  widgetInfo.steps
-                                    ? { steps: widgetInfo.steps }
-                                    : widgetInfo.hydration
-                                      ? { hydration: widgetInfo.hydration }
-                                      : widgetInfo.meditation
-                                        ? { meditation: widgetInfo.meditation }
+                        <EditableWidget
+                          widgetId={widget.id}
+                          widgetTitle={widgetInfo.title}
+                          onPress={() => handleWidgetPress(widget.id)}
+                          onLongPress={() => handleWidgetLongPress(widget.id)}
+                          onEnterEditMode={() => setEditMode(true)}
+                          onDragTargetChange={setDragTargetPosition}
+                          onResize={async (newSize) => { try { await changeSize(widget.id, newSize); } catch { } }}
+                          onRemove={async () => { try { await toggleWidget(widget.id); } catch { } }}
+                          editMode={editMode}
+                        >
+                          {WidgetComponent === MiniGaugeChart ? (
+                            <MiniGaugeChart
+                              value={gaugeProgress}
+                              maxValue={100}
+                              label={widgetInfo.title}
+                              color={widgetInfo.color}
+                              subtitle={gaugeSubtitle}
+                              backgroundColor={widgetInfo.backgroundColor}
+                              trendValue={gaugeTrend}
+                              icon={widgetInfo.icon}
+                              size={getWidgetSize(widget.size)}
+                              additionalData={
+                                widgetInfo.steps
+                                  ? { steps: widgetInfo.steps }
+                                  : widgetInfo.hydration
+                                    ? { hydration: widgetInfo.hydration }
+                                    : widgetInfo.meditation
+                                      ? { meditation: widgetInfo.meditation }
+                                      : widgetInfo.calories
+                                        ? { calories: widgetInfo.calories }
                                         : undefined
-                                }
-                              />
-                            ) : (
-                              <MiniInfoCard
-                                label={widgetInfo.title}
-                                value={infoValue}
-                                subtitle={infoSubtitle}
-                                icon={widgetInfo.icon}
-                                color={widgetInfo.color}
-                                backgroundColor={widgetInfo.backgroundColor}
-                                trendValue={infoTrend}
-                                size={getWidgetSize(widget.size)}
-                                detailChips={infoDetails}
-                              />
-                            )}
-                          </EditableWidget>
-                        </View>
-                      );
-                    })}
+                              }
+                            />
+                          ) : (
+                            <MiniInfoCard
+                              label={widgetInfo.title}
+                              value={infoValue}
+                              subtitle={infoSubtitle}
+                              icon={widgetInfo.icon}
+                              color={widgetInfo.color}
+                              backgroundColor={widgetInfo.backgroundColor}
+                              trendValue={infoTrend}
+                              size={getWidgetSize(widget.size)}
+                              detailChips={infoDetails}
+                            />
+                          )}
+                        </EditableWidget>
+                      </View>
+                    );
+                  })}
                   {!rowHasLarge(0) && createEmptySlots(0, 3)}
                 </View>
 
                 {/* Riga 2: Posizioni 3, 4, 5 */}
                 <View style={styles.widgetRow}>
-                  {(rowHasLarge(1)
-                    ? widgetConfig.filter(w => w.enabled && w.position === 3 && w.size === 'large')
-                    : widgetConfig.filter(w => w.enabled && w.position >= 3 && w.position < 6)
-                  )
-                    .filter(w => {
-                      // 🔥 FIX: Filtra il widget 'cycle' se l'utente non è di genere femminile PRIMA del map
-                      if (w.id === 'cycle' && userGender !== 'female') {
-                        return false;
-                      }
-                      return true;
-                    })
-                    .sort((a, b) => a.position - b.position)
-                    .slice(0, rowHasLarge(1) ? 1 : 3) // 🔥 FIX: Limita esplicitamente a 3 widget per riga (o 1 large)
-                    .map((widget) => {
-                      const widgetInfo = widgetData.find(w => w.id === widget.id);
-                      if (!widgetInfo) return null;
+                  {filterWidgetsForRow(
+                    (rowHasLarge(1)
+                      ? widgetConfig.filter(w => w.enabled && w.position === 3 && w.size === 'large')
+                      : widgetConfig.filter(w => w.enabled && w.position >= 3 && w.position < 6)
+                    )
+                      .filter(w => {
+                        // 🔥 FIX: Filtra il widget 'cycle' se l'utente non è di genere femminile PRIMA del map
+                        if (w.id === 'cycle' && userGender !== 'female') {
+                          return false;
+                        }
+                        return true;
+                      })
+                      .sort((a, b) => a.position - b.position),
+                    3 // Max 3 slot per riga
+                  ).map((widget) => {
+                    const widgetInfo = widgetData.find(w => w.id === widget.id);
+                    if (!widgetInfo) return null;
 
-                      const WidgetComponent =
-                        widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'cycle'
-                          ? MiniInfoCard
-                          : MiniGaugeChart;
+                    const WidgetComponent =
+                      widget.id === 'sleep' || widget.id === 'hrv' || widget.id === 'cycle'
+                        ? MiniInfoCard
+                        : MiniGaugeChart;
 
-                      const gaugeProgress = computeGaugeProgress(widgetInfo);
-                      const gaugeSubtitle = computeGaugeSubtitle(widgetInfo);
-                      const gaugeTrend = computeGaugeTrend(gaugeProgress);
-                      const infoValue = getInfoCardValue(widget.id, widgetInfo, widget.size);
-                      const infoSubtitle = getInfoCardSubtitle(widget.id, widgetInfo);
-                      const infoTrend = getInfoCardTrend(widget.id, widgetInfo);
-                      const infoDetails = getInfoCardDetails(widget.id, widgetInfo);
+                    const gaugeProgress = computeGaugeProgress(widgetInfo);
+                    const gaugeSubtitle = computeGaugeSubtitle(widgetInfo);
+                    const gaugeTrend = computeGaugeTrend(gaugeProgress);
+                    const infoValue = getInfoCardValue(widget.id, widgetInfo, widget.size);
+                    const infoSubtitle = getInfoCardSubtitle(widget.id, widgetInfo);
+                    const infoTrend = getInfoCardTrend(widget.id, widgetInfo);
+                    const infoDetails = getInfoCardDetails(widget.id, widgetInfo);
 
-                      return (
-                        <View key={widget.id} style={{ width: getWidgetWidth(widget.size) }}>
-                          {dragTargetPosition === widget.position && (
-                            <View style={styles.dropIndicator}>
-                              <View style={styles.dropIndicatorInner} />
-                            </View>
-                          )}
-                          <EditableWidget
-                            widgetId={widget.id}
-                            widgetTitle={widgetInfo.title}
-                            onPress={() => handleWidgetPress(widget.id)}
-                            onLongPress={() => handleWidgetLongPress(widget.id)}
-                            onEnterEditMode={() => setEditMode(true)}
-                            onDragTargetChange={setDragTargetPosition}
-                            onResize={async (newSize) => { try { await changeSize(widget.id, newSize); } catch { } }}
-                            onRemove={async () => { try { await toggleWidget(widget.id); } catch { } }}
-                            editMode={editMode}
-                          >
-                            {WidgetComponent === MiniGaugeChart ? (
-                              <MiniGaugeChart
-                                value={gaugeProgress}
-                                maxValue={100}
-                                label={widgetInfo.title}
-                                color={widgetInfo.color}
-                                subtitle={gaugeSubtitle}
-                                backgroundColor={widgetInfo.backgroundColor}
-                                trendValue={gaugeTrend}
-                                icon={widgetInfo.icon}
-                                size={getWidgetSize(widget.size)}
-                                additionalData={
-                                  widgetInfo.steps
-                                    ? { steps: widgetInfo.steps }
-                                    : widgetInfo.hydration
-                                      ? { hydration: widgetInfo.hydration }
-                                      : widgetInfo.meditation
-                                        ? { meditation: widgetInfo.meditation }
+                    return (
+                      <View key={widget.id} style={{ width: getWidgetWidth(widget.size) }}>
+                        {dragTargetPosition === widget.position && (
+                          <View style={styles.dropIndicator}>
+                            <View style={styles.dropIndicatorInner} />
+                          </View>
+                        )}
+                        <EditableWidget
+                          widgetId={widget.id}
+                          widgetTitle={widgetInfo.title}
+                          onPress={() => handleWidgetPress(widget.id)}
+                          onLongPress={() => handleWidgetLongPress(widget.id)}
+                          onEnterEditMode={() => setEditMode(true)}
+                          onDragTargetChange={setDragTargetPosition}
+                          onResize={async (newSize) => { try { await changeSize(widget.id, newSize); } catch { } }}
+                          onRemove={async () => { try { await toggleWidget(widget.id); } catch { } }}
+                          editMode={editMode}
+                        >
+                          {WidgetComponent === MiniGaugeChart ? (
+                            <MiniGaugeChart
+                              value={gaugeProgress}
+                              maxValue={100}
+                              label={widgetInfo.title}
+                              color={widgetInfo.color}
+                              subtitle={gaugeSubtitle}
+                              backgroundColor={widgetInfo.backgroundColor}
+                              trendValue={gaugeTrend}
+                              icon={widgetInfo.icon}
+                              size={getWidgetSize(widget.size)}
+                              additionalData={
+                                widgetInfo.steps
+                                  ? { steps: widgetInfo.steps }
+                                  : widgetInfo.hydration
+                                    ? { hydration: widgetInfo.hydration }
+                                    : widgetInfo.meditation
+                                      ? { meditation: widgetInfo.meditation }
+                                      : widgetInfo.calories
+                                        ? { calories: widgetInfo.calories }
                                         : undefined
-                                }
-                              />
-                            ) : (
-                              <MiniInfoCard
-                                label={widgetInfo.title}
-                                value={infoValue}
-                                subtitle={infoSubtitle}
-                                icon={widgetInfo.icon}
-                                color={widgetInfo.color}
-                                backgroundColor={widgetInfo.backgroundColor}
-                                trendValue={infoTrend}
-                                size={getWidgetSize(widget.size)}
-                                detailChips={infoDetails}
-                              />
-                            )}
-                          </EditableWidget>
-                        </View>
-                      );
-                    })}
+                              }
+                            />
+                          ) : (
+                            <MiniInfoCard
+                              label={widgetInfo.title}
+                              value={infoValue}
+                              subtitle={infoSubtitle}
+                              icon={widgetInfo.icon}
+                              color={widgetInfo.color}
+                              backgroundColor={widgetInfo.backgroundColor}
+                              trendValue={infoTrend}
+                              size={getWidgetSize(widget.size)}
+                              detailChips={infoDetails}
+                            />
+                          )}
+                        </EditableWidget>
+                      </View>
+                    );
+                  })}
                   {!rowHasLarge(1) && createEmptySlots(3, 6)}
                 </View>
               </>
@@ -2860,12 +2957,11 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               <Text style={[styles.emptyActivitiesText, { color: themeColors.textSecondary }]}>
                 {t('home.activities.emptyDescription') || 'Le attività che aggiungerai dalla chat AI o dalle altre sezioni appariranno qui. Potrai attivare le notifiche per ricordarti di completarle!'}
               </Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.emptyActivitiesButton, { backgroundColor: themeColors.primary }]}
                 onPress={() => router.push('/(tabs)/coach')}
                 activeOpacity={0.8}
               >
-                <MaterialCommunityIcons name="robot-outline" size={18} color="#fff" />
                 <Text style={styles.emptyActivitiesButtonText}>
                   {t('home.activities.askCoach') || 'Chiedi al Coach AI'}
                 </Text>
@@ -3550,7 +3646,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               const ml = hydrationUnitService.unitToMl(newVal, preferredUnit);
               valueToSave = Math.round(ml / 250); // Salva sempre in bicchieri internamente
             }
-            
+
             // salva
             await widgetGoalsService.setGoal(goalModal.widgetId!, valueToSave);
             // ricarica widget data con i nuovi goal
@@ -3574,7 +3670,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         onSuccess={async () => {
           // 🔥 FIX: Chiudi il modal PRIMA di fare sync per evitare loop
           setHealthPermissionsModal(false);
-          
+
           // 🆕 Rimosso feedback "syncing" - la UI già mostra il loading state
 
           // 🔥 FIX: Forza sync immediata dei dati dopo concessione permessi
@@ -3582,12 +3678,12 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             // 🔥 CRITICO: Aspetta un momento più lungo per assicurarsi che Health Connect abbia processato i permessi
             console.log('⏳ Waiting for Health Connect to process permissions...');
             await new Promise(resolve => setTimeout(resolve, 2000));
-            
+
             // 🔥 CRITICO: PRIMA aggiorna i permessi nel HOOK per aggiornare lo stato UI
             console.log('🔄 Refreshing permissions in hook...');
             const updatedPermissions = await refreshPermissions();
             console.log('📋 Updated permissions in hook:', updatedPermissions);
-            
+
             const hasAnyPermission = Object.values(updatedPermissions).some(Boolean);
             if (!hasAnyPermission) {
               console.log('⚠️ No permissions detected after refresh, trying again...');
@@ -3595,7 +3691,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               await new Promise(resolve => setTimeout(resolve, 1500));
               await refreshPermissions();
             }
-            
+
             // 🔥 Forza una sincronizzazione immediata
             console.log('🔄 Starting forced sync...');
             const syncResult = await syncData();
@@ -3606,21 +3702,21 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               heartRate: syncResult.data?.heartRate,
               sleepHours: syncResult.data?.sleepHours,
             });
-            
+
             // 🔥 CRITICO: Aggiorna i widget IMMEDIATAMENTE con i dati sincronizzati
             if (syncResult.success && syncResult.data) {
               // 🔥 Verifica che i dati siano reali (non mock) controllando se hanno valori significativi
               const hasRealData = (syncResult.data.steps && syncResult.data.steps > 0) ||
-                                  (syncResult.data.heartRate && syncResult.data.heartRate > 0) ||
-                                  (syncResult.data.sleepHours && syncResult.data.sleepHours > 0) ||
-                                  (syncResult.data.hrv && syncResult.data.hrv > 0);
-              
+                (syncResult.data.heartRate && syncResult.data.heartRate > 0) ||
+                (syncResult.data.sleepHours && syncResult.data.sleepHours > 0) ||
+                (syncResult.data.hrv && syncResult.data.hrv > 0);
+
               if (hasRealData) {
                 console.log('✅ Real data detected, updating widgets...');
                 // 🔥 Passa direttamente i dati sincronizzati per evitare che vengano usati dati mock dal hook
                 const data = await buildWidgetDataFromHealth(syncResult.data);
                 setWidgetData(data);
-                
+
                 // 🆕 Feedback discreto di successo con haptic e toast elegante
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 showSuccessToast(t('home.permissions.syncSuccess') || '✨ Dati sincronizzati con successo!');
@@ -3635,7 +3731,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               setWidgetData(data);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
-            
+
             // Ricarica anche i dati del Daily Copilot
             loadTodayGlanceData();
           } catch (error) {
@@ -3748,18 +3844,18 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           if (!currentUser?.id) return;
 
           // Aggiungi più bicchieri in sequenza
-          let lastResult = { success: false, newHydration: 0, error: '' };
+          let lastResult: { success: boolean; newHydration?: number; error?: string } = { success: false, newHydration: 0, error: '' };
           for (let i = 0; i < quantity; i++) {
             lastResult = await TodayGlanceService.addWaterGlass(currentUser.id);
             if (!lastResult.success) break;
           }
-          
+
           if (lastResult.success) {
             const { hydrationUnitService } = await import('../services/hydration-unit.service');
             const unit = await hydrationUnitService.getPreferredUnit();
             const config = hydrationUnitService.getUnitConfig(unit);
             const units = hydrationUnitService.mlToUnit(lastResult.newHydration || 0, unit);
-            
+
             UserFeedbackService.showSuccess(
               `${quantity > 1 ? `Aggiunti ${quantity} bicchieri!` : 'Aggiunto!'} Totale: ${Math.round(units * 10) / 10} ${config.label}`,
               t('home.hydrationActions.addedTitle') || 'Acqua aggiunta'
@@ -3780,18 +3876,18 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           if (!currentUser?.id) return;
 
           // Rimuovi più bicchieri in sequenza
-          let lastResult = { success: false, newHydration: 0, error: '' };
+          let lastResult: { success: boolean; newHydration?: number; error?: string } = { success: false, newHydration: 0, error: '' };
           for (let i = 0; i < quantity; i++) {
             lastResult = await TodayGlanceService.removeWaterGlass(currentUser.id);
             if (!lastResult.success) break;
           }
-          
+
           if (lastResult.success) {
             const { hydrationUnitService } = await import('../services/hydration-unit.service');
             const unit = await hydrationUnitService.getPreferredUnit();
             const config = hydrationUnitService.getUnitConfig(unit);
             const units = hydrationUnitService.mlToUnit(lastResult.newHydration || 0, unit);
-            
+
             UserFeedbackService.showSuccess(
               `${quantity > 1 ? `Rimossi ${quantity} bicchieri!` : 'Rimosso!'} Totale: ${Math.round(units * 10) / 10} ${config.label}`,
               t('home.hydrationActions.removedTitle') || 'Acqua rimossa'
@@ -3819,10 +3915,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           if (!currentUser?.id) return;
 
           const result = await TodayGlanceService.addMeditationMinutes(currentUser.id, minutes);
-          
+
           if (result.success) {
             UserFeedbackService.showSuccess(
-              t('home.meditationActions.addedSuccess', { 
+              t('home.meditationActions.addedSuccess', {
                 minutes: result.newMinutes || 0
               }) || `Aggiunti ${minutes} minuti! Totale: ${result.newMinutes || 0} min`,
               t('home.meditationActions.addedTitle') || 'Meditazione aggiunta'
@@ -3843,10 +3939,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           if (!currentUser?.id) return;
 
           const result = await TodayGlanceService.removeMeditationMinutes(currentUser.id, minutes);
-          
+
           if (result.success) {
             UserFeedbackService.showSuccess(
-              t('home.meditationActions.removedSuccess', { 
+              t('home.meditationActions.removedSuccess', {
                 minutes: result.newMinutes || 0
               }) || `Rimossi ${minutes} minuti! Totale: ${result.newMinutes || 0} min`,
               t('home.meditationActions.removedTitle') || 'Meditazione rimossa'

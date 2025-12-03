@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, Image, Dimensions, Platform, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,7 +24,7 @@ export const ResultHero: React.FC<ResultHeroProps> = ({
     imageUri,
     style,
 }) => {
-    const { mode } = useTheme();
+    const { mode, colors } = useTheme();
     const insets = useSafeAreaInsets();
     const isDark = mode === 'dark';
 
@@ -36,28 +36,32 @@ export const ResultHero: React.FC<ResultHeroProps> = ({
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     };
 
+    // 🔥 FIX: Altezza ridotta su iOS, considera insets.top solo per il padding interno
+    const heroHeight = Platform.OS === 'ios' ? 240 : 280;
+
     return (
-        <View style={[styles.container, { height: 340 + insets.top, paddingTop: 0 }, style]}>
+        <View style={[styles.container, { height: heroHeight + insets.top, paddingTop: insets.top }, style]}>
             {imageUri ? (
                 <Image source={imageUri} style={styles.image} resizeMode="cover" />
             ) : (
+                // 🔥 FIX: Gradiente che sfuma verso trasparente in alto per fondersi con qualsiasi sfondo
                 <LinearGradient
-                    colors={[hexToRgba(color, 0), hexToRgba(color, 0.5), color]}
-                    locations={[0, 0.5, 1]}
+                    colors={['transparent', hexToRgba(color, 0.2), hexToRgba(color, 0.5), color]}
+                    locations={[0, 0.3, 0.6, 1]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 0, y: 1 }}
                     style={styles.gradient}
                 />
             )}
 
-            {/* Premium Overlay Gradient */}
+            {/* Premium Overlay Gradient - sfuma verso il basso */}
             <LinearGradient
-                colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
-                locations={[0, 0.6, 1]}
+                colors={['transparent', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.6)']}
+                locations={[0, 0.5, 1]}
                 style={styles.overlay}
             />
 
-            <View style={styles.content}>
+            <View style={[styles.content, { bottom: Platform.OS === 'ios' ? 30 : 50 }]}>
                 <BlurView intensity={40} tint="dark" style={styles.scoreContainer}>
                     {score !== undefined ? (
                         <Text style={styles.score}>{score}</Text>
@@ -77,7 +81,7 @@ export const ResultHero: React.FC<ResultHeroProps> = ({
 const styles = StyleSheet.create({
     container: {
         width: width,
-        backgroundColor: '#000',
+        backgroundColor: 'transparent', // 🔥 FIX: Trasparente per fondersi con lo sfondo
         overflow: 'hidden',
     },
     image: {

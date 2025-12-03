@@ -35,10 +35,10 @@ export const WidgetSelectionModal: React.FC<WidgetSelectionModalProps> = ({
   const { colors } = useTheme();
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  
+
   // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare le animazioni attive
   const animationRefs = useRef<Animated.CompositeAnimation[]>([]);
-  
+
   // 🔥 FIX: Memory leak - ferma tutte le animazioni attive
   const stopAnimations = useCallback(() => {
     animationRefs.current.forEach(anim => {
@@ -52,7 +52,7 @@ export const WidgetSelectionModal: React.FC<WidgetSelectionModalProps> = ({
   useEffect(() => {
     // 🔥 FIX: Memory leak - ferma le animazioni precedenti prima di avviarne di nuove
     stopAnimations();
-    
+
     if (visible) {
       // Anima il modal dal basso
       const anim = Animated.parallel([
@@ -67,7 +67,7 @@ export const WidgetSelectionModal: React.FC<WidgetSelectionModalProps> = ({
           useNativeDriver: true,
         }),
       ]);
-      
+
       // 🔥 FIX: Memory leak - salva il riferimento all'animazione per cleanup
       animationRefs.current = [anim];
       anim.start();
@@ -85,12 +85,12 @@ export const WidgetSelectionModal: React.FC<WidgetSelectionModalProps> = ({
           useNativeDriver: true,
         }),
       ]);
-      
+
       // 🔥 FIX: Memory leak - salva il riferimento all'animazione per cleanup
       animationRefs.current = [anim];
       anim.start();
     }
-    
+
     // 🔥 FIX: Memory leak - cleanup: ferma tutte le animazioni quando il componente viene smontato
     return () => {
       stopAnimations();
@@ -105,6 +105,7 @@ export const WidgetSelectionModal: React.FC<WidgetSelectionModalProps> = ({
       sleep: 'sleep',
       hrv: 'heart-pulse',
       cycle: 'flower',
+      calories: 'fire',
     };
     return icons[widgetId] || 'widget';
   };
@@ -117,6 +118,7 @@ export const WidgetSelectionModal: React.FC<WidgetSelectionModalProps> = ({
       sleep: t('widgets.sleep'),
       hrv: t('widgets.hrv'),
       cycle: t('widgets.cycle'),
+      calories: t('widgets.calories'),
     };
     return titles[widgetId] || widgetId;
   };
@@ -176,7 +178,7 @@ export const WidgetSelectionModal: React.FC<WidgetSelectionModalProps> = ({
 
         <View style={styles.content}>
           {availableWidgets.length > 0 ? (
-            <ScrollView 
+            <ScrollView
               style={styles.scrollView}
               showsVerticalScrollIndicator={false}
             >

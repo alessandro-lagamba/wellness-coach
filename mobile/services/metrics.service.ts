@@ -50,38 +50,38 @@ export class MetricsService {
 
   // Skin Metric Buckets
   private static getTextureBucket(value: number): BucketInfo {
-    if (value < 40) return { label: "Rough", color: "#ef4444", icon: "⚠️", description: "Pelle ruvida e irregolare" };
-    if (value < 60) return { label: "Fair", color: "#f59e0b", icon: "⚠️", description: "Texture migliorabile" };
-    if (value < 80) return { label: "Good", color: "#10b981", icon: "✅", description: "Texture buona" };
-    return { label: "Excellent", color: "#06b6d4", icon: "🌟", description: "Texture eccellente" };
+    if (value < 40) return { label: "ROUGH", color: "#ef4444", icon: "⚠️", description: "Texture ruvida con irregolarità evidenti. Potrebbero essere presenti pori dilatati o imperfezioni. Consigliato esfoliare regolarmente." };
+    if (value < 60) return { label: "FAIR", color: "#f59e0b", icon: "⚠️", description: "Texture con alcune irregolarità. La pelle potrebbe beneficiare di trattamenti leviganti e idratazione costante." };
+    if (value < 80) return { label: "GOOD", color: "#10b981", icon: "✅", description: "Texture morbida e uniforme. La pelle appare sana con pori poco visibili. Mantieni la routine attuale." };
+    return { label: "EXCELLENT", color: "#06b6d4", icon: "🌟", description: "Texture eccellente, liscia e setosa. Pori quasi invisibili, pelle ben curata e luminosa." };
   }
 
   private static getRednessBucket(value: number): BucketInfo {
-    if (value < 20) return { label: "Low", color: "#10b981", icon: "✅", description: "Pelle calma e sana" };
-    if (value < 40) return { label: "Mild", color: "#f59e0b", icon: "⚠️", description: "Leggero arrossamento" };
-    if (value < 60) return { label: "Moderate", color: "#ef4444", icon: "⚠️", description: "Arrossamento moderato" };
-    return { label: "High", color: "#dc2626", icon: "🚨", description: "Arrossamento significativo" };
+    if (value < 20) return { label: "LOW", color: "#10b981", icon: "✅", description: "Tono uniforme senza arrossamenti. La pelle appare calma e in equilibrio. Ottimo stato di salute cutanea." };
+    if (value < 40) return { label: "MILD", color: "#f59e0b", icon: "⚠️", description: "Leggero rossore in alcune zone. Potrebbe indicare sensibilità o lieve irritazione. Considera prodotti lenitivi." };
+    if (value < 60) return { label: "MODERATE", color: "#ef4444", icon: "⚠️", description: "Arrossamento moderato visibile. La pelle mostra segni di irritazione o sensibilità. Evita prodotti aggressivi." };
+    return { label: "HIGH", color: "#dc2626", icon: "🚨", description: "Arrossamento significativo. Potrebbero essere presenti irritazioni o condizioni che richiedono attenzione. Consulta uno specialista." };
   }
 
   private static getHydrationBucket(value: number): BucketInfo {
-    if (value < 40) return { label: "Low", color: "#ef4444", icon: "⚠️", description: "Pelle disidratata" };
-    if (value < 55) return { label: "Below Optimal", color: "#f59e0b", icon: "⚠️", description: "Sotto l'ottimale" };
-    if (value < 75) return { label: "Optimal", color: "#10b981", icon: "✅", description: "Idratazione ottimale" };
-    return { label: "High", color: "#06b6d4", icon: "💧", description: "Molto idratata" };
+    if (value < 40) return { label: "LOW", color: "#ef4444", icon: "⚠️", description: "Pelle disidratata che può apparire opaca, tesa o squamosa. Necessita di idratazione profonda e costante." };
+    if (value < 55) return { label: "BELOW OPTIMAL", color: "#f59e0b", icon: "⚠️", description: "Idratazione sotto il livello ottimale. Aumenta l'apporto di acqua e usa creme idratanti più ricche." };
+    if (value < 75) return { label: "OPTIMAL", color: "#10b981", icon: "✅", description: "Idratazione ottimale. La pelle è elastica, morbida e luminosa. La barriera cutanea funziona correttamente." };
+    return { label: "EXCELLENT", color: "#06b6d4", icon: "💧", description: "Pelle perfettamente idratata, elastica e radiosa. Eccellente equilibrio di acqua nella pelle." };
   }
 
   private static getOilinessBucket(value: number): BucketInfo {
-    if (value < 30) return { label: "Dry", color: "#ef4444", icon: "⚠️", description: "Pelle secca" };
-    if (value < 50) return { label: "Balanced", color: "#10b981", icon: "✅", description: "Equilibrio ottimale" };
-    if (value < 65) return { label: "Oily", color: "#f59e0b", icon: "⚠️", description: "Pelle oleosa" };
-    return { label: "Very Oily", color: "#dc2626", icon: "🚨", description: "Pelle molto oleosa" };
+    if (value < 30) return { label: "DRY", color: "#ef4444", icon: "⚠️", description: "Pelle secca con bassa produzione di sebo. Può apparire opaca e tendere a desquamarsi. Usa prodotti nutrienti." };
+    if (value < 50) return { label: "BALANCED", color: "#10b981", icon: "✅", description: "Produzione di sebo equilibrata. La pelle non è né troppo secca né troppo grassa. Stato ideale." };
+    if (value < 65) return { label: "OILY", color: "#f59e0b", icon: "⚠️", description: "Pelle tendenzialmente oleosa, specialmente nella zona T. Usa prodotti opacizzanti e detergenti delicati." };
+    return { label: "VERY OILY", color: "#dc2626", icon: "🚨", description: "Pelle molto oleosa con eccesso di sebo. I pori potrebbero apparire dilatati. Controlla la produzione con prodotti specifici." };
   }
 
   private static getOverallBucket(value: number): BucketInfo {
-    if (value < 40) return { label: "Poor", color: "#ef4444", icon: "⚠️", description: "Salute cutanea da migliorare" };
-    if (value < 60) return { label: "Fair", color: "#f59e0b", icon: "⚠️", description: "Salute cutanea discreta" };
-    if (value < 80) return { label: "Good", color: "#10b981", icon: "✅", description: "Salute cutanea buona" };
-    return { label: "Excellent", color: "#06b6d4", icon: "🌟", description: "Salute cutanea eccellente" };
+    if (value < 40) return { label: "POOR", color: "#ef4444", icon: "⚠️", description: "La pelle presenta diverse criticità che richiedono attenzione. Considera di consultare un dermatologo." };
+    if (value < 60) return { label: "FAIR", color: "#f59e0b", icon: "⚠️", description: "Salute cutanea nella media con margini di miglioramento. Una routine costante può aiutare." };
+    if (value < 80) return { label: "GOOD", color: "#10b981", icon: "✅", description: "Buona salute della pelle. I parametri sono generalmente positivi. Mantieni le buone abitudini." };
+    return { label: "EXCELLENT", color: "#06b6d4", icon: "🌟", description: "Pelle in ottima salute! Tutti i parametri sono eccellenti. Complimenti per la tua routine di cura." };
   }
 
   // Emotion Metric Buckets

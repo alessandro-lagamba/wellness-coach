@@ -44,7 +44,6 @@
     "healthPermissionsDescription": "Manage access to your health data",
     "appConfig": "App Configuration",
     "appConfigDescription": "Control app experience",
-    "notifications": "Notifications",
     "notificationsTitle": "Notifications",
     "notificationsDescription": "Define reminders & alerts",
     "subscription": "Subscription",
@@ -489,6 +488,12 @@
     }
   },
   "analysis": {
+    "gauge": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "fair": "Fair",
+      "poor": "Poor"
+    },
     "emotion": {
       "card": {
         "lastTitle": "Last emotion analysis",
@@ -512,8 +517,14 @@
         "title": "Real-time Emotion Detection",
         "subtitle": "Capture a quick scan to understand how you feel and track mood trends."
       },
-      "recent": { "title": "Recent Session", "subtitle": "Your latest emotion analysis results" },
-      "quickStats": { "title": "Quick Stats", "subtitle": "Your emotional wellness overview" },
+      "recent": {
+        "title": "Recent Session",
+        "subtitle": "Your latest emotion analysis results"
+      },
+      "quickStats": {
+        "title": "Quick Stats",
+        "subtitle": "Your emotional wellness overview"
+      },
       "trends": {
         "title": "Emotional Trends",
         "subtitle": "7-day overview of your emotional state",
@@ -531,7 +542,10 @@
         "totalSessions": "Total sessions",
         "dominantEmotion": "Dominant emotion"
       },
-      "valenceArousal": { "title": "Valence & Arousal", "subtitle": "Understand emotional positivity and intensity" },
+      "valenceArousal": {
+        "title": "Valence & Arousal",
+        "subtitle": "Understand emotional positivity and intensity"
+      },
       "metrics": {
         "valence": "Valence",
         "positivity": "Positivity",
@@ -539,17 +553,17 @@
         "intensity": "Intensity",
         "sessions": "Sessions",
         "thisMonth": "This month",
-      "buckets": {
-        "negative": "Negative",
-        "neutral": "Neutral",
-        "positive": "Positive",
-        "veryPositive": "Very Positive",
-        "low": "Low",
-        "medium": "Medium",
-        "high": "High",
-        "veryLow": "Very Low",
-        "veryHigh": "Very High"
-      },
+        "buckets": {
+          "negative": "Negative",
+          "neutral": "Neutral",
+          "positive": "Positive",
+          "veryPositive": "Very Positive",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "veryLow": "Very Low",
+          "veryHigh": "Very High"
+        },
         "valenceDesc": "Tracks the positivity of your expression and overall affect.",
         "arousalDesc": "Measures the intensity or energy level detected at the moment.",
         "valenceDescription": "Valence measures how positive or negative your emotions are. High values indicate happiness and satisfaction, while low values indicate sadness or worry. This metric helps you understand your overall emotional state.",
@@ -712,7 +726,7 @@
       "title": "Emotion Analysis",
       "capture": "Capture",
       "analyze": "Analyze",
-      "results": "Results",
+      "resultsLabel": "Results",
       "startDetection": "Start Detection",
       "selectFromGallery": "Select from Gallery",
       "analyzingExpressions": "Analyzing expressions",
@@ -745,17 +759,45 @@
         "sampleHint": "Complete your first skin analysis to see real results"
       },
       "metricExplainers": {
-        "texture": { "why": "Shows surface uniformity.", "how": "Analysis of surface irregularities." },
-        "redness": { "why": "Estimates visible redness/irritation.", "how": "Analysis of chromatic skin signals." },
-        "hydration": { "why": "Surface water content.", "how": "Hydration estimate from skin patterns." },
-        "oiliness": { "why": "Sebum balance and shine.", "how": "Detection of surface shininess." },
-        "overall": { "label": "Skin Health", "why": "Aggregate index of key parameters.", "how": "Combination of smoothness, redness, hydration and oiliness." }
+        "texture": {
+          "why": "Shows surface uniformity.",
+          "how": "Analysis of surface irregularities."
+        },
+        "redness": {
+          "why": "Estimates visible redness/irritation.",
+          "how": "Analysis of chromatic skin signals."
+        },
+        "hydration": {
+          "why": "Surface water content.",
+          "how": "Hydration estimate from skin patterns."
+        },
+        "oiliness": {
+          "why": "Sebum balance and shine.",
+          "how": "Detection of surface shininess."
+        },
+        "overall": {
+          "label": "Skin Health",
+          "why": "Aggregate index of key parameters.",
+          "how": "Combination of smoothness, redness, hydration and oiliness."
+        }
       },
       "guides": {
-        "smoothness": { "title": "Texture Improvement Guide", "description": "Personalized tips for smoother, more even skin." },
-        "redness": { "title": "Inflammation Reduction Guide", "description": "Learn how to calm irritated and sensitive skin." },
-        "oiliness": { "title": "Sebum Balance Guide", "description": "Control excess oil production with expert tips." },
-        "confidence": { "title": "Analysis Quality Tips", "description": "Get the most accurate skin analysis results." }
+        "smoothness": {
+          "title": "Texture Improvement Guide",
+          "description": "Personalized tips for smoother, more even skin."
+        },
+        "redness": {
+          "title": "Inflammation Reduction Guide",
+          "description": "Learn how to calm irritated and sensitive skin."
+        },
+        "oiliness": {
+          "title": "Sebum Balance Guide",
+          "description": "Control excess oil production with expert tips."
+        },
+        "confidence": {
+          "title": "Analysis Quality Tips",
+          "description": "Get the most accurate skin analysis results."
+        }
       },
       "header": {
         "hydrationReadiness": "Hydration readiness",
@@ -771,8 +813,14 @@
         "subtitle": "Measure hydration, redness and texture with a guided camera scan."
       },
       "start": "Start skin scan",
-      "recent": { "title": "Recent Analysis", "subtitle": "Your latest skin scan results" },
-      "quickStats": { "title": "Quick Stats", "subtitle": "Your skin health overview" },
+      "recent": {
+        "title": "Recent Analysis",
+        "subtitle": "Your latest skin scan results"
+      },
+      "quickStats": {
+        "title": "Quick Stats",
+        "subtitle": "Your skin health overview"
+      },
       "trends": {
         "title": "Skin Health Score Trends",
         "subtitle": "7-day overview of your skin metrics",
@@ -848,8 +896,8 @@
         "skinHealthLabel": "Skin Health",
         "detectedIssues": "Detected Issues",
         "healthScore": "Skin Health Score",
-        "excellent": "Excellent Condition",
-        "good": "Good Condition",
+        "excellentCondition": "Excellent Condition",
+        "goodCondition": "Good Condition",
         "needsAttention": "Needs Attention",
         "recommendation": "Skin Care Tip",
         "detectedIssue": "Detected Issue",
@@ -925,7 +973,7 @@
       "title": "Skin Analysis",
       "capture": "Capture",
       "analyze": "Analyze",
-      "results": "Results",
+      "resultsLabel": "Results",
       "startAnalysis": "Start Analysis",
       "selectFromGallery": "Select from Gallery",
       "analyzingSkin": "Analyzing skin",
@@ -968,7 +1016,7 @@
       "title": "Food Analysis",
       "capture": "Capture",
       "analyze": "Analyze",
-      "results": "Results",
+      "resultsLabel": "Results",
       "startAnalysis": "Start Analysis",
       "selectFromGallery": "Select from Gallery",
       "analyzingFood": "Analyzing food",
@@ -976,6 +1024,27 @@
       "recent": {
         "title": "Latest Analysis",
         "subtitle": "Your most recent food analysis"
+      },
+      "calorieHistory": {
+        "title": "Calorie History",
+        "consumed": "Consumed",
+        "target": "Target",
+        "onTarget": "On Target",
+        "surplus": "Surplus",
+        "deficit": "Deficit",
+        "todayStatus": "Today's Status",
+        "last14Days": "Last 14 Days",
+        "noData": "No history data available",
+        "weeklyStats": "Weekly Statistics",
+        "avgDaily": "Avg Daily",
+        "daysOnTarget": "Days on Target",
+        "trend": "Trend vs Last Week",
+        "weeklyDeficit": "total deficit",
+        "weeklySurplus": "total surplus",
+        "tipTitle": "Diet Tip",
+        "tipWeightLoss": "Maintain a slight calorie deficit to lose weight sustainably.",
+        "tipBulk": "Ensure you're in a slight surplus with enough protein to build muscle.",
+        "tipMaintenance": "Great job maintaining your calorie balance!"
       },
       "card": {
         "lastTitle": "Latest Analysis",
@@ -1380,9 +1449,8 @@
     }
   },
   "ui": {
-    "tapToExpand": "Tap to expand",
-    "tapToCollapse": "Tap to collapse",
-    "whyItMatters": "Why it matters",
+    "tapToExpand": "Tap to expand details",
+    "tapToCollapse": "Tap to collapse details",
     "howItWorks": "How it works",
     "analysisInProgress": "ANALYSIS IN PROGRESS",
     "analyzing": "Analyzing..."
@@ -1445,84 +1513,84 @@
       }
     },
     "widgetGoal": {
-          "subtitle": "Set your preferred daily target.",
-          "rangeHint": "Min {{min}} • Max {{max}} ({{step}} step)",
-          "steps": {
-            "title": "Daily Steps Goal",
-            "unit": "steps",
-            "hint": "e.g. 10000"
-          },
-          "hydration": {
-            "title": "Hydration Goal",
-            "unit": "glasses",
-            "hint": "e.g. 8",
-            "selectUnit": "Select unit of measurement",
-            "unitInfo": "{{ml}}ml per {{unit}}",
-            "units": {
-              "glass": "Glass",
-              "bottle": "Bottle",
-              "liter": "Liters"
-            }
-          },
-          "meditation": {
-            "title": "Meditation Goal",
-            "unit": "minutes",
-            "hint": "e.g. 30"
-          },
-          "sleep": {
-            "title": "Sleep Goal",
-            "unit": "hours",
-            "hint": "e.g. 8"
-          }
-        },
-        "biometric": {
-          "title": "Biometric Security",
-          "useTitle": "Use {{type}}",
-          "notAvailableTitle": "Biometric Not Available",
-          "description": "Enable biometric authentication to securely and quickly access the app using {{type}}.",
-          "notSupported": "Your device does not support biometric authentication.",
-          "currentStatus": "Current Status",
-          "enabled": "Enabled",
-          "disabled": "Disabled",
-          "benefits": "Benefits",
-          "benefit1": "Secure and fast access",
-          "benefit2": "No password to remember",
-          "benefit3": "Advanced protection",
-          "privacyNote": "Your biometric data always remains private and is never shared.",
-          "notAvailable": "Not Available",
-          "notAvailableMessage": "Biometric data is not available on this device",
-          "enableTitle": "Enable Biometric Authentication",
-          "enableMessage": "Enter your password to save biometric data",
-          "enable": "Enable",
-          "passwordRequired": "Password is required",
-          "incorrectPassword": "Incorrect password",
-          "enabledSuccess": "Biometric authentication enabled!\nYou can access using {{type}} on next login.",
-          "enableError": "Unable to enable biometric authentication",
-          "disabledSuccess": "Biometric authentication disabled",
-          "disableError": "Unable to disable biometric authentication"
-        },
-        "biometricSetup": {
-          "title": "Biometric Authentication",
-          "subtitle": "Set up {{type}} for fast and secure access",
-          "checkingCapabilities": "Checking device capabilities...",
-          "availableOnDevice": "{{type}} available on this device",
-          "credentialsProtected": "Your credentials are protected with end-to-end encryption",
-          "notAvailable": "Biometric authentication not available",
-          "configureInSettings": "Configure biometric authentication in device settings",
-          "skipForNow": "Skip for now",
-          "configure": "Set up {{type}}",
-          "credentialsNotAvailable": "Credentials not available for biometric setup",
-          "cannotSaveCredentials": "Unable to save credentials",
-          "setupSuccess": "{{type}} authentication has been set up successfully. From now on, you can access the app quickly.",
-          "perfect": "Perfect!",
-          "setupError": "An error occurred during setup"
-        },
-        "biometricSuggestion": {
-          "title": "Biometric Authentication",
-          "enableTitle": "Enable {{type}}",
-          "description": "Use {{type}} to quickly access the app without entering a password."
+      "subtitle": "Set your preferred daily target.",
+      "rangeHint": "Min {{min}} • Max {{max}} ({{step}} step)",
+      "steps": {
+        "title": "Daily Steps Goal",
+        "unit": "steps",
+        "hint": "e.g. 10000"
+      },
+      "hydration": {
+        "title": "Hydration Goal",
+        "unit": "glasses",
+        "hint": "e.g. 8",
+        "selectUnit": "Select unit of measurement",
+        "unitInfo": "{{ml}}ml per {{unit}}",
+        "units": {
+          "glass": "Glass",
+          "bottle": "Bottle",
+          "liter": "Liters"
         }
+      },
+      "meditation": {
+        "title": "Meditation Goal",
+        "unit": "minutes",
+        "hint": "e.g. 30"
+      },
+      "sleep": {
+        "title": "Sleep Goal",
+        "unit": "hours",
+        "hint": "e.g. 8"
+      }
     },
+    "biometric": {
+      "title": "Biometric Security",
+      "useTitle": "Use {{type}}",
+      "notAvailableTitle": "Biometric Not Available",
+      "description": "Enable biometric authentication to securely and quickly access the app using {{type}}.",
+      "notSupported": "Your device does not support biometric authentication.",
+      "currentStatus": "Current Status",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "benefits": "Benefits",
+      "benefit1": "Secure and fast access",
+      "benefit2": "No password to remember",
+      "benefit3": "Advanced protection",
+      "privacyNote": "Your biometric data always remains private and is never shared.",
+      "notAvailable": "Not Available",
+      "notAvailableMessage": "Biometric data is not available on this device",
+      "enableTitle": "Enable Biometric Authentication",
+      "enableMessage": "Enter your password to save biometric data",
+      "enable": "Enable",
+      "passwordRequired": "Password is required",
+      "incorrectPassword": "Incorrect password",
+      "enabledSuccess": "Biometric authentication enabled!\nYou can access using {{type}} on next login.",
+      "enableError": "Unable to enable biometric authentication",
+      "disabledSuccess": "Biometric authentication disabled",
+      "disableError": "Unable to disable biometric authentication"
+    },
+    "biometricSetup": {
+      "title": "Biometric Authentication",
+      "subtitle": "Set up {{type}} for fast and secure access",
+      "checkingCapabilities": "Checking device capabilities...",
+      "availableOnDevice": "{{type}} available on this device",
+      "credentialsProtected": "Your credentials are protected with end-to-end encryption",
+      "notAvailable": "Biometric authentication not available",
+      "configureInSettings": "Configure biometric authentication in device settings",
+      "skipForNow": "Skip for now",
+      "configure": "Set up {{type}}",
+      "credentialsNotAvailable": "Credentials not available for biometric setup",
+      "cannotSaveCredentials": "Unable to save credentials",
+      "setupSuccess": "{{type}} authentication has been set up successfully. From now on, you can access the app quickly.",
+      "perfect": "Perfect!",
+      "setupError": "An error occurred during setup"
+    },
+    "biometricSuggestion": {
+      "title": "Biometric Authentication",
+      "enableTitle": "Enable {{type}}",
+      "description": "Use {{type}} to quickly access the app without entering a password."
+    }
+  },
   "popups": {
     "wellnessSuggestion": {
       "defaultTitle": "Wellness Activity",
@@ -1918,7 +1986,7 @@
     "featureUnlocked3": "Personalized coaching",
     "continueToApp": "Continue",
     "autoCloseHint": "Auto-closing in 3 seconds...",
-    "verifyEmailStep3": "The app will open automatically"
+    "verifyEmailStep3Auto": "The app will open automatically"
   },
   "profile": {
     "title": "Personal Information",
@@ -1954,6 +2022,7 @@
     "hydration": "Hydration",
     "sleep": "Sleep",
     "hrv": "HRV",
+    "calories": "Calories",
     "analyses": "Check-In",
     "cycle": "Cycle",
     "checkIn": "Check-In",

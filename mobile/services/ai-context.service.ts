@@ -2,6 +2,8 @@ import { EmotionAnalysisService } from './emotion-analysis.service';
 import { SkinAnalysisService } from './skin-analysis.service';
 import { WellnessSuggestionService } from './chat-wellness.service';
 import cacheService from './cache.service';
+import { UnifiedAnalysisService } from './unified-analysis.service';
+import { menstrualCycleService } from './menstrual-cycle.service';
 
 export interface AIContext {
   userId: string;
@@ -42,6 +44,21 @@ export interface AIContext {
   }>;
   insights: string[];
   // Nuovi campi per analisi avanzate
+  nutritionContext: {
+    todayCalories: number;
+    todayMacros: {
+      protein: number;
+      carbs: number;
+      fat: number;
+    };
+    recentMeals: string[];
+  };
+  menstrualCycleContext: {
+    phase: string;
+    day: number;
+    nextPeriodDays: number;
+    recentNotes: string;
+  } | null;
   temporalPatterns: {
     timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
     dayOfWeek: 'weekday' | 'weekend';
@@ -93,23 +110,23 @@ export class AIContextService {
     const now = new Date();
     const hour = now.getHours();
     const day = now.getDay();
-    
+
     // Determina periodo della giornata
     let timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
     if (hour >= 6 && hour < 12) timeOfDay = 'morning';
     else if (hour >= 12 && hour < 18) timeOfDay = 'afternoon';
     else if (hour >= 18 && hour < 22) timeOfDay = 'evening';
     else timeOfDay = 'night';
-    
+
     // Determina giorno della settimana
     const dayOfWeek = (day >= 1 && day <= 5) ? 'weekday' : 'weekend';
-    
+
     // Analizza cicli emotivi
     const emotionalCycles = this.detectEmotionalCycles(emotionHistory);
-    
+
     // Analizza cicli della pelle
     const skinCycles = this.detectSkinCycles(skinHistory);
-    
+
     return {
       timeOfDay,
       dayOfWeek,
@@ -123,13 +140,13 @@ export class AIContextService {
    */
   private static detectEmotionalCycles(emotionHistory: any[]): Array<{ pattern: string; frequency: number; description: string; }> {
     const cycles: Array<{ pattern: string; frequency: number; description: string; }> = [];
-    
+
     if (emotionHistory.length < 3) return cycles;
-    
+
     // Analizza pattern di valence
     const valenceValues = emotionHistory.map(h => h.valence);
     const avgValence = valenceValues.reduce((sum, v) => sum + v, 0) / valenceValues.length;
-    
+
     if (avgValence < -0.2) {
       cycles.push({
         pattern: 'negative_valence',
@@ -143,11 +160,11 @@ export class AIContextService {
         description: 'Tendenza a stati d\'animo positivi'
       });
     }
-    
+
     // Analizza pattern di arousal
     const arousalValues = emotionHistory.map(h => h.arousal);
     const avgArousal = arousalValues.reduce((sum, a) => sum + a, 0) / arousalValues.length;
-    
+
     if (avgArousal > 0.7) {
       cycles.push({
         pattern: 'high_arousal',
@@ -161,7 +178,7 @@ export class AIContextService {
         description: 'Tendenza a stati di bassa attivazione'
       });
     }
-    
+
     return cycles;
   }
 
@@ -170,13 +187,13 @@ export class AIContextService {
    */
   private static detectSkinCycles(skinHistory: any[]): Array<{ pattern: string; frequency: number; description: string; }> {
     const cycles: Array<{ pattern: string; frequency: number; description: string; }> = [];
-    
+
     if (skinHistory.length < 2) return cycles;
-    
+
     // Analizza trend del punteggio generale
     const scores = skinHistory.map(h => h.overall_score);
     const avgScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
-    
+
     if (avgScore < 60) {
       cycles.push({
         pattern: 'low_skin_health',
@@ -190,7 +207,7 @@ export class AIContextService {
         description: 'Condizione della pelle generalmente buona'
       });
     }
-    
+
     // Analizza pattern di idratazione
     const hydrationScores = skinHistory.filter(h => h.hydration_score !== null).map(h => h.hydration_score);
     if (hydrationScores.length > 0) {
@@ -203,7 +220,7 @@ export class AIContextService {
         });
       }
     }
-    
+
     return cycles;
   }
 
@@ -211,8 +228,8 @@ export class AIContextService {
    * Genera insights comportamentali
    */
   private static generateBehavioralInsights(
-    emotionHistory: any[], 
-    skinHistory: any[], 
+    emotionHistory: any[],
+    skinHistory: any[],
     temporalPatterns: any
   ): {
     stressIndicators: string[];
@@ -224,13 +241,13 @@ export class AIContextService {
     const wellnessTriggers: string[] = [];
     const improvementAreas: string[] = [];
     const strengths: string[] = [];
-    
+
     // Analizza indicatori di stress
     if (emotionHistory.length > 0) {
       const recentEmotions = emotionHistory.slice(0, 3);
       const avgValence = recentEmotions.reduce((sum, e) => sum + e.valence, 0) / recentEmotions.length;
       const avgArousal = recentEmotions.reduce((sum, e) => sum + e.arousal, 0) / recentEmotions.length;
-      
+
       if (avgValence < -0.3) {
         stressIndicators.push('Umore persistentemente negativo');
       }
@@ -238,7 +255,7 @@ export class AIContextService {
         stressIndicators.push('Alto livello di attivazione/stress');
       }
     }
-    
+
     // Analizza trigger di benessere
     if (emotionHistory.length > 0) {
       const positiveEmotions = emotionHistory.filter(e => e.valence > 0.2);
@@ -246,7 +263,7 @@ export class AIContextService {
         wellnessTriggers.push('Tendenza a stati d\'animo positivi');
       }
     }
-    
+
     // Analizza aree di miglioramento
     if (skinHistory.length > 0) {
       const recentSkin = skinHistory[0];
@@ -260,7 +277,7 @@ export class AIContextService {
         improvementAreas.push('Texture della pelle');
       }
     }
-    
+
     // Identifica punti di forza
     if (skinHistory.length > 0) {
       const recentSkin = skinHistory[0];
@@ -271,7 +288,7 @@ export class AIContextService {
         strengths.push('Ottima idratazione della pelle');
       }
     }
-    
+
     return {
       stressIndicators,
       wellnessTriggers,
@@ -294,32 +311,32 @@ export class AIContextService {
   } {
     const environmentalFactors: string[] = [];
     const lifestyleIndicators: string[] = [];
-    
+
     // Analizza fattori ambientali basati sui pattern temporali
     if (temporalPatterns.timeOfDay === 'morning') {
       environmentalFactors.push('Periodo mattutino - energia in aumento');
     } else if (temporalPatterns.timeOfDay === 'evening') {
       environmentalFactors.push('Periodo serale - tempo di rilassamento');
     }
-    
+
     if (temporalPatterns.dayOfWeek === 'weekend') {
       environmentalFactors.push('Fine settimana - tempo libero');
     } else {
       environmentalFactors.push('Giorno lavorativo - routine quotidiana');
     }
-    
+
     // Analizza indicatori di stile di vita
     if (emotionHistory.length > 0) {
       const recentEmotions = emotionHistory.slice(0, 2);
       const avgValence = recentEmotions.reduce((sum, e) => sum + e.valence, 0) / recentEmotions.length;
-      
+
       if (avgValence > 0.3) {
         lifestyleIndicators.push('Stile di vita positivo e bilanciato');
       } else if (avgValence < -0.3) {
         lifestyleIndicators.push('Possibili fattori di stress nello stile di vita');
       }
     }
-    
+
     return {
       recentActivity: 'Analisi recenti completate',
       environmentalFactors,
@@ -334,7 +351,7 @@ export class AIContextService {
   static async getCompleteContext(userId: string, forceRefresh: boolean = false): Promise<AIContext> {
     try {
       const cacheKey = `ai_context:${userId}`;
-      
+
       // 🆕 Prova cache prima (se non forceRefresh)
       if (!forceRefresh) {
         const cached = await cacheService.get<AIContext>(cacheKey);
@@ -342,15 +359,51 @@ export class AIContextService {
           return cached;
         }
       }
-      
+
       // Building AI context (logging handled by backend)
 
       // Ottieni contesto emotivo e della pelle in parallelo
-      const [emotionContext, skinContext, correlations] = await Promise.all([
+      const [
+        emotionContext,
+        skinContext,
+        correlations,
+        foodHistory,
+        cycleData,
+        cycleNotes
+      ] = await Promise.all([
         EmotionAnalysisService.getEmotionContextForAI(userId),
         SkinAnalysisService.getSkinContextForAI(userId),
-        SkinAnalysisService.getEmotionSkinCorrelations(userId)
+        SkinAnalysisService.getEmotionSkinCorrelations(userId),
+        UnifiedAnalysisService.getInstance().getAnalysisHistoryByType('food'),
+        menstrualCycleService.getCycleData(),
+        menstrualCycleService.getRecentNotesForAI()
       ]);
+
+      // Calcola contesto nutrizionale
+      const today = new Date().toISOString().split('T')[0];
+      const todayFood = (foodHistory as any[]).filter(f => f.created_at.startsWith(today));
+
+      let todayCalories = 0;
+      let todayMacros = { protein: 0, carbs: 0, fat: 0 };
+      const recentMeals: string[] = [];
+
+      todayFood.forEach(f => {
+        if (f.result) {
+          todayCalories += f.result.calories || 0;
+          todayMacros.protein += f.result.macros?.protein || 0;
+          todayMacros.carbs += f.result.macros?.carbs || 0;
+          todayMacros.fat += f.result.macros?.fat || 0;
+          if (f.result.foodName) recentMeals.push(f.result.foodName);
+        }
+      });
+
+      // Contesto ciclo mestruale
+      const cycleContext = cycleData ? {
+        phase: (cycleData as any).phaseName,
+        day: (cycleData as any).day,
+        nextPeriodDays: (cycleData as any).nextPeriodDays,
+        recentNotes: cycleNotes
+      } : null;
 
       // Ottieni suggerimento wellness appropriato
       const suggestedSuggestion = await WellnessSuggestionService.getContextualSuggestion(
@@ -378,7 +431,7 @@ export class AIContextService {
         arousal: h.arousal,
         confidence: h.confidence
       }));
-      
+
       const skinHistory = skinContext.history.map(h => ({
         date: h.created_at,
         overallScore: h.overall_score,
@@ -390,14 +443,14 @@ export class AIContextService {
 
       // Analizza pattern temporali
       const temporalPatterns = this.analyzeTemporalPatterns(emotionHistory, skinHistory);
-      
+
       // Genera insights comportamentali
       const behavioralInsights = this.generateBehavioralInsights(
-        emotionHistory, 
-        skinHistory, 
+        emotionHistory,
+        skinHistory,
         temporalPatterns
       );
-      
+
       // Genera fattori contestuali
       const contextualFactors = this.generateContextualFactors(
         temporalPatterns,
@@ -408,10 +461,10 @@ export class AIContextService {
       // Determina urgenza e timing del suggerimento
       let urgency: 'low' | 'medium' | 'high' = 'low';
       let timing: 'immediate' | 'today' | 'this_week' = 'this_week';
-      
-      if (behavioralInsights.stressIndicators.length > 0 || 
-          emotionContext.trend === 'declining' || 
-          skinContext.trend === 'declining') {
+
+      if (behavioralInsights.stressIndicators.length > 0 ||
+        emotionContext.trend === 'declining' ||
+        skinContext.trend === 'declining') {
         urgency = 'high';
         timing = 'immediate';
       } else if (behavioralInsights.improvementAreas.length > 0) {
@@ -437,8 +490,16 @@ export class AIContextService {
         } : null,
         emotionHistory,
         skinHistory,
+        emotionHistory,
+        skinHistory,
         emotionTrend: emotionContext.trend,
         skinTrend: skinContext.trend,
+        nutritionContext: {
+          todayCalories,
+          todayMacros,
+          recentMeals
+        },
+        menstrualCycleContext: cycleContext,
         correlations: correlations.correlations,
         insights: correlations.insights,
         temporalPatterns,
@@ -465,7 +526,7 @@ export class AIContextService {
       return context;
     } catch (error) {
       console.error('Error building AI context:', error);
-      
+
       // Restituisci contesto vuoto in caso di errore
       return {
         userId,
@@ -475,6 +536,12 @@ export class AIContextService {
         skinHistory: [],
         emotionTrend: 'stable',
         skinTrend: 'stable',
+        nutritionContext: {
+          todayCalories: 0,
+          todayMacros: { protein: 0, carbs: 0, fat: 0 },
+          recentMeals: []
+        },
+        menstrualCycleContext: null,
         correlations: [],
         insights: [],
         temporalPatterns: {
@@ -545,18 +612,36 @@ export class AIContextService {
       promptContext += `\n- Trend pelle: ${context.skinTrend}`;
     }
 
+    // Contesto Nutrizionale
+    promptContext += `\n\nNUTRIZIONE OGGI:
+- Calorie assunte: ${context.nutritionContext.todayCalories} kcal
+- Macronutrienti: Proteine ${context.nutritionContext.todayMacros.protein}g, Carboidrati ${context.nutritionContext.todayMacros.carbs}g, Grassi ${context.nutritionContext.todayMacros.fat}g`;
+
+    if (context.nutritionContext.recentMeals.length > 0) {
+      promptContext += `\n- Pasti recenti: ${context.nutritionContext.recentMeals.join(', ')}`;
+    }
+
+    // Contesto Ciclo Mestruale
+    if (context.menstrualCycleContext) {
+      promptContext += `\n\nCICLO MESTRUALE:
+- Fase: ${context.menstrualCycleContext.phase}
+- Giorno del ciclo: ${context.menstrualCycleContext.day}
+- Prossimo ciclo tra: ${context.menstrualCycleContext.nextPeriodDays} giorni
+- Note recenti: ${context.menstrualCycleContext.recentNotes}`;
+    }
+
     // Pattern temporali
     promptContext += `\n\nCONTESTO TEMPORALE:
 - Periodo della giornata: ${context.temporalPatterns.timeOfDay}
 - Giorno della settimana: ${context.temporalPatterns.dayOfWeek}`;
-    
+
     if (context.temporalPatterns.emotionalCycles.length > 0) {
       promptContext += `\n- Cicli emotivi rilevati:`;
       context.temporalPatterns.emotionalCycles.forEach(cycle => {
         promptContext += `\n  • ${cycle.description} (frequenza: ${(cycle.frequency * 100).toFixed(0)}%)`;
       });
     }
-    
+
     if (context.temporalPatterns.skinCycles.length > 0) {
       promptContext += `\n- Cicli della pelle rilevati:`;
       context.temporalPatterns.skinCycles.forEach(cycle => {
@@ -571,21 +656,21 @@ export class AIContextService {
         promptContext += `\n- ${indicator}`;
       });
     }
-    
+
     if (context.behavioralInsights.wellnessTriggers.length > 0) {
       promptContext += `\n\nTRIGGER DI BENESSERE:`;
       context.behavioralInsights.wellnessTriggers.forEach(trigger => {
         promptContext += `\n- ${trigger}`;
       });
     }
-    
+
     if (context.behavioralInsights.improvementAreas.length > 0) {
       promptContext += `\n\nAREE DI MIGLIORAMENTO:`;
       context.behavioralInsights.improvementAreas.forEach(area => {
         promptContext += `\n- ${area}`;
       });
     }
-    
+
     if (context.behavioralInsights.strengths.length > 0) {
       promptContext += `\n\nPUNTI DI FORZA:`;
       context.behavioralInsights.strengths.forEach(strength => {
@@ -600,7 +685,7 @@ export class AIContextService {
         promptContext += `\n- ${factor}`;
       });
     }
-    
+
     if (context.contextualFactors.lifestyleIndicators.length > 0) {
       promptContext += `\n\nINDICATORI DI STILE DI VITA:`;
       context.contextualFactors.lifestyleIndicators.forEach(indicator => {
@@ -638,7 +723,7 @@ export class AIContextService {
   }> {
     try {
       const context = await this.getCompleteContext(userId);
-      
+
       if (!context.suggestedWellnessSuggestion) {
         return {
           suggestion: null,
@@ -647,7 +732,7 @@ export class AIContextService {
       }
 
       // Determina se mostrare il banner basato su urgenza e fattori contestuali
-      const shouldShowBanner = 
+      const shouldShowBanner =
         context.suggestedWellnessSuggestion?.urgency === 'high' ||
         context.suggestedWellnessSuggestion?.urgency === 'medium' ||
         context.behavioralInsights.stressIndicators.length > 0 ||

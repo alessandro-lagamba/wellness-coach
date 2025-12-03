@@ -46,7 +46,6 @@
     "biometricSecurityDescription": "Gestisci login Face ID / Touch ID",
     "appConfig": "Configurazione App",
     "appConfigDescription": "Controlla l'esperienza dell'app",
-    "notifications": "Notifiche",
     "notificationsTitle": "Notifiche",
     "notificationsDescription": "Definisci promemoria e avvisi",
     "subscription": "Abbonamento",
@@ -499,6 +498,12 @@
     }
   },
   "analysis": {
+    "gauge": {
+      "excellent": "Eccellente",
+      "good": "Buono",
+      "fair": "Discreto",
+      "poor": "Scarso"
+    },
     "emotion": {
       "card": {
         "lastTitle": "Ultima analisi emotiva",
@@ -525,7 +530,7 @@
       "title": "Analisi Emotiva",
       "capture": "Cattura",
       "analyze": "Analizza",
-      "results": "Risultati",
+      "resultsLabel": "Risultati",
       "startDetection": "Avvia rilevamento",
       "selectFromGallery": "Seleziona dalla galleria",
       "analyzingExpressions": "Analisi delle espressioni",
@@ -535,8 +540,14 @@
       "readyToScan": "Pronto per scansionare",
       "saved": "{{count}} salvati",
       "noneYet": "Nessuno ancora",
-      "recent": { "title": "Ultima sessione", "subtitle": "I risultati più recenti dell'analisi emotiva" },
-      "quickStats": { "title": "Statistiche rapide", "subtitle": "Panoramica del tuo benessere emotivo" },
+      "recent": {
+        "title": "Ultima sessione",
+        "subtitle": "I risultati più recenti dell'analisi emotiva"
+      },
+      "quickStats": {
+        "title": "Statistiche rapide",
+        "subtitle": "Panoramica del tuo benessere emotivo"
+      },
       "trends": {
         "title": "Trend Emotivi",
         "subtitle": "Andamento di 7 giorni del tuo stato emotivo",
@@ -554,7 +565,10 @@
         "totalSessions": "Sessioni totali",
         "dominantEmotion": "Emozione dominante"
       },
-      "valenceArousal": { "title": "Valence & Arousal", "subtitle": "Comprendi positività e intensità delle emozioni" },
+      "valenceArousal": {
+        "title": "Valence & Arousal",
+        "subtitle": "Comprendi positività e intensità delle emozioni"
+      },
       "metrics": {
         "valence": "Valence",
         "positivity": "Positività",
@@ -755,17 +769,45 @@
         "sampleHint": "Completa la tua prima analisi per vedere i risultati reali"
       },
       "metricExplainers": {
-        "texture": { "why": "Indica uniformità e levigatezza della pelle.", "how": "Analisi delle irregolarità superficiali." },
-        "redness": { "why": "Stima arrossamento/irritazione visibile.", "how": "Analisi dei segnali cromatici cutanei." },
-        "hydration": { "why": "Contenuto d'acqua superficiale.", "how": "Stima dell'idratazione da pattern cutanei." },
-        "oiliness": { "why": "Equilibrio del sebo e lucidità.", "how": "Rilevazione della brillantezza superficiale." },
-        "overall": { "label": "Salute della Pelle", "why": "Indice sintetico dei parametri chiave.", "how": "Combinazione di uniformità, rossore, idratazione e oleosità." }
+        "texture": {
+          "why": "Indica uniformità e levigatezza della pelle.",
+          "how": "Analisi delle irregolarità superficiali."
+        },
+        "redness": {
+          "why": "Stima arrossamento/irritazione visibile.",
+          "how": "Analisi dei segnali cromatici cutanei."
+        },
+        "hydration": {
+          "why": "Contenuto d'acqua superficiale.",
+          "how": "Stima dell'idratazione da pattern cutanei."
+        },
+        "oiliness": {
+          "why": "Equilibrio del sebo e lucidità.",
+          "how": "Rilevazione della brillantezza superficiale."
+        },
+        "overall": {
+          "label": "Salute della Pelle",
+          "why": "Indice sintetico dei parametri chiave.",
+          "how": "Combinazione di uniformità, rossore, idratazione e oleosità."
+        }
       },
       "guides": {
-        "smoothness": { "title": "Guida miglioramento texture", "description": "Suggerimenti personalizzati per una pelle più uniforme." },
-        "redness": { "title": "Guida riduzione infiammazione", "description": "Come calmare pelle irritata e sensibile." },
-        "oiliness": { "title": "Guida bilanciamento sebo", "description": "Controlla l'eccesso di sebo con consigli mirati." },
-        "confidence": { "title": "Suggerimenti qualità analisi", "description": "Ottieni risultati di analisi più accurati." }
+        "smoothness": {
+          "title": "Guida miglioramento texture",
+          "description": "Suggerimenti personalizzati per una pelle più uniforme."
+        },
+        "redness": {
+          "title": "Guida riduzione infiammazione",
+          "description": "Come calmare pelle irritata e sensibile."
+        },
+        "oiliness": {
+          "title": "Guida bilanciamento sebo",
+          "description": "Controlla l'eccesso di sebo con consigli mirati."
+        },
+        "confidence": {
+          "title": "Suggerimenti qualità analisi",
+          "description": "Ottieni risultati di analisi più accurati."
+        }
       },
       "header": {
         "hydrationReadiness": "Prontezza idratazione",
@@ -781,8 +823,14 @@
         "subtitle": "Misura idratazione, rossore e texture con una scansione guidata."
       },
       "start": "Avvia analisi pelle",
-      "recent": { "title": "Analisi recente", "subtitle": "I risultati più recenti" },
-      "quickStats": { "title": "Statistiche rapide", "subtitle": "Panoramica della salute della pelle" },
+      "recent": {
+        "title": "Analisi recente",
+        "subtitle": "I risultati più recenti"
+      },
+      "quickStats": {
+        "title": "Statistiche rapide",
+        "subtitle": "Panoramica della salute della pelle"
+      },
       "trends": {
         "title": "Trend del punteggio pelle",
         "subtitle": "Andamento di 7 giorni delle metriche cutanee",
@@ -860,8 +908,8 @@
         "analysisNotes": "Note di Analisi",
         "personalizedRecommendations": "Raccomandazioni Personalizzate",
         "healthScore": "Punteggio Salute Pelle",
-        "excellent": "Condizione Eccellente",
-        "good": "Condizione Buona",
+        "excellentCondition": "Condizione Eccellente",
+        "goodCondition": "Condizione Buona",
         "needsAttention": "Richiede Attenzione",
         "recommendation": "Consiglio per la Pelle",
         "detectedIssue": "Problema Rilevato",
@@ -935,7 +983,7 @@
       "title": "Analisi Pelle",
       "capture": "Cattura",
       "analyze": "Analizza",
-      "results": "Risultati",
+      "resultsLabel": "Risultati",
       "startAnalysis": "Avvia analisi",
       "selectFromGallery": "Seleziona dalla galleria",
       "analyzingSkin": "Analisi della pelle",
@@ -978,7 +1026,7 @@
       "title": "Analisi Cibo",
       "capture": "Cattura",
       "analyze": "Analizza",
-      "results": "Risultati",
+      "resultsLabel": "Risultati",
       "startAnalysis": "Avvia Analisi",
       "selectFromGallery": "Seleziona dalla galleria",
       "analyzingFood": "Analisi del cibo",
@@ -986,6 +1034,27 @@
       "recent": {
         "title": "Ultima Analisi",
         "subtitle": "La tua analisi nutrizionale più recente"
+      },
+      "calorieHistory": {
+        "title": "Storico Calorie",
+        "consumed": "Assunte",
+        "target": "Obiettivo",
+        "onTarget": "In Obiettivo",
+        "surplus": "Eccesso",
+        "deficit": "Deficit",
+        "todayStatus": "Stato di Oggi",
+        "last14Days": "Ultimi 14 Giorni",
+        "noData": "Nessun dato storico disponibile",
+        "weeklyStats": "Statistiche Settimanali",
+        "avgDaily": "Media Giornaliera",
+        "daysOnTarget": "Giorni in Obiettivo",
+        "trend": "Trend vs Settimana Scorsa",
+        "weeklyDeficit": "deficit totale",
+        "weeklySurplus": "eccesso totale",
+        "tipTitle": "Consiglio Dietetico",
+        "tipWeightLoss": "Mantieni un leggero deficit calorico per perdere peso in modo sostenibile.",
+        "tipBulk": "Assicurati di essere in leggero surplus con abbastanza proteine per costruire muscoli.",
+        "tipMaintenance": "Ottimo lavoro nel mantenere il tuo equilibrio calorico!"
       },
       "card": {
         "lastTitle": "Ultima Analisi",
@@ -1352,6 +1421,12 @@
           "bulk": "Aumento Peso",
           "custom": "Personalizzato"
         },
+        "bmi": {
+          "underweight": "Sottopeso",
+          "normal": "Normopeso",
+          "overweight": "Sovrappeso",
+          "obese": "Obesità"
+        },
         "missingData": "Dati Mancanti",
         "missingDataDesc": "Completa il tuo profilo con età, peso, altezza e genere per ottenere un suggerimento AI preciso.",
         "missingActivityLevel": "Livello di Attività Mancante",
@@ -1396,8 +1471,8 @@
     }
   },
   "ui": {
-    "tapToExpand": "Tocca per espandere",
-    "tapToCollapse": "Tocca per ridurre",
+    "tapToExpand": "Tocca per espandere i dettagli",
+    "tapToCollapse": "Tocca per ridurre i dettagli",
     "whyItMatters": "Perché è importante",
     "howItWorks": "Come funziona",
     "analysisInProgress": "ANALISI IN CORSO",
@@ -1572,85 +1647,85 @@
         "other": "Altro"
       }
     },
-        "widgetGoal": {
-          "subtitle": "Imposta il tuo obiettivo giornaliero preferito.",
-          "rangeHint": "Min {{min}} • Max {{max}} (passo {{step}})",
-          "steps": {
-            "title": "Obiettivo Passi Giornaliero",
-            "unit": "passi",
-            "hint": "es. 10000"
-          },
-          "hydration": {
-            "title": "Obiettivo Idratazione",
-            "unit": "bicchieri",
-            "hint": "es. 8",
-            "selectUnit": "Seleziona unità di misura",
-            "unitInfo": "{{ml}}ml per {{unit}}",
-            "units": {
-              "glass": "Bicchiere",
-              "bottle": "Bottiglia",
-              "liter": "Litri"
-            }
-          },
-          "meditation": {
-            "title": "Obiettivo Meditazione",
-            "unit": "minuti",
-            "hint": "es. 30"
-          },
-          "sleep": {
-            "title": "Obiettivo Sonno",
-            "unit": "ore",
-            "hint": "es. 8"
-          }
-        },
-        "biometric": {
-          "title": "Biometric Security",
-          "useTitle": "Usa {{type}}",
-          "notAvailableTitle": "Biometrico Non Disponibile",
-          "description": "Abilita l'autenticazione biometrica per accedere all'app in modo sicuro e veloce usando {{type}}.",
-          "notSupported": "Il tuo dispositivo non supporta l'autenticazione biometrica.",
-          "currentStatus": "Stato Attuale",
-          "enabled": "Abilitato",
-          "disabled": "Disabilitato",
-          "benefits": "Vantaggi",
-          "benefit1": "Accesso sicuro e veloce",
-          "benefit2": "Nessuna password da ricordare",
-          "benefit3": "Protezione avanzata",
-          "privacyNote": "I tuoi dati biometrici rimangono sempre privati e non vengono mai condivisi.",
-          "notAvailable": "Non disponibile",
-          "notAvailableMessage": "I dati biometrici non sono disponibili su questo dispositivo",
-          "enableTitle": "Abilita Autenticazione Biometrica",
-          "enableMessage": "Inserisci la tua password per salvare i dati biometrici",
-          "enable": "Abilita",
-          "passwordRequired": "La password è obbligatoria",
-          "incorrectPassword": "Password non corretta",
-          "enabledSuccess": "Autenticazione biometrica abilitata!\nPotrai accedere usando {{type}} al prossimo accesso.",
-          "enableError": "Impossibile abilitare l'autenticazione biometrica",
-          "disabledSuccess": "Autenticazione biometrica disabilitata",
-          "disableError": "Impossibile disabilitare l'autenticazione biometrica"
-        },
-        "biometricSetup": {
-          "title": "Autenticazione Biometrica",
-          "subtitle": "Configura {{type}} per un accesso rapido e sicuro",
-          "checkingCapabilities": "Verifica delle capacità del dispositivo...",
-          "availableOnDevice": "{{type}} disponibile su questo dispositivo",
-          "credentialsProtected": "Le tue credenziali sono protette con crittografia end-to-end",
-          "notAvailable": "Autenticazione biometrica non disponibile",
-          "configureInSettings": "Configura l'autenticazione biometrica nelle impostazioni del dispositivo",
-          "skipForNow": "Salta per ora",
-          "configure": "Configura {{type}}",
-          "credentialsNotAvailable": "Credenziali non disponibili per la configurazione biometrica",
-          "cannotSaveCredentials": "Impossibile salvare le credenziali",
-          "setupSuccess": "L'autenticazione {{type}} è stata configurata con successo. D'ora in poi potrai accedere rapidamente all'app.",
-          "perfect": "Perfetto!",
-          "setupError": "Si è verificato un errore durante la configurazione"
-        },
-        "biometricSuggestion": {
-          "title": "Autenticazione Biometrica",
-          "enableTitle": "Abilita {{type}}",
-          "description": "Usa {{type}} per accedere rapidamente all'app senza inserire password."
+    "widgetGoal": {
+      "subtitle": "Imposta il tuo obiettivo giornaliero preferito.",
+      "rangeHint": "Min {{min}} • Max {{max}} (passo {{step}})",
+      "steps": {
+        "title": "Obiettivo Passi Giornaliero",
+        "unit": "passi",
+        "hint": "es. 10000"
+      },
+      "hydration": {
+        "title": "Obiettivo Idratazione",
+        "unit": "bicchieri",
+        "hint": "es. 8",
+        "selectUnit": "Seleziona unità di misura",
+        "unitInfo": "{{ml}}ml per {{unit}}",
+        "units": {
+          "glass": "Bicchiere",
+          "bottle": "Bottiglia",
+          "liter": "Litri"
         }
+      },
+      "meditation": {
+        "title": "Obiettivo Meditazione",
+        "unit": "minuti",
+        "hint": "es. 30"
+      },
+      "sleep": {
+        "title": "Obiettivo Sonno",
+        "unit": "ore",
+        "hint": "es. 8"
+      }
     },
+    "biometric": {
+      "title": "Biometric Security",
+      "useTitle": "Usa {{type}}",
+      "notAvailableTitle": "Biometrico Non Disponibile",
+      "description": "Abilita l'autenticazione biometrica per accedere all'app in modo sicuro e veloce usando {{type}}.",
+      "notSupported": "Il tuo dispositivo non supporta l'autenticazione biometrica.",
+      "currentStatus": "Stato Attuale",
+      "enabled": "Abilitato",
+      "disabled": "Disabilitato",
+      "benefits": "Vantaggi",
+      "benefit1": "Accesso sicuro e veloce",
+      "benefit2": "Nessuna password da ricordare",
+      "benefit3": "Protezione avanzata",
+      "privacyNote": "I tuoi dati biometrici rimangono sempre privati e non vengono mai condivisi.",
+      "notAvailable": "Non disponibile",
+      "notAvailableMessage": "I dati biometrici non sono disponibili su questo dispositivo",
+      "enableTitle": "Abilita Autenticazione Biometrica",
+      "enableMessage": "Inserisci la tua password per salvare i dati biometrici",
+      "enable": "Abilita",
+      "passwordRequired": "La password è obbligatoria",
+      "incorrectPassword": "Password non corretta",
+      "enabledSuccess": "Autenticazione biometrica abilitata!\nPotrai accedere usando {{type}} al prossimo accesso.",
+      "enableError": "Impossibile abilitare l'autenticazione biometrica",
+      "disabledSuccess": "Autenticazione biometrica disabilitata",
+      "disableError": "Impossibile disabilitare l'autenticazione biometrica"
+    },
+    "biometricSetup": {
+      "title": "Autenticazione Biometrica",
+      "subtitle": "Configura {{type}} per un accesso rapido e sicuro",
+      "checkingCapabilities": "Verifica delle capacità del dispositivo...",
+      "availableOnDevice": "{{type}} disponibile su questo dispositivo",
+      "credentialsProtected": "Le tue credenziali sono protette con crittografia end-to-end",
+      "notAvailable": "Autenticazione biometrica non disponibile",
+      "configureInSettings": "Configura l'autenticazione biometrica nelle impostazioni del dispositivo",
+      "skipForNow": "Salta per ora",
+      "configure": "Configura {{type}}",
+      "credentialsNotAvailable": "Credenziali non disponibili per la configurazione biometrica",
+      "cannotSaveCredentials": "Impossibile salvare le credenziali",
+      "setupSuccess": "L'autenticazione {{type}} è stata configurata con successo. D'ora in poi potrai accedere rapidamente all'app.",
+      "perfect": "Perfetto!",
+      "setupError": "Si è verificato un errore durante la configurazione"
+    },
+    "biometricSuggestion": {
+      "title": "Autenticazione Biometrica",
+      "enableTitle": "Abilita {{type}}",
+      "description": "Usa {{type}} per accedere rapidamente all'app senza inserire password."
+    }
+  },
   "onboarding": {
     "skip": "Salta",
     "startJourney": "Inizia il tuo viaggio",
@@ -1962,7 +2037,7 @@
     "featureUnlocked3": "Coaching personalizzato",
     "continueToApp": "Continua",
     "autoCloseHint": "Chiusura automatica in 3 secondi...",
-    "verifyEmailStep3": "L'app si aprirà automaticamente"
+    "verifyEmailStep3Auto": "L'app si aprirà automaticamente"
   },
   "profile": {
     "title": "Informazioni Personali",
@@ -1998,6 +2073,7 @@
     "hydration": "Idratazione",
     "sleep": "Sonno",
     "hrv": "HRV",
+    "calories": "Calorie",
     "analyses": "Check-In",
     "cycle": "Ciclo",
     "checkIn": "Check-In",

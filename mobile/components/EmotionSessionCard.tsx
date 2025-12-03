@@ -184,7 +184,7 @@ const MetricTile: React.FC<{
         </View>
 
         <View style={[styles.tapRow, { backgroundColor: `${valueColor}15` }]}>
-          <Text style={[styles.tapHint, { color: valueColor }]}>{expanded ? t('ui.close') : t('analysis.emotion.sessionCard.tapToExpand')}</Text>
+          <Text style={[styles.tapHint, { color: valueColor }]}>{expanded ? t('common.close') : t('analysis.emotion.sessionCard.tapToExpand')}</Text>
           <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={16} color={valueColor} />
         </View>
       </TouchableOpacity>
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
   progressFill: { height: '100%', borderRadius: 999 },
   tapRow: {
     marginTop: 10,
-    flexDirection: 'row', 
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
     alignSelf: 'flex-end',

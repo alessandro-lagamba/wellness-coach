@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BucketInfo, TrendInfo } from '../services/metrics.service';
 import { ActionInfo } from '../services/actions.service';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface EnhancedScoreTileProps {
   metric: string;
@@ -41,9 +42,49 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
   expanded = false,
 }) => {
   const { colors, mode } = useTheme();
+  const { t, language } = useTranslation();
   const isDark = mode === 'dark';
   const [isExpanded, setIsExpanded] = useState(expanded);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  // 🔥 FIX: Traduce le etichette dei bucket dinamicamente
+  const translateBucketLabel = (label: string): string => {
+    const translations: { [key: string]: { it: string; en: string } } = {
+      // Texture
+      'ROUGH': { it: 'RUVIDA', en: 'ROUGH' },
+      'FAIR': { it: 'DISCRETA', en: 'FAIR' },
+      'GOOD': { it: 'BUONA', en: 'GOOD' },
+      'EXCELLENT': { it: 'ECCELLENTE', en: 'EXCELLENT' },
+      // Redness
+      'LOW': { it: 'BASSO', en: 'LOW' },
+      'MILD': { it: 'LIEVE', en: 'MILD' },
+      'MODERATE': { it: 'MODERATO', en: 'MODERATE' },
+      'HIGH': { it: 'ALTO', en: 'HIGH' },
+      // Hydration
+      'BELOW OPTIMAL': { it: 'SOTTO OTTIMALE', en: 'BELOW OPTIMAL' },
+      'OPTIMAL': { it: 'OTTIMALE', en: 'OPTIMAL' },
+      // Oiliness
+      'DRY': { it: 'SECCA', en: 'DRY' },
+      'BALANCED': { it: 'EQUILIBRATA', en: 'BALANCED' },
+      'OILY': { it: 'OLEOSA', en: 'OILY' },
+      'VERY OILY': { it: 'MOLTO OLEOSA', en: 'VERY OILY' },
+      // Overall
+      'POOR': { it: 'SCARSA', en: 'POOR' },
+      // Emotion
+      'NEGATIVE': { it: 'NEGATIVA', en: 'NEGATIVE' },
+      'NEUTRAL': { it: 'NEUTRA', en: 'NEUTRAL' },
+      'POSITIVE': { it: 'POSITIVA', en: 'POSITIVE' },
+      'VERY POSITIVE': { it: 'MOLTO POSITIVA', en: 'VERY POSITIVE' },
+      'MEDIUM': { it: 'MEDIA', en: 'MEDIUM' },
+      'VERY HIGH': { it: 'MOLTO ALTA', en: 'VERY HIGH' },
+    };
+    
+    const upperLabel = label.toUpperCase();
+    if (translations[upperLabel]) {
+      return translations[upperLabel][language as 'it' | 'en'] || label;
+    }
+    return label;
+  };
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -108,7 +149,7 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
           {bucket && (
             <View style={[styles.bucketBadge, { backgroundColor: bucket.color + '15' }]}>
               <Text style={[styles.bucketText, { color: bucket.color }]}>
-                {bucket.label}
+                {translateBucketLabel(bucket.label)}
               </Text>
             </View>
           )}

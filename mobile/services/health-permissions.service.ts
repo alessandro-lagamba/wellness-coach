@@ -566,6 +566,18 @@ export class HealthPermissionsService {
     permissionIds: string[]
   ): Promise<{ success: boolean; granted: string[]; denied: string[] }> {
     try {
+      // 🔥 FIX: Verifica che AppleHealthKit e initHealthKit siano disponibili
+      if (!AppleHealthKit || typeof AppleHealthKit.initHealthKit !== 'function') {
+        console.warn('[HealthPermissions] AppleHealthKit.initHealthKit is not available - HealthKit may not be properly linked');
+        // 🔥 FIX: NON salvare i permessi se HealthKit non è disponibile
+        // Questo è il comportamento corretto per iOS Simulator o se la libreria non è linkata
+        return {
+          success: false,
+          granted: [],
+          denied: permissionIds,
+        };
+      }
+      
       const permissions: any = {};
       
       // Mappa i permessi richiesti
@@ -580,24 +592,34 @@ export class HealthPermissionsService {
       });
 
       return new Promise((resolve) => {
-        AppleHealthKit.initHealthKit(permissions, (error: string) => {
-          if (error) {
-            console.error('Error requesting HealthKit permissions:', error);
-            resolve({
-              success: false,
-              granted: [],
-              denied: permissionIds,
-            });
-          } else {
-            // Salva i permessi concessi
-            this.saveGrantedPermissions(permissionIds);
-            resolve({
-              success: true,
-              granted: permissionIds,
-              denied: [],
-            });
-          }
-        });
+        try {
+          AppleHealthKit.initHealthKit(permissions, (error: string) => {
+            if (error) {
+              console.error('Error requesting HealthKit permissions:', error);
+              resolve({
+                success: false,
+                granted: [],
+                denied: permissionIds,
+              });
+            } else {
+              // Salva i permessi concessi
+              this.saveGrantedPermissions(permissionIds);
+              resolve({
+                success: true,
+                granted: permissionIds,
+                denied: [],
+              });
+            }
+          });
+        } catch (initError) {
+          console.warn('[HealthPermissions] initHealthKit call failed:', initError);
+          // 🔥 FIX: NON salvare i permessi se la chiamata fallisce
+          resolve({
+            success: false,
+            granted: [],
+            denied: permissionIds,
+          });
+        }
       });
     } catch (error) {
       console.error('Error requesting HealthKit permissions:', error);
@@ -715,6 +737,36 @@ export class HealthPermissionsService {
    */
   static async getGrantedPermissions(): Promise<string[]> {
     try {
+      // 🔥 FIX: Per iOS, verifica che HealthKit sia disponibile prima di restituire permessi
+      if (Platform.OS === 'ios') {
+        if (!AppleHealthKit || typeof AppleHealthKit.isAvailable !== 'function') {
+          // HealthKit non disponibile - cancella eventuali permessi salvati incorrettamente
+          await AsyncStorage.removeItem(this.STORAGE_KEYS.PERMISSIONS_GRANTED);
+          return [];
+        }
+        
+        // Verifica disponibilità HealthKit
+        const isAvailable = await new Promise<boolean>((resolve) => {
+          try {
+            AppleHealthKit.isAvailable((error: any, results: boolean) => {
+              resolve(!error && results === true);
+            });
+          } catch {
+            resolve(false);
+          }
+        });
+        
+        if (!isAvailable) {
+          // HealthKit non disponibile - cancella eventuali permessi salvati incorrettamente
+          await AsyncStorage.removeItem(this.STORAGE_KEYS.PERMISSIONS_GRANTED);
+          return [];
+        }
+        
+        // HealthKit disponibile - leggi da AsyncStorage
+        const permissions = await AsyncStorage.getItem(this.STORAGE_KEYS.PERMISSIONS_GRANTED);
+        return permissions ? JSON.parse(permissions) : [];
+      }
+      
       if (Platform.OS === 'android' && hasHC && HealthConnect) {
         try {
           if (HealthConnect.initialize && typeof HealthConnect.initialize === 'function') {

@@ -9,20 +9,22 @@ import { useTheme } from "../contexts/ThemeContext"
 type WidgetSize = "small" | "medium" | "large"
 
 type StepsDetails = { current: number; goal: number; km?: number; calories?: number }
-type HydrationDetails = { 
+type HydrationDetails = {
   glasses: number; // 🔥 FIX: Ora contiene il valore in unità preferita (non sempre bicchieri)
   goal: number; // 🔥 FIX: Goal in unità preferita
-  ml?: number; 
+  ml?: number;
   lastDrink?: string;
   preferredUnit?: 'glass' | 'bottle' | 'liter'; // 🆕 Unità preferita
   unitLabel?: string; // 🆕 Etichetta unità (es. "bicchiere", "bottiglia", "litro")
 }
 type MeditationDetails = { minutes: number; goal: number; sessions?: number; streak?: number; favoriteType?: string }
+type CalorieDetails = { current: number; goal: number; carbs: number; protein: number; fat: number }
 
 type AdditionalData =
   | { steps: StepsDetails }
   | { hydration: HydrationDetails }
   | { meditation: MeditationDetails }
+  | { calories: CalorieDetails }
 
 interface Props {
   value: number
@@ -94,6 +96,22 @@ const MiniGaugeChart: React.FC<Props> = memo(({
       const chips = [{ icon: "meditation", label: "Today", value: `${d.minutes} min` }]
       if (size === "large" && d.sessions) chips.push({ icon: "calendar-check", label: "Sessions", value: `${d.sessions}` })
       if (size === "large" && d.streak) chips.push({ icon: "fire", label: "Streak", value: `${d.streak}d` })
+      return chips
+    }
+    if ("calories" in additionalData) {
+      const d = additionalData.calories
+      // For Large size, show only current calories. For Medium, show current/goal.
+      const valueDisplay = size === "large" ? `${d.current}` : `${d.current}/${d.goal}`
+
+      const chips = [{ icon: "fire", label: "Calories", value: valueDisplay }]
+      if (size === "large" || size === "medium") {
+        chips.push({ icon: "barley", label: "Carbs", value: `${d.carbs}g` })
+        chips.push({ icon: "food-drumstick", label: "Protein", value: `${d.protein}g` })
+        // Only show fat if we have space (Large size usually fits 3 chips comfortably)
+        if (size === "large") {
+          chips.push({ icon: "oil", label: "Fat", value: `${d.fat}g` })
+        }
+      }
       return chips
     }
     return []

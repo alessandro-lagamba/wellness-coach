@@ -110,6 +110,43 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
 
     // Common patterns
     const patterns: { pattern: RegExp; replacement: string }[] = [
+      // AU (Action Unit) translations
+      { pattern: /AU1\d?:/gi, replacement: (m) => m }, // Keep AU codes as-is for clarity
+      { pattern: /lip corner puller/gi, replacement: 'sollevamento angolo labbra' },
+      { pattern: /clear smile/gi, replacement: 'sorriso evidente' },
+      { pattern: /cheek raiser/gi, replacement: 'sollevamento guance' },
+      { pattern: /crow\'?s feet/gi, replacement: 'zampe di gallina' },
+      { pattern: /inner brow raiser/gi, replacement: 'sollevamento sopracciglio interno' },
+      { pattern: /outer brow raiser/gi, replacement: 'sollevamento sopracciglio esterno' },
+      { pattern: /brow lowerer/gi, replacement: 'abbassamento sopracciglia' },
+      { pattern: /upper lid raiser/gi, replacement: 'sollevamento palpebra superiore' },
+      { pattern: /nose wrinkler/gi, replacement: 'arricciamento naso' },
+      { pattern: /lip stretcher/gi, replacement: 'stiramento labbra' },
+      { pattern: /lip corner depressor/gi, replacement: 'abbassamento angolo labbra' },
+      { pattern: /chin raiser/gi, replacement: 'sollevamento mento' },
+      { pattern: /lip pressor/gi, replacement: 'pressione labbra' },
+      { pattern: /jaw drop/gi, replacement: 'apertura mandibola' },
+      { pattern: /is present/gi, replacement: 'è presente' },
+      { pattern: /is visible/gi, replacement: 'è visibile' },
+      { pattern: /is detected/gi, replacement: 'è rilevato' },
+      { pattern: /is slightly/gi, replacement: 'è leggermente' },
+      { pattern: /slightly open/gi, replacement: 'leggermente aperta' },
+      { pattern: /slightly squinted/gi, replacement: 'leggermente socchiusi' },
+      { pattern: /indicating happiness/gi, replacement: 'indicando felicità' },
+      { pattern: /indicating sadness/gi, replacement: 'indicando tristezza' },
+      { pattern: /indicating surprise/gi, replacement: 'indicando sorpresa' },
+      { pattern: /indicating anger/gi, replacement: 'indicando rabbia' },
+      { pattern: /indicating fear/gi, replacement: 'indicando paura' },
+      { pattern: /indicating disgust/gi, replacement: 'indicando disgusto' },
+      { pattern: /appears positive/gi, replacement: 'appare positiva' },
+      { pattern: /appears negative/gi, replacement: 'appare negativa' },
+      { pattern: /Mouth is rilassato/gi, replacement: 'La bocca è rilassata' },
+      { pattern: /Mouth is/gi, replacement: 'La bocca è' },
+      { pattern: /Eyes are/gi, replacement: 'Gli occhi sono' },
+      { pattern: /Overall/gi, replacement: 'Complessivamente' },
+      { pattern: /l\'espressione facciale/gi, replacement: 'l\'espressione facciale' },
+      
+      // Original patterns
       { pattern: /face is partially occluded by/gi, replacement: 'il viso è parzialmente coperto da' },
       { pattern: /facial expression is mostly/gi, replacement: 'l\'espressione facciale è principalmente' },
       { pattern: /facial expression appears/gi, replacement: 'l\'espressione facciale appare' },
@@ -130,6 +167,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
       { pattern: /relaxed/gi, replacement: 'rilassato' },
       { pattern: /tired/gi, replacement: 'stanco' },
       { pattern: /fatigued/gi, replacement: 'affaticato' },
+      { pattern: /and/gi, replacement: 'e' },
     ];
 
     for (const { pattern, replacement } of patterns) {
@@ -338,7 +376,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
   };
 
   return (
-    <SafeAreaWrapper style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right', 'bottom']}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -473,13 +511,13 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
       </ScrollView>
 
       {/* Bottom Action Bar */}
-      <View
+      <SafeAreaView
+        edges={['bottom']}
         style={[
           styles.bottomBar,
           { 
             backgroundColor: colors.background, 
             borderTopColor: isDark ? 'rgba(148,163,184,0.18)' : 'rgba(15,23,42,0.08)',
-            paddingBottom: insets.bottom, // 🔥 FIX: Rispetta gli insets bottom per i tasti di navigazione Android
           },
         ]}
       >
@@ -497,9 +535,9 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
               style={[styles.secondaryButton, { borderColor: colors.border }]}
               onPress={onRetake}
             >
-              <MaterialCommunityIcons name="camera-retake" size={20} color={colors.text} />
+              <MaterialCommunityIcons name="camera-retake" size={18} color={colors.text} />
               <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-                {t('analysis.emotion.results.retake') || 'Retake'}
+                {language === 'it' ? 'Ripeti' : 'Retake'}
               </Text>
             </TouchableOpacity>
 
@@ -518,8 +556,8 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
-    </SafeAreaWrapper>
+      </SafeAreaView>
+    </View>
   );
 };
 
@@ -566,14 +604,13 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     borderWidth: 1,
     marginHorizontal: 16,
-    marginBottom: Platform.OS === 'ios' ? 18 : 12,
+    marginBottom: 12,
     overflow: 'hidden',
   },
   bottomBarContent: {
     flexDirection: 'row',
-    padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    gap: 16,
+    padding: 16,
+    gap: 12,
   },
   secondaryButton: {
     flex: 1,

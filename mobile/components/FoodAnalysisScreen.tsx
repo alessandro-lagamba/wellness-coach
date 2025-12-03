@@ -70,6 +70,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 import { useFocusEffect } from 'expo-router';
 import { NutritionalGoalsModal } from './NutritionalGoalsModal';
+import { CalorieHistoryModal } from './CalorieHistoryModal';
 import { FridgeIngredientsModal } from './FridgeIngredientsModal';
 import { RecipeDetailModal } from './RecipeDetailModal';
 import { RecipeHubModal } from './RecipeHubModal';
@@ -480,6 +481,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
   const [showFridgeModal, setShowFridgeModal] = useState(false);
   const [recipeHubVisible, setRecipeHubVisible] = useState(false);
   const [selectedPlannerDate, setSelectedPlannerDate] = useState(new Date());
+  const [showCalorieHistory, setShowCalorieHistory] = useState(false);
 
   // Modal per dettagli ricetta
   const [showRecipeModal, setShowRecipeModal] = useState(false);
@@ -848,7 +850,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
       // ✅ FIX: Verifica se copilotEvents esiste prima di usarlo
       const copilotModule = require('react-native-copilot');
       const copilotEvents = copilotModule.copilotEvents;
-      
+
       if (copilotEvents && typeof copilotEvents.on === 'function') {
         const listener = copilotEvents.on('stop', async () => {
           await OnboardingService.completeFoodWalkthrough();
@@ -1870,7 +1872,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           const capturePromise = ref.current.takePictureAsync(strategy.options);
-          
+
           // 🔥 FIX: Memory leak - puliamo il timeout se il componente viene smontato
           let timeoutId: ReturnType<typeof setTimeout> | null = null;
           const timeoutPromise = new Promise((_, reject) => {
@@ -2657,11 +2659,13 @@ const FoodAnalysisScreenContent: React.FC = () => {
             return (
               <>
                 {/* Animated Calorie Horizontal Progress - Full Width */}
-                <AnimatedCalorieBar
-                  current={todayTotals.calories}
-                  max={dailyGoals.calories}
-                  label={t('analysis.food.metrics.calories')}
-                />
+                <TouchableOpacity onPress={() => setShowCalorieHistory(true)} activeOpacity={0.8}>
+                  <AnimatedCalorieBar
+                    current={dailyIntake.calories}
+                    max={nutritionalGoals?.daily_calories || 2000}
+                    label={t('analysis.food.metrics.calories')}
+                  />
+                </TouchableOpacity>
 
                 {/* Macro Gauges: Carbs, Proteins, Fats - In Row */}
                 <View style={styles.gaugeRow}>
@@ -2865,7 +2869,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                         // 🔥 FIX: Recupera l'immagine da custom_recipe, recipe, o dall'analisi salvata
                         const customRecipe = entry.custom_recipe as any;
                         const imageUri = entry.recipe?.image || customRecipe?.image_url;
-                        
+
                         if (imageUri) {
                           return (
                             <ImageWithFallback
@@ -3042,6 +3046,15 @@ const FoodAnalysisScreenContent: React.FC = () => {
           currentGoals={nutritionalGoals}
         />
 
+        {/* Calorie History Modal */}
+        <CalorieHistoryModal
+          visible={showCalorieHistory}
+          onClose={() => setShowCalorieHistory(false)}
+          currentCalories={dailyIntake.calories}
+          targetCalories={nutritionalGoals?.daily_calories || 2000}
+          dietGoal={nutritionalGoals?.diet_goal}
+        />
+
         {/* Fridge Ingredients Modal */}
         <FridgeIngredientsModal
           visible={showFridgeModal}
@@ -3181,7 +3194,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
-                  style={[styles.secondaryButton, { 
+                  style={[styles.secondaryButton, {
                     backgroundColor: colors.surfaceElevated || colors.surface,
                     borderColor: colors.border,
                     borderWidth: 1,

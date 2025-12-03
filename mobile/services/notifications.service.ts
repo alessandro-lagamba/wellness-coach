@@ -15,7 +15,8 @@ export type NotificationCategory =
   | 'evening_winddown'
   | 'goal_progress'
   | 'streak_celebration'
-  | 'sleep_preparation';
+  | 'sleep_preparation'
+  | 'weight_reminder';
 
 export interface ScheduleOptions {
   // For time-based triggers
@@ -48,14 +49,14 @@ async function findSimilarScheduled(category: NotificationCategory, withinMinute
   const all = await Notifications.getAllScheduledNotificationsAsync();
   const now = Date.now();
   const soon = withinMinutes * 60 * 1000;
-  
+
   return all.find(n => {
     const sameCategory = n?.content?.data?.category === category;
     if (!sameCategory) return false;
-    
+
     // I trigger di tipo "time interval" non espongono la data, quindi usiamo la nostra chiave
     const k = n?.content?.data?.[UNIQUE_KEY];
-    
+
     // Se la chiave contiene un timestamp, valutiamo la finestra (vicinanza di SCHEDULE-TIME)
     if (k && typeof k === 'string') {
       const parts = k.split(':');
@@ -65,7 +66,7 @@ async function findSimilarScheduled(category: NotificationCategory, withinMinute
         if (Math.abs(now - ts) <= soon) return true;
       }
     }
-    
+
     // Fallback: già ce n'è una del tipo (per notifiche immediate/relative)
     return true;
   });
@@ -168,18 +169,18 @@ export const NotificationService = {
     // Time-based (specific hour/minute, optional weekday)
     if (options.hour !== undefined && options.minute !== undefined) {
       const repeats = options.repeats ?? true;
-      
+
       // 🔧 NORMALIZZA e POSTICIPA SE NECESSARIO
       const now = new Date();
       let hour = options.hour!;
       let minute = options.minute!;
       const weekday = options.weekday; // Expo: 1=Mon ... 7=Sun
-      
+
       // cand: oggi all'ora/minuto richiesti
       const cand = new Date(now);
       cand.setSeconds(0, 0);
       cand.setHours(hour, minute, 0, 0);
-      
+
       // Se DAILY e l'orario è già passato/uguale → sposta di 60s (per evitare "now")
       if (!weekday) {
         if (cand.getTime() <= now.getTime()) {
@@ -197,17 +198,17 @@ export const NotificationService = {
         }
         // (Se è un giorno diverso, lasciamo a Expo la prossima occorrenza)
       }
-      
+
       // 🔑 Key stabile (includi second=0)
       const key = weekday
         ? `${baseKey}:${weekday}:${hour}:${minute}:s0`
         : `${baseKey}:daily:${hour}:${minute}:s0`;
-      
+
       // 🔔 Trigger con second fissato a 0
       const trigger: Notifications.DailyTriggerInput | Notifications.WeeklyTriggerInput = weekday
         ? { hour, minute, second: 0, weekday, repeats }
         : { hour, minute, second: 0, repeats };
-      
+
       return scheduleUnique(key, { content, trigger });
     }
 
@@ -219,7 +220,7 @@ export const NotificationService = {
         debug('Coalesced relative notification:', category, existing.identifier);
         return existing.identifier;
       }
-      
+
       const key = `${baseKey}:in:${Math.max(1, options.secondsFromNow)}s:${Date.now()}`;
       const trigger: Notifications.TimeIntervalTriggerInput = {
         seconds: Math.max(1, options.secondsFromNow),
@@ -235,12 +236,12 @@ export const NotificationService = {
       debug('Coalesced immediate notification:', category, existing.identifier);
       return existing.identifier;
     }
-    
+
     return scheduleUnique(`${baseKey}:now:${Date.now()}`, { content, trigger: null });
   },
 
   async cancel(id: string) {
-    try { await Notifications.cancelScheduledNotificationAsync(id); } catch {}
+    try { await Notifications.cancelScheduledNotificationAsync(id); } catch { }
   },
 
   // Presets
@@ -347,7 +348,7 @@ export const NotificationService = {
         { screen: 'food', action: 'OPEN_FRIDGE_RECIPES' }
       );
     }, delay);
-    
+
     return null; // Non ritorniamo l'ID perché è asincrono
   },
 
@@ -436,22 +437,43 @@ export const NotificationService = {
     return null;
   },
 
+  async scheduleWeightReminder() {
+    // Cancel existing weight reminders first
+    const all = await Notifications.getAllScheduledNotificationsAsync();
+    const weightNotifs = all.filter(n => n.content.data?.category === 'weight_reminder');
+    for (const n of weightNotifs) {
+      await this.cancel(n.identifier);
+    }
+
+    // Schedule new reminder for 7 days from now
+    // 7 days * 24 hours * 60 minutes * 60 seconds
+    const secondsIn7Days = 7 * 24 * 60 * 60;
+
+    return this.schedule(
+      'weight_reminder',
+      'Aggiornamento Peso ⚖️',
+      'È passata una settimana. Aggiorna il tuo peso per tracciare i progressi!',
+      { secondsFromNow: secondsIn7Days },
+      { screen: 'profile' }
+    );
+  },
+
   // Bundle of defaults - schedules all notifications at their specific times
   // Protegge da duplicazioni: non viene rilanciato se già eseguito (persistente in AsyncStorage)
   async scheduleDefaults() {
     await this.initialize();
-    
+
     // 1) Controllo persistente (sopravvive ai riavvii)
     const persisted = await AsyncStorage.getItem(DEFAULTS_FLAG);
     if (persisted === '1' || defaultsScheduled) {
       debug('Defaults already scheduled, skipping');
       return [];
     }
-    
+
     // 2) Segna subito (best-effort) per evitare race conditions
     defaultsScheduled = true;
     await AsyncStorage.setItem(DEFAULTS_FLAG, '1');
-    
+
     debug('Scheduling defaults...');
     const ids: string[] = [];
     ids.push(...(await this.scheduleEmotionSkinWeekly()));
@@ -462,7 +484,7 @@ export const NotificationService = {
     ids.push(await this.scheduleEveningWinddown());
     // ✅ OPTIMIZED: Removed scheduleSleepPreparation - now unified with scheduleEveningWinddown
     ids.push(await this.scheduleFridgeExpiryCheck()); // Daily check at 18:00
-    
+
     debug('Defaults scheduled:', ids.length, 'notifications');
     return ids;
   },

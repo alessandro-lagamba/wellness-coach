@@ -330,8 +330,9 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
       <View style={styles.overlay}>
         <BlurView intensity={20} tint={mode === 'dark' ? 'dark' : 'light'} style={styles.blurContainer}>
           <View style={styles.modalContainer}>
+            {/* 🔥 FIX: Colori più scuri per migliorare la leggibilità del testo */}
             <LinearGradient
-              colors={['#4facfe', '#00f2fe']}
+              colors={['#1e3a5f', '#0d2137']}
               style={styles.modalGradient}
             >
               {/* Header */}
@@ -530,10 +531,10 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                     disabled={isRequesting || selectedPermissions.length === 0}
                   >
                     {isRequesting ? (
-                      <ActivityIndicator size="small" color="#4facfe" />
+                      <ActivityIndicator size="small" color="#60a5fa" />
                     ) : (
                       <>
-                        <MaterialCommunityIcons name="heart-pulse" size={18} color="#4facfe" style={{ flexShrink: 0 }} />
+                        <MaterialCommunityIcons name="heart-pulse" size={18} color="#60a5fa" style={{ flexShrink: 0 }} />
                         <Text style={styles.requestButtonText} numberOfLines={1} ellipsizeMode="tail">
                           {t('modals.healthPermissions.requestPermissions', { count: selectedPermissions.length }) || 'Concedi i permessi consigliati'}
                         </Text>
@@ -653,8 +654,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   permissionItemSelected: {
-    backgroundColor: 'rgba(79, 172, 254, 0.2)',
-    borderColor: '#4facfe',
+    backgroundColor: 'rgba(96, 165, 250, 0.25)',
+    borderColor: '#60a5fa',
   },
   permissionItemRequired: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
@@ -693,8 +694,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#4facfe',
-    borderColor: '#4facfe',
+    backgroundColor: '#60a5fa',
+    borderColor: '#60a5fa',
   },
   checkboxRequired: {
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
@@ -794,7 +795,7 @@ const styles = StyleSheet.create({
     minWidth: 0, // Permette al flex di funzionare correttamente
   },
   requestButtonText: {
-    color: '#4facfe',
+    color: '#60a5fa',
     fontSize: 15,
     fontWeight: 'bold',
     marginLeft: 6,
