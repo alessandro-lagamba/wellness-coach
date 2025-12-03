@@ -14,6 +14,11 @@ dependencies = [
     "livekit-plugins-openai>=0.2.0",
     "python-dotenv",
     "aiohttp",  # 🆕 For fetching context from backend
+
+    # 🔧 Pin Opentelemetry per compatibilità con livekit-agents
+    "opentelemetry-sdk==1.24.0",
+    "opentelemetry-api==1.24.0",
+    "opentelemetry-exporter-otlp==1.24.0",
 ]
 
 [dependency-groups]
