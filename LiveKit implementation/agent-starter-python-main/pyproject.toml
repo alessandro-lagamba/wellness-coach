@@ -16,9 +16,9 @@ dependencies = [
     "aiohttp",  # 🆕 For fetching context from backend
 
     # 🔧 Pin Opentelemetry per compatibilità con livekit-agents
-    "opentelemetry-sdk==1.24.0",
-    "opentelemetry-api==1.24.0",
-    "opentelemetry-exporter-otlp==1.24.0",
+    "opentelemetry-sdk==1.34.1",
+    "opentelemetry-api==1.34.1",
+    "opentelemetry-exporter-otlp==1.34.1",
 ]
 
 [dependency-groups]
