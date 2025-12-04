@@ -2246,5 +2246,10 @@
     "generating": "Creating your avatar...",
     "cameraNotReady": "Camera is not ready. Please wait a moment.",
     "generationError": "Error generating avatar. Please try again."
+  },
+  "healthConnect": {
+    "lastUpdated": "Last updated at {{time}}",
+    "syncHint": "To always show the latest data, manually sync your fitness tracker with Health Connect",
+    "noData": "No recent data available"
   }
 }

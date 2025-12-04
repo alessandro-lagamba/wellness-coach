@@ -25,8 +25,8 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
   const { config, toggleWidget, changeSize, reorderWidgets, addWidget } = useWidgetConfig();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-  // 🔥 Lista di tutti i widget disponibili
-  const ALL_AVAILABLE_WIDGETS = ['steps', 'meditation', 'hydration', 'sleep', 'hrv', 'analyses'];
+  // 🔥 Lista di tutti i widget disponibili (include cycle e calories)
+  const ALL_AVAILABLE_WIDGETS = ['steps', 'meditation', 'hydration', 'sleep', 'hrv', 'calories', 'cycle'];
 
   // 🔥 Filtra i widget NON ancora aggiunti O disabilitati
   // Mostra solo i widget che NON sono abilitati nella config
@@ -71,7 +71,7 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
       const newConfig = [...config];
       const [draggedItem] = newConfig.splice(fromIndex, 1);
       newConfig.splice(toIndex, 0, draggedItem);
-      
+
       // Update positions
       newConfig.forEach((item, index) => {
         item.position = index;
@@ -92,7 +92,8 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
       hydration: 'cup-water',
       sleep: 'sleep',
       hrv: 'heart-pulse',
-      analyses: 'chart-line',
+      calories: 'fire',
+      cycle: 'flower',
     };
     return icons[widgetId] || 'widgets';
   };
@@ -104,7 +105,8 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
       hydration: t('widgets.hydration'),
       sleep: t('widgets.sleep'),
       hrv: t('widgets.hrv'),
-      analyses: t('widgets.analyses'),
+      calories: t('widgets.calories'),
+      cycle: t('widgets.cycle'),
     };
     return titles[widgetId] || widgetId;
   };
@@ -112,14 +114,14 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
   const handleAddWidget = async (widgetId: string) => {
     try {
       // 🔥 FIX: Rimuoviamo console.log eccessivi
-      
+
       // Trova la prima posizione disponibile
       const occupiedPositions = new Set(
         config.filter(w => w.enabled).map(w => w.position)
       );
-      
+
       // 🔥 FIX: Rimuoviamo console.log eccessivi
-      
+
       let availablePosition = 0;
       for (let i = 0; i < 6; i++) {
         if (!occupiedPositions.has(i)) {
@@ -131,9 +133,9 @@ export const WidgetCustomizationModal: React.FC<WidgetCustomizationModalProps> =
       // 🔥 FIX: Rimuoviamo console.log eccessivi
 
       await addWidget(widgetId, 'small', availablePosition);
-      
+
       // 🔥 FIX: Rimuoviamo console.log eccessivi
-      
+
       // Non mostrare alert, il widget verrà aggiunto automaticamente e la lista si aggiornerà
       // Alert.alert(
       //   t('widgetCustomization.success') || 'Successo',
