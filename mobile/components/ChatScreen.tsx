@@ -2287,113 +2287,134 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         <View style={styles.scrollArea}>
           {mode === 'chat' ? (
             <>
-              {/* 🆕 Chat History Sidebar Drawer */}
+              {/* 🆕 Chat History Sidebar Drawer - Slides from left */}
               <Modal
                 visible={showChatHistory && mode === 'chat'}
-                animationType="slide"
-                presentationStyle="pageSheet"
+                animationType="fade"
+                transparent={true}
                 onRequestClose={() => setShowChatHistory(false)}
               >
-                <View style={{ flex: 1, backgroundColor: colors.background }}>
-                  {/* Header */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                    <Text style={{ fontSize: 20, fontWeight: '600', color: colors.text }}>{t('chat.history.title') || 'Cronologia Chat'}</Text>
-                    <TouchableOpacity onPress={() => setShowChatHistory(false)} style={{ padding: 8 }}>
-                      <FontAwesome name="times" size={20} color={colors.text} />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* New Chat Button */}
-                  <TouchableOpacity
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: colors.primary,
-                      marginHorizontal: 16,
-                      marginTop: 16,
-                      marginBottom: 8,
-                      paddingVertical: 14,
-                      paddingHorizontal: 20,
-                      borderRadius: 12,
-                      gap: 10,
-                    }}
-                    onPress={() => {
-                      const welcomeMessage = getInitialMessage();
-                      setMessages([{
-                        id: 'welcome',
-                        text: welcomeMessage,
-                        sender: 'ai',
-                        timestamp: new Date(Date.now() - 60000),
-                      }]);
-                      setCurrentSessionId(null);
-                      setShowChatHistory(false);
-                    }}
-                  >
-                    <FontAwesome name="plus-circle" size={18} color="#fff" />
-                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>{t('chat.history.newChat') || 'Nuova Chat'}</Text>
-                  </TouchableOpacity>
-
-                  {/* Chat History List */}
-                  <ScrollView style={{ flex: 1, paddingHorizontal: 16 }} showsVerticalScrollIndicator={false}>
-                    {chatHistory.length > 0 ? (
-                      chatHistory.map((session: any, index: number) => {
-                        const firstMessage = session.firstUserMessage || '';
-                        const truncatedMessage = firstMessage.length > 60
-                          ? firstMessage.substring(0, 60) + '...'
-                          : firstMessage;
-                        const sessionDate = new Date(session.created_at || Date.now());
-                        const dateString = sessionDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
-
-                        return (
-                          <TouchableOpacity
-                            key={session.id}
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              backgroundColor: currentSessionId === session.id ? colors.primaryMuted : surfaceSecondary,
-                              paddingVertical: 14,
-                              paddingHorizontal: 16,
-                              borderRadius: 12,
-                              marginBottom: 8,
-                              borderWidth: currentSessionId === session.id ? 1 : 0,
-                              borderColor: colors.primary,
-                            }}
-                            onPress={async () => {
-                              const sessionMessages = await ChatService.getChatMessages(session.id);
-                              const formattedMessages: Message[] = sessionMessages.map((msg: any) => ({
-                                id: msg.id,
-                                text: msg.content,
-                                sender: msg.role === 'user' ? 'user' : 'ai',
-                                timestamp: new Date(msg.created_at),
-                                sessionId: session.id,
-                              }));
-                              setMessages(formattedMessages.length > 0 ? formattedMessages : [{
-                                id: 'welcome',
-                                text: getInitialMessage(),
-                                sender: 'ai',
-                                timestamp: new Date(Date.now() - 60000),
-                              }]);
-                              setCurrentSessionId(session.id);
-                              setShowChatHistory(false);
-                            }}
-                          >
-                            <View style={{ flex: 1 }}>
-                              <Text style={{ fontSize: 15, fontWeight: '500', color: colors.text, marginBottom: 4 }} numberOfLines={2}>
-                                {truncatedMessage || session.session_name || t('chat.history.unnamed') || 'Chat senza nome'}
-                              </Text>
-                              <Text style={{ fontSize: 12, color: colors.textSecondary }}>{dateString}</Text>
-                            </View>
-                            <FontAwesome name="chevron-right" size={14} color={colors.textSecondary} />
-                          </TouchableOpacity>
-                        );
-                      })
-                    ) : (
-                      <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-                        <FontAwesome name="comments-o" size={40} color={colors.textSecondary} />
-                        <Text style={{ color: colors.textSecondary, marginTop: 12 }}>{t('chat.history.empty') || 'Nessuna chat precedente'}</Text>
+                <View style={{ flex: 1, flexDirection: 'row' }}>
+                  {/* Sidebar - 80% width */}
+                  <Animated.View style={{
+                    width: '80%',
+                    height: '100%',
+                    backgroundColor: colors.background,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 2, height: 0 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 10,
+                    elevation: 10,
+                  }}>
+                    {/* Header */}
+                    <SafeAreaView style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>{t('chat.history.title')}</Text>
+                        <TouchableOpacity onPress={() => setShowChatHistory(false)} style={{ padding: 8 }}>
+                          <FontAwesome name="times" size={20} color={colors.text} />
+                        </TouchableOpacity>
                       </View>
-                    )}
-                  </ScrollView>
+
+                      {/* New Chat Button */}
+                      <TouchableOpacity
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: colors.primary,
+                          marginHorizontal: 16,
+                          marginTop: 16,
+                          marginBottom: 12,
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderRadius: 10,
+                          gap: 10,
+                        }}
+                        onPress={() => {
+                          const welcomeMessage = getInitialMessage();
+                          setMessages([{
+                            id: 'welcome',
+                            text: welcomeMessage,
+                            sender: 'ai',
+                            timestamp: new Date(Date.now() - 60000),
+                          }]);
+                          setCurrentSessionId(null);
+                          setShowChatHistory(false);
+                        }}
+                      >
+                        <FontAwesome name="plus" size={16} color="#fff" />
+                        <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600' }}>{t('chat.history.newChat')}</Text>
+                      </TouchableOpacity>
+
+                      {/* Chat History List */}
+                      <ScrollView style={{ flex: 1, paddingHorizontal: 16 }} showsVerticalScrollIndicator={false}>
+                        {chatHistory.length > 0 ? (
+                          chatHistory.map((session: any) => {
+                            const firstMessage = session.firstUserMessage || '';
+                            const truncatedMessage = firstMessage.length > 45
+                              ? firstMessage.substring(0, 45) + '...'
+                              : firstMessage;
+                            const sessionDate = new Date(session.created_at || Date.now());
+                            const dateString = sessionDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+
+                            return (
+                              <TouchableOpacity
+                                key={session.id}
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  backgroundColor: currentSessionId === session.id ? colors.primaryMuted : surfaceSecondary,
+                                  paddingVertical: 12,
+                                  paddingHorizontal: 14,
+                                  borderRadius: 10,
+                                  marginBottom: 8,
+                                  borderLeftWidth: currentSessionId === session.id ? 3 : 0,
+                                  borderLeftColor: colors.primary,
+                                }}
+                                onPress={async () => {
+                                  const sessionMessages = await ChatService.getChatMessages(session.id);
+                                  const formattedMessages: Message[] = sessionMessages.map((msg: any) => ({
+                                    id: msg.id,
+                                    text: msg.content,
+                                    sender: msg.role === 'user' ? 'user' : 'ai',
+                                    timestamp: new Date(msg.created_at),
+                                    sessionId: session.id,
+                                  }));
+                                  setMessages(formattedMessages.length > 0 ? formattedMessages : [{
+                                    id: 'welcome',
+                                    text: getInitialMessage(),
+                                    sender: 'ai',
+                                    timestamp: new Date(Date.now() - 60000),
+                                  }]);
+                                  setCurrentSessionId(session.id);
+                                  setShowChatHistory(false);
+                                }}
+                              >
+                                <FontAwesome name="comment-o" size={16} color={colors.textSecondary} style={{ marginRight: 12 }} />
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 14, fontWeight: '500', color: colors.text }} numberOfLines={1}>
+                                    {truncatedMessage || session.session_name || t('chat.history.unnamed')}
+                                  </Text>
+                                  <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>{dateString}</Text>
+                                </View>
+                              </TouchableOpacity>
+                            );
+                          })
+                        ) : (
+                          <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                            <FontAwesome name="comments-o" size={36} color={colors.textSecondary} />
+                            <Text style={{ color: colors.textSecondary, marginTop: 12, fontSize: 14 }}>{t('chat.history.empty')}</Text>
+                          </View>
+                        )}
+                      </ScrollView>
+                    </SafeAreaView>
+                  </Animated.View>
+
+                  {/* Overlay - closes drawer when tapped */}
+                  <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
+                    activeOpacity={1}
+                    onPress={() => setShowChatHistory(false)}
+                  />
                 </View>
               </Modal>
 

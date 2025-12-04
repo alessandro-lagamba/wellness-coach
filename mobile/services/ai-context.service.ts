@@ -4,6 +4,7 @@ import { WellnessSuggestionService } from './chat-wellness.service';
 import cacheService from './cache.service';
 import { UnifiedAnalysisService } from './unified-analysis.service';
 import { menstrualCycleService } from './menstrual-cycle.service';
+import { FoodAnalysisService } from './food-analysis.service';
 
 export interface AIContext {
   userId: string;
@@ -374,26 +375,27 @@ export class AIContextService {
         EmotionAnalysisService.getEmotionContextForAI(userId),
         SkinAnalysisService.getSkinContextForAI(userId),
         SkinAnalysisService.getEmotionSkinCorrelations(userId),
-        UnifiedAnalysisService.getInstance().getAnalysisHistoryByType('food'),
+        FoodAnalysisService.getFoodHistory(userId, 30), // 🔥 FIX: Use Supabase instead of AsyncStorage
         menstrualCycleService.getCycleData(),
         menstrualCycleService.getRecentNotesForAI()
       ]);
 
-      // Calcola contesto nutrizionale
+      // Calcola contesto nutrizionale - 🔥 FIX: Supabase schema has fields at root level
       const today = new Date().toISOString().split('T')[0];
-      const todayFood = (foodHistory as any[]).filter(f => f.created_at.startsWith(today));
+      const todayFood = (foodHistory as any[]).filter(f => f.created_at?.startsWith(today));
 
       let todayCalories = 0;
       let todayMacros = { protein: 0, carbs: 0, fat: 0 };
       const recentMeals: string[] = [];
 
+      // 🔥 FIX: Supabase schema has calories, proteins, carbohydrates, fats at root level
       todayFood.forEach(f => {
-        if (f.result) {
-          todayCalories += f.result.calories || 0;
-          todayMacros.protein += f.result.macros?.protein || 0;
-          todayMacros.carbs += f.result.macros?.carbs || 0;
-          todayMacros.fat += f.result.macros?.fat || 0;
-          if (f.result.foodName) recentMeals.push(f.result.foodName);
+        todayCalories += f.calories || 0;
+        todayMacros.protein += f.proteins || 0;
+        todayMacros.carbs += f.carbohydrates || 0;
+        todayMacros.fat += f.fats || 0;
+        if (f.identified_foods && f.identified_foods.length > 0) {
+          recentMeals.push(...f.identified_foods);
         }
       });
 

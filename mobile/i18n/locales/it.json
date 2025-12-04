@@ -192,7 +192,9 @@
     },
     "history": {
       "title": "Cronologia Chat",
-      "unnamed": "Chat senza nome"
+      "unnamed": "Chat senza nome",
+      "newChat": "Nuova Chat",
+      "empty": "Nessuna chat precedente"
     },
     "suggestionFeedback": {
       "title": "Ottimo!",

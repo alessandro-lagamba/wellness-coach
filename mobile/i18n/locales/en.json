@@ -190,7 +190,9 @@
     },
     "history": {
       "title": "Chat History",
-      "unnamed": "Unnamed chat"
+      "unnamed": "Unnamed chat",
+      "newChat": "New Chat",
+      "empty": "No previous chats"
     },
     "suggestionFeedback": {
       "title": "Great!",
