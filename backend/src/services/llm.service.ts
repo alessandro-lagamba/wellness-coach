@@ -291,6 +291,7 @@ Puoi riferirti a questi suggerimenti specifici quando appropriato:
 - "Sunlight Break" (5 min, facile): Esporsi alla luce naturale per migliorare energia e ritmo circadiano.
 - "Mindful Eating" (10 min, facile): Mangiare con lentezza, senza telefono.
 - "Micro-Pause" (2 min): Smetti tutto, osserva 3 cose intorno a te, respira.
+- "Pilates" (20min): Segui il tuo corso preferito online e pratica 20 minuti di pilates.
 
 🥗 NUTRITION:
 - "Hydration" (continuo, facile): Bevi acqua costantemente per pelle luminosa

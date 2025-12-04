@@ -40,7 +40,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
   const { t } = useTranslation();
   const [showPopup, setShowPopup] = useState(false);
 
-  // ✅ FIX: Robust value validation and fallback
+  // ✅ Robust value validation and fallback
   const safeValue = (() => {
     if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
       console.warn(`⚠️ Invalid value for ${label}:`, value, 'Using fallback');
@@ -76,6 +76,15 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
     if (score >= 40) return t('analysis.gauge.fair');
     return t('analysis.gauge.poor');
   };
+
+  // 🔧 Per il testo centrale: calcolo posizione numero + unit
+  const valueStr = String(safeValue);
+  const centerX = 50;
+  const valueFontSize = 18;
+  // Stima larghezza di un carattere: aggiusta 0.55 / 0.6 finché ti piace
+  const charWidth = valueFontSize * 0.55;
+  const valueWidth = valueStr.length * charWidth;
+  const unitOffset = valueWidth / 2 + 2; // +2 = spazio tra numero e unit
 
   return (
     <View style={styles.container}>
@@ -128,25 +137,44 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
                 transform="rotate(-90 50 50)"
               />
 
-              {/* Center text - value with optional unit */}
+              {/* Center text - numero centrato + unit spostata a dx */}
               <SvgText
-                x="50"
+                x={centerX}
                 y="48"
                 textAnchor="middle"
-                fontSize="18"
+                fontSize={valueFontSize}
                 fontWeight="700"
                 fill={getScoreColor(safeValue)}
               >
-                {safeValue}{unit ? unit : ''}
+                {valueStr}
               </SvgText>
+
+              {unit && (
+                <SvgText
+                  x={centerX + unitOffset}
+                  y="48"
+                  textAnchor="start"
+                  fontSize={valueFontSize * 0.8}
+                  fontWeight="600"
+                  fill={getScoreColor(safeValue)}
+                >
+                  {unit}
+                </SvgText>
+              )}
+
+              {/* Max value sotto */}
               <SvgText
                 x="50"
-                y="60"
+                y="62"
                 textAnchor="middle"
                 fontSize="10"
                 fill={colors.textSecondary}
               >
-                /<TSpan dx="8">{maxValue}{unit ? unit : ''}</TSpan>
+                /
+                <TSpan dx="7">
+                  {maxValue}
+                  {unit ? ` ${unit}` : ''}
+                </TSpan>
               </SvgText>
             </Svg>
           </View>
@@ -216,10 +244,10 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 8, // Ridotto da 12 a 8
+    marginBottom: 12, // Ridotto da 12 a 8
   },
   label: {
-    fontSize: 13, // Ridotto da 14 a 13
+    fontSize: 14, // Ridotto da 14 a 13
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -231,7 +259,7 @@ const styles = StyleSheet.create({
   chartContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8, // Ridotto da 12 a 8
+    marginBottom: 10, // Ridotto da 12 a 8
   },
   footer: {
     alignItems: 'center',
@@ -243,11 +271,11 @@ const styles = StyleSheet.create({
   },
   scoreBadge: {
     paddingVertical: 3, // Ridotto da 4 a 3
-    paddingHorizontal: 6, // Ridotto da 8 a 6
-    borderRadius: 10, // Ridotto da 12 a 10
+    paddingHorizontal: 8, // Ridotto da 8 a 6
+    borderRadius: 12, // Ridotto da 12 a 10
   },
   scoreText: {
-    fontSize: 9, // Ridotto da 10 a 9
+    fontSize: 10, // Ridotto da 10 a 9
     fontWeight: '600',
     color: '#ffffff',
   },

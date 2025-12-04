@@ -722,7 +722,9 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         distance: 0,
         calories: 0,
       };
-      return await buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoalInGlasses, meditationGoal, sleepGoal);
+      // 🔥 FIX: Always pass cycleData and dailyIntake even when healthData is null
+      const cycleForWidget = userGender === 'female' ? cycleData : null;
+      return await buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoalInGlasses, meditationGoal, sleepGoal, cycleForWidget, dailyIntake);
     }
 
     const hd = dataToUse;
@@ -973,11 +975,13 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         return t('home.hrv.value', { value: formatted });
       }
       case 'cycle':
-        // 🆕 Per size S, mostra solo il numero del giorno per evitare troncamento
+        // 🔥 FIX: Per size S, mostra numero del giorno con etichetta "Day"/"Giorno"
+        // MiniInfoCard usa splitValue che separa numero da unità
         if (!info.cycle) return '—';
         if (size === 'small') {
-          // Abbrevia "Giorno" a "G." per size S
-          return `G. ${info.cycle.day}`;
+          // Formato: "25 Day" o "25 Giorno" - splitValue estrae "25" come primary e "Day/Giorno" come unit
+          const dayLabel = language === 'it' ? 'Giorno' : 'Day';
+          return `${info.cycle.day} ${dayLabel}`;
         }
         return t('home.cycle.day', { day: info.cycle.day });
       default:

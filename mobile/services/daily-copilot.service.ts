@@ -496,9 +496,36 @@ class DailyCopilotService {
           contextInfo += `- Macros: Protein ${macros.protein || 0}g, Carbs ${macros.carbs || 0}g, Fat ${macros.fat || 0}g\n`;
         }
         if (aiContext.nutritionContext.recentMeals && aiContext.nutritionContext.recentMeals.length > 0) {
-          contextInfo += `- Recent meals: ${aiContext.nutritionContext.recentMeals.join(', ')}\n`;
+          contextInfo += `- Foods eaten today: ${aiContext.nutritionContext.recentMeals.join(', ')}\n`;
         }
-        contextInfo += `\n💡 Use this information to give personalized nutrition recommendations.\n`;
+        // 🔥 NEW: Add dietary goals
+        const goals = (aiContext.nutritionContext as any).dietaryGoals;
+        if (goals) {
+          contextInfo += `\n🎯 DIETARY GOALS:\n`;
+          if (goals.dailyCalories) contextInfo += `- Daily calorie target: ${goals.dailyCalories} kcal\n`;
+          if (goals.carbsPercentage) contextInfo += `- Target carbs: ${goals.carbsPercentage}%\n`;
+          if (goals.proteinsPercentage) contextInfo += `- Target protein: ${goals.proteinsPercentage}%\n`;
+          if (goals.fatsPercentage) contextInfo += `- Target fat: ${goals.fatsPercentage}%\n`;
+        }
+        // 🔥 NEW: Add today's meal plan
+        const mealPlan = (aiContext.nutritionContext as any).mealPlanToday;
+        if (mealPlan && mealPlan.length > 0) {
+          contextInfo += `\n📅 TODAY'S MEAL PLAN:\n`;
+          mealPlan.forEach((meal: any) => {
+            contextInfo += `- ${meal.mealType}: ${meal.recipeName}${meal.plannedCalories ? ` (${meal.plannedCalories} kcal)` : ''}\n`;
+          });
+        }
+        // 🔥 NEW: Add food history
+        const foodHistory = (aiContext.nutritionContext as any).foodHistory;
+        if (foodHistory && foodHistory.length > 0) {
+          contextInfo += `\n📊 RECENT EATING HISTORY:\n`;
+          foodHistory.slice(0, 3).forEach((entry: any) => {
+            if (entry.foods && entry.foods.length > 0) {
+              contextInfo += `- ${entry.date}: ${entry.foods.join(', ')} (${entry.totalCalories} kcal)\n`;
+            }
+          });
+        }
+        contextInfo += `\n💡 Use this information to give personalized nutrition recommendations considering goals vs actual intake.\n`;
       }
     } catch (contextError) {
       console.warn('⚠️ Could not load additional context:', contextError);
