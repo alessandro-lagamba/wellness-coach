@@ -281,7 +281,7 @@ ${languageInstruction}
 6. SUGGERIMENTI: Wellness suggestions con urgenza e timing specifici
 
 💡 WELLNESS SUGGESTIONS DISPONIBILI:
-Puoi riferirti a questi suggerimenti specifici quando appropriato:
+Puoi riferirti a questi suggerimenti specifici quando lo ritieni appropriato in relazione alla conversazione e ai messaggi che ricevi. Se ritieni che nessun suggerimento sia pertinente NON devi consigliarlo. Ecco la lista dei suggerimenti disponibili:
 
 🧘 MIND & BODY:
 - "Breathing Exercises" (5 min, facile): Pratica respirazione consapevole per ridurre stress

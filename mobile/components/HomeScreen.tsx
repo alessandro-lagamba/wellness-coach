@@ -603,13 +603,14 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   );
 
   // 🆕 Funzione per caricare genere e dati del ciclo
+  // 🔥 FIX: NOTA - Questa funzione viene chiamata all'avvio e al focus
   const loadUserGenderAndCycle = useCallback(async () => {
     try {
       const currentUser = await AuthService.getCurrentUser();
       if (currentUser?.id) {
         const userProfile = await AuthService.getUserProfile(currentUser.id);
         const gender = userProfile?.gender || null;
-        console.log('[HomeScreen] User gender loaded:', gender); // 🔥 DEBUG
+        console.log('[HomeScreen] User gender loaded:', gender);
         setUserGender(gender);
 
         // Carica i dati del ciclo solo se l'utente è di genere femminile
@@ -618,10 +619,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           const { widgetConfigService } = await import('../services/widget-config.service');
           const config = await widgetConfigService.getWidgetConfig();
           const cycleWidget = config.find(w => w.id === 'cycle');
-          console.log('[HomeScreen] Cycle widget config:', cycleWidget); // 🔥 DEBUG
+          console.log('[HomeScreen] Cycle widget config:', cycleWidget);
           if (cycleWidget && !cycleWidget.enabled) {
             // Abilita il widget se non è già abilitato
-            await widgetConfigService.addWidget('cycle', 'small', 0); // 🔥 FIX: Usa addWidget per gestione intelligente della posizione
+            await widgetConfigService.addWidget('cycle', 'small', 0);
             console.log('✅ Cycle widget automatically enabled for female user');
           } else if (!cycleWidget) {
             // Se il widget non esiste nella config, crealo
@@ -629,9 +630,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             console.log('✅ Cycle widget created and enabled for female user');
           }
 
+          // 🔥 IMPORTANTE: Carica i dati del ciclo DOPO aver abilitato il widget
           const { menstrualCycleService } = await import('../services/menstrual-cycle.service');
           const cycle = await menstrualCycleService.getCycleData();
-          console.log('[HomeScreen] Cycle data loaded:', cycle); // 🔥 DEBUG
+          console.log('[HomeScreen] Cycle data loaded:', cycle);
           setCycleData(cycle);
         } else {
           setCycleData(null);
@@ -732,6 +734,23 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     const cycleForWidget = userGender === 'female' ? cycleData : null;
     return await buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoalInGlasses, meditationGoal, sleepGoal, cycleForWidget, dailyIntake);
   }, [healthData, healthStatus, placeholderMessages, translateWidgetTitle, cycleData, userGender, t, dailyIntake]);
+
+  // 🔥 FIX: Ricarica i widget quando cambiano i dati del ciclo
+  // Questo risolve la race condition dove i widget non si aggiornano dopo che il ciclo viene caricato
+  useEffect(() => {
+    if (userGender !== 'female') return; // Solo per utenti femminili
+    if (!cycleData) return; // Aspetta che i dati siano caricati
+
+    (async () => {
+      try {
+        console.log('🔄 Cycle data changed, updating widgets...', { day: cycleData.day, phase: cycleData.phase });
+        const updatedWidgetData = await buildWidgetDataFromHealth();
+        setWidgetData(updatedWidgetData);
+      } catch (error) {
+        console.error('❌ Error updating widgets after cycle data change:', error);
+      }
+    })();
+  }, [cycleData, userGender, buildWidgetDataFromHealth]);
 
   // 🔥 NEW: Funzione per ricaricare i dati dal database e aggiornare i widget
   // Questa funzione è necessaria perché i dati di idratazione e meditazione sono salvati
