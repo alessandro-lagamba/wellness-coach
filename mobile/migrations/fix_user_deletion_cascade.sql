@@ -116,3 +116,5 @@ $$;
 -- Add comment for documentation
 COMMENT ON FUNCTION delete_user_completely IS 'Safely deletes a user and all related data from all tables. Use this function instead of direct DELETE to ensure all data is properly removed.';
 
+
+

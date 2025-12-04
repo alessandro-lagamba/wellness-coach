@@ -336,3 +336,5 @@ L'onboarding attuale è **funzionale ma incompleto**. I principali gap sono:
 
 Con queste modifiche, l'esperienza dei nuovi utenti migliorerà significativamente, aumentando engagement e retention.
 
+
+

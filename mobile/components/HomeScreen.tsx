@@ -621,11 +621,11 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           console.log('[HomeScreen] Cycle widget config:', cycleWidget); // 🔥 DEBUG
           if (cycleWidget && !cycleWidget.enabled) {
             // Abilita il widget se non è già abilitato
-            await widgetConfigService.enableWidget('cycle', 'small', 0); // 🔥 FIX: Aggiungi posizione 0
+            await widgetConfigService.addWidget('cycle', 'small', 0); // 🔥 FIX: Usa addWidget per gestione intelligente della posizione
             console.log('✅ Cycle widget automatically enabled for female user');
           } else if (!cycleWidget) {
             // Se il widget non esiste nella config, crealo
-            await widgetConfigService.enableWidget('cycle', 'small', 0);
+            await widgetConfigService.addWidget('cycle', 'small', 0);
             console.log('✅ Cycle widget created and enabled for female user');
           }
 
@@ -2699,7 +2699,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                   {filterWidgetsForRow(
                     (rowHasLarge(0)
                       ? widgetConfig.filter(w => w.enabled && w.position === 0 && w.size === 'large')
-                      : widgetConfig.filter(w => w.enabled && w.position < 3 && w.position >= 0)
+                      : widgetConfig.filter(w => w.enabled && w.position >= 0 && w.position < 3) // 🔥 FIX: Escludi position -1
                     )
                       .filter(w => {
                         // 🔥 FIX: Filtra il widget 'cycle' se l'utente non è di genere femminile PRIMA del map

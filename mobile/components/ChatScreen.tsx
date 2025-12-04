@@ -1268,8 +1268,10 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         temporalPatterns: aiContext.temporalPatterns,
         behavioralInsights: aiContext.behavioralInsights,
         contextualFactors: aiContext.contextualFactors,
-        // 🆕 Contesto ciclo mestruale
-        menstrualCycleContext: cycleContext || undefined,
+        // 🔥 FIX: Includi nutritionContext aggregato da AIContextService
+        nutritionContext: aiContext.nutritionContext,
+        // 🆕 Contesto ciclo mestruale (da AIContextService + dati freschi)
+        menstrualCycleContext: aiContext.menstrualCycleContext || cycleContext || undefined,
         // 🔧 Aggiungi nome utente per personalizzazione (usa first_name se disponibile)
         firstName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
         lastName: currentUserProfile?.last_name || currentUser?.user_metadata?.full_name?.split(' ').slice(1).join(' ') || undefined,
@@ -1284,6 +1286,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         temporalPatterns: null,
         behavioralInsights: null,
         contextualFactors: null,
+        nutritionContext: null,
         menstrualCycleContext: undefined,
         userName: 'Utente',
         isAnonymous: true
@@ -1548,10 +1551,12 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         temporalPatterns: aiContext.temporalPatterns,
         behavioralInsights: aiContext.behavioralInsights,
         contextualFactors: aiContext.contextualFactors,
-        // 🆕 Contesto ciclo mestruale con info dettagliate
-        menstrualCycleContext: cycleContextForChat || undefined,
+        // 🔥 FIX: Includi nutritionContext aggregato da AIContextService (calorie/macro del giorno)
+        nutritionContext: aiContext.nutritionContext,
+        // 🆕 Contesto ciclo mestruale con info dettagliate (da AIContextService + dati freschi)
+        menstrualCycleContext: aiContext.menstrualCycleContext || cycleContextForChat || undefined,
         menstrualCyclePhase: cyclePhaseInfo || undefined,
-        // 🆕 Contesto alimentazione
+        // 🆕 Contesto alimentazione (ultimo pasto + dati freschi)
         foodContext: foodContextForChat || undefined,
         // 🔧 Aggiungi nome utente per personalizzazione (usa first_name se disponibile)
         firstName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',

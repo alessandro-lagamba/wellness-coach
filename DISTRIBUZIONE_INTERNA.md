@@ -296,3 +296,5 @@ Per problemi o domande:
 **Versione App:** 0.1.0
 **Bundle ID:** com.wellnesscoach.app
 
+
+

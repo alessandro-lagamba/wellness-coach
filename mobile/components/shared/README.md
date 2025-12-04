@@ -32,3 +32,5 @@ import { SafeAreaWrapper } from './shared/SafeAreaWrapper';
 - ✅ API più semplice (non serve specificare gli edges manualmente)
 - ✅ Consistenza in tutta l'app
 
+
+

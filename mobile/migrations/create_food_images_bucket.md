@@ -28,3 +28,5 @@ Il bucket `food-images` deve essere creato manualmente tramite il dashboard di S
 
 Dopo aver creato il bucket, verifica che funzioni provando a caricare un'immagine tramite l'app.
 
+
+

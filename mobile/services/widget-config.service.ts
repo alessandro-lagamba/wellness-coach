@@ -64,14 +64,15 @@ class WidgetConfigService {
   }
 
   // Config di default (2 righe, 3 colonne)
+  // 🔥 FIX: Ogni widget ha una posizione unica. 'cycle' usa -1 (non posizionato) quando disabilitato.
   private defaultConfig: WidgetConfig[] = [
     { id: 'steps', enabled: true, size: 'small', position: 0 },
-    { id: 'meditation', enabled: true, size: 'medium', position: 1 },
+    { id: 'meditation', enabled: true, size: 'small', position: 1 },
     { id: 'hydration', enabled: true, size: 'small', position: 2 },
-    { id: 'sleep', enabled: true, size: 'large', position: 3 },
+    { id: 'sleep', enabled: true, size: 'small', position: 3 },
     { id: 'hrv', enabled: true, size: 'small', position: 4 },
     { id: 'calories', enabled: true, size: 'small', position: 5 },
-    { id: 'cycle', enabled: false, size: 'small', position: 0 }, // Disabilitato di default, può essere abilitato
+    { id: 'cycle', enabled: false, size: 'small', position: -1 }, // -1 = non posizionato (verrà assegnato quando abilitato)
   ];
 
   static getInstance(): WidgetConfigService {
@@ -170,9 +171,26 @@ class WidgetConfigService {
     const cfg = await this.getWidgetConfig();
     const w = cfg.find(x => x.id === widgetId);
     if (!w) return;
-    // NB: toggle “puro” (non forza la size). Per riabilitare con size 'small'
-    // usa enableWidget(...) o addWidget(...).
-    w.enabled = !w.enabled;
+
+    // 🔥 FIX: When disabling, set position to -1. When enabling, find a valid position.
+    if (w.enabled) {
+      // Disabling: set position to -1
+      w.enabled = false;
+      w.position = -1;
+    } else {
+      // Enabling: find first available position
+      w.enabled = true;
+      const used = new Set(this.getOccupiedPositions(cfg.filter(x => x.id !== widgetId)));
+      for (let p = 0; p < 6; p++) {
+        if (!used.has(p)) {
+          const testRow = Math.floor(p / 3);
+          if (this.isValidRowLayout(cfg, widgetId, w.size, testRow)) {
+            w.position = p;
+            break;
+          }
+        }
+      }
+    }
     await this.save(cfg);
   }
 
@@ -352,7 +370,8 @@ class WidgetConfigService {
   }
 
   async removeWidget(widgetId: string) {
-    await this.updateWidgetConfig(widgetId, { enabled: false });
+    // 🔥 FIX: Set position to -1 when disabling, so empty slots appear correctly
+    await this.updateWidgetConfig(widgetId, { enabled: false, position: -1 });
   }
 
   /** Aggiunge/abilita un widget con size di default = 'small'
@@ -365,20 +384,39 @@ class WidgetConfigService {
       exists.enabled = true;
       // 👉 forza sempre la size alla richiesta (default 'small')
       exists.size = size;
-      if (this.isValidPosition(preferredPos ?? -1)) exists.position = preferredPos as number;
 
-      // 🔥 FIX: Valida che la combinazione di widget nella riga sia valida
-      const row = Math.floor((preferredPos ?? exists.position) / 3);
-      if (!this.isValidRowLayout(cfg, widgetId, size, row)) {
-        console.warn('⚠️ Invalid widget layout: cannot add widget with this size');
-        // Fallback: prova a trovare una posizione valida nella stessa riga o in un'altra
-        const used = new Set(this.getOccupiedPositions(cfg));
+      // 🔥 FIX: Se il widget ha posizione -1 o non valida, trova uno slot valido
+      const currentPos = exists.position;
+      const targetPos = this.isValidPosition(preferredPos ?? -1) ? preferredPos! : currentPos;
+
+      if (!this.isValidPosition(targetPos) || targetPos < 0) {
+        // Trova il primo slot libero
+        const used = new Set(this.getOccupiedPositions(cfg.filter(w => w.id !== widgetId)));
         for (let p = 0; p < 6; p++) {
           if (!used.has(p)) {
             const testRow = Math.floor(p / 3);
             if (this.isValidRowLayout(cfg, widgetId, size, testRow)) {
               exists.position = p;
+              console.log(`✅ Widget ${widgetId} assigned to position ${p}`);
               break;
+            }
+          }
+        }
+      } else {
+        exists.position = targetPos;
+        // 🔥 FIX: Valida che la combinazione di widget nella riga sia valida
+        const row = Math.floor(targetPos / 3);
+        if (!this.isValidRowLayout(cfg, widgetId, size, row)) {
+          console.warn('⚠️ Invalid widget layout: cannot add widget with this size');
+          // Fallback: prova a trovare una posizione valida nella stessa riga o in un'altra
+          const used = new Set(this.getOccupiedPositions(cfg.filter(w => w.id !== widgetId)));
+          for (let p = 0; p < 6; p++) {
+            if (!used.has(p)) {
+              const testRow = Math.floor(p / 3);
+              if (this.isValidRowLayout(cfg, widgetId, size, testRow)) {
+                exists.position = p;
+                break;
+              }
             }
           }
         }

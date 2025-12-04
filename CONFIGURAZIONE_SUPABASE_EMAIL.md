@@ -156,3 +156,5 @@ Ma per le build di produzione, usa sempre `wellnesscoach://auth/confirm`.
 **Ultimo aggiornamento:** Gennaio 2025
 **Versione App:** 0.1.0
 
+
+
