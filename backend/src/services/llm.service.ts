@@ -86,6 +86,23 @@ export interface LLMOptions {
         fat?: number;
       };
       recentMeals?: string[];
+      // 🔥 FIX: Added dietary goals and meal plan
+      dietaryGoals?: {
+        dailyCalories?: number;
+        carbsPercentage?: number;
+        proteinsPercentage?: number;
+        fatsPercentage?: number;
+      } | null;
+      mealPlanToday?: Array<{
+        mealType: string;
+        recipeName?: string;
+        plannedCalories?: number;
+      }>;
+      foodHistory?: Array<{
+        date: string;
+        foods: string[];
+        totalCalories: number;
+      }>;
     } | null;
     foodContext?: {
       lastMealName?: string;
@@ -564,7 +581,39 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
       contextualPrompt += `\n- Macro oggi: Proteine ${nutrition.todayMacros.protein || 0}g, Carboidrati ${nutrition.todayMacros.carbs || 0}g, Grassi ${nutrition.todayMacros.fat || 0}g`;
     }
     if (nutrition?.recentMeals && nutrition.recentMeals.length > 0) {
-      contextualPrompt += `\n- Pasti recenti: ${nutrition.recentMeals.join(', ')}`;
+      contextualPrompt += `\n- Cibi mangiati oggi: ${nutrition.recentMeals.join(', ')}`;
+    }
+    // 🔥 FIX: Add dietary goals
+    if (nutrition?.dietaryGoals) {
+      contextualPrompt += `\n\n🎯 OBIETTIVI DIETETICI DELL'UTENTE:`;
+      if (nutrition.dietaryGoals.dailyCalories) {
+        contextualPrompt += `\n- Obiettivo calorie giornaliere: ${nutrition.dietaryGoals.dailyCalories} kcal`;
+      }
+      if (nutrition.dietaryGoals.carbsPercentage) {
+        contextualPrompt += `\n- Percentuale carboidrati: ${nutrition.dietaryGoals.carbsPercentage}%`;
+      }
+      if (nutrition.dietaryGoals.proteinsPercentage) {
+        contextualPrompt += `\n- Percentuale proteine: ${nutrition.dietaryGoals.proteinsPercentage}%`;
+      }
+      if (nutrition.dietaryGoals.fatsPercentage) {
+        contextualPrompt += `\n- Percentuale grassi: ${nutrition.dietaryGoals.fatsPercentage}%`;
+      }
+    }
+    // 🔥 FIX: Add meal plan for today
+    if (nutrition?.mealPlanToday && nutrition.mealPlanToday.length > 0) {
+      contextualPrompt += `\n\n📅 PASTI PIANIFICATI PER OGGI:`;
+      nutrition.mealPlanToday.forEach((meal: any) => {
+        contextualPrompt += `\n- ${meal.mealType}: ${meal.recipeName}${meal.plannedCalories ? ` (${meal.plannedCalories} kcal)` : ''}`;
+      });
+    }
+    // 🔥 FIX: Add recent food history
+    if (nutrition?.foodHistory && nutrition.foodHistory.length > 0) {
+      contextualPrompt += `\n\n📊 STORICO PASTI RECENTI:`;
+      nutrition.foodHistory.slice(0, 5).forEach((entry: any) => {
+        if (entry.foods && entry.foods.length > 0) {
+          contextualPrompt += `\n- ${entry.date}: ${entry.foods.join(', ')} (${entry.totalCalories} kcal)`;
+        }
+      });
     }
     if (food?.lastMealName) {
       contextualPrompt += `\n- Ultimo pasto: ${food.lastMealName}`;
@@ -579,7 +628,7 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
       contextualPrompt += `\n- Cibi identificati: ${food.identifiedFoods.join(', ')}`;
     }
 
-    contextualPrompt += `\n\n💡 USA QUESTE INFORMAZIONI per dare consigli nutrizionali personalizzati e rispondere a domande sull'alimentazione.`;
+    contextualPrompt += `\n\n💡 USA QUESTE INFORMAZIONI per dare consigli nutrizionali personalizzati, rispondere a domande sull'alimentazione e verificare il progresso verso gli obiettivi.`;
   }
 
   // Istruzioni finali migliorate

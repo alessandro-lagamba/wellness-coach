@@ -27,6 +27,7 @@ interface EnhancedMetricTileProps {
   onExpandPress?: () => void;
   expanded?: boolean;
   description?: string; // NEW: For Valence/Arousal explanations
+  unit?: string; // 🔥 NEW: Unit to display (e.g., 'g', 'kcal')
 }
 
 export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
@@ -42,6 +43,7 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
   onExpandPress,
   expanded = false,
   description, // NEW
+  unit, // 🔥 NEW
 }) => {
   const { colors, mode } = useTheme();
   const { t } = useTranslation();
@@ -92,7 +94,9 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
     if (metric === 'arousal') {
       return Math.round(value * 100) + '%';
     }
-    return value.toFixed(0); // Simplified for cleaner look
+    // 🔥 FIX: Append unit if provided
+    const formatted = value.toFixed(0);
+    return unit ? `${formatted}${unit}` : formatted;
   };
 
   // Translate bucket label

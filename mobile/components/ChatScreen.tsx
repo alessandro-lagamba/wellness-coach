@@ -1112,8 +1112,8 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     try {
       // 🆕 Rimosso log per performance
 
-      // Get AI context
-      const context = await AIContextService.getCompleteContext(currentUser.id);
+      // Get AI context - 🔥 FIX: Force refresh to ensure food/nutrition data is current
+      const context = await AIContextService.getCompleteContext(currentUser.id, true);
       setAiContext(context);
 
       // 🔧 RIMOSSO: Non mostrare banner iniziale automatico
@@ -2220,15 +2220,18 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
           </CopilotStep>
         </View>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          {/* Cronologia Chat Button */}
-          {mode === 'chat' && chatHistory.length > 0 && (
-            <TouchableOpacity
-              style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}
-              onPress={() => setShowChatHistory(!showChatHistory)}
-            >
-              <FontAwesome name="history" size={18} color={colors.text} />
-            </TouchableOpacity>
-          )}
+          {/* Cronologia Chat Button - Always show for consistent layout */}
+          <TouchableOpacity
+            style={[
+              styles.headerButton,
+              { backgroundColor: surfaceSecondary },
+              (mode !== 'chat' || chatHistory.length === 0) && { opacity: 0 }
+            ]}
+            onPress={() => mode === 'chat' && chatHistory.length > 0 && setShowChatHistory(!showChatHistory)}
+            disabled={mode !== 'chat' || chatHistory.length === 0}
+          >
+            <FontAwesome name="history" size={18} color={colors.text} />
+          </TouchableOpacity>
           {/* Impostazioni Button */}
           <TouchableOpacity
             style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}

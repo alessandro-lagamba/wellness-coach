@@ -20,6 +20,7 @@ interface GaugeChartProps {
   historicalData?: Array<{ date: string; value: number }>;
   metric?: string; // 'valence', 'arousal', 'texture', 'redness', 'hydration', 'oiliness'
   icon?: string;
+  unit?: string; // 🔥 NEW: Unit to display (e.g., 'g', 'kcal', '%')
 }
 
 export const GaugeChart: React.FC<GaugeChartProps> = ({
@@ -32,7 +33,8 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
   description,
   historicalData,
   metric,
-  icon
+  icon,
+  unit
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -126,7 +128,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
                 transform="rotate(-90 50 50)"
               />
 
-              {/* Center text */}
+              {/* Center text - value with optional unit */}
               <SvgText
                 x="50"
                 y="48"
@@ -135,7 +137,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
                 fontWeight="700"
                 fill={getScoreColor(safeValue)}
               >
-                {safeValue}
+                {safeValue}{unit ? unit : ''}
               </SvgText>
               <SvgText
                 x="50"
@@ -144,7 +146,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
                 fontSize="10"
                 fill={colors.textSecondary}
               >
-                /<TSpan dx="8">{maxValue}</TSpan>
+                /<TSpan dx="8">{maxValue}{unit ? unit : ''}</TSpan>
               </SvgText>
             </Svg>
           </View>

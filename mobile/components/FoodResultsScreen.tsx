@@ -117,57 +117,57 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
 
   const metricSuggestions = language === 'it'
     ? {
-        protein: {
-          low: 'Aggiungi legumi, pesce o carne bianca per bilanciare il piatto.',
-          moderate: 'Una piccola porzione di proteine magre completerà il pasto.',
-          good: 'Quota proteica in linea con l’obiettivo giornaliero.',
-          high: 'Le proteine sono già abbondanti, accompagna con verdure o cereali integrali.',
-        },
-        carbs: {
-          low: 'Integra cereali integrali o pane per avere energia a rilascio lento.',
-          moderate: 'Apporto di carboidrati discreto, abbinalo a fibre per stabilizzare la glicemia.',
-          good: 'Energia ben distribuita, continua così.',
-          high: 'Molti carboidrati: aggiungi proteine o verdure per bilanciare il piatto.',
-        },
-        fats: {
-          low: 'Grassi molto bassi: usa olio extravergine o frutta secca per assorbire vitamine.',
-          moderate: 'Grassi nella norma, ottimo per un pasto leggero.',
-          good: 'Grassi equilibrati rispetto all’obiettivo.',
-          high: 'Grassi elevati: riduci condimenti o salumi e aggiungi verdure fresche.',
-        },
-        fiber: {
-          low: 'Abbina insalata, verdure o legumi per supportare digestione e sazietà.',
-          moderate: 'Puoi aumentare ancora la fibra con frutta o cereali integrali.',
-          good: 'Ottimo apporto di fibre per un pasto completo.',
-          high: 'Fibra abbondante: bevi acqua per favorire la digestione.',
-        },
-      }
+      protein: {
+        low: 'Aggiungi legumi, pesce o carne bianca per bilanciare il piatto.',
+        moderate: 'Una piccola porzione di proteine magre completerà il pasto.',
+        good: 'Quota proteica in linea con l’obiettivo giornaliero.',
+        high: 'Le proteine sono già abbondanti, accompagna con verdure o cereali integrali.',
+      },
+      carbs: {
+        low: 'Integra cereali integrali o pane per avere energia a rilascio lento.',
+        moderate: 'Apporto di carboidrati discreto, abbinalo a fibre per stabilizzare la glicemia.',
+        good: 'Energia ben distribuita, continua così.',
+        high: 'Molti carboidrati: aggiungi proteine o verdure per bilanciare il piatto.',
+      },
+      fats: {
+        low: 'Grassi molto bassi: usa olio extravergine o frutta secca per assorbire vitamine.',
+        moderate: 'Grassi nella norma, ottimo per un pasto leggero.',
+        good: 'Grassi equilibrati rispetto all’obiettivo.',
+        high: 'Grassi elevati: riduci condimenti o salumi e aggiungi verdure fresche.',
+      },
+      fiber: {
+        low: 'Abbina insalata, verdure o legumi per supportare digestione e sazietà.',
+        moderate: 'Puoi aumentare ancora la fibra con frutta o cereali integrali.',
+        good: 'Ottimo apporto di fibre per un pasto completo.',
+        high: 'Fibra abbondante: bevi acqua per favorire la digestione.',
+      },
+    }
     : {
-        protein: {
-          low: 'Add lean protein (fish, legumes, chicken) to balance the plate.',
-          moderate: 'A small protein side will complete the meal.',
-          good: 'Protein intake is aligned with your daily target.',
-          high: 'Protein load is already high, pair with veggies or whole grains.',
-        },
-        carbs: {
-          low: 'Add whole grains or bread to keep energy stable.',
-          moderate: 'Decent carb intake, pair with fiber to stabilise glucose.',
-          good: 'Energy is well distributed across carbs.',
-          high: 'High carbs: add proteins or veggies to balance the plate.',
-        },
-        fats: {
-          low: 'Very low fat: add olive oil or nuts to absorb fat-soluble vitamins.',
-          moderate: 'Fats are within a good range for a light meal.',
-          good: 'Fat intake is balanced with your target.',
-          high: 'High fat: reduce dressings or cured meats and add fresh veggies.',
-        },
-        fiber: {
-          low: 'Pair with salad, veggies or legumes to support digestion and satiety.',
-          moderate: 'You can boost fiber further with fruit or whole grains.',
-          good: 'Great fiber intake for a complete meal.',
-          high: 'Fiber is high: remember to drink water to aid digestion.',
-        },
-      };
+      protein: {
+        low: 'Add lean protein (fish, legumes, chicken) to balance the plate.',
+        moderate: 'A small protein side will complete the meal.',
+        good: 'Protein intake is aligned with your daily target.',
+        high: 'Protein load is already high, pair with veggies or whole grains.',
+      },
+      carbs: {
+        low: 'Add whole grains or bread to keep energy stable.',
+        moderate: 'Decent carb intake, pair with fiber to stabilise glucose.',
+        good: 'Energy is well distributed across carbs.',
+        high: 'High carbs: add proteins or veggies to balance the plate.',
+      },
+      fats: {
+        low: 'Very low fat: add olive oil or nuts to absorb fat-soluble vitamins.',
+        moderate: 'Fats are within a good range for a light meal.',
+        good: 'Fat intake is balanced with your target.',
+        high: 'High fat: reduce dressings or cured meats and add fresh veggies.',
+      },
+      fiber: {
+        low: 'Pair with salad, veggies or legumes to support digestion and satiety.',
+        moderate: 'You can boost fiber further with fruit or whole grains.',
+        good: 'Great fiber intake for a complete meal.',
+        high: 'Fiber is high: remember to drink water to aid digestion.',
+      },
+    };
 
   const buildMacroBucket = (metricKey: 'protein' | 'carbs' | 'fats' | 'fiber', value: number) => {
     const goal = macroGoals[metricKey] || 1;
@@ -345,7 +345,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
 
   // Determine hero color based on health score
   const heroColor = results.healthScore > 70 ? '#10b981' : results.healthScore > 40 ? '#f59e0b' : '#ef4444';
-  
+
   // Helper to convert hex to rgba
   const hexToRgba = (hex: string, alpha: number): string => {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -353,7 +353,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
     const b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
-  
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -363,11 +363,11 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
         {/* Hero Section */}
         <ResultHero
           title={t('analysis.food.healthScore') || 'Health Score'}
-          subtitle={results.healthScore >= 70 
+          subtitle={results.healthScore >= 70
             ? t('analysis.food.excellent') || 'Excellent Nutrition'
-            : results.healthScore >= 40 
-            ? t('analysis.food.good') || 'Good Nutrition'
-            : t('analysis.food.needsImprovement') || 'Needs Improvement'}
+            : results.healthScore >= 40
+              ? t('analysis.food.good') || 'Good Nutrition'
+              : t('analysis.food.needsImprovement') || 'Needs Improvement'}
           score={results.healthScore}
           color={results.healthScore > 70 ? '#10b981' : results.healthScore > 40 ? '#f59e0b' : '#ef4444'}
           style={styles.hero}
@@ -375,7 +375,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
 
         <View style={styles.contentContainer}>
           {/* Metrics Grid */}
-              <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 32 }]} numberOfLines={2} ellipsizeMode="tail">
+          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 32 }]} numberOfLines={2} ellipsizeMode="tail">
             {t('analysis.food.nutritionalBreakdown') || 'NUTRITIONAL BREAKDOWN'}
           </Text>
 
@@ -389,6 +389,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
               icon="fire"
               bucket={caloriesBucket}
               expanded={true}
+              unit=" kcal"
             />
 
             {/* Protein */}
@@ -399,6 +400,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
               color="#3b82f6"
               icon="food-steak"
               bucket={proteinBucket}
+              unit="g"
             />
 
             {/* Carbs */}
@@ -409,6 +411,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
               color="#f97316"
               icon="noodles"
               bucket={carbsBucket}
+              unit="g"
             />
 
             {/* Fats */}
@@ -419,6 +422,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
               color="#fbbf24"
               icon="oil"
               bucket={fatsBucket}
+              unit="g"
             />
 
             {/* Fiber (if available) */}
@@ -430,6 +434,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
                 color="#10b981"
                 icon="leaf"
                 bucket={fiberBucket}
+                unit="g"
               />
             )}
           </View>
@@ -463,9 +468,9 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
           {/* Recommendations */}
           {recommendations.length > 0 && (
             <>
-          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]} numberOfLines={2} ellipsizeMode="tail">
+              <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]} numberOfLines={2} ellipsizeMode="tail">
                 {t('analysis.food.results.recommendations') || 'RACCOMANDAZIONI'}
-          </Text>
+              </Text>
 
               {recommendations.map((rec) => (
                 <NutritionRecommendationCard
@@ -474,8 +479,8 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
                   description={rec.description}
                   priority={rec.priority}
                   index={parseInt(rec.id.split('-')[1])}
-            />
-          ))}
+                />
+              ))}
             </>
           )}
 
@@ -489,8 +494,8 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
         edges={['bottom']}
         style={[
           styles.bottomBar,
-          { 
-            backgroundColor: colors.background, 
+          {
+            backgroundColor: colors.background,
             borderTopColor: isDark ? 'rgba(148,163,184,0.18)' : 'rgba(15,23,42,0.08)',
           },
         ]}

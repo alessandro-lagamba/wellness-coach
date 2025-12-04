@@ -5,6 +5,8 @@ import cacheService from './cache.service';
 import { UnifiedAnalysisService } from './unified-analysis.service';
 import { menstrualCycleService } from './menstrual-cycle.service';
 import { FoodAnalysisService } from './food-analysis.service';
+import { AuthService } from './auth.service';
+import mealPlanService from './meal-plan.service';
 
 export interface AIContext {
   userId: string;
@@ -53,6 +55,23 @@ export interface AIContext {
       fat: number;
     };
     recentMeals: string[];
+    // 🆕 Diet goals and meal plan for LLM
+    dietaryGoals?: {
+      dailyCalories?: number;
+      carbsPercentage?: number;
+      proteinsPercentage?: number;
+      fatsPercentage?: number;
+    } | null;
+    mealPlanToday?: Array<{
+      mealType: string;
+      recipeName?: string;
+      plannedCalories?: number;
+    }>;
+    foodHistory?: Array<{
+      date: string;
+      foods: string[];
+      totalCalories: number;
+    }>;
   };
   menstrualCycleContext: {
     phase: string;
@@ -364,24 +383,29 @@ export class AIContextService {
       // Building AI context (logging handled by backend)
 
       // Ottieni contesto emotivo e della pelle in parallelo
+      // 🔥 FIX: Now also fetching user profile for dietary goals and meal plan entries
+      const today = new Date().toISOString().split('T')[0];
       const [
         emotionContext,
         skinContext,
         correlations,
         foodHistory,
         cycleData,
-        cycleNotes
+        cycleNotes,
+        userProfile,
+        mealPlanEntries
       ] = await Promise.all([
         EmotionAnalysisService.getEmotionContextForAI(userId),
         SkinAnalysisService.getSkinContextForAI(userId),
         SkinAnalysisService.getEmotionSkinCorrelations(userId),
         FoodAnalysisService.getFoodHistory(userId, 30), // 🔥 FIX: Use Supabase instead of AsyncStorage
         menstrualCycleService.getCycleData(),
-        menstrualCycleService.getRecentNotesForAI()
+        menstrualCycleService.getRecentNotesForAI(),
+        AuthService.getUserProfile(userId).catch(() => null),
+        mealPlanService.getEntries(today, today).catch(() => [])
       ]);
 
       // Calcola contesto nutrizionale - 🔥 FIX: Supabase schema has fields at root level
-      const today = new Date().toISOString().split('T')[0];
       const todayFood = (foodHistory as any[]).filter(f => f.created_at?.startsWith(today));
 
       let todayCalories = 0;
@@ -492,14 +516,31 @@ export class AIContextService {
         } : null,
         emotionHistory,
         skinHistory,
-        emotionHistory,
-        skinHistory,
         emotionTrend: emotionContext.trend,
         skinTrend: skinContext.trend,
         nutritionContext: {
           todayCalories,
           todayMacros,
-          recentMeals
+          recentMeals,
+          // 🔥 FIX: Include dietary goals from user profile
+          dietaryGoals: userProfile?.nutritional_goals ? {
+            dailyCalories: userProfile.nutritional_goals.daily_calories,
+            carbsPercentage: userProfile.nutritional_goals.carbs_percentage,
+            proteinsPercentage: userProfile.nutritional_goals.proteins_percentage,
+            fatsPercentage: userProfile.nutritional_goals.fats_percentage,
+          } : null,
+          // 🔥 FIX: Include today's meal plan
+          mealPlanToday: (mealPlanEntries || []).map((entry: any) => ({
+            mealType: entry.meal_type,
+            recipeName: entry.recipe?.name || entry.custom_recipe?.name || 'Unknown',
+            plannedCalories: entry.recipe?.macros?.calories || entry.custom_recipe?.macros?.calories || 0,
+          })),
+          // 🔥 FIX: Include food history for AI context
+          foodHistory: (foodHistory as any[]).slice(0, 10).map((f: any) => ({
+            date: f.created_at?.split('T')[0] || today,
+            foods: f.identified_foods || [],
+            totalCalories: f.calories || 0,
+          })),
         },
         menstrualCycleContext: cycleContext,
         correlations: correlations.correlations,

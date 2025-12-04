@@ -440,7 +440,8 @@ class DailyCopilotService {
     let menstrualCycleContext = null;
     let nutritionContext = null;
     try {
-      const aiContext = await AIContextService.getCompleteContext(userId);
+      // 🔥 FIX: Force refresh to ensure food/nutrition data is current
+      const aiContext = await AIContextService.getCompleteContext(userId, true);
 
       // Aggiungi informazioni sul contesto emotivo e della pelle se disponibili
       if (aiContext.currentEmotion) {

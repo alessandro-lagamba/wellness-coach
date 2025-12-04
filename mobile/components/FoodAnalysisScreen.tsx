@@ -2683,6 +2683,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     }))}
                     metric="carbohydrates"
                     icon="leaf"
+                    unit="g"
                   />
 
                   <GaugeChart
@@ -2699,6 +2700,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     }))}
                     metric="proteins"
                     icon="heart"
+                    unit="g"
                   />
 
                   <GaugeChart
@@ -2715,6 +2717,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     }))}
                     metric="fats"
                     icon="circle"
+                    unit="g"
                   />
                 </View>
               </>
