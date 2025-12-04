@@ -8,9 +8,9 @@ import { getUserLanguage, getLanguageInstruction } from './language.service';
 export interface DailyCopilotData {
   overallScore: number;        // 0-100
   mood: number;               // 1-5 dal check-in
-  sleep: { 
-    hours: number; 
-    quality: number; 
+  sleep: {
+    hours: number;
+    quality: number;
     bedtime?: string;
     wakeTime?: string;
   };
@@ -82,7 +82,7 @@ class DailyCopilotService {
       const now = new Date();
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const cacheKey = `copilot_${currentUser.id}_${today}`;
-      
+
       const dbResult = await this.dbService.getDailyCopilotData(currentUser.id, today);
       if (dbResult.success && dbResult.data) {
         console.log('✅ Daily Copilot: Found existing analysis in database for today');
@@ -177,7 +177,7 @@ class DailyCopilotService {
     try {
       // Ottieni contesto AI completo
       const aiContext = await AIContextService.getCompleteContext(userId);
-      
+
       // Dati dal check-in giornaliero (mood e sleep)
       const mood = await this.getTodayMood();
       const sleep = await this.getTodaySleep();
@@ -213,7 +213,7 @@ class DailyCopilotService {
       // ✅ FIX: Use local timezone for "today" to avoid timezone issues
       const now = new Date();
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      
+
       // 🔥 FIX: Prima prova a leggere i dati di OGGI
       const { data: todayCheckin } = await supabase
         .from('daily_copilot_analyses')
@@ -221,36 +221,36 @@ class DailyCopilotService {
         .eq('user_id', currentUser.id)
         .eq('date', today)
         .maybeSingle();
-      
+
       if (todayCheckin?.mood !== null && todayCheckin?.mood !== undefined) {
         console.log('✅ Daily Copilot: Using today\'s mood:', todayCheckin.mood);
         return todayCheckin.mood;
       }
-      
+
       // 🔥 FIX: Se non ci sono dati di oggi, usa i dati di IERI (sera prima)
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-      
+
       const { data: yesterdayCheckin } = await supabase
         .from('daily_copilot_analyses')
         .select('mood')
         .eq('user_id', currentUser.id)
         .eq('date', yesterdayKey)
         .maybeSingle();
-      
+
       if (yesterdayCheckin?.mood !== null && yesterdayCheckin?.mood !== undefined) {
         console.log('ℹ️ Daily Copilot: Using yesterday\'s mood (evening before):', yesterdayCheckin.mood);
         return yesterdayCheckin.mood;
       }
-      
+
       // Fallback ad AsyncStorage per retrocompatibilità
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const savedMood = await AsyncStorage.getItem(`checkin:mood:${today}`);
       if (savedMood) {
         return parseInt(savedMood, 10);
       }
-      
+
       // Fallback finale: default neutro
       console.log('⚠️ Daily Copilot: No mood data found, using default (3)');
       return 3;
@@ -273,7 +273,7 @@ class DailyCopilotService {
 
       const { supabase } = await import('../lib/supabase');
       const today = new Date().toISOString().slice(0, 10);
-      
+
       // 🔥 FIX: Prima prova a leggere i dati di OGGI
       const { data: todayCheckin } = await supabase
         .from('daily_copilot_analyses')
@@ -281,7 +281,7 @@ class DailyCopilotService {
         .eq('user_id', currentUser.id)
         .eq('date', today)
         .maybeSingle();
-      
+
       if (todayCheckin && (todayCheckin.sleep_hours || todayCheckin.sleep_quality)) {
         console.log('✅ Daily Copilot: Using today\'s sleep:', {
           hours: todayCheckin.sleep_hours,
@@ -292,19 +292,19 @@ class DailyCopilotService {
           quality: todayCheckin.sleep_quality || 80
         };
       }
-      
+
       // 🔥 FIX: Se non ci sono dati di oggi, usa i dati di IERI (sera prima)
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayKey = yesterday.toISOString().slice(0, 10);
-      
+
       const { data: yesterdayCheckin } = await supabase
         .from('daily_copilot_analyses')
         .select('sleep_hours, sleep_quality')
         .eq('user_id', currentUser.id)
         .eq('date', yesterdayKey)
         .maybeSingle();
-      
+
       if (yesterdayCheckin && (yesterdayCheckin.sleep_hours || yesterdayCheckin.sleep_quality)) {
         console.log('ℹ️ Daily Copilot: Using yesterday\'s sleep (evening before):', {
           hours: yesterdayCheckin.sleep_hours,
@@ -315,18 +315,18 @@ class DailyCopilotService {
           quality: yesterdayCheckin.sleep_quality || 80
         };
       }
-      
+
       // Fallback ad AsyncStorage per retrocompatibilità
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const savedSleep = await AsyncStorage.getItem(`checkin:sleep:${today}`);
-      
+
       if (savedSleep) {
         return {
           hours: 7.5,
           quality: parseInt(savedSleep, 10)
         };
       }
-      
+
       // Fallback finale: default
       console.log('⚠️ Daily Copilot: No sleep data found, using default (7.5h, 80%)');
       return { hours: 7.5, quality: 80 };
@@ -354,7 +354,7 @@ class DailyCopilotService {
       // 🔥 FIX: Prova prima a prendere i dati dal database (più aggiornati)
       const { supabase } = await import('../lib/supabase');
       const today = new Date().toISOString().split('T')[0];
-      
+
       const { data: healthData } = await supabase
         .from('health_data')
         .select('steps, hrv, hydration, resting_heart_rate')
@@ -369,7 +369,7 @@ class DailyCopilotService {
           hydration: healthData.hydration ? Math.round(healthData.hydration / 250) : 6,
           restingHR: healthData.resting_heart_rate
         });
-        
+
         return {
           steps: healthData.steps || 5000,
           hrv: healthData.hrv || 35,
@@ -383,7 +383,7 @@ class DailyCopilotService {
         const { HealthDataService } = await import('./health-data.service');
         const healthService = HealthDataService.getInstance();
         const syncResult = await healthService.syncHealthData(false);
-        
+
         if (syncResult.success && syncResult.data) {
           const data = syncResult.data;
           console.log('✅ Daily Copilot: Using real health data from HealthDataService:', {
@@ -392,7 +392,7 @@ class DailyCopilotService {
             hydration: data.hydration ? Math.round(data.hydration / 250) : 6,
             restingHR: data.restingHeartRate
           });
-          
+
           return {
             steps: data.steps || 5000,
             hrv: data.hrv || 35,
@@ -428,7 +428,7 @@ class DailyCopilotService {
    * ✅ Include: timeout, retry logic, gestione errori robusta
    */
   private async generateAIAnalysis(
-    data: CopilotAnalysisRequest, 
+    data: CopilotAnalysisRequest,
     userId: string
   ): Promise<DailyCopilotData | null> {
     // 🔥 FIX: Ottieni la lingua corrente dell'utente
@@ -437,29 +437,67 @@ class DailyCopilotService {
 
     // 🔥 FIX: Ottieni contesto aggiuntivo per arricchire il prompt
     let contextInfo = '';
+    let menstrualCycleContext = null;
+    let nutritionContext = null;
     try {
       const aiContext = await AIContextService.getCompleteContext(userId);
-      
+
       // Aggiungi informazioni sul contesto emotivo e della pelle se disponibili
       if (aiContext.currentEmotion) {
         contextInfo += `\n- Emotional state: ${aiContext.currentEmotion.emotion} (valence: ${aiContext.currentEmotion.valence.toFixed(2)}, arousal: ${aiContext.currentEmotion.arousal.toFixed(2)})\n`;
       }
-      
+
       if (aiContext.currentSkin) {
         contextInfo += `- Skin status score: ${aiContext.currentSkin.overallScore}/100\n`;
       }
-      
+
       if (aiContext.emotionTrend) {
         const trendText = aiContext.emotionTrend === 'improving' ? 'improving' : aiContext.emotionTrend === 'declining' ? 'worsening' : 'stable';
         contextInfo += `- Emotional trend: ${trendText}\n`;
       }
-      
+
       if (aiContext.insights && aiContext.insights.length > 0) {
         contextInfo += `\n- Recent insights:\n${aiContext.insights.slice(0, 3).map(i => `  - ${i}`).join('\n')}\n`;
       }
-      
+
       if (aiContext.behavioralInsights?.improvementAreas && aiContext.behavioralInsights.improvementAreas.length > 0) {
         contextInfo += `\n- Areas of improvement:\n${aiContext.behavioralInsights.improvementAreas.slice(0, 2).map(a => `  - ${a}`).join('\n')}\n`;
+      }
+
+      // 🔥 FIX: Aggiungi contesto ciclo mestruale se disponibile
+      if (aiContext.menstrualCycleContext) {
+        menstrualCycleContext = aiContext.menstrualCycleContext;
+        contextInfo += `\n🩸 MENSTRUAL CYCLE:\n`;
+        if (aiContext.menstrualCycleContext.phase) {
+          contextInfo += `- Current phase: ${aiContext.menstrualCycleContext.phase}\n`;
+        }
+        if (aiContext.menstrualCycleContext.day) {
+          contextInfo += `- Cycle day: ${aiContext.menstrualCycleContext.day}\n`;
+        }
+        if (aiContext.menstrualCycleContext.nextPeriodDays !== undefined) {
+          contextInfo += `- Days until next period: ${aiContext.menstrualCycleContext.nextPeriodDays}\n`;
+        }
+        if (aiContext.menstrualCycleContext.recentNotes) {
+          contextInfo += `- Recent notes: ${aiContext.menstrualCycleContext.recentNotes}\n`;
+        }
+        contextInfo += `\n💡 Use this information to personalize recommendations based on cycle phase (e.g., more rest during menstrual phase, more energy during ovulatory phase).\n`;
+      }
+
+      // 🔥 FIX: Aggiungi contesto nutrizionale se disponibile
+      if (aiContext.nutritionContext) {
+        nutritionContext = aiContext.nutritionContext;
+        contextInfo += `\n🍽️ NUTRITION TODAY:\n`;
+        if (aiContext.nutritionContext.todayCalories !== undefined) {
+          contextInfo += `- Calories consumed: ${aiContext.nutritionContext.todayCalories} kcal\n`;
+        }
+        if (aiContext.nutritionContext.todayMacros) {
+          const macros = aiContext.nutritionContext.todayMacros;
+          contextInfo += `- Macros: Protein ${macros.protein || 0}g, Carbs ${macros.carbs || 0}g, Fat ${macros.fat || 0}g\n`;
+        }
+        if (aiContext.nutritionContext.recentMeals && aiContext.nutritionContext.recentMeals.length > 0) {
+          contextInfo += `- Recent meals: ${aiContext.nutritionContext.recentMeals.join(', ')}\n`;
+        }
+        contextInfo += `\n💡 Use this information to give personalized nutrition recommendations.\n`;
       }
     } catch (contextError) {
       console.warn('⚠️ Could not load additional context:', contextError);
@@ -572,7 +610,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
       return await RetryService.withRetry(
         async () => {
           const backendURL = await getBackendURL();
-          
+
           // Timeout per la chiamata API (30 secondi - analisi AI può richiedere tempo)
           const controller = new AbortController();
           const timeoutId = setTimeout(() => {
@@ -626,12 +664,12 @@ OUTPUT FORMAT (return ONLY valid JSON):
             return this.parseAIAnalysis(analysisText, data);
           } catch (error: any) {
             clearTimeout(timeoutId);
-            
+
             // Gestione specifica per timeout
             if (error.name === 'AbortError' || error.message?.includes('timeout')) {
               throw new Error('AI analysis timeout: il server ha impiegato troppo tempo');
             }
-            
+
             throw error;
           }
         },
@@ -674,16 +712,16 @@ OUTPUT FORMAT (return ONLY valid JSON):
         const jsonMatch = analysisText.match(/\{[\s\S]*?\}(?=\s*$|\s*[^}])/);
         if (jsonMatch) {
           let jsonString = jsonMatch[0];
-          
+
           // Try to fix incomplete JSON by adding missing closing braces
           const openBraces = (jsonString.match(/\{/g) || []).length;
           const closeBraces = (jsonString.match(/\}/g) || []).length;
-          
+
           if (openBraces > closeBraces) {
             const missingBraces = openBraces - closeBraces;
             jsonString += '}'.repeat(missingBraces);
           }
-          
+
           // Try to fix incomplete strings within JSON
           if (jsonString.includes('"correlations": [') && !jsonString.includes(']')) {
             // Find the last incomplete array and close it
@@ -692,7 +730,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
               jsonString = jsonString.replace(lastArrayMatch[0], lastArrayMatch[0] + ']');
             }
           }
-          
+
           try {
             parsedData = JSON.parse(jsonString);
           } catch (fixError) {
@@ -701,7 +739,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
           }
         }
       }
-      
+
       if (parsedData && parsedData.recommendations) {
         return {
           overallScore: parsedData.overallScore || this.calculateOverallScore(data),
@@ -735,7 +773,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
     } catch (error) {
       // Fallback to basic recommendations on parse error
     }
-    
+
     // Fallback to basic analysis
     return this.generateFallbackAnalysis(data);
   }
@@ -767,13 +805,13 @@ OUTPUT FORMAT (return ONLY valid JSON):
             };
           }
         });
-        
+
         return { recommendations };
       }
     } catch (error) {
       console.log('⚠️ Could not extract partial recommendations:', error);
     }
-    
+
     return null;
   }
 
@@ -801,26 +839,26 @@ OUTPUT FORMAT (return ONLY valid JSON):
    */
   private calculateOverallScore(data: CopilotAnalysisRequest): number {
     let score = 0;
-    
+
     // Mood (20%)
     score += (data.mood / 5) * 20;
-    
+
     // Sleep (30%)
     const sleepScore = (data.sleep.hours / 8) * 0.7 + (data.sleep.quality / 100) * 0.3;
     score += Math.min(sleepScore, 1) * 30;
-    
+
     // Steps (20%)
     const stepsScore = Math.min(data.healthMetrics.steps / 10000, 1);
     score += stepsScore * 20;
-    
+
     // HRV (15%)
     const hrvScore = Math.min(data.healthMetrics.hrv / 50, 1);
     score += hrvScore * 15;
-    
+
     // Hydration (15%)
     const hydrationScore = Math.min(data.healthMetrics.hydration / 8, 1);
     score += hydrationScore * 15;
-    
+
     return Math.round(score);
   }
 
@@ -1024,18 +1062,18 @@ OUTPUT FORMAT (return ONLY valid JSON):
     recovery: 'excellent' | 'good' | 'needs_attention';
     mood: 'positive' | 'neutral' | 'low';
   } {
-    const energy: 'high' | 'medium' | 'low' = data.mood >= 4 && data.healthMetrics.hrv >= 35 ? 'high' : 
-                   data.mood >= 3 && data.healthMetrics.hrv >= 25 ? 'medium' : 'low';
-    
+    const energy: 'high' | 'medium' | 'low' = data.mood >= 4 && data.healthMetrics.hrv >= 35 ? 'high' :
+      data.mood >= 3 && data.healthMetrics.hrv >= 25 ? 'medium' : 'low';
+
     const recovery: 'excellent' | 'good' | 'needs_attention' = data.sleep.hours >= 7 && data.sleep.quality >= 80 ? 'excellent' :
-                     data.sleep.hours >= 6 && data.sleep.quality >= 60 ? 'good' : 'needs_attention';
-    
+      data.sleep.hours >= 6 && data.sleep.quality >= 60 ? 'good' : 'needs_attention';
+
     const mood: 'positive' | 'neutral' | 'low' = data.mood >= 4 ? 'positive' : data.mood >= 3 ? 'neutral' : 'low';
-    
+
     const focus = energy === 'low' ? 'Energia & Recupero' :
-                  recovery === 'needs_attention' ? 'Riposo & Benessere' :
-                  data.healthMetrics.steps < 5000 ? 'Movimento & Vitalità' :
-                  'Mantenimento & Crescita';
+      recovery === 'needs_attention' ? 'Riposo & Benessere' :
+        data.healthMetrics.steps < 5000 ? 'Movimento & Vitalità' :
+          'Mantenimento & Crescita';
 
     return { focus, energy, recovery, mood };
   }
@@ -1062,35 +1100,35 @@ OUTPUT FORMAT (return ONLY valid JSON):
   private convertDBRecordToCopilotData(dbRecord: any): DailyCopilotData {
     try {
       // 🔥 FIX: Gestisci i casi in cui i dati potrebbero essere stringhe JSON invece di oggetti
-      const healthMetrics = typeof dbRecord.health_metrics === 'string' 
-        ? JSON.parse(dbRecord.health_metrics) 
+      const healthMetrics = typeof dbRecord.health_metrics === 'string'
+        ? JSON.parse(dbRecord.health_metrics)
         : (dbRecord.health_metrics || {});
-      
+
       const recommendations = typeof dbRecord.recommendations === 'string'
         ? JSON.parse(dbRecord.recommendations)
         : (dbRecord.recommendations || []);
-      
+
       const summary = typeof dbRecord.summary === 'string'
         ? JSON.parse(dbRecord.summary)
         : (dbRecord.summary || {});
-      
+
       // 🔥 FIX: Assicurati che recommendations sia un array e converti i campi
-      const recommendationsArray = Array.isArray(recommendations) 
+      const recommendationsArray = Array.isArray(recommendations)
         ? recommendations.map((rec: any) => ({
-            id: rec.id || `rec-${Date.now()}-${Math.random()}`,
-            priority: rec.priority || 'medium',
-            category: rec.category || 'energy',
-            action: rec.action || '',
-            reason: rec.reason || '',
-            icon: rec.icon || '💡',
-            estimatedTime: rec.estimated_time || rec.estimatedTime || undefined,
-            actionable: rec.actionable !== undefined ? rec.actionable : true,
-            detailedExplanation: rec.detailed_explanation || rec.detailedExplanation,
-            correlations: rec.correlations || [],
-            expectedBenefits: rec.expected_benefits || rec.expectedBenefits || [],
-          }))
+          id: rec.id || `rec-${Date.now()}-${Math.random()}`,
+          priority: rec.priority || 'medium',
+          category: rec.category || 'energy',
+          action: rec.action || '',
+          reason: rec.reason || '',
+          icon: rec.icon || '💡',
+          estimatedTime: rec.estimated_time || rec.estimatedTime || undefined,
+          actionable: rec.actionable !== undefined ? rec.actionable : true,
+          detailedExplanation: rec.detailed_explanation || rec.detailedExplanation,
+          correlations: rec.correlations || [],
+          expectedBenefits: rec.expected_benefits || rec.expectedBenefits || [],
+        }))
         : [];
-      
+
       // 🔥 FIX: Assicurati che summary abbia i campi necessari
       const summaryData = {
         focus: summary.focus || 'Mantenimento & Crescita',
@@ -1098,7 +1136,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
         recovery: summary.recovery || 'good',
         mood: summary.mood || 'neutral',
       };
-      
+
       return {
         overallScore: dbRecord.overall_score || 50,
         mood: dbRecord.mood || 3,

@@ -2284,6 +2284,37 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       showsHorizontalScrollIndicator={false}
                       contentContainerStyle={styles.chatHistoryScrollContent}
                     >
+                      {/* 🆕 New Chat Button */}
+                      <TouchableOpacity
+                        style={[
+                          styles.chatHistoryItem,
+                          {
+                            backgroundColor: colors.primary,
+                            borderColor: colors.primary,
+                            minWidth: 100,
+                          }
+                        ]}
+                        onPress={async () => {
+                          // Crea una nuova sessione di chat
+                          const welcomeMessage = getInitialMessage();
+                          setMessages([{
+                            id: 'welcome',
+                            text: welcomeMessage,
+                            sender: 'ai',
+                            timestamp: new Date(Date.now() - 60000),
+                          }]);
+                          setCurrentSessionId(null);
+                          setShowChatHistory(false);
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                          <FontAwesome name="plus" size={14} color="#fff" />
+                          <Text style={[styles.chatHistoryItemName, { color: '#fff', fontWeight: '600' }]}>
+                            {t('chat.history.newChat') || 'Nuova Chat'}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+
                       {chatHistory.map((session: any) => {
                         const firstMessage = session.firstUserMessage || '';
                         const truncatedMessage = firstMessage.length > 50

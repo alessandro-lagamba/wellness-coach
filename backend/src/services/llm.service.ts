@@ -65,6 +65,35 @@ export interface LLMOptions {
       environmentalFactors: string[];
       lifestyleIndicators: string[];
     };
+    // 🔥 FIX: Aggiunti contesti ciclo mestruale e nutrizione
+    menstrualCycleContext?: {
+      phase?: string;
+      day?: number;
+      nextPeriodDays?: number;
+      recentNotes?: string;
+    } | null;
+    menstrualCyclePhase?: {
+      currentPhase?: string;
+      dayOfCycle?: number;
+      daysUntilNext?: number;
+      cycleLength?: number;
+    } | null;
+    nutritionContext?: {
+      todayCalories?: number;
+      todayMacros?: {
+        protein?: number;
+        carbs?: number;
+        fat?: number;
+      };
+      recentMeals?: string[];
+    } | null;
+    foodContext?: {
+      lastMealName?: string;
+      calories?: number;
+      healthScore?: number;
+      macros?: any;
+      identifiedFoods?: string[];
+    } | null;
   };
   // 🆕 NUOVO: Intent di analisi rilevato dal messaggio
   analysisIntent?: {
@@ -139,29 +168,29 @@ export async function generateWellnessResponse(
 
   } catch (error) {
     console.error('[LLM] ❌ Error generating response:', error);
-    
+
     // Fallback response based on emotion
     if (options.emotionContext?.dominantEmotion) {
       return getFallbackResponse(message, options.emotionContext.dominantEmotion);
     }
-    
+
     return 'Mi dispiace, sto avendo difficoltà tecniche. Puoi riprovare tra un momento?';
   }
 }
 
 function buildSystemPrompt(options: LLMOptions = {}): string {
   const { emotionContext, skinContext, userContext, tone = 'empathetic', responseLength = 'standard', includeActionSteps = true } = options;
-  
+
   // 🔥 FIX: Extract user language from context (default: 'it')
   const userLanguage = userContext?.language || 'it';
   const languageInstruction = userLanguage === 'en'
     ? 'IMPORTANT: Respond in English. All your responses must be in English. Use natural, warm but professional English.'
     : 'IMPORTANT: Rispondi in italiano. Tutte le tue risposte devono essere in italiano. Usa un italiano naturale, caldo ma professionale.';
-  
+
   // Extract user name from context
   const userName = userContext?.firstName || userContext?.first_name || userContext?.name || null;
   const userGreeting = userName ? (userLanguage === 'en' ? `Hi ${userName}!` : `Ciao ${userName}!`) : (userLanguage === 'en' ? 'Hi!' : 'Ciao!');
-  
+
   // Tone instructions (localized)
   const toneInstructions = userLanguage === 'en' ? {
     empathetic: 'Be empathetic, understanding, and warm. Show understanding for the user\'s emotions and use welcoming language.',
@@ -187,8 +216,8 @@ function buildSystemPrompt(options: LLMOptions = {}): string {
   };
 
   // Action steps instructions (localized)
-  const actionStepsInstruction = includeActionSteps 
-    ? (userLanguage === 'en' 
+  const actionStepsInstruction = includeActionSteps
+    ? (userLanguage === 'en'
       ? 'At the end of each response, when appropriate, add a concrete and actionable "Next step" (e.g., "Next step: try 5 minutes of deep breathing").'
       : 'Alla fine di ogni risposta, quando appropriato, aggiungi un "Prossimo passo" concreto e actionable (es. "Prossimo passo: prova 5 minuti di respirazione profonda").')
     : (userLanguage === 'en'
@@ -350,7 +379,7 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
     const valence = emotionContext.valence || 0;
     const arousal = emotionContext.arousal || 0;
     const confidence = emotionContext.confidence || 0;
-    
+
     contextualPrompt += `\n\nSTATO EMOTIVO ATTUALE:
 - Emozione dominante: ${emotion}
 - Valence: ${valence.toFixed(2)} (da -1 negativo a +1 positivo)
@@ -362,7 +391,7 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
   if (skinContext?.overallScore !== undefined) {
     contextualPrompt += `\n\nCONDIZIONE PELLE ATTUALE:
 - Score generale: ${skinContext.overallScore}/100`;
-    
+
     if (skinContext.hydrationScore !== undefined) {
       contextualPrompt += `\n- Idratazione: ${skinContext.hydrationScore}/100`;
     }
@@ -384,7 +413,7 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
       const date = new Date(h.date).toLocaleDateString('it-IT');
       contextualPrompt += `\n${index + 1}. ${date}: ${h.emotion} (valence: ${h.valence.toFixed(2)}, arousal: ${h.arousal.toFixed(2)})`;
     });
-    
+
     if (userContext.emotionTrend) {
       contextualPrompt += `\n- Trend emotivo: ${userContext.emotionTrend}`;
     }
@@ -397,7 +426,7 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
       const date = new Date(h.date).toLocaleDateString('it-IT');
       contextualPrompt += `\n${index + 1}. ${date}: Score ${h.overallScore}/100`;
     });
-    
+
     if (userContext.skinTrend) {
       contextualPrompt += `\n- Trend pelle: ${userContext.skinTrend}`;
     }
@@ -408,14 +437,14 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
     contextualPrompt += `\n\nCONTESTO TEMPORALE:
 - Periodo della giornata: ${userContext.temporalPatterns.timeOfDay}
 - Giorno della settimana: ${userContext.temporalPatterns.dayOfWeek}`;
-    
+
     if (userContext.temporalPatterns.emotionalCycles && userContext.temporalPatterns.emotionalCycles.length > 0) {
       contextualPrompt += `\n- Cicli emotivi rilevati:`;
       userContext.temporalPatterns.emotionalCycles.forEach((cycle: any) => {
         contextualPrompt += `\n  • ${cycle.description} (frequenza: ${(cycle.frequency * 100).toFixed(0)}%)`;
       });
     }
-    
+
     if (userContext.temporalPatterns.skinCycles && userContext.temporalPatterns.skinCycles.length > 0) {
       contextualPrompt += `\n- Cicli della pelle rilevati:`;
       userContext.temporalPatterns.skinCycles.forEach((cycle: any) => {
@@ -432,21 +461,21 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
         contextualPrompt += `\n- ${indicator}`;
       });
     }
-    
+
     if (userContext.behavioralInsights.wellnessTriggers && userContext.behavioralInsights.wellnessTriggers.length > 0) {
       contextualPrompt += `\n\nTRIGGER DI BENESSERE:`;
       userContext.behavioralInsights.wellnessTriggers.forEach((trigger: string) => {
         contextualPrompt += `\n- ${trigger}`;
       });
     }
-    
+
     if (userContext.behavioralInsights.improvementAreas && userContext.behavioralInsights.improvementAreas.length > 0) {
       contextualPrompt += `\n\nAREE DI MIGLIORAMENTO:`;
       userContext.behavioralInsights.improvementAreas.forEach((area: string) => {
         contextualPrompt += `\n- ${area}`;
       });
     }
-    
+
     if (userContext.behavioralInsights.strengths && userContext.behavioralInsights.strengths.length > 0) {
       contextualPrompt += `\n\nPUNTI DI FORZA:`;
       userContext.behavioralInsights.strengths.forEach((strength: string) => {
@@ -463,7 +492,7 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
         contextualPrompt += `\n- ${factor}`;
       });
     }
-    
+
     if (userContext.contextualFactors.lifestyleIndicators && userContext.contextualFactors.lifestyleIndicators.length > 0) {
       contextualPrompt += `\n\nINDICATORI DI STILE DI VITA:`;
       userContext.contextualFactors.lifestyleIndicators.forEach((indicator: string) => {
@@ -486,13 +515,71 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
 - Titolo: ${userContext.wellnessSuggestion.title}
 - Categoria: ${userContext.wellnessSuggestion.category}
 - Descrizione: ${userContext.wellnessSuggestion.description}`;
-    
+
     if (userContext.wellnessSuggestion.urgency) {
       contextualPrompt += `\n- Urgenza: ${userContext.wellnessSuggestion.urgency}`;
     }
     if (userContext.wellnessSuggestion.timing) {
       contextualPrompt += `\n- Timing: ${userContext.wellnessSuggestion.timing}`;
     }
+  }
+
+  // 🔥 FIX: Aggiungi contesto ciclo mestruale
+  if (userContext?.menstrualCycleContext || userContext?.menstrualCyclePhase) {
+    const cycleContext = userContext.menstrualCycleContext;
+    const cyclePhase = userContext.menstrualCyclePhase;
+
+    contextualPrompt += `\n\n🩸 CICLO MESTRUALE:\n- HAI ACCESSO AI DATI DEL CICLO MESTRUALE DELL'UTENTE!`;
+
+    if (cyclePhase?.currentPhase || cycleContext?.phase) {
+      contextualPrompt += `\n- Fase attuale: ${cyclePhase?.currentPhase || cycleContext?.phase}`;
+    }
+    if (cyclePhase?.dayOfCycle || cycleContext?.day) {
+      contextualPrompt += `\n- Giorno del ciclo: ${cyclePhase?.dayOfCycle || cycleContext?.day}`;
+    }
+    if (cyclePhase?.daysUntilNext !== undefined || cycleContext?.nextPeriodDays !== undefined) {
+      contextualPrompt += `\n- Prossimo ciclo tra: ${cyclePhase?.daysUntilNext ?? cycleContext?.nextPeriodDays} giorni`;
+    }
+    if (cyclePhase?.cycleLength) {
+      contextualPrompt += `\n- Durata ciclo: ${cyclePhase.cycleLength} giorni`;
+    }
+    if (cycleContext?.recentNotes) {
+      contextualPrompt += `\n- Note recenti: ${cycleContext.recentNotes}`;
+    }
+
+    contextualPrompt += `\n\n💡 USA QUESTE INFORMAZIONI per personalizzare i consigli in base alla fase del ciclo (es. più riposo in fase mestruale, più energia in fase ovulatoria).`;
+  }
+
+  // 🔥 FIX: Aggiungi contesto nutrizionale
+  if (userContext?.nutritionContext || userContext?.foodContext) {
+    const nutrition = userContext.nutritionContext;
+    const food = userContext.foodContext;
+
+    contextualPrompt += `\n\n🍽️ NUTRIZIONE:\n- HAI ACCESSO AI DATI NUTRIZIONALI DELL'UTENTE!`;
+
+    if (nutrition?.todayCalories !== undefined) {
+      contextualPrompt += `\n- Calorie oggi: ${nutrition.todayCalories} kcal`;
+    }
+    if (nutrition?.todayMacros) {
+      contextualPrompt += `\n- Macro oggi: Proteine ${nutrition.todayMacros.protein || 0}g, Carboidrati ${nutrition.todayMacros.carbs || 0}g, Grassi ${nutrition.todayMacros.fat || 0}g`;
+    }
+    if (nutrition?.recentMeals && nutrition.recentMeals.length > 0) {
+      contextualPrompt += `\n- Pasti recenti: ${nutrition.recentMeals.join(', ')}`;
+    }
+    if (food?.lastMealName) {
+      contextualPrompt += `\n- Ultimo pasto: ${food.lastMealName}`;
+    }
+    if (food?.calories !== undefined) {
+      contextualPrompt += `\n- Calorie ultimo pasto: ${food.calories} kcal`;
+    }
+    if (food?.healthScore !== undefined) {
+      contextualPrompt += `\n- Health score ultimo pasto: ${food.healthScore}/100`;
+    }
+    if (food?.identifiedFoods && food.identifiedFoods.length > 0) {
+      contextualPrompt += `\n- Cibi identificati: ${food.identifiedFoods.join(', ')}`;
+    }
+
+    contextualPrompt += `\n\n💡 USA QUESTE INFORMAZIONI per dare consigli nutrizionali personalizzati e rispondere a domande sull'alimentazione.`;
   }
 
   // Istruzioni finali migliorate
@@ -519,6 +606,6 @@ function getFallbackResponse(message: string, emotion: string): string {
     happiness: "È bello vederti positivo! Come posso aiutarti a mantenere questo stato d'animo? Magari possiamo esplorare cosa ti rende felice.",
     neutral: "Ti ascolto. Come posso supportarti oggi nel tuo percorso di benessere?"
   };
-  
+
   return fallbacks[emotion as keyof typeof fallbacks] || fallbacks.neutral;
 }
