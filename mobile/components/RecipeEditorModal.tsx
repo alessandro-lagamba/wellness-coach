@@ -286,8 +286,8 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           style={styles.keyboardAvoidingContainer}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={0}
+          behavior="padding"
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
         >
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <TouchableOpacity onPress={onClose} style={styles.headerButton}>
@@ -303,9 +303,10 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
           </View>
 
           <ScrollView
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[styles.content, { paddingBottom: 120 }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={true}
+            automaticallyAdjustKeyboardInsets={true}
           >
             <View style={[styles.field, { borderColor: colors.border }]}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>

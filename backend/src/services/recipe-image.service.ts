@@ -52,7 +52,6 @@ export async function generateRecipeImageFromTitle(
 
     // 2) Nessuna cache: chiama deAPI per generare l'immagine
     console.log("[RecipeImage] 🎨 Generating image for:", title);
-    const foodPrompt = `Professional food photography of ${title}, appetizing dish, high quality, studio lighting, top-down view, clean background`;
 
     const response = await fetch(DEAPI_ENDPOINT, {
       method: "POST",
@@ -62,20 +61,23 @@ export async function generateRecipeImageFromTitle(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        prompt: foodPrompt,
-        negative_prompt: "blur, darkness, noise, text, watermark, logo, hands, people, ugly, deformed",
-        model: "flux-schnell", // 🔥 FIX: Correct model name
+        prompt: title,
+        model: "Flux1schnell",
         width: 512,
         height: 512,
-        steps: 4, // 🔥 FIX: flux-schnell uses fewer steps (4-8 is optimal)
+        steps: 4,
+        negative_prompt: "",
       }),
     });
 
     if (!response.ok) {
+      const errorBody = await response.text().catch(() => "Unable to read error body");
       console.error(
         "[RecipeImage] txt2img error:",
         response.status,
-        response.statusText
+        response.statusText,
+        "Body:",
+        errorBody
       );
       return null;
     }
