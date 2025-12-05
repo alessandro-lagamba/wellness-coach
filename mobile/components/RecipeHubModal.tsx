@@ -61,9 +61,12 @@ const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 // Helper per generare URL immagine Unsplash basato su titolo/ingredienti
 const getRecipeImageUrl = (recipe: UserRecipe, mealType?: MealType): string => {
-    // Se la ricetta ha già un'immagine salvata, usala (quando implementeremo il campo image)
-    // Per ora generiamo un URL basato su ingredienti principali o titolo
+    // ✅ Se la ricetta ha un'immagine salvata (generata dall'AI), usala!
+    if (recipe.image) {
+        return recipe.image;
+    }
 
+    // Fallback: genera URL basato su ingredienti/titolo
     const searchTerms: string[] = [];
 
     // Aggiungi ingredienti principali (primi 2-3)

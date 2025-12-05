@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -63,18 +64,27 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
                   </Text>
                 </View>
               ) : recipe ? (
-                <ScrollView 
-                  style={styles.scrollView} 
+                <ScrollView
+                  style={styles.scrollView}
                   contentContainerStyle={styles.scrollViewContent}
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                 >
+                  {/* Recipe Image */}
+                  {recipe.image && (
+                    <Image
+                      source={{ uri: recipe.image }}
+                      style={styles.recipeImage}
+                      resizeMode="cover"
+                    />
+                  )}
+
                   {/* Recipe Meta */}
                   <View style={styles.recipeMeta}>
                     <View style={styles.recipeMetaItem}>
                       <MaterialCommunityIcons name="clock-outline" size={16} color={colors.textSecondary} />
                       <Text style={[styles.recipeMetaText, { color: colors.textSecondary }]}>
-                        {recipe.readyInMinutes} {t('analysis.food.fridge.minutes')}
+                        {recipe.readyInMinutes || recipe.ready_in_minutes || recipe.total_minutes || '?'} {t('analysis.food.fridge.minutes')}
                       </Text>
                     </View>
                     <View style={styles.recipeMetaItem}>
@@ -85,44 +95,60 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
                     </View>
                   </View>
 
-                  {/* Macros Section */}
-                  <View style={styles.macrosSection}>
-                    <Text style={[styles.macrosTitle, { color: colors.text }]}>
-                      {t('analysis.food.fridge.nutritionPerServing')}
-                    </Text>
-                    <View style={styles.macrosGrid}>
-                      <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
-                        <Text style={[styles.macroValue, { color: colors.text }]}>
-                          {Math.round(recipe.caloriesPerServing)}
+                  {/* Macros Section - Handle both camelCase and snake_case field names */}
+                  {(() => {
+                    // Handle different field naming conventions
+                    const calories = recipe.caloriesPerServing || recipe.calories_per_serving || 0;
+                    const macros = recipe.macrosPerServing || recipe.macros || {};
+                    const protein = macros?.protein || 0;
+                    const carbs = macros?.carbs || 0;
+                    const fat = macros?.fat || 0;
+
+                    // Only show section if we have valid data
+                    const hasNutrition = calories > 0 || protein > 0 || carbs > 0 || fat > 0;
+
+                    if (!hasNutrition) return null;
+
+                    return (
+                      <View style={styles.macrosSection}>
+                        <Text style={[styles.macrosTitle, { color: colors.text }]}>
+                          {t('analysis.food.fridge.nutritionPerServing')}
                         </Text>
-                        <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>kcal</Text>
+                        <View style={styles.macrosGrid}>
+                          <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
+                            <Text style={[styles.macroValue, { color: colors.text }]}>
+                              {Math.round(calories)}
+                            </Text>
+                            <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>kcal</Text>
+                          </View>
+                          <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
+                            <Text style={[styles.macroValue, { color: colors.text }]}>
+                              {Math.round(protein)}g
+                            </Text>
+                            <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>
+                              {t('analysis.food.metrics.proteins')}
+                            </Text>
+                          </View>
+                          <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
+                            <Text style={[styles.macroValue, { color: colors.text }]}>
+                              {Math.round(carbs)}g
+                            </Text>
+                            <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>
+                              {t('analysis.food.metrics.carbohydrates')}
+                            </Text>
+                          </View>
+                          <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
+                            <Text style={[styles.macroValue, { color: colors.text }]}>
+                              {Math.round(fat)}g
+                            </Text>
+                            <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>
+                              {t('analysis.food.metrics.fats')}
+                            </Text>
+                          </View>
+                        </View>
                       </View>
-                      <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
-                        <Text style={[styles.macroValue, { color: colors.text }]}>
-                          {Math.round(recipe.macrosPerServing?.protein || 0)}g
-                        </Text>
-                        <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>
-                          {t('analysis.food.metrics.proteins')}
-                        </Text>
-                      </View>
-                      <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
-                        <Text style={[styles.macroValue, { color: colors.text }]}>
-                          {Math.round(recipe.macrosPerServing?.carbs || 0)}g
-                        </Text>
-                        <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>
-                          {t('analysis.food.metrics.carbohydrates')}
-                        </Text>
-                      </View>
-                      <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
-                        <Text style={[styles.macroValue, { color: colors.text }]}>
-                          {Math.round(recipe.macrosPerServing?.fat || 0)}g
-                        </Text>
-                        <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>
-                          {t('analysis.food.metrics.fats')}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
+                    );
+                  })()}
 
                   {/* Ingredients Section */}
                   <View style={styles.ingredientsListSection}>
@@ -263,6 +289,12 @@ const styles = StyleSheet.create({
   scrollViewContent: {
     padding: 20,
     paddingBottom: 10,
+  },
+  recipeImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    marginBottom: 16,
   },
   recipeMeta: {
     flexDirection: 'row',
