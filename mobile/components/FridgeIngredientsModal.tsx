@@ -75,7 +75,8 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   const { t } = useTranslation();
   const { colors } = useTheme();
   const [ingredients, setIngredients] = useState<IngredientRow[]>([{ name: '' }]);
-  const [savedIngredients, setSavedIngredients] = useState<Array<{ id: string; name: string; expiry_date?: string; quantity?: number; unit?: string }>>([]);
+  const [savedIngredients, setSavedIngredients] = useState<Array<{ id: string; name: string; expiry_date?: string; quantity?: number; unit?: string; category?: string }>>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null); // null = show all
   const [loading, setLoading] = useState(false);
   const [generatedRecipe, setGeneratedRecipe] = useState<any>(null);
   const [bulkText, setBulkText] = useState('');
@@ -479,6 +480,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
           expiry_date: item.expiry_date,
           quantity: item.quantity,
           unit: item.unit,
+          category: (item as any).category, // Category may be stored on item
         })),
       );
       setExcludedIngredientIds((prev) => {
@@ -1097,61 +1099,115 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                           <Text style={[styles.sectionTitle, { color: colors.text }]}>
                             {t('analysis.food.fridge.savedIngredients') || 'Ingredienti Salvati'}
                           </Text>
-                          {savedIngredients.map((item) => (
-                            <View key={item.id} style={[styles.savedIngredientRow, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                              <View style={styles.savedIngredientInfo}>
-                                <Text style={[styles.savedIngredientName, { color: colors.text }]}>{item.name}</Text>
-                                {item.expiry_date && (
-                                  <Text style={[styles.savedIngredientExpiry, { color: colors.textSecondary }]}>
-                                    {t('analysis.food.fridge.expires')}: {item.expiry_date}
-                                  </Text>
-                                )}
-                                {item.quantity && (
-                                  <Text style={[styles.savedIngredientQuantity, { color: colors.textSecondary }]}>
-                                    {item.quantity} {item.unit || ''}
-                                  </Text>
-                                )}
+
+                          {/* Category quick filter chips */}
+                          <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            style={styles.categoryFilterContainer}
+                            contentContainerStyle={styles.categoryFilterContent}
+                          >
+                            <TouchableOpacity
+                              style={[
+                                styles.categoryChip,
+                                {
+                                  backgroundColor: categoryFilter === null ? colors.primary : colors.surfaceElevated,
+                                  borderColor: categoryFilter === null ? colors.primary : colors.border,
+                                }
+                              ]}
+                              onPress={() => setCategoryFilter(null)}
+                            >
+                              <Text style={[styles.categoryChipText, { color: categoryFilter === null ? colors.textInverse : colors.text }]}>
+                                {t('common.all') || 'Tutti'}
+                              </Text>
+                            </TouchableOpacity>
+                            {[
+                              { id: 'vegetables', icon: '🥬', label: t('analysis.food.fridge.categories.vegetables') || 'Verdure' },
+                              { id: 'meat', icon: '🥩', label: t('analysis.food.fridge.categories.meat') || 'Carne' },
+                              { id: 'fish', icon: '🐟', label: t('analysis.food.fridge.categories.fish') || 'Pesce' },
+                              { id: 'dairy', icon: '🧀', label: t('analysis.food.fridge.categories.dairy') || 'Latticini' },
+                              { id: 'fruits', icon: '🍎', label: t('analysis.food.fridge.categories.fruits') || 'Frutta' },
+                              { id: 'grains', icon: '🌾', label: t('analysis.food.fridge.categories.grains') || 'Cereali' },
+                              { id: 'spices', icon: '🧄', label: t('analysis.food.fridge.categories.spices') || 'Spezie' },
+                              { id: 'other', icon: '📦', label: t('analysis.food.fridge.categories.other') || 'Altro' },
+                            ].map((cat) => (
+                              <TouchableOpacity
+                                key={cat.id}
+                                style={[
+                                  styles.categoryChip,
+                                  {
+                                    backgroundColor: categoryFilter === cat.id ? colors.primary : colors.surfaceElevated,
+                                    borderColor: categoryFilter === cat.id ? colors.primary : colors.border,
+                                  }
+                                ]}
+                                onPress={() => setCategoryFilter(categoryFilter === cat.id ? null : cat.id)}
+                              >
+                                <Text style={styles.categoryChipIcon}>{cat.icon}</Text>
+                                <Text style={[styles.categoryChipText, { color: categoryFilter === cat.id ? colors.textInverse : colors.text }]}>
+                                  {cat.label}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+
+                          {/* Filtered ingredients list */}
+                          {savedIngredients
+                            .filter(item => categoryFilter === null || item.category === categoryFilter)
+                            .map((item) => (
+                              <View key={item.id} style={[styles.savedIngredientRow, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                                <View style={styles.savedIngredientInfo}>
+                                  <Text style={[styles.savedIngredientName, { color: colors.text }]}>{item.name}</Text>
+                                  {item.expiry_date && (
+                                    <Text style={[styles.savedIngredientExpiry, { color: colors.textSecondary }]}>
+                                      {t('analysis.food.fridge.expires')}: {item.expiry_date}
+                                    </Text>
+                                  )}
+                                  {item.quantity && (
+                                    <Text style={[styles.savedIngredientQuantity, { color: colors.textSecondary }]}>
+                                      {item.quantity} {item.unit || ''}
+                                    </Text>
+                                  )}
+                                </View>
+                                <View style={styles.savedIngredientActions}>
+                                  <TouchableOpacity
+                                    onPress={() => toggleExcludeIngredient(item.id)}
+                                    style={[
+                                      styles.excludeButton,
+                                      {
+                                        backgroundColor: excludedIngredientIds[item.id]
+                                          ? colors.warning + '25'
+                                          : colors.surface,
+                                        borderColor: excludedIngredientIds[item.id]
+                                          ? colors.warning
+                                          : colors.border,
+                                      },
+                                    ]}
+                                  >
+                                    <MaterialCommunityIcons
+                                      name={
+                                        excludedIngredientIds[item.id]
+                                          ? 'eye-off-outline'
+                                          : 'eye-outline'
+                                      }
+                                      size={16}
+                                      color={excludedIngredientIds[item.id] ? colors.warning : colors.textSecondary}
+                                    />
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    onPress={() => handleAddFavoriteFromSaved(item.name)}
+                                    style={[styles.excludeButton, { borderColor: colors.primary }]}
+                                  >
+                                    <MaterialCommunityIcons name="star-outline" size={16} color={colors.primary} />
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    onPress={() => removeSavedIngredient(item.id)}
+                                    style={[styles.removeSavedButton, { backgroundColor: colors.error + '20' }]}
+                                  >
+                                    <FontAwesome name="trash" size={14} color={colors.error} />
+                                  </TouchableOpacity>
+                                </View>
                               </View>
-                              <View style={styles.savedIngredientActions}>
-                                <TouchableOpacity
-                                  onPress={() => toggleExcludeIngredient(item.id)}
-                                  style={[
-                                    styles.excludeButton,
-                                    {
-                                      backgroundColor: excludedIngredientIds[item.id]
-                                        ? colors.warning + '25'
-                                        : colors.surface,
-                                      borderColor: excludedIngredientIds[item.id]
-                                        ? colors.warning
-                                        : colors.border,
-                                    },
-                                  ]}
-                                >
-                                  <MaterialCommunityIcons
-                                    name={
-                                      excludedIngredientIds[item.id]
-                                        ? 'eye-off-outline'
-                                        : 'eye-outline'
-                                    }
-                                    size={16}
-                                    color={excludedIngredientIds[item.id] ? colors.warning : colors.textSecondary}
-                                  />
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  onPress={() => handleAddFavoriteFromSaved(item.name)}
-                                  style={[styles.excludeButton, { borderColor: colors.primary }]}
-                                >
-                                  <MaterialCommunityIcons name="star-outline" size={16} color={colors.primary} />
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  onPress={() => removeSavedIngredient(item.id)}
-                                  style={[styles.removeSavedButton, { backgroundColor: colors.error + '20' }]}
-                                >
-                                  <FontAwesome name="trash" size={14} color={colors.error} />
-                                </TouchableOpacity>
-                              </View>
-                            </View>
-                          ))}
+                            ))}
                         </View>
                       )}
 
@@ -2094,12 +2150,26 @@ const styles = StyleSheet.create({
   categoryChips: {
     flexDirection: 'row',
   },
+  categoryFilterContainer: {
+    marginVertical: 12,
+  },
+  categoryFilterContent: {
+    paddingHorizontal: 4,
+    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   categoryChip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    marginRight: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  categoryChipIcon: {
+    fontSize: 14,
   },
   categoryChipText: {
     fontSize: 12,
