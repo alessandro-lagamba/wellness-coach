@@ -68,6 +68,7 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
     ingredients: '',
     steps: '',
   });
+  const [recipeImage, setRecipeImage] = useState<string | null>(null);  // Track recipe image separately
   const [saving, setSaving] = useState(false);
   const canUseAiComplete = !!aiContext && mode === 'create';
   const [calculatedNutrition, setCalculatedNutrition] = useState<{
@@ -116,6 +117,8 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
       ingredients: ingredientsValue,
       steps: stepsValue,
     });
+    // Set the image from the source (generated recipe or existing recipe)
+    setRecipeImage(source?.image || null);
   };
 
   useEffect(() => {
@@ -181,6 +184,8 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
         fiber: calculatedNutrition.macrosPerServing.fiber,
         sugar: calculatedNutrition.macrosPerServing.sugar,
       } : undefined,
+      // ✅ Include the recipe image if available
+      image: recipeImage || undefined,
     };
   };
 

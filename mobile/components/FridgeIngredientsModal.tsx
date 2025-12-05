@@ -153,6 +153,8 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
         fiber: recipe.macrosPerServing.fiber,
         sugar: recipe.macrosPerServing.sugar,
       } : null,
+      // ✅ Aggiungi immagine generata dall'AI
+      image: recipe?.image || null,
     };
   };
 

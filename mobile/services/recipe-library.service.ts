@@ -60,6 +60,7 @@ export interface SaveRecipeInput {
   favorite?: boolean;
   notes?: string;
   source?: string;
+  image?: string;  // URL immagine della ricetta
 }
 
 class RecipeLibraryService {
@@ -88,6 +89,34 @@ class RecipeLibraryService {
     }
 
     return (data || []).map((row) => this.mapRow(row));
+  }
+
+  /**
+   * Find a recipe by title (case-insensitive, partial match)
+   * Used for duplicate detection before saving a generated recipe
+   */
+  async findByTitle(title: string): Promise<UserRecipe | null> {
+    const user = await AuthService.getCurrentUser();
+    if (!user || !title.trim()) return null;
+
+    const normalizedTitle = title.trim().toLowerCase();
+
+    const { data, error } = await supabase
+      .from('user_recipes')
+      .select('*')
+      .eq('user_id', user.id)
+      .ilike('title', `%${normalizedTitle}%`)
+      .limit(1)
+      .single();
+
+    if (error) {
+      // No match found is not an error
+      if (error.code === 'PGRST116') return null;
+      console.warn('[RecipeLibrary] findByTitle error', error);
+      return null;
+    }
+
+    return data ? this.mapRow(data) : null;
   }
 
   async save(input: SaveRecipeInput): Promise<UserRecipe> {
@@ -214,8 +243,7 @@ class RecipeLibraryService {
       favorite: options.favorite,
       notes: options.notes,
       source: 'generated',
-      // se il backend ha generato un URL immagine, propagalo nel payload
-      // @ts-expect-error: "image" è proprietà extra gestita dal backend
+      // Propaga l'URL immagine generata dal backend
       image: generated?.image,
     };
 
@@ -252,8 +280,7 @@ class RecipeLibraryService {
     assignIfDefined('notes', input.notes);
     assignIfDefined('source', input.source);
     // campo opzionale per l'immagine della ricetta
-    // @ts-expect-error: proprietà extra consentita a livello di payload DB
-    assignIfDefined('image', (input as any).image);
+    assignIfDefined('image', input.image);
 
     return base;
   }
