@@ -67,6 +67,7 @@ export async function generateRecipeImageFromTitle(
         height: 512,
         steps: 4,
         negative_prompt: "",
+        seed: Math.floor(Math.random() * 4294967295), // Random seed between 0 and 2^32-1
       }),
     });
 

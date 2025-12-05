@@ -216,10 +216,15 @@ export const parseIngredientsSchema = {
           properties: {
             name: { type: "string" },
             quantity: { type: "number" },
-            unit: { type: "string" },
+            unit: { type: "string", enum: ["g", "ml", "pcs", "serving"] },
             expiryDate: { type: "string" },
+            category: {
+              type: "string",
+              enum: ["meat", "fish", "vegetables", "fruits", "dairy", "grains", "legumes", "spices", "beverages", "other"]
+            },
+            confidence: { type: "number", minimum: 0, maximum: 1 },
           },
-          required: ["name"],
+          required: ["name", "category", "confidence"],
         },
       },
       commands: {

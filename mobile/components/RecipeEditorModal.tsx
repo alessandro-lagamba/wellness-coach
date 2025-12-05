@@ -85,10 +85,10 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
   const nutritionCalculationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const hydrateForm = (source?: Partial<UserRecipe> | null) => {
-    const mealTypesValue =
+    const mealTypesValue: MealType[] =
       source?.meal_types && source.meal_types.length
         ? (source.meal_types as MealType[])
-        : ['dinner'];
+        : ['dinner' as MealType];
     const ingredientsValue = Array.isArray(source?.ingredients)
       ? source!.ingredients
         .map((ing) => {
@@ -284,265 +284,259 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView
-          style={styles.keyboardAvoidingContainer}
-          behavior="padding"
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={onClose} style={styles.headerButton}>
+            <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            {isCreateMode
+              ? t('analysis.food.recipes.editor.createTitle') ||
+              t('analysis.food.recipes.editor.title')
+              : t('analysis.food.recipes.editor.title')}
+          </Text>
+          <View style={styles.headerButton} />
+        </View>
+
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingBottom: 80 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={true}
+          automaticallyAdjustKeyboardInsets={true}
         >
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={onClose} style={styles.headerButton}>
-              <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>
-              {isCreateMode
-                ? t('analysis.food.recipes.editor.createTitle') ||
-                t('analysis.food.recipes.editor.title')
-                : t('analysis.food.recipes.editor.title')}
+          <View style={[styles.field, { borderColor: colors.border }]}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>
+              {t('analysis.food.recipes.editor.recipeName')}
             </Text>
-            <View style={styles.headerButton} />
+            <TextInput
+              value={form.title}
+              onChangeText={(value) => setForm((prev) => ({ ...prev, title: value }))}
+              style={[styles.input, { color: colors.text }]}
+              placeholder={t('analysis.food.recipes.editor.recipeNamePlaceholder')}
+              placeholderTextColor={colors.textTertiary}
+            />
           </View>
 
-          <ScrollView
-            contentContainerStyle={[styles.content, { paddingBottom: 120 }]}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={true}
-            automaticallyAdjustKeyboardInsets={true}
-          >
-            <View style={[styles.field, { borderColor: colors.border }]}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                {t('analysis.food.recipes.editor.recipeName')}
-              </Text>
-              <TextInput
-                value={form.title}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, title: value }))}
-                style={[styles.input, { color: colors.text }]}
-                placeholder={t('analysis.food.recipes.editor.recipeNamePlaceholder')}
-                placeholderTextColor={colors.textTertiary}
-              />
-            </View>
-
-            <View style={[styles.field, { borderColor: colors.border }]}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                {t('analysis.food.recipes.editor.description')}
-              </Text>
-              <TextInput
-                value={form.description}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, description: value }))}
-                style={[styles.input, styles.textarea, { color: colors.text }]}
-                multiline
-                placeholder={t('analysis.food.recipes.editor.descriptionPlaceholder')}
-                placeholderTextColor={colors.textTertiary}
-              />
-            </View>
-
-            <View style={styles.row}>
-              <View style={[styles.smallField, { borderColor: colors.border }]}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>
-                  {t('analysis.food.recipes.editor.servings')}
-                </Text>
-                <TextInput
-                  value={String(form.servings)}
-                  onChangeText={(value) =>
-                    setForm((prev) => ({ ...prev, servings: Number(value) || 1 }))
-                  }
-                  keyboardType="numeric"
-                  style={[styles.input, { color: colors.text }]}
-                />
-              </View>
-              <View style={[styles.smallField, { borderColor: colors.border }]}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>
-                  {t('analysis.food.recipes.editor.readyMinutes') || t('analysis.food.fridge.minutes')}
-                </Text>
-                <TextInput
-                  value={form.readyMinutes}
-                  onChangeText={(value) => setForm((prev) => ({ ...prev, readyMinutes: value }))}
-                  keyboardType="numeric"
-                  style={[styles.input, { color: colors.text }]}
-                />
-              </View>
-            </View>
-
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('analysis.food.recipes.editor.mealType')}
+          <View style={[styles.field, { borderColor: colors.border }]}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>
+              {t('analysis.food.recipes.editor.description')}
             </Text>
-            <View style={styles.chipsRow}>
-              {mealTypes.map((type) => {
-                const active = form.mealTypes.has(type);
-                return (
-                  <TouchableOpacity
-                    key={type}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: active ? colors.primary : colors.surface,
-                        borderColor: active ? colors.primary : colors.border,
-                      },
-                    ]}
-                    onPress={() => handleToggleMealType(type)}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        { color: active ? colors.textInverse : colors.text },
-                      ]}
-                    >
-                      {t(`analysis.food.mealTypes.${type}`)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <TextInput
+              value={form.description}
+              onChangeText={(value) => setForm((prev) => ({ ...prev, description: value }))}
+              style={[styles.input, styles.textarea, { color: colors.text }]}
+              multiline
+              placeholder={t('analysis.food.recipes.editor.descriptionPlaceholder')}
+              placeholderTextColor={colors.textTertiary}
+            />
+          </View>
 
-            <TouchableOpacity
-              style={[
-                styles.favoriteToggle,
-                {
-                  borderColor: form.favorite ? colors.primary : colors.border,
-                  backgroundColor: form.favorite ? colors.primary + '1A' : 'transparent',
-                },
-              ]}
-              onPress={() => setForm((prev) => ({ ...prev, favorite: !prev.favorite }))}
-            >
-              <MaterialCommunityIcons
-                name={form.favorite ? 'star' : 'star-outline'}
-                size={18}
-                color={form.favorite ? colors.primary : colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.favoriteToggleText,
-                  { color: form.favorite ? colors.primary : colors.text },
-                ]}
-              >
-                {t('analysis.food.recipes.editor.favoriteToggle')}
-              </Text>
-            </TouchableOpacity>
-
-            <View style={[styles.field, { borderColor: colors.border }]}>
+          <View style={styles.row}>
+            <View style={[styles.smallField, { borderColor: colors.border }]}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>
-                {t('analysis.food.recipes.editor.tags')}
+                {t('analysis.food.recipes.editor.servings')}
               </Text>
               <TextInput
-                value={form.tags}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, tags: value }))}
+                value={String(form.servings)}
+                onChangeText={(value) =>
+                  setForm((prev) => ({ ...prev, servings: Number(value) || 1 }))
+                }
+                keyboardType="numeric"
                 style={[styles.input, { color: colors.text }]}
-                placeholder={t('analysis.food.fridge.tagsPlaceholder')}
-                placeholderTextColor={colors.textTertiary}
               />
             </View>
-
-            <View style={[styles.field, { borderColor: colors.border }]}>
+            <View style={[styles.smallField, { borderColor: colors.border }]}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>
-                {t('analysis.food.recipes.editor.notes')}
+                {t('analysis.food.recipes.editor.readyMinutes') || t('analysis.food.fridge.minutes')}
               </Text>
               <TextInput
-                value={form.notes}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, notes: value }))}
-                style={[styles.input, styles.textarea, { color: colors.text }]}
-                multiline
-                placeholder={t('analysis.food.fridge.notesPlaceholder')}
-                placeholderTextColor={colors.textTertiary}
+                value={form.readyMinutes}
+                onChangeText={(value) => setForm((prev) => ({ ...prev, readyMinutes: value }))}
+                keyboardType="numeric"
+                style={[styles.input, { color: colors.text }]}
               />
             </View>
+          </View>
 
-            <View style={[styles.field, { borderColor: colors.border }]}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                {t('analysis.food.recipes.editor.ingredients')}
-              </Text>
-              <TextInput
-                value={form.ingredients}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, ingredients: value }))}
-                multiline
-                style={[styles.input, styles.textarea, { color: colors.text }]}
-                placeholder={t('analysis.food.recipes.editor.ingredientsPlaceholder')}
-                placeholderTextColor={colors.textTertiary}
-              />
-              {/* 🔥 FIX: Mostra i macronutrienti calcolati */}
-              {isCalculatingNutrition && (
-                <View style={[styles.nutritionInfo, { backgroundColor: colors.surface }]}>
-                  <ActivityIndicator size="small" color={colors.primary} />
-                  <Text style={[styles.nutritionText, { color: colors.textSecondary }]}>
-                    {t('analysis.food.recipes.editor.calculatingNutrition')}
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t('analysis.food.recipes.editor.mealType')}
+          </Text>
+          <View style={styles.chipsRow}>
+            {mealTypes.map((type) => {
+              const active = form.mealTypes.has(type);
+              return (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: active ? colors.primary : colors.surface,
+                      borderColor: active ? colors.primary : colors.border,
+                    },
+                  ]}
+                  onPress={() => handleToggleMealType(type)}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      { color: active ? colors.textInverse : colors.text },
+                    ]}
+                  >
+                    {t(`analysis.food.mealTypes.${type}`)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.favoriteToggle,
+              {
+                borderColor: form.favorite ? colors.primary : colors.border,
+                backgroundColor: form.favorite ? colors.primary + '1A' : 'transparent',
+              },
+            ]}
+            onPress={() => setForm((prev) => ({ ...prev, favorite: !prev.favorite }))}
+          >
+            <MaterialCommunityIcons
+              name={form.favorite ? 'star' : 'star-outline'}
+              size={18}
+              color={form.favorite ? colors.primary : colors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.favoriteToggleText,
+                { color: form.favorite ? colors.primary : colors.text },
+              ]}
+            >
+              {t('analysis.food.recipes.editor.favoriteToggle')}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={[styles.field, { borderColor: colors.border }]}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>
+              {t('analysis.food.recipes.editor.tags')}
+            </Text>
+            <TextInput
+              value={form.tags}
+              onChangeText={(value) => setForm((prev) => ({ ...prev, tags: value }))}
+              style={[styles.input, { color: colors.text }]}
+              placeholder={t('analysis.food.fridge.tagsPlaceholder')}
+              placeholderTextColor={colors.textTertiary}
+            />
+          </View>
+
+          <View style={[styles.field, { borderColor: colors.border }]}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>
+              {t('analysis.food.recipes.editor.notes')}
+            </Text>
+            <TextInput
+              value={form.notes}
+              onChangeText={(value) => setForm((prev) => ({ ...prev, notes: value }))}
+              style={[styles.input, styles.textarea, { color: colors.text }]}
+              multiline
+              placeholder={t('analysis.food.fridge.notesPlaceholder')}
+              placeholderTextColor={colors.textTertiary}
+            />
+          </View>
+
+          <View style={[styles.field, { borderColor: colors.border }]}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>
+              {t('analysis.food.recipes.editor.ingredients')}
+            </Text>
+            <TextInput
+              value={form.ingredients}
+              onChangeText={(value) => setForm((prev) => ({ ...prev, ingredients: value }))}
+              multiline
+              style={[styles.input, styles.textarea, { color: colors.text }]}
+              placeholder={t('analysis.food.recipes.editor.ingredientsPlaceholder')}
+              placeholderTextColor={colors.textTertiary}
+            />
+            {/* 🔥 FIX: Mostra i macronutrienti calcolati */}
+            {isCalculatingNutrition && (
+              <View style={[styles.nutritionInfo, { backgroundColor: colors.surface }]}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.nutritionText, { color: colors.textSecondary }]}>
+                  {t('analysis.food.recipes.editor.calculatingNutrition')}
+                </Text>
+              </View>
+            )}
+            {calculatedNutrition && !isCalculatingNutrition && (
+              <View style={[styles.nutritionInfo, { backgroundColor: colors.surface, borderColor: colors.primary + '40' }]}>
+                <View style={styles.nutritionHeader}>
+                  <MaterialCommunityIcons name="information" size={16} color={colors.primary} />
+                  <Text style={[styles.nutritionText, { color: colors.text }]}>
+                    {t('analysis.food.recipes.editor.calculatedNutrition')}
                   </Text>
                 </View>
-              )}
-              {calculatedNutrition && !isCalculatingNutrition && (
-                <View style={[styles.nutritionInfo, { backgroundColor: colors.surface, borderColor: colors.primary + '40' }]}>
-                  <View style={styles.nutritionHeader}>
-                    <MaterialCommunityIcons name="information" size={16} color={colors.primary} />
-                    <Text style={[styles.nutritionText, { color: colors.text }]}>
-                      {t('analysis.food.recipes.editor.calculatedNutrition')}
-                    </Text>
-                  </View>
-                  <View style={styles.nutritionValues}>
-                    <Text style={[styles.nutritionValue, { color: colors.text }]}>
-                      {Math.round(calculatedNutrition.caloriesPerServing || 0)} kcal
-                    </Text>
-                    <Text style={[styles.nutritionValue, { color: colors.textSecondary }]}>
-                      P: {Math.round(calculatedNutrition.macrosPerServing?.protein || 0)}g |
-                      C: {Math.round(calculatedNutrition.macrosPerServing?.carbs || 0)}g |
-                      F: {Math.round(calculatedNutrition.macrosPerServing?.fat || 0)}g
-                    </Text>
-                  </View>
+                <View style={styles.nutritionValues}>
+                  <Text style={[styles.nutritionValue, { color: colors.text }]}>
+                    {Math.round(calculatedNutrition.caloriesPerServing || 0)} kcal
+                  </Text>
+                  <Text style={[styles.nutritionValue, { color: colors.textSecondary }]}>
+                    P: {Math.round(calculatedNutrition.macrosPerServing?.protein || 0)}g |
+                    C: {Math.round(calculatedNutrition.macrosPerServing?.carbs || 0)}g |
+                    F: {Math.round(calculatedNutrition.macrosPerServing?.fat || 0)}g
+                  </Text>
                 </View>
-              )}
-            </View>
+              </View>
+            )}
+          </View>
 
-            <View style={[styles.field, { borderColor: colors.border }]}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                {t('analysis.food.recipes.editor.steps')}
+          <View style={[styles.field, { borderColor: colors.border }]}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>
+              {t('analysis.food.recipes.editor.steps')}
+            </Text>
+            <TextInput
+              value={form.steps}
+              onChangeText={(value) => setForm((prev) => ({ ...prev, steps: value }))}
+              multiline
+              style={[styles.input, styles.textarea, { color: colors.text }]}
+              placeholder={t('analysis.food.recipes.editor.stepsPlaceholder')}
+              placeholderTextColor={colors.textTertiary}
+            />
+          </View>
+        </ScrollView>
+
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          {!isCreateMode && (
+            <TouchableOpacity
+              style={[styles.deleteButton, { borderColor: colors.error }]}
+              onPress={confirmDelete}
+            >
+              <Text style={[styles.deleteButtonText, { color: colors.error }]}>
+                {t('common.delete')}
               </Text>
-              <TextInput
-                value={form.steps}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, steps: value }))}
-                multiline
-                style={[styles.input, styles.textarea, { color: colors.text }]}
-                placeholder={t('analysis.food.recipes.editor.stepsPlaceholder')}
-                placeholderTextColor={colors.textTertiary}
-              />
-            </View>
-          </ScrollView>
+            </TouchableOpacity>
+          )}
 
-          <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            {!isCreateMode && (
+          <View style={{ flexDirection: 'row', gap: 12, flex: 1, justifyContent: 'flex-end' }}>
+            {canUseAiComplete && (
               <TouchableOpacity
-                style={[styles.deleteButton, { borderColor: colors.error }]}
-                onPress={confirmDelete}
+                style={[styles.aiButton, { borderColor: colors.primary }]}
+                onPress={handleAiComplete}
+                disabled={saving}
               >
-                <Text style={[styles.deleteButtonText, { color: colors.error }]}>
-                  {t('common.delete')}
+                <Text style={[styles.aiButtonText, { color: colors.primary }]}>
+                  {t('analysis.food.recipes.editor.aiComplete')}
                 </Text>
               </TouchableOpacity>
             )}
-
-            <View style={{ flexDirection: 'row', gap: 12, flex: 1, justifyContent: 'flex-end' }}>
-              {canUseAiComplete && (
-                <TouchableOpacity
-                  style={[styles.aiButton, { borderColor: colors.primary }]}
-                  onPress={handleAiComplete}
-                  disabled={saving}
-                >
-                  <Text style={[styles.aiButtonText, { color: colors.primary }]}>
-                    {t('analysis.food.recipes.editor.aiComplete')}
-                  </Text>
-                </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.saveButton, { backgroundColor: colors.primary }]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator color={colors.textInverse} />
+              ) : (
+                <Text style={[styles.saveButtonText, { color: colors.textInverse }]}>
+                  {t('common.save')}
+                </Text>
               )}
-              <TouchableOpacity
-                style={[styles.saveButton, { backgroundColor: colors.primary }]}
-                onPress={handleSave}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator color={colors.textInverse} />
-                ) : (
-                  <Text style={[styles.saveButtonText, { color: colors.textInverse }]}>
-                    {t('common.save')}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </SafeAreaView>
     </Modal>
   );
