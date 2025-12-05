@@ -119,6 +119,24 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
     });
     // Set the image from the source (generated recipe or existing recipe)
     setRecipeImage(source?.image || null);
+
+    // ✅ Initialize calculatedNutrition from source data (handles both camelCase and snake_case)
+    const calories = (source as any)?.caloriesPerServing || source?.calories_per_serving || 0;
+    const macros = (source as any)?.macrosPerServing || source?.macros || null;
+    if (calories > 0 || macros) {
+      setCalculatedNutrition({
+        caloriesPerServing: calories,
+        macrosPerServing: macros ? {
+          protein: macros.protein || 0,
+          carbs: macros.carbs || 0,
+          fat: macros.fat || 0,
+          fiber: macros.fiber,
+          sugar: macros.sugar,
+        } : undefined,
+      });
+    } else {
+      setCalculatedNutrition(null);
+    }
   };
 
   useEffect(() => {
