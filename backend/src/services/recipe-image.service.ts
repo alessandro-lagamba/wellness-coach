@@ -85,13 +85,23 @@ export async function generateRecipeImageFromTitle(
 
     const data: any = await response.json();
 
+    // Log full response to debug URL extraction
+    console.log("[RecipeImage] 📥 DEAPI response:", JSON.stringify(data, null, 2));
+
+    // Try multiple possible paths for image URL in the response
     const imageUrl =
       data?.images?.[0]?.url ||
+      data?.images?.[0] ||
       data?.image_url ||
+      data?.url ||
+      data?.data?.images?.[0]?.url ||
+      data?.data?.image_url ||
+      data?.output?.images?.[0]?.url ||
+      data?.result?.url ||
       null;
 
     if (!imageUrl) {
-      console.warn("[RecipeImage] No image URL returned from deAPI");
+      console.warn("[RecipeImage] No image URL found in response. Full response keys:", Object.keys(data || {}));
       return null;
     }
 

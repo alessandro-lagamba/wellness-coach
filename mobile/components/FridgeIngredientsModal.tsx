@@ -80,7 +80,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   const [generatedRecipe, setGeneratedRecipe] = useState<any>(null);
   const [bulkText, setBulkText] = useState('');
   const bulkInputRef = useRef<TextInput | null>(null);
-  
+
   const [parsingTranscript, setParsingTranscript] = useState(false);
   const [parsedChips, setParsedChips] = useState<ParsedIngredientChip[]>([]);
   const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
@@ -125,11 +125,11 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   const buildDraftFromGenerated = (recipe: any): Partial<UserRecipe> => {
     const ingredients = Array.isArray(recipe?.ingredients)
       ? recipe.ingredients.map((ing: any) => ({
-          name: ing.name || ing.title || '',
-          quantity: ing.quantity,
-          unit: ing.unit,
-          optional: ing.optional,
-        }))
+        name: ing.name || ing.title || '',
+        quantity: ing.quantity,
+        unit: ing.unit,
+        optional: ing.optional,
+      }))
       : [];
 
     return {
@@ -188,16 +188,16 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
       });
       return;
     }
-    
+
     setProcessingAI(prev => ({ ...prev, [index]: true }));
-    
+
     try {
       // Usa AI per categorizzare e separare ingredienti
       const result = await NutritionService.parseIngredients(nameText.trim(), 'it-IT');
-      
+
       if (result.success && result.data && result.data.ingredients.length > 0) {
         const parsed = result.data.ingredients[0]; // Prendi il primo ingrediente parsato
-        
+
         // Se l'AI ha trovato più ingredienti, separali
         if (result.data.ingredients.length > 1) {
           // Crea nuove righe per gli ingredienti aggiuntivi
@@ -208,7 +208,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
             expiry: ing.expiry,
             category: ing.category,
           }));
-          
+
           // Aggiorna l'ingrediente corrente e aggiungi i nuovi
           setIngredients(prev => {
             const updated = [...prev];
@@ -253,11 +253,11 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   // Parsing veloce "dettatura": accetta input del tipo "pomodori, latte, uova 10 pezzi"
   const parseBulkInput = async () => {
     if (!bulkText.trim()) return;
-    
+
     try {
       setParsingTranscript(true);
       const result = await NutritionService.parseIngredients(bulkText.trim(), 'it-IT');
-      
+
       if (result.success && result.data) {
         // Converti parsed ingredients in chips
         const chips: ParsedIngredientChip[] = result.data.ingredients.map((ing, idx) => ({
@@ -269,15 +269,15 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
           category: ing.category,
           confidence: ing.confidence,
         }));
-        
+
         setParsedChips(chips);
         setBulkText('');
-        
+
         // Gestisci comandi vocali se presenti
         if (result.data.commands && result.data.commands.length > 0) {
           handleVoiceCommands(result.data.commands);
         }
-        
+
         // Gestisci ambiguità se presenti
         if (result.data.ambiguous && result.data.ambiguous.length > 0) {
           handleAmbiguity(result.data.ambiguous);
@@ -324,14 +324,14 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
         setIngredients(prev => prev.filter(ing => ing.name.toLowerCase() !== cmd.ingredientName!.toLowerCase()));
         setParsedChips(prev => prev.filter(chip => chip.name.toLowerCase() !== cmd.ingredientName!.toLowerCase()));
       } else if (cmd.type === 'update_expiry' && cmd.ingredientName && cmd.expiry) {
-        setIngredients(prev => prev.map(ing => 
-          ing.name.toLowerCase() === cmd.ingredientName!.toLowerCase() 
-            ? { ...ing, expiry: cmd.expiry } 
+        setIngredients(prev => prev.map(ing =>
+          ing.name.toLowerCase() === cmd.ingredientName!.toLowerCase()
+            ? { ...ing, expiry: cmd.expiry }
             : ing
         ));
-        setParsedChips(prev => prev.map(chip => 
-          chip.name.toLowerCase() === cmd.ingredientName!.toLowerCase() 
-            ? { ...chip, expiry: cmd.expiry } 
+        setParsedChips(prev => prev.map(chip =>
+          chip.name.toLowerCase() === cmd.ingredientName!.toLowerCase()
+            ? { ...chip, expiry: cmd.expiry }
             : chip
         ));
       } else if (cmd.type === 'mark_finished' && cmd.ingredientName) {
@@ -374,12 +374,12 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
       expiry: chip.expiry,
       category: chip.category, // 🔥 FIX: Include categoria
     }));
-    
+
     setIngredients((prev) => {
       const base = prev.length === 1 && !prev[0].name ? [] : prev;
       return [...base, ...confirmed];
     });
-    
+
     // Salva su Supabase (scadenza opzionale)
     try {
       await fridgeItemsService.addFridgeItems(
@@ -395,7 +395,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
       console.error('Error saving to fridge:', error);
       // Non bloccare l'utente se il salvataggio fallisce
     }
-    
+
     setParsedChips([]);
     // Ricarica ingredienti salvati dopo la conferma
     await loadSavedIngredients();
@@ -405,15 +405,15 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   const handleSaveIngredients = async () => {
     // Valida: solo nome non vuoto, scadenza opzionale
     const validIngredients = ingredients
-      .map(ing => ({ 
-        name: ing.name.trim(), 
+      .map(ing => ({
+        name: ing.name.trim(),
         expiry: (ing.expiry || '').trim() || undefined,
         quantity: ing.quantity,
         unit: ing.unit,
         category: ing.category, // 🔥 FIX: Include categoria
       }))
       .filter(ing => ing.name.length > 0);
-    
+
     if (validIngredients.length === 0) {
       Alert.alert(t('common.error'), t('analysis.food.fridge.noIngredients'));
       return;
@@ -641,8 +641,8 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
       setAnalyzingPhoto(true);
 
       // Converti in base64 data URL
-      const imageBase64 = asset.base64.startsWith('data:') 
-        ? asset.base64 
+      const imageBase64 = asset.base64.startsWith('data:')
+        ? asset.base64
         : `data:image/jpeg;base64,${asset.base64}`;
 
       // Chiama API analyze-image
@@ -687,7 +687,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
 
       // Mostra i chips estratti per conferma
       setParsedChips(prev => [...prev, ...extractedIngredients]);
-      
+
       Alert.alert(
         t('common.success'),
         `${extractedIngredients.length} ingrediente/i identificato/i. Conferma per aggiungerli al frigo.`
@@ -708,9 +708,9 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   const handleGenerateRecipe = async () => {
     // Combina ingredienti nuovi e salvati
     const newIngredients = ingredients
-      .map(ing => ({ name: ing.name.trim(), expiry: (ing.expiry || '').trim() }))
+      .map(ing => ({ name: ing.name.trim(), expiry: (ing.expiry || '').trim(), category: ing.category }))
       .filter(ing => ing.name.length > 0);
-    
+
     const allIngredients = [
       ...savedIngredients.map(item => item.name),
       ...newIngredients.map(ing => ing.name),
@@ -834,636 +834,644 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
 
   return (
     <>
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={handleClose}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
+      <Modal
+        visible={visible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleClose}
       >
-        <View style={styles.modalOverlay}>
-          <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-            <View style={[styles.modalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>
-                  {generatedRecipe ? t('analysis.food.fridge.recipeGenerated') : t('analysis.food.fridge.title')}
-                </Text>
-                <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-                  <FontAwesome name="times" size={20} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView 
-                style={styles.scrollView} 
-                contentContainerStyle={styles.scrollViewContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
-            {!generatedRecipe ? (
-              <>
-                <View style={styles.infoSection}>
-                  <MaterialCommunityIcons name="information" size={24} color={colors.accent} />
-                  <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-                    {t('analysis.food.fridge.modalDesc')}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingView}
+        >
+          <View style={styles.modalOverlay}>
+            <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+              <View style={[styles.modalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>
+                    {generatedRecipe ? t('analysis.food.fridge.recipeGenerated') : t('analysis.food.fridge.title')}
                   </Text>
+                  <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+                    <FontAwesome name="times" size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
                 </View>
 
-                <View style={[styles.preferencesSection, { borderColor: colors.border }]}>
-                  <View style={styles.preferencesHeader}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                      {t('analysis.food.preferences.title')}
-                    </Text>
-                    {preferencesLoading && <ActivityIndicator size="small" color={colors.primary} />}
-                  </View>
-                  <Text style={[styles.helperText, { color: colors.textSecondary }]}>
-                    {t('analysis.food.preferences.subtitle')}
-                  </Text>
+                <ScrollView
+                  style={styles.scrollView}
+                  contentContainerStyle={styles.scrollViewContent}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {!generatedRecipe ? (
+                    <>
+                      <View style={styles.infoSection}>
+                        <MaterialCommunityIcons name="information" size={24} color={colors.accent} />
+                        <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+                          {t('analysis.food.fridge.modalDesc')}
+                        </Text>
+                      </View>
 
-                  <Text style={[styles.preferencesLabel, { color: colors.text }]}>
-                    {t('analysis.food.preferences.cuisineLabel')}
-                  </Text>
-                  <View style={styles.cuisineOptionsRow}>
-                    {CUISINE_OPTIONS.map((option) => {
-                      const isActive = preferences?.cuisinePreference === option.id;
-                      return (
-                        <TouchableOpacity
-                          key={option.id}
-                          style={[
-                            styles.cuisineOption,
-                            {
-                              backgroundColor: isActive ? colors.primary : colors.surfaceElevated,
-                              borderColor: isActive ? colors.primary : colors.border,
-                            },
-                          ]}
-                          onPress={() => handleCuisineSelect(option.id)}
-                        >
-                          <Text
+                      <View style={[styles.preferencesSection, { borderColor: colors.border }]}>
+                        <View style={styles.preferencesHeader}>
+                          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                            {t('analysis.food.preferences.title')}
+                          </Text>
+                          {preferencesLoading && <ActivityIndicator size="small" color={colors.primary} />}
+                        </View>
+                        <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+                          {t('analysis.food.preferences.subtitle')}
+                        </Text>
+
+                        <Text style={[styles.preferencesLabel, { color: colors.text }]}>
+                          {t('analysis.food.preferences.cuisineLabel')}
+                        </Text>
+                        <View style={styles.cuisineOptionsRow}>
+                          {CUISINE_OPTIONS.map((option) => {
+                            const isActive = preferences?.cuisinePreference === option.id;
+                            return (
+                              <TouchableOpacity
+                                key={option.id}
+                                style={[
+                                  styles.cuisineOption,
+                                  {
+                                    backgroundColor: isActive ? colors.primary : colors.surfaceElevated,
+                                    borderColor: isActive ? colors.primary : colors.border,
+                                  },
+                                ]}
+                                onPress={() => handleCuisineSelect(option.id)}
+                              >
+                                <Text
+                                  style={[
+                                    styles.cuisineOptionText,
+                                    { color: isActive ? colors.textInverse : colors.text },
+                                  ]}
+                                >
+                                  {t(option.labelKey)}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+
+                        <View style={styles.preferenceRow}>
+                          <Text style={[styles.preferencesLabel, { color: colors.text }]}>
+                            {t('analysis.food.preferences.favorites')}
+                          </Text>
+                          <View
                             style={[
-                              styles.cuisineOptionText,
-                              { color: isActive ? colors.textInverse : colors.text },
+                              styles.preferenceInputWrapper,
+                              { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
                             ]}
                           >
-                            {t(option.labelKey)}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-
-                  <View style={styles.preferenceRow}>
-                    <Text style={[styles.preferencesLabel, { color: colors.text }]}>
-                      {t('analysis.food.preferences.favorites')}
-                    </Text>
-                    <View
-                      style={[
-                        styles.preferenceInputWrapper,
-                        { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
-                      ]}
-                    >
-                      <TextInput
-                        style={[styles.preferenceInput, { color: colors.text }]}
-                        value={newFavorite}
-                        onChangeText={setNewFavorite}
-                        placeholder={t('analysis.food.preferences.favoritePlaceholder')}
-                        placeholderTextColor={colors.textTertiary}
-                        onSubmitEditing={handleAddFavorite}
-                      />
-                      <TouchableOpacity onPress={handleAddFavorite} style={styles.preferenceAddButton}>
-                        <MaterialCommunityIcons name="plus" size={16} color={colors.primary} />
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.preferenceChips}>
-                      {preferences?.favoriteIngredients?.map((item) => (
-                        <View
-                          key={item}
-                          style={[
-                            styles.preferenceChip,
-                            { backgroundColor: colors.primary + '15', borderColor: colors.primary },
-                          ]}
-                        >
-                          <Text style={[styles.preferenceChipText, { color: colors.text }]}>{item}</Text>
-                          <TouchableOpacity onPress={() => handleRemoveFavorite(item)} style={styles.chipRemove}>
-                            <FontAwesome name="times" size={12} color={colors.textSecondary} />
-                          </TouchableOpacity>
+                            <TextInput
+                              style={[styles.preferenceInput, { color: colors.text }]}
+                              value={newFavorite}
+                              onChangeText={setNewFavorite}
+                              placeholder={t('analysis.food.preferences.favoritePlaceholder')}
+                              placeholderTextColor={colors.textTertiary}
+                              onSubmitEditing={handleAddFavorite}
+                            />
+                            <TouchableOpacity onPress={handleAddFavorite} style={styles.preferenceAddButton}>
+                              <MaterialCommunityIcons name="plus" size={16} color={colors.primary} />
+                            </TouchableOpacity>
+                          </View>
+                          <View style={styles.preferenceChips}>
+                            {preferences?.favoriteIngredients?.map((item) => (
+                              <View
+                                key={item}
+                                style={[
+                                  styles.preferenceChip,
+                                  { backgroundColor: colors.primary + '15', borderColor: colors.primary },
+                                ]}
+                              >
+                                <Text style={[styles.preferenceChipText, { color: colors.text }]}>{item}</Text>
+                                <TouchableOpacity onPress={() => handleRemoveFavorite(item)} style={styles.chipRemove}>
+                                  <FontAwesome name="times" size={12} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                              </View>
+                            ))}
+                          </View>
                         </View>
-                      ))}
-                    </View>
-                  </View>
 
-                  <View style={styles.preferenceRow}>
-                    <Text style={[styles.preferencesLabel, { color: colors.text }]}>
-                      {t('analysis.food.preferences.allergies')}
-                    </Text>
-                    <View
-                      style={[
-                        styles.preferenceInputWrapper,
-                        { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
-                      ]}
-                    >
-                      <TextInput
-                        style={[styles.preferenceInput, { color: colors.text }]}
-                        value={newAllergy}
-                        onChangeText={setNewAllergy}
-                        placeholder={t('analysis.food.preferences.allergyPlaceholder')}
-                        placeholderTextColor={colors.textTertiary}
-                        onSubmitEditing={handleAddAllergy}
-                      />
-                      <TouchableOpacity onPress={handleAddAllergy} style={styles.preferenceAddButton}>
-                        <MaterialCommunityIcons name="plus" size={16} color={colors.primary} />
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.preferenceChips}>
-                      {preferences?.allergies?.map((item) => (
-                        <View
-                          key={item}
-                          style={[
-                            styles.preferenceChip,
-                            { backgroundColor: colors.error + '15', borderColor: colors.error },
-                          ]}
-                        >
-                          <Text style={[styles.preferenceChipText, { color: colors.text }]}>{item}</Text>
-                          <TouchableOpacity onPress={() => handleRemoveAllergy(item)} style={styles.chipRemove}>
-                            <FontAwesome name="times" size={12} color={colors.textSecondary} />
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                </View>
-
-                {/* Inserimento rapido */}
-                <View style={styles.quickAddSection}>
-                  <View style={styles.quickAddHeader}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                      {t('analysis.food.fridge.quickAdd')}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={handlePhotoAnalysis}
-                      disabled={analyzingPhoto}
-                      style={[styles.photoButton, { backgroundColor: colors.accent + '20', borderColor: colors.accent }]}
-                    >
-                      {analyzingPhoto ? (
-                        <ActivityIndicator size="small" color={colors.accent} />
-                      ) : (
-                        <>
-                          <MaterialCommunityIcons name="camera" size={18} color={colors.accent} />
-                          <Text style={[styles.photoButtonText, { color: colors.accent }]}>
-                            {t('analysis.food.fridge.takePhoto') || 'Foto'}
+                        <View style={styles.preferenceRow}>
+                          <Text style={[styles.preferencesLabel, { color: colors.text }]}>
+                            {t('analysis.food.preferences.allergies')}
                           </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                  
-                  {/* Chips confermabili */}
-                  {parsedChips.length > 0 && (
-                    <View style={styles.chipsSection}>
-                      <Text style={[styles.chipsLabel, { color: colors.text }]}>
-                        {t('analysis.food.fridge.confirmIngredients')}:
-                      </Text>
-                      <View style={styles.chipsContainer}>
-                        {parsedChips.map((chip) => (
                           <View
-                            key={chip.id}
-                            style={[styles.chip, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
+                            style={[
+                              styles.preferenceInputWrapper,
+                              { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
+                            ]}
                           >
-                            <View style={styles.chipContent}>
-                              <Text style={[styles.chipText, { color: colors.text }]}>
-                                {chip.name}
-                                {chip.quantity && ` ${chip.quantity}${chip.unit || ''}`}
-                                {chip.expiry && ` (${t('analysis.food.fridge.expires')}: ${chip.expiry})`}
-                              </Text>
-                              {chip.confidence < 0.7 && (
-                                <MaterialCommunityIcons name="alert-circle" size={14} color={colors.warning} />
-                              )}
+                            <TextInput
+                              style={[styles.preferenceInput, { color: colors.text }]}
+                              value={newAllergy}
+                              onChangeText={setNewAllergy}
+                              placeholder={t('analysis.food.preferences.allergyPlaceholder')}
+                              placeholderTextColor={colors.textTertiary}
+                              onSubmitEditing={handleAddAllergy}
+                            />
+                            <TouchableOpacity onPress={handleAddAllergy} style={styles.preferenceAddButton}>
+                              <MaterialCommunityIcons name="plus" size={16} color={colors.primary} />
+                            </TouchableOpacity>
+                          </View>
+                          <View style={styles.preferenceChips}>
+                            {preferences?.allergies?.map((item) => (
+                              <View
+                                key={item}
+                                style={[
+                                  styles.preferenceChip,
+                                  { backgroundColor: colors.error + '15', borderColor: colors.error },
+                                ]}
+                              >
+                                <Text style={[styles.preferenceChipText, { color: colors.text }]}>{item}</Text>
+                                <TouchableOpacity onPress={() => handleRemoveAllergy(item)} style={styles.chipRemove}>
+                                  <FontAwesome name="times" size={12} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Inserimento rapido */}
+                      <View style={styles.quickAddSection}>
+                        <View style={styles.quickAddHeader}>
+                          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                            {t('analysis.food.fridge.quickAdd')}
+                          </Text>
+                          <TouchableOpacity
+                            onPress={handlePhotoAnalysis}
+                            disabled={analyzingPhoto}
+                            style={[styles.photoButton, { backgroundColor: colors.accent + '20', borderColor: colors.accent }]}
+                          >
+                            {analyzingPhoto ? (
+                              <ActivityIndicator size="small" color={colors.accent} />
+                            ) : (
+                              <>
+                                <MaterialCommunityIcons name="camera" size={18} color={colors.accent} />
+                                <Text style={[styles.photoButtonText, { color: colors.accent }]}>
+                                  {t('analysis.food.fridge.takePhoto') || 'Foto'}
+                                </Text>
+                              </>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+
+                        {/* Chips confermabili */}
+                        {parsedChips.length > 0 && (
+                          <View style={styles.chipsSection}>
+                            <Text style={[styles.chipsLabel, { color: colors.text }]}>
+                              {t('analysis.food.fridge.confirmIngredients')}:
+                            </Text>
+                            <View style={styles.chipsContainer}>
+                              {parsedChips.map((chip) => (
+                                <View
+                                  key={chip.id}
+                                  style={[styles.chip, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
+                                >
+                                  <View style={styles.chipContent}>
+                                    <Text style={[styles.chipText, { color: colors.text }]}>
+                                      {chip.name}
+                                      {chip.quantity && ` ${chip.quantity}${chip.unit || ''}`}
+                                      {chip.expiry && ` (${t('analysis.food.fridge.expires')}: ${chip.expiry})`}
+                                    </Text>
+                                    {chip.confidence < 0.7 && (
+                                      <MaterialCommunityIcons name="alert-circle" size={14} color={colors.warning} />
+                                    )}
+                                  </View>
+                                  <TouchableOpacity
+                                    onPress={() => removeChip(chip.id)}
+                                    style={styles.chipRemove}
+                                  >
+                                    <FontAwesome name="times" size={12} color={colors.textSecondary} />
+                                  </TouchableOpacity>
+                                </View>
+                              ))}
                             </View>
                             <TouchableOpacity
-                              onPress={() => removeChip(chip.id)}
-                              style={styles.chipRemove}
+                              onPress={confirmChips}
+                              style={[styles.confirmChipsButton, { backgroundColor: colors.primary }]}
                             >
-                              <FontAwesome name="times" size={12} color={colors.textSecondary} />
+                              <FontAwesome name="check" size={14} color={colors.textInverse} />
+                              <Text style={[styles.confirmChipsText, { color: colors.textInverse }]}>
+                                {t('analysis.food.fridge.addAll')}
+                              </Text>
                             </TouchableOpacity>
+                          </View>
+                        )}
+                        <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                          <TextInput
+                            ref={bulkInputRef}
+                            style={[styles.input, { color: colors.text }]}
+                            value={bulkText}
+                            onChangeText={setBulkText}
+                            placeholder={t('analysis.food.fridge.quickAddPlaceholder')}
+                            placeholderTextColor={colors.textTertiary}
+                            multiline
+                          />
+                        </View>
+                        {/* 🔥 FIX: Rimosso hint sulle virgole - l'AI gestisce tutto automaticamente */}
+                        <TouchableOpacity
+                          onPress={parseBulkInput}
+                          style={[styles.addButton, { borderColor: colors.border }]}
+                          disabled={parsingTranscript || !bulkText.trim()}
+                        >
+                          {parsingTranscript ? (
+                            <ActivityIndicator size="small" color={colors.primary} />
+                          ) : (
+                            <FontAwesome name="plus" size={14} color={colors.primary} />
+                          )}
+                          <Text style={[styles.addButtonText, { color: colors.primary }]}>
+                            {parsingTranscript ? t('common.loading') : t('analysis.food.fridge.parseAndAdd')}
+                          </Text>
+                        </TouchableOpacity>
+                        <Text style={[styles.helperText, { color: colors.textTertiary }]}>
+                          {t('analysis.food.fridge.dictationHint')}
+                        </Text>
+                      </View>
+
+                      {/* Ingredienti salvati */}
+                      {savedIngredients.length > 0 && (
+                        <View style={styles.savedIngredientsSection}>
+                          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                            {t('analysis.food.fridge.savedIngredients') || 'Ingredienti Salvati'}
+                          </Text>
+                          {savedIngredients.map((item) => (
+                            <View key={item.id} style={[styles.savedIngredientRow, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                              <View style={styles.savedIngredientInfo}>
+                                <Text style={[styles.savedIngredientName, { color: colors.text }]}>{item.name}</Text>
+                                {item.expiry_date && (
+                                  <Text style={[styles.savedIngredientExpiry, { color: colors.textSecondary }]}>
+                                    {t('analysis.food.fridge.expires')}: {item.expiry_date}
+                                  </Text>
+                                )}
+                                {item.quantity && (
+                                  <Text style={[styles.savedIngredientQuantity, { color: colors.textSecondary }]}>
+                                    {item.quantity} {item.unit || ''}
+                                  </Text>
+                                )}
+                              </View>
+                              <View style={styles.savedIngredientActions}>
+                                <TouchableOpacity
+                                  onPress={() => toggleExcludeIngredient(item.id)}
+                                  style={[
+                                    styles.excludeButton,
+                                    {
+                                      backgroundColor: excludedIngredientIds[item.id]
+                                        ? colors.warning + '25'
+                                        : colors.surface,
+                                      borderColor: excludedIngredientIds[item.id]
+                                        ? colors.warning
+                                        : colors.border,
+                                    },
+                                  ]}
+                                >
+                                  <MaterialCommunityIcons
+                                    name={
+                                      excludedIngredientIds[item.id]
+                                        ? 'eye-off-outline'
+                                        : 'eye-outline'
+                                    }
+                                    size={16}
+                                    color={excludedIngredientIds[item.id] ? colors.warning : colors.textSecondary}
+                                  />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  onPress={() => handleAddFavoriteFromSaved(item.name)}
+                                  style={[styles.excludeButton, { borderColor: colors.primary }]}
+                                >
+                                  <MaterialCommunityIcons name="star-outline" size={16} color={colors.primary} />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  onPress={() => removeSavedIngredient(item.id)}
+                                  style={[styles.removeSavedButton, { backgroundColor: colors.error + '20' }]}
+                                >
+                                  <FontAwesome name="trash" size={14} color={colors.error} />
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+
+                      {/* Mostra solo ingredienti non ancora salvati */}
+                      {ingredients.some(ing => ing.name.trim().length > 0) && (
+                        <View style={styles.ingredientsSection}>
+                          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                            {t('analysis.food.fridge.newIngredients') || 'Nuovi Ingredienti'}
+                          </Text>
+
+                          {ingredients.map((ingredient, index) => (
+                            <View key={index} style={styles.ingredientRowContainer}>
+                              <View style={styles.ingredientRow}>
+                                <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border, flex: 1 }]}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                    <TextInput
+                                      style={[styles.input, { color: colors.text, flex: 1 }]}
+                                      value={ingredient.name}
+                                      onChangeText={(value) => updateIngredient(index, 'name', value)}
+                                      onBlur={() => {
+                                        // 🔥 FIX: Processa automaticamente con AI quando l'utente finisce di digitare
+                                        if (ingredient.name.trim().length >= 2) {
+                                          processIngredientNameWithAI(index, ingredient.name);
+                                        }
+                                      }}
+                                      placeholder={t('analysis.food.fridge.ingredientPlaceholderAI') || `Ingrediente ${index + 1} (es: pomodori, mozzarella)`}
+                                      placeholderTextColor={colors.textTertiary}
+                                      autoCapitalize="words"
+                                    />
+                                    {processingAI[index] && (
+                                      <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 8 }} />
+                                    )}
+                                  </View>
+                                </View>
+                                <View style={[styles.expiryWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                                  <MaterialCommunityIcons name="calendar" size={12} color={colors.textTertiary} />
+                                  <TextInput
+                                    style={[styles.expiryInput, { color: colors.text }]}
+                                    value={ingredient.expiry || ''}
+                                    onChangeText={(value) => updateIngredient(index, 'expiry', value)}
+                                    placeholder={t('analysis.food.fridge.expiryPlaceholder')}
+                                    placeholderTextColor={colors.textTertiary}
+                                    keyboardType="numbers-and-punctuation"
+                                  />
+                                </View>
+                                {ingredients.length > 1 && (
+                                  <TouchableOpacity
+                                    onPress={() => removeIngredient(index)}
+                                    style={[styles.removeButton, { backgroundColor: colors.error + '20' }]}
+                                  >
+                                    <FontAwesome name="trash" size={14} color={colors.error} />
+                                  </TouchableOpacity>
+                                )}
+                              </View>
+                              {/* 🔥 FIX: Selettore categoria */}
+                              <View style={styles.categorySelector}>
+                                <Text style={[styles.categoryLabel, { color: colors.textSecondary }]}>
+                                  {t('analysis.food.fridge.category') || 'Categoria:'}
+                                </Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryChips}>
+                                  {(['meat', 'fish', 'vegetables', 'fruits', 'dairy', 'grains', 'legumes', 'spices', 'beverages', 'other'] as const).map((cat) => (
+                                    <TouchableOpacity
+                                      key={cat}
+                                      style={[
+                                        styles.categoryChip,
+                                        {
+                                          backgroundColor: ingredient.category === cat ? colors.primary : colors.surfaceElevated,
+                                          borderColor: ingredient.category === cat ? colors.primary : colors.border,
+                                        },
+                                      ]}
+                                      onPress={() => updateIngredient(index, 'category', cat)}
+                                    >
+                                      <Text
+                                        style={[
+                                          styles.categoryChipText,
+                                          { color: ingredient.category === cat ? colors.textInverse : colors.text },
+                                        ]}
+                                      >
+                                        {t(`analysis.food.fridge.categories.${cat}`) || cat}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  ))}
+                                </ScrollView>
+                              </View>
+                            </View>
+                          ))}
+
+                          <TouchableOpacity
+                            onPress={addIngredient}
+                            style={[styles.addButton, { borderColor: colors.border }]}
+                          >
+                            <FontAwesome name="plus" size={14} color={colors.primary} />
+                            <Text style={[styles.addButtonText, { color: colors.primary }]}>
+                              {t('analysis.food.fridge.addMore')}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </>
+                  ) : (
+                    <View style={styles.recipeSection}>
+                      <Text style={[styles.recipeTitle, { color: colors.text }]}>
+                        {generatedRecipe.title}
+                      </Text>
+
+                      <View style={styles.recipeMeta}>
+                        <View style={styles.recipeMetaItem}>
+                          <MaterialCommunityIcons name="clock-outline" size={16} color={colors.textSecondary} />
+                          <Text style={[styles.recipeMetaText, { color: colors.textSecondary }]}>
+                            {generatedRecipe.readyInMinutes} {t('analysis.food.fridge.minutes')}
+                          </Text>
+                        </View>
+                        <View style={styles.recipeMetaItem}>
+                          <MaterialCommunityIcons name="account-group" size={16} color={colors.textSecondary} />
+                          <Text style={[styles.recipeMetaText, { color: colors.textSecondary }]}>
+                            {generatedRecipe.servings} {t('analysis.food.fridge.servings')}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.macrosSection}>
+                        <Text style={[styles.macrosTitle, { color: colors.text }]}>
+                          {t('analysis.food.fridge.nutritionPerServing')}
+                        </Text>
+                        <View style={styles.macrosGrid}>
+                          <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
+                            <Text style={[styles.macroValue, { color: colors.text }]}>
+                              {Math.round(generatedRecipe.caloriesPerServing)}
+                            </Text>
+                            <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>kcal</Text>
+                          </View>
+                          <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
+                            <Text style={[styles.macroValue, { color: colors.text }]}>
+                              {Math.round(generatedRecipe.macrosPerServing.protein)}g
+                            </Text>
+                            <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>
+                              {t('analysis.food.metrics.proteins')}
+                            </Text>
+                          </View>
+                          <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
+                            <Text style={[styles.macroValue, { color: colors.text }]}>
+                              {Math.round(generatedRecipe.macrosPerServing.carbs)}g
+                            </Text>
+                            <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>
+                              {t('analysis.food.metrics.carbohydrates')}
+                            </Text>
+                          </View>
+                          <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
+                            <Text style={[styles.macroValue, { color: colors.text }]}>
+                              {Math.round(generatedRecipe.macrosPerServing.fat)}g
+                            </Text>
+                            <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>
+                              {t('analysis.food.metrics.fats')}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      <View style={styles.ingredientsListSection}>
+                        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                          {t('analysis.food.fridge.ingredients')}
+                        </Text>
+                        {generatedRecipe.ingredients.map((ing: any, index: number) => (
+                          <View key={index} style={styles.ingredientListItem}>
+                            <MaterialCommunityIcons name="circle" size={6} color={colors.primary} />
+                            <Text style={[styles.ingredientListItemText, { color: colors.text }]}>
+                              {ing.quantity} {ing.unit} {ing.name}
+                              {ing.optional && (
+                                <Text style={[styles.optionalText, { color: colors.textTertiary }]}>
+                                  {' '}({t('analysis.food.fridge.optional')})
+                                </Text>
+                              )}
+                            </Text>
                           </View>
                         ))}
                       </View>
+
+                      <View style={styles.stepsSection}>
+                        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                          {t('analysis.food.fridge.steps')}
+                        </Text>
+                        {generatedRecipe.steps.map((step: string, index: number) => (
+                          <View key={index} style={styles.stepItem}>
+                            <View style={[styles.stepNumber, { backgroundColor: colors.primary }]}>
+                              <Text style={styles.stepNumberText}>{index + 1}</Text>
+                            </View>
+                            <Text style={[styles.stepText, { color: colors.text }]}>{step}</Text>
+                          </View>
+                        ))}
+                      </View>
+
+                      {generatedRecipe.tips && generatedRecipe.tips.length > 0 && (
+                        <View style={styles.tipsSection}>
+                          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                            {t('analysis.food.fridge.tips')}
+                          </Text>
+                          {generatedRecipe.tips.map((tip: string, index: number) => (
+                            <View key={index} style={styles.tipItem}>
+                              <MaterialCommunityIcons name="lightbulb" size={16} color={colors.accent} />
+                              <Text style={[styles.tipText, { color: colors.textSecondary }]}>{tip}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+
+                      {generatedRecipe.shoppingGaps && generatedRecipe.shoppingGaps.length > 0 && (
+                        <View style={styles.shoppingGapsSection}>
+                          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                            {t('analysis.food.fridge.missingIngredients')}
+                          </Text>
+                          {generatedRecipe.shoppingGaps.map((gap: string, index: number) => (
+                            <View key={index} style={styles.shoppingGapItem}>
+                              <MaterialCommunityIcons name="cart-outline" size={16} color={colors.warning} />
+                              <Text style={[styles.shoppingGapText, { color: colors.textSecondary }]}>{gap}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </ScrollView>
+
+                <View style={[styles.buttonContainer, { borderTopColor: colors.border }]}>
+                  {!generatedRecipe ? (
+                    <View style={styles.ingredientsActions}>
                       <TouchableOpacity
-                        onPress={confirmChips}
-                        style={[styles.confirmChipsButton, { backgroundColor: colors.primary }]}
+                        style={[styles.saveButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                        onPress={handleSaveIngredients}
+                        disabled={loading}
                       >
-                        <FontAwesome name="check" size={14} color={colors.textInverse} />
-                        <Text style={[styles.confirmChipsText, { color: colors.textInverse }]}>
-                          {t('analysis.food.fridge.addAll')}
+                        {loading ? (
+                          <ActivityIndicator size="small" color={colors.primary} />
+                        ) : (
+                          <>
+                            <FontAwesome name="save" size={16} color={colors.primary} />
+                            <Text style={[styles.saveButtonText, { color: colors.primary }]}>
+                              {t('analysis.food.fridge.saveIngredients') || 'Salva Ingredienti'}
+                            </Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.generateButton, { backgroundColor: colors.primary }]}
+                        onPress={handleGenerateRecipe}
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <ActivityIndicator size="small" color={colors.textInverse} />
+                        ) : (
+                          <>
+                            <MaterialCommunityIcons name="chef-hat" size={18} color={colors.textInverse} />
+                            <Text style={[styles.generateButtonText, { color: colors.textInverse }]}>
+                              {t('analysis.food.fridge.generateRecipe')}
+                            </Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.recipeActions}>
+                      <TouchableOpacity
+                        style={[styles.secondaryButton, { borderColor: colors.border }]}
+                        onPress={() => {
+                          setGeneratedRecipe(null);
+                          setIngredients([{ name: '' }]);
+                        }}
+                      >
+                        <Text
+                          style={[styles.secondaryButtonText, { color: colors.text }]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {t('analysis.food.fridge.newRecipe')}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.saveLibraryButton, { borderColor: colors.primary }]}
+                        onPress={openRecipeEditorForGenerated}
+                      >
+                        <MaterialCommunityIcons name="content-save-outline" size={18} color={colors.primary} />
+                        <Text
+                          style={[styles.saveLibraryButtonText, { color: colors.primary }]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {t('analysis.food.fridge.editAndSave')}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+                        onPress={handleClose}
+                      >
+                        <Text
+                          style={[styles.primaryButtonText, { color: colors.textInverse }]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {t('common.close')}
                         </Text>
                       </TouchableOpacity>
                     </View>
                   )}
-                  <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}> 
-                    <TextInput
-                      ref={bulkInputRef}
-                      style={[styles.input, { color: colors.text }]}
-                      value={bulkText}
-                      onChangeText={setBulkText}
-                      placeholder={t('analysis.food.fridge.quickAddPlaceholder')}
-                      placeholderTextColor={colors.textTertiary}
-                      multiline
-                    />
-                  </View>
-                  {/* 🔥 FIX: Rimosso hint sulle virgole - l'AI gestisce tutto automaticamente */}
-                  <TouchableOpacity onPress={parseBulkInput} style={[styles.addButton, { borderColor: colors.border }]}> 
-                    <FontAwesome name="plus" size={14} color={colors.primary} />
-                    <Text style={[styles.addButtonText, { color: colors.primary }]}>
-                      {t('analysis.food.fridge.parseAndAdd')}
-                    </Text>
-                  </TouchableOpacity>
-                  <Text style={[styles.helperText, { color: colors.textTertiary }]}>
-                    {t('analysis.food.fridge.dictationHint')}
-                  </Text>
                 </View>
-
-                {/* Ingredienti salvati */}
-                {savedIngredients.length > 0 && (
-                  <View style={styles.savedIngredientsSection}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                      {t('analysis.food.fridge.savedIngredients') || 'Ingredienti Salvati'}
-                    </Text>
-                    {savedIngredients.map((item) => (
-                      <View key={item.id} style={[styles.savedIngredientRow, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                        <View style={styles.savedIngredientInfo}>
-                          <Text style={[styles.savedIngredientName, { color: colors.text }]}>{item.name}</Text>
-                          {item.expiry_date && (
-                            <Text style={[styles.savedIngredientExpiry, { color: colors.textSecondary }]}>
-                              {t('analysis.food.fridge.expires')}: {item.expiry_date}
-                            </Text>
-                          )}
-                          {item.quantity && (
-                            <Text style={[styles.savedIngredientQuantity, { color: colors.textSecondary }]}>
-                              {item.quantity} {item.unit || ''}
-                            </Text>
-                          )}
-                        </View>
-                        <View style={styles.savedIngredientActions}>
-                          <TouchableOpacity
-                            onPress={() => toggleExcludeIngredient(item.id)}
-                            style={[
-                              styles.excludeButton,
-                              {
-                                backgroundColor: excludedIngredientIds[item.id]
-                                  ? colors.warning + '25'
-                                  : colors.surface,
-                                borderColor: excludedIngredientIds[item.id]
-                                  ? colors.warning
-                                  : colors.border,
-                              },
-                            ]}
-                          >
-                            <MaterialCommunityIcons
-                              name={
-                                excludedIngredientIds[item.id]
-                                  ? 'eye-off-outline'
-                                  : 'eye-outline'
-                              }
-                              size={16}
-                              color={excludedIngredientIds[item.id] ? colors.warning : colors.textSecondary}
-                            />
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            onPress={() => handleAddFavoriteFromSaved(item.name)}
-                            style={[styles.excludeButton, { borderColor: colors.primary }]}
-                          >
-                            <MaterialCommunityIcons name="star-outline" size={16} color={colors.primary} />
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            onPress={() => removeSavedIngredient(item.id)}
-                            style={[styles.removeSavedButton, { backgroundColor: colors.error + '20' }]}
-                          >
-                            <FontAwesome name="trash" size={14} color={colors.error} />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* Mostra solo ingredienti non ancora salvati */}
-                {ingredients.some(ing => ing.name.trim().length > 0) && (
-                  <View style={styles.ingredientsSection}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                      {t('analysis.food.fridge.newIngredients') || 'Nuovi Ingredienti'}
-                    </Text>
-                    
-                    {ingredients.map((ingredient, index) => (
-                    <View key={index} style={styles.ingredientRowContainer}>
-                      <View style={styles.ingredientRow}>
-                        <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border, flex: 1 }]}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                            <TextInput
-                              style={[styles.input, { color: colors.text, flex: 1 }]}
-                              value={ingredient.name}
-                              onChangeText={(value) => updateIngredient(index, 'name', value)}
-                              onBlur={() => {
-                                // 🔥 FIX: Processa automaticamente con AI quando l'utente finisce di digitare
-                                if (ingredient.name.trim().length >= 2) {
-                                  processIngredientNameWithAI(index, ingredient.name);
-                                }
-                              }}
-                              placeholder={t('analysis.food.fridge.ingredientPlaceholderAI') || `Ingrediente ${index + 1} (es: pomodori, mozzarella)`}
-                              placeholderTextColor={colors.textTertiary}
-                              autoCapitalize="words"
-                            />
-                            {processingAI[index] && (
-                              <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 8 }} />
-                            )}
-                          </View>
-                        </View>
-                        <View style={[styles.expiryWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}> 
-                          <MaterialCommunityIcons name="calendar" size={12} color={colors.textTertiary} />
-                          <TextInput
-                            style={[styles.expiryInput, { color: colors.text }]}
-                            value={ingredient.expiry || ''}
-                            onChangeText={(value) => updateIngredient(index, 'expiry', value)}
-                            placeholder={t('analysis.food.fridge.expiryPlaceholder')}
-                            placeholderTextColor={colors.textTertiary}
-                            keyboardType="numbers-and-punctuation"
-                          />
-                        </View>
-                        {ingredients.length > 1 && (
-                          <TouchableOpacity
-                            onPress={() => removeIngredient(index)}
-                            style={[styles.removeButton, { backgroundColor: colors.error + '20' }]}
-                          >
-                            <FontAwesome name="trash" size={14} color={colors.error} />
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                      {/* 🔥 FIX: Selettore categoria */}
-                      <View style={styles.categorySelector}>
-                        <Text style={[styles.categoryLabel, { color: colors.textSecondary }]}>
-                          {t('analysis.food.fridge.category') || 'Categoria:'}
-                        </Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryChips}>
-                          {(['meat', 'fish', 'vegetables', 'fruits', 'dairy', 'grains', 'legumes', 'spices', 'beverages', 'other'] as const).map((cat) => (
-                            <TouchableOpacity
-                              key={cat}
-                              style={[
-                                styles.categoryChip,
-                                {
-                                  backgroundColor: ingredient.category === cat ? colors.primary : colors.surfaceElevated,
-                                  borderColor: ingredient.category === cat ? colors.primary : colors.border,
-                                },
-                              ]}
-                              onPress={() => updateIngredient(index, 'category', cat)}
-                            >
-                              <Text
-                                style={[
-                                  styles.categoryChipText,
-                                  { color: ingredient.category === cat ? colors.textInverse : colors.text },
-                                ]}
-                              >
-                                {t(`analysis.food.fridge.categories.${cat}`) || cat}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </ScrollView>
-                      </View>
-                    </View>
-                  ))}
-
-                  <TouchableOpacity
-                    onPress={addIngredient}
-                    style={[styles.addButton, { borderColor: colors.border }]}
-                  >
-                    <FontAwesome name="plus" size={14} color={colors.primary} />
-                    <Text style={[styles.addButtonText, { color: colors.primary }]}>
-                      {t('analysis.food.fridge.addMore')}
-                    </Text>
-                  </TouchableOpacity>
-                  </View>
-                )}
-              </>
-            ) : (
-              <View style={styles.recipeSection}>
-                <Text style={[styles.recipeTitle, { color: colors.text }]}>
-                  {generatedRecipe.title}
-                </Text>
-                
-                <View style={styles.recipeMeta}>
-                  <View style={styles.recipeMetaItem}>
-                    <MaterialCommunityIcons name="clock-outline" size={16} color={colors.textSecondary} />
-                    <Text style={[styles.recipeMetaText, { color: colors.textSecondary }]}>
-                      {generatedRecipe.readyInMinutes} {t('analysis.food.fridge.minutes')}
-                    </Text>
-                  </View>
-                  <View style={styles.recipeMetaItem}>
-                    <MaterialCommunityIcons name="account-group" size={16} color={colors.textSecondary} />
-                    <Text style={[styles.recipeMetaText, { color: colors.textSecondary }]}>
-                      {generatedRecipe.servings} {t('analysis.food.fridge.servings')}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.macrosSection}>
-                  <Text style={[styles.macrosTitle, { color: colors.text }]}>
-                    {t('analysis.food.fridge.nutritionPerServing')}
-                  </Text>
-                  <View style={styles.macrosGrid}>
-                    <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
-                      <Text style={[styles.macroValue, { color: colors.text }]}>
-                        {Math.round(generatedRecipe.caloriesPerServing)}
-                      </Text>
-                      <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>kcal</Text>
-                    </View>
-                    <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
-                      <Text style={[styles.macroValue, { color: colors.text }]}>
-                        {Math.round(generatedRecipe.macrosPerServing.protein)}g
-                      </Text>
-                      <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>
-                        {t('analysis.food.metrics.proteins')}
-                      </Text>
-                    </View>
-                    <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
-                      <Text style={[styles.macroValue, { color: colors.text }]}>
-                        {Math.round(generatedRecipe.macrosPerServing.carbs)}g
-                      </Text>
-                      <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>
-                        {t('analysis.food.metrics.carbohydrates')}
-                      </Text>
-                    </View>
-                    <View style={[styles.macroItem, { backgroundColor: colors.surfaceElevated }]}>
-                      <Text style={[styles.macroValue, { color: colors.text }]}>
-                        {Math.round(generatedRecipe.macrosPerServing.fat)}g
-                      </Text>
-                      <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>
-                        {t('analysis.food.metrics.fats')}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.ingredientsListSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                    {t('analysis.food.fridge.ingredients')}
-                  </Text>
-                  {generatedRecipe.ingredients.map((ing: any, index: number) => (
-                    <View key={index} style={styles.ingredientListItem}>
-                      <MaterialCommunityIcons name="circle" size={6} color={colors.primary} />
-                      <Text style={[styles.ingredientListItemText, { color: colors.text }]}>
-                        {ing.quantity} {ing.unit} {ing.name}
-                        {ing.optional && (
-                          <Text style={[styles.optionalText, { color: colors.textTertiary }]}>
-                            {' '}({t('analysis.food.fridge.optional')})
-                          </Text>
-                        )}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-
-                <View style={styles.stepsSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                    {t('analysis.food.fridge.steps')}
-                  </Text>
-                  {generatedRecipe.steps.map((step: string, index: number) => (
-                    <View key={index} style={styles.stepItem}>
-                      <View style={[styles.stepNumber, { backgroundColor: colors.primary }]}>
-                        <Text style={styles.stepNumberText}>{index + 1}</Text>
-                      </View>
-                      <Text style={[styles.stepText, { color: colors.text }]}>{step}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                {generatedRecipe.tips && generatedRecipe.tips.length > 0 && (
-                  <View style={styles.tipsSection}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                      {t('analysis.food.fridge.tips')}
-                    </Text>
-                    {generatedRecipe.tips.map((tip: string, index: number) => (
-                      <View key={index} style={styles.tipItem}>
-                        <MaterialCommunityIcons name="lightbulb" size={16} color={colors.accent} />
-                        <Text style={[styles.tipText, { color: colors.textSecondary }]}>{tip}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {generatedRecipe.shoppingGaps && generatedRecipe.shoppingGaps.length > 0 && (
-                  <View style={styles.shoppingGapsSection}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                      {t('analysis.food.fridge.missingIngredients')}
-                    </Text>
-                    {generatedRecipe.shoppingGaps.map((gap: string, index: number) => (
-                      <View key={index} style={styles.shoppingGapItem}>
-                        <MaterialCommunityIcons name="cart-outline" size={16} color={colors.warning} />
-                        <Text style={[styles.shoppingGapText, { color: colors.textSecondary }]}>{gap}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
               </View>
-            )}
-              </ScrollView>
+            </SafeAreaView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
-              <View style={[styles.buttonContainer, { borderTopColor: colors.border }]}>
-                {!generatedRecipe ? (
-                  <View style={styles.ingredientsActions}>
-                    <TouchableOpacity
-                      style={[styles.saveButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                      onPress={handleSaveIngredients}
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <ActivityIndicator size="small" color={colors.primary} />
-                      ) : (
-                        <>
-                          <FontAwesome name="save" size={16} color={colors.primary} />
-                          <Text style={[styles.saveButtonText, { color: colors.primary }]}>
-                            {t('analysis.food.fridge.saveIngredients') || 'Salva Ingredienti'}
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.generateButton, { backgroundColor: colors.primary }]}
-                      onPress={handleGenerateRecipe}
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <ActivityIndicator size="small" color={colors.textInverse} />
-                      ) : (
-                        <>
-                          <MaterialCommunityIcons name="chef-hat" size={18} color={colors.textInverse} />
-                          <Text style={[styles.generateButtonText, { color: colors.textInverse }]}>
-                            {t('analysis.food.fridge.generateRecipe')}
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={styles.recipeActions}>
-                    <TouchableOpacity
-                      style={[styles.secondaryButton, { borderColor: colors.border }]}
-                      onPress={() => {
-                        setGeneratedRecipe(null);
-                        setIngredients([{ name: '' }]);
-                      }}
-                    >
-                      <Text 
-                        style={[styles.secondaryButtonText, { color: colors.text }]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {t('analysis.food.fridge.newRecipe')}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.saveLibraryButton, { borderColor: colors.primary }]}
-                      onPress={openRecipeEditorForGenerated}
-                    >
-                      <MaterialCommunityIcons name="content-save-outline" size={18} color={colors.primary} />
-                      <Text 
-                        style={[styles.saveLibraryButtonText, { color: colors.primary }]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {t('analysis.food.fridge.editAndSave')}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-                      onPress={handleClose}
-                    >
-                      <Text 
-                        style={[styles.primaryButtonText, { color: colors.textInverse }]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {t('common.close')}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            </View>
-          </SafeAreaView>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
-
-    <RecipeEditorModal
-      visible={recipeEditorVisible}
-      mode="create"
-      recipe={null}
-      initialDraft={recipeDraft}
-      onClose={() => {
-        setRecipeEditorVisible(false);
-        setRecipeDraft(null);
-      }}
-      onSaved={handleRecipeEditorSavedFromFridge}
-    />
+      <RecipeEditorModal
+        visible={recipeEditorVisible}
+        mode="create"
+        recipe={null}
+        initialDraft={recipeDraft}
+        onClose={() => {
+          setRecipeEditorVisible(false);
+          setRecipeDraft(null);
+        }}
+        onSaved={handleRecipeEditorSavedFromFridge}
+      />
     </>
   );
 };

@@ -324,6 +324,7 @@ export class NutritionServiceClass {
         quantity?: number;
         unit?: 'g' | 'ml' | 'pcs' | 'serving';
         expiry?: string;
+        category?: 'meat' | 'fish' | 'vegetables' | 'fruits' | 'dairy' | 'grains' | 'legumes' | 'spices' | 'beverages' | 'other';
         confidence: number;
         notes?: string;
       }>;
