@@ -36,6 +36,7 @@ export interface UserRecipe {
   favorite: boolean;
   notes?: string | null;
   source?: string | null;
+  image?: string | null;  // URL immagine della ricetta
   last_used_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -97,10 +98,10 @@ class RecipeLibraryService {
 
     const payload = this.serializePayload(input, user.id);
     const { data, error } = await supabase
-        .from('user_recipes')
-        .insert(payload)
-        .select()
-        .single();
+      .from('user_recipes')
+      .insert(payload)
+      .select()
+      .single();
 
     if (error) {
       console.error('[RecipeLibrary] save error', error);
@@ -203,12 +204,12 @@ class RecipeLibraryService {
       calories_per_serving: generated?.caloriesPerServing,
       macros: generated?.macrosPerServing
         ? {
-            protein: generated.macrosPerServing.protein,
-            carbs: generated.macrosPerServing.carbs,
-            fat: generated.macrosPerServing.fat,
-            fiber: generated.macrosPerServing.fiber,
-            sugar: generated.macrosPerServing.sugar,
-          }
+          protein: generated.macrosPerServing.protein,
+          carbs: generated.macrosPerServing.carbs,
+          fat: generated.macrosPerServing.fat,
+          fiber: generated.macrosPerServing.fiber,
+          sugar: generated.macrosPerServing.sugar,
+        }
         : undefined,
       favorite: options.favorite,
       notes: options.notes,
@@ -278,6 +279,7 @@ class RecipeLibraryService {
       favorite: !!row.favorite,
       notes: row.notes ?? undefined,
       source: row.source ?? undefined,
+      image: row.image ?? undefined,  // URL immagine della ricetta
       last_used_at: row.last_used_at ?? undefined,
       created_at: row.created_at,
       updated_at: row.updated_at,
