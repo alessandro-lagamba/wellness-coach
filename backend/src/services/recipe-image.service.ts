@@ -66,7 +66,9 @@ async function pollForResult(requestId: string, apiKey: string): Promise<string 
 
       if (status === "completed" || status === "success" || status === "done") {
         // Try to extract image URL from various possible paths
+        // DEAPI returns result_url directly under data when status is "done"
         const imageUrl =
+          statusData?.data?.result_url ||  // <-- DEAPI uses this!
           statusData?.data?.output?.images?.[0]?.url ||
           statusData?.data?.output?.images?.[0] ||
           statusData?.data?.images?.[0]?.url ||
@@ -79,6 +81,7 @@ async function pollForResult(requestId: string, apiKey: string): Promise<string 
           statusData?.images?.[0]?.url ||
           statusData?.images?.[0] ||
           statusData?.image_url ||
+          statusData?.result_url ||
           statusData?.result?.url ||
           null;
 
