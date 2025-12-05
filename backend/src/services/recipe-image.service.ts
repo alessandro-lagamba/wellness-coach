@@ -154,8 +154,8 @@ export async function generateRecipeImageFromTitle(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        prompt: `Professional food photography of ${title}, appetizing, high quality, restaurant style, soft lighting`,
-        model: "ZImageTurbo_INT8",
+        prompt: title,
+        model: "Flux1schnell",
         width: 512,
         height: 512,
         steps: 4,
