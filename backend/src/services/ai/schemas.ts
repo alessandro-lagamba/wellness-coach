@@ -200,3 +200,42 @@ export const coachSchema = {
     required: ["title", "message", "priority", "category"],
   },
 } as const;
+
+// 🆕 Schema per il parsing degli ingredienti da voce/testo
+export const parseIngredientsSchema = {
+  name: "parsed_ingredients",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      ingredients: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            name: { type: "string" },
+            quantity: { type: "number" },
+            unit: { type: "string" },
+            expiryDate: { type: "string" },
+          },
+          required: ["name"],
+        },
+      },
+      commands: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            action: { type: "string", enum: ["add", "remove", "update", "clear"] },
+            target: { type: "string" },
+          },
+          required: ["action"],
+        },
+      },
+      confidence: { type: "number", minimum: 0, maximum: 1 },
+    },
+    required: ["ingredients", "confidence"],
+  },
+} as const;

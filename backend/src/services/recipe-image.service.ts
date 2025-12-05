@@ -51,6 +51,9 @@ export async function generateRecipeImageFromTitle(
     }
 
     // 2) Nessuna cache: chiama deAPI per generare l'immagine
+    console.log("[RecipeImage] 🎨 Generating image for:", title);
+    const foodPrompt = `Professional food photography of ${title}, appetizing dish, high quality, studio lighting, top-down view, clean background`;
+
     const response = await fetch(DEAPI_ENDPOINT, {
       method: "POST",
       headers: {
@@ -59,12 +62,12 @@ export async function generateRecipeImageFromTitle(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        prompt: title,
-        negative_prompt: "blur, darkness, noise, text, watermark, logo",
-        model: "Flux1schnell",
+        prompt: foodPrompt,
+        negative_prompt: "blur, darkness, noise, text, watermark, logo, hands, people, ugly, deformed",
+        model: "flux-schnell", // 🔥 FIX: Correct model name
         width: 512,
         height: 512,
-        steps: 30,
+        steps: 4, // 🔥 FIX: flux-schnell uses fewer steps (4-8 is optimal)
       }),
     });
 
