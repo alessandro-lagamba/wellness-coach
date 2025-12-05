@@ -1337,7 +1337,7 @@
         "ambiguousMessage": "Intendevi: {{suggestions}}",
         "generateRecipe": "Genera Ricetta",
         "recipeGenerated": "Ricetta Generata",
-        "editAndSave": "Modifica e salva",
+        "editAndSave": "Salva",
         "noIngredients": "Inserisci almeno un ingrediente",
         "needMoreIngredients": "Aggiungi almeno {{count}} ingredienti prima di generare una ricetta",
         "generateError": "Errore durante la generazione della ricetta",

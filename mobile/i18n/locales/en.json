@@ -1323,7 +1323,7 @@
         "ambiguousMessage": "Did you mean: {{suggestions}}",
         "generateRecipe": "Generate Recipe",
         "recipeGenerated": "Recipe Generated",
-        "editAndSave": "Edit & Save",
+        "editAndSave": "Save",
         "noIngredients": "Enter at least one ingredient",
         "needMoreIngredients": "Add at least {{count}} ingredients before generating a recipe",
         "generateError": "Error generating recipe",
