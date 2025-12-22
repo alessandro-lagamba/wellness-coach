@@ -7,11 +7,11 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
   withTiming,
-  withSpring 
+  withSpring
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -20,6 +20,7 @@ import { WidgetData } from '../services/today-glance.service';
 import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
+const isNarrowScreen = width < 380;
 
 interface TodayGlanceWidgetProps {
   widget: WidgetData;
@@ -64,6 +65,11 @@ const TodayGlanceWidget: React.FC<TodayGlanceWidgetProps> = ({
     const lightColor = `${baseColor}20`;
     return [lightColor, '#ffffff'];
   };
+
+  // Responsive sizes for narrow screens
+  const iconSize = isNarrowScreen ? 14 : 18;
+  const progressSize = isNarrowScreen ? 50 : 70;
+  const containerPadding = isNarrowScreen ? 10 : 20;
 
   const ProgressCircle = ({ progress, color, size = 60 }: { progress: number; color: string; size?: number }) => {
     const radius = (size - 8) / 2;
@@ -134,7 +140,7 @@ const TodayGlanceWidget: React.FC<TodayGlanceWidgetProps> = ({
         <View style={styles.widgetContainer}>
           {/* Header with icon and trend */}
           <View style={styles.widgetHeader}>
-            <Text style={styles.widgetIcon}>{widget.icon}</Text>
+            <Text style={[styles.widgetIcon, isNarrowScreen && { fontSize: iconSize }]}>{widget.icon}</Text>
             {widget.trend && (
               <View style={[
                 styles.trendBadge,
@@ -152,22 +158,36 @@ const TodayGlanceWidget: React.FC<TodayGlanceWidgetProps> = ({
 
           {/* Progress Circle */}
           {widget.progress !== undefined && (
-            <View style={styles.progressContainer}>
-              <ProgressCircle 
-                progress={widget.progress} 
-                color={getProgressBarColor()} 
-                size={70}
+            <View style={[styles.progressContainer, isNarrowScreen && { marginBottom: 8 }]}>
+              <ProgressCircle
+                progress={widget.progress}
+                color={getProgressBarColor()}
+                size={progressSize}
               />
             </View>
           )}
 
           {/* Title and Value */}
           <View style={styles.widgetContent}>
-            <Text style={[styles.widgetTitle, { color: colors.text }]} numberOfLines={1}>{widget.title}</Text>
-            <Text style={[styles.widgetValue, { color: widget.color }]}>
+            <Text
+              style={[styles.widgetTitle, { color: colors.text }, isNarrowScreen && styles.widgetTitleSmall]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              {widget.title}
+            </Text>
+            <Text style={[styles.widgetValue, { color: widget.color }, isNarrowScreen && styles.widgetValueSmall]}>
               {widget.value}
             </Text>
-            <Text style={[styles.widgetSubtitle, { color: colors.textSecondary }]}>{widget.subtitle}</Text>
+            <Text
+              style={[styles.widgetSubtitle, { color: colors.textSecondary }, isNarrowScreen && styles.widgetSubtitleSmall]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              {widget.subtitle}
+            </Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -191,7 +211,7 @@ const styles = StyleSheet.create({
   widgetContainer: {
     flex: 1,
     borderRadius: 20,
-    padding: 20,
+    padding: isNarrowScreen ? 10 : 20,
     alignItems: 'center',
     justifyContent: 'space-between',
   },
@@ -264,6 +284,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6b7280',
     marginTop: -2,
+  },
+  // Narrow screen styles
+  widgetTitleSmall: {
+    fontSize: 10,
+  },
+  widgetValueSmall: {
+    fontSize: 13,
+  },
+  widgetSubtitleSmall: {
+    fontSize: 8,
   },
 });
 

@@ -553,7 +553,7 @@
       },
       "trends": {
         "title": "Trend Emotivi",
-        "subtitle": "Andamento di 7 giorni del tuo stato emotivo",
+        "subtitle": "Andamento degli ultimi 7 giorni",
         "detailedView": "Visualizzazione dettagliata",
         "threeMonths": "90 giorni",
         "noData": "Nessun dato disponibile per questo periodo",
@@ -1320,7 +1320,7 @@
         "ingredientPlaceholder": "Ingrediente {{number}}",
         "addMore": "Aggiungi altro ingrediente",
         "expiryPlaceholder": "Scadenza (AAAA-MM-GG)",
-        "quickAdd": "Dettatura / Inserimento rapido",
+        "quickAdd": "Inserimento rapido",
         "quickAddPlaceholder": "Scrivi o detta gli ingredienti (l'AI li separerà automaticamente)",
         "ingredientPlaceholderAI": "Nome ingrediente (l'AI categorizzerà automaticamente)",
         "parseAndAdd": "Analizza e aggiungi",

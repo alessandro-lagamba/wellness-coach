@@ -62,12 +62,12 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
 
   // 🔥 FIX: Dynamic sizing using onLayout - measures actual container width
   const { width: windowWidth } = useWindowDimensions();
-  const [chartSize, setChartSize] = useState(Math.min(120, Math.max(70, windowWidth * 0.25)));
+  const [chartSize, setChartSize] = useState(Math.min(120, Math.max(85, windowWidth * 0.26)));
 
   const handleChartLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
-    // Take min between container width and reasonable max (clamped 70-140)
-    const size = Math.max(70, Math.min(w * 0.85, 140));
+    // Take min between container width and reasonable max (clamped 85-130)
+    const size = Math.max(85, Math.min(w * 0.9, 130));
     setChartSize(size);
   };
 
@@ -94,15 +94,15 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
 
   // 🔧 Scaling for font/offset based on chartSize (pixels)
   const scale = chartSize / REFERENCE_SIZE;
-  // 🔥 FIX: Larger font sizes for better readability
-  const valueFontSize = Math.max(16, 22 * scale); // Minimum 16, scales with chart
+  // 🔥 FIX: Scaled font sizes for balanced readability
+  const valueFontSize = Math.max(18, 24 * scale); // Minimum 18, scales with chart
   const valueStr = String(safeValue);
   const centerX = VB_SIZE / 2; // 50 in viewBox units
   // Offset for unit text - convert px to viewBox units
   const charWidth = valueFontSize * 0.5;
   const valueWidth = valueStr.length * charWidth;
   const unitOffset = (valueWidth / 2 + 2) / (chartSize / VB_SIZE); // Convert to viewBox units
-  const maxFontSize = Math.max(9, 12 * scale); // Minimum 9 for max value label
+  const maxFontSize = Math.max(10, 13 * scale); // Minimum 10 for max value label
 
   return (
     <View style={styles.container}>
