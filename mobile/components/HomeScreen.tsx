@@ -4688,7 +4688,7 @@ const styles = StyleSheet.create({
   activityIconContainer: {
     width: 52,
     height: 52,
-    borderRadius: 16,
+    borderRadius: 26, // Circular instead of rounded square
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',

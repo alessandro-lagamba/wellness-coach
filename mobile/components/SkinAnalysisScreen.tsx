@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Modal,
   BackHandler,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -48,6 +49,7 @@ import { InsightCorrelation } from './InsightCorrelation';
 import { InsightSection } from './InsightSection';
 import { ActionCard } from './ActionCard';
 import { MetricsService } from '../services/metrics.service';
+import wellnessActivitiesService from '../services/wellness-activities.service';
 import { ActionsService } from '../services/actions.service';
 import { QualityService } from '../services/quality.service';
 import { CorrelationService } from '../services/correlation.service';
@@ -90,191 +92,191 @@ const heroImageUri = 'https://images.unsplash.com/photo-1557163435-efdb2550fbfb?
 // Video URI per Skin Analysis - usando require per file locali
 const heroVideoUri = require('../assets/videos/skin-analysis-video.mp4');
 
-// Guide dettagliate per ogni modulo
+// Guide dettagliate per ogni modulo - Contenuto in italiano
 const skincareGuides = {
   smoothness: {
-    title: 'Texture Improvement Guide',
-    subtitle: 'Achieve smoother, more even skin',
+    title: 'Guida miglioramento texture',
+    subtitle: 'Suggerimenti per una pelle più uniforme',
     image: 'https://images.unsplash.com/photo-1654781350550-0dc72ecb6fae?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=998',
     sections: {
       products: {
-        title: '🧴 Recommended Products',
+        title: '🧴 Prodotti Consigliati',
         items: [
-          'Chemical exfoliants (AHA/BHA) - 2-3x per week',
-          'Retinoids - Start with low concentration',
-          'Hydrating serums with hyaluronic acid',
-          'Gentle cleansers with ceramides',
-          'SPF 30+ daily protection'
+          'Esfolianti chimici (AHA/BHA) - 2-3 volte a settimana',
+          'Retinoidi - Inizia con basse concentrazioni',
+          'Sieri idratanti con acido ialuronico',
+          'Detergenti delicati con ceramidi',
+          'SPF 30+ protezione quotidiana'
         ]
       },
       nutrition: {
-        title: '🥗 Nutrition & Diet',
+        title: '🥗 Nutrizione e Dieta',
         items: [
-          'Omega-3 fatty acids (fish, nuts, seeds)',
-          'Vitamin C rich foods (citrus, berries)',
-          'Antioxidants (green tea, dark chocolate)',
-          'Stay hydrated - 8+ glasses water daily',
-          'Limit processed foods and sugars'
+          'Acidi grassi Omega-3 (pesce, noci, semi)',
+          'Alimenti ricchi di Vitamina C (agrumi, frutti di bosco)',
+          'Antiossidanti (tè verde, cioccolato fondente)',
+          'Mantieniti idratato - 8+ bicchieri d\'acqua al giorno',
+          'Limita cibi processati e zuccheri'
         ]
       },
       routine: {
-        title: '📋 Daily Routine',
+        title: '📋 Routine Giornaliera',
         items: [
-          'Morning: Gentle cleanse → Vitamin C → Moisturizer → SPF',
-          'Evening: Double cleanse → Exfoliant (2-3x/week) → Retinol → Moisturizer',
-          'Weekly: Deep cleansing mask',
-          'Monthly: Professional facial treatment'
+          'Mattina: Detergente delicato → Vitamina C → Idratante → SPF',
+          'Sera: Doppia detersione → Esfoliante (2-3x/sett) → Retinolo → Idratante',
+          'Settimanale: Maschera purificante profonda',
+          'Mensile: Trattamento professionale'
         ]
       },
       timing: {
-        title: '⏰ Best Timing',
+        title: '⏰ Tempistiche Ottimali',
         items: [
-          'Exfoliate in the evening, not morning',
-          'Retinoids work best at night',
-          'SPF is essential every morning',
-          'Allow 2-4 weeks to see improvements',
-          'Be consistent for best results'
+          'Esfoliare la sera, non la mattina',
+          'I retinoidi funzionano meglio di notte',
+          'SPF essenziale ogni mattina',
+          'Aspetta 2-4 settimane per vedere miglioramenti',
+          'La costanza è fondamentale per i risultati'
         ]
       }
     }
   },
   redness: {
-    title: 'Inflammation Reduction Guide',
-    subtitle: 'Calm irritated and sensitive skin',
+    title: 'Guida riduzione infiammazione',
+    subtitle: 'Come calmare pelle irritata e sensibile',
     image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80',
     sections: {
       products: {
-        title: '🧴 Recommended Products',
+        title: '🧴 Prodotti Consigliati',
         items: [
-          'Niacinamide serums (2-5% concentration)',
-          'Centella asiatica (Cica) products',
-          'Aloe vera gel for immediate relief',
-          'Gentle, fragrance-free cleansers',
-          'Mineral SPF with zinc oxide'
+          'Sieri alla niacinamide (concentrazione 2-5%)',
+          'Prodotti alla Centella asiatica (Cica)',
+          'Gel di aloe vera per sollievo immediato',
+          'Detergenti delicati senza profumo',
+          'SPF minerale con ossido di zinco'
         ]
       },
       nutrition: {
-        title: '🥗 Anti-Inflammatory Foods',
+        title: '🥗 Alimenti Anti-Infiammatori',
         items: [
-          'Turmeric and ginger (natural anti-inflammatories)',
-          'Green leafy vegetables',
-          'Berries and cherries',
-          'Fatty fish (salmon, mackerel)',
-          'Avoid spicy foods and alcohol'
+          'Curcuma e zenzero (antinfiammatori naturali)',
+          'Verdure a foglia verde',
+          'Frutti di bosco e ciliegie',
+          'Pesce grasso (salmone, sgombro)',
+          'Evita cibi piccanti e alcol'
         ]
       },
       routine: {
-        title: '📋 Soothing Routine',
+        title: '📋 Routine Lenitiva',
         items: [
-          'Morning: Gentle cleanse → Niacinamide → Calming moisturizer → SPF',
-          'Evening: Oil cleanse → Gentle cleanser → Centella serum → Moisturizer',
-          'Use lukewarm water, never hot',
-          'Pat dry, don\'t rub',
-          'Apply products with clean hands'
+          'Mattina: Detergente delicato → Niacinamide → Idratante calmante → SPF',
+          'Sera: Olio detergente → Detergente delicato → Siero alla Centella → Idratante',
+          'Usa acqua tiepida, mai calda',
+          'Tampona per asciugare, non sfregare',
+          'Applica i prodotti con mani pulite'
         ]
       },
       timing: {
-        title: '⏰ When to Apply',
+        title: '⏰ Quando Applicare',
         items: [
-          'Apply calming products immediately after cleansing',
-          'Use SPF every morning, even indoors',
-          'Avoid harsh treatments during flare-ups',
-          'Give skin time to heal between treatments',
-          'Monitor skin reaction to new products'
+          'Applica prodotti calmanti subito dopo la detersione',
+          'Usa SPF ogni mattina, anche in casa',
+          'Evita trattamenti aggressivi durante le riacutizzazioni',
+          'Dai alla pelle tempo di guarire tra i trattamenti',
+          'Monitora la reazione della pelle ai nuovi prodotti'
         ]
       }
     }
   },
   oiliness: {
-    title: 'Sebum Balance Guide',
-    subtitle: 'Control excess oil production',
+    title: 'Guida bilanciamento sebo',
+    subtitle: 'Controlla la produzione di sebo in eccesso',
     image: 'https://images.unsplash.com/photo-1718490953028-021d352b14fd?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1699',
     sections: {
       products: {
-        title: '🧴 Oil-Control Products',
+        title: '🧴 Prodotti Controllo Oleosità',
         items: [
-          'Salicylic acid cleansers (1-2% concentration)',
-          'Clay masks (kaolin, bentonite)',
-          'Oil-free, non-comedogenic moisturizers',
-          'Mattifying primers and sunscreens',
-          'Gentle exfoliating toners'
+          'Detergenti all\'acido salicilico (1-2%)',
+          'Maschere all\'argilla (caolino, bentonite)',
+          'Idratanti oil-free e non comedogenici',
+          'Primer e solari opacizzanti',
+          'Tonici esfolianti delicati'
         ]
       },
       nutrition: {
-        title: '🥗 Diet Adjustments',
+        title: '🥗 Aggiustamenti Dietetici',
         items: [
-          'Reduce dairy and processed foods',
-          'Limit refined sugars and carbs',
-          'Increase fiber-rich foods',
-          'Stay hydrated with water',
-          'Consider zinc and B-vitamin supplements'
+          'Riduci latticini e cibi processati',
+          'Limita zuccheri e carboidrati raffinati',
+          'Aumenta i cibi ricchi di fibre',
+          'Mantieniti idratato con acqua',
+          'Considera integratori di zinco e vitamine B'
         ]
       },
       routine: {
-        title: '📋 Oil-Control Routine',
+        title: '📋 Routine Controllo Oleosità',
         items: [
-          'Morning: Salicylic acid cleanser → Toner → Light moisturizer → Mattifying SPF',
-          'Evening: Double cleanse → Clay mask (2x/week) → Light moisturizer',
-          'Blot excess oil throughout the day',
-          'Use oil-absorbing sheets as needed',
-          'Don\'t over-cleanse (can increase oil production)'
+          'Mattina: Detergente acido salicilico → Tonico → Idratante leggero → SPF opacizzante',
+          'Sera: Doppia detersione → Maschera argilla (2x/sett) → Idratante leggero',
+          'Tampona il sebo in eccesso durante il giorno',
+          'Usa salviette assorbenti al bisogno',
+          'Non esagerare con la detersione (può aumentare il sebo)'
         ]
       },
       timing: {
-        title: '⏰ Optimal Timing',
+        title: '⏰ Tempistiche Ottimali',
         items: [
-          'Cleanse immediately after sweating',
-          'Apply clay masks in the evening',
-          'Use oil-control products in the morning',
-          'Allow 4-6 weeks to see oil reduction',
-          'Adjust routine based on seasonal changes'
+          'Detergi subito dopo aver sudato',
+          'Applica maschere all\'argilla di sera',
+          'Usa prodotti opacizzanti la mattina',
+          'Aspetta 4-6 settimane per riduzione del sebo',
+          'Adatta la routine ai cambi stagionali'
         ]
       }
     }
   },
   confidence: {
-    title: 'Analysis Quality Tips',
-    subtitle: 'Get the most accurate skin analysis',
+    title: 'Suggerimenti qualità analisi',
+    subtitle: 'Ottieni l\'analisi della pelle più accurata',
     image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80',
     sections: {
       products: {
-        title: '📸 Photo Quality',
+        title: '📸 Qualità della Foto',
         items: [
-          'Use natural lighting near a window',
-          'Hold phone at eye level',
-          'Ensure face is fully in frame',
-          'Remove glasses and accessories',
-          'Keep hair away from face'
+          'Usa luce naturale vicino a una finestra',
+          'Tieni il telefono all\'altezza degli occhi',
+          'Assicurati che il viso sia completamente inquadrato',
+          'Rimuovi occhiali e accessori',
+          'Tieni i capelli lontani dal viso'
         ]
       },
       nutrition: {
-        title: '🧼 Skin Preparation',
+        title: '🧼 Preparazione della Pelle',
         items: [
-          'Clean face thoroughly before analysis',
-          'Remove all makeup completely',
-          'Wait 30 minutes after washing',
-          'Avoid applying products before scan',
-          'Ensure skin is dry and clean'
+          'Pulisci accuratamente il viso prima dell\'analisi',
+          'Rimuovi completamente il trucco',
+          'Aspetta 30 minuti dopo il lavaggio',
+          'Evita di applicare prodotti prima della scansione',
+          'Assicurati che la pelle sia asciutta e pulita'
         ]
       },
       routine: {
-        title: '📋 Best Practices',
+        title: '📋 Best Practice',
         items: [
-          'Analyze at the same time each day',
-          'Use consistent lighting conditions',
-          'Take multiple angles if needed',
-          'Compare results over time',
-          'Track changes in your routine'
+          'Analizza alla stessa ora ogni giorno',
+          'Usa condizioni di illuminazione costanti',
+          'Scatta da più angolazioni se necessario',
+          'Confronta i risultati nel tempo',
+          'Traccia i cambiamenti nella tua routine'
         ]
       },
       timing: {
-        title: '⏰ Optimal Timing',
+        title: '⏰ Tempistiche Ottimali',
         items: [
-          'Morning analysis shows natural skin state',
-          'Evening analysis shows daily wear',
-          'Avoid analysis after intense treatments',
-          'Wait 24-48 hours after new products',
-          'Consistent timing improves accuracy'
+          'L\'analisi mattutina mostra lo stato naturale della pelle',
+          'L\'analisi serale mostra l\'usura quotidiana',
+          'Evita l\'analisi dopo trattamenti intensi',
+          'Aspetta 24-48 ore dopo nuovi prodotti',
+          'La costanza negli orari migliora l\'accuratezza'
         ]
       }
     }
@@ -2044,10 +2046,13 @@ const SkinAnalysisScreenContent: React.FC = () => {
           >
             <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
               <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={closeSkincareGuide} style={[styles.closeButton, { backgroundColor: colors.surfaceMuted }]}>
-                  <FontAwesome name="times" size={20} color={colors.text} />
-                </TouchableOpacity>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                <View style={styles.modalHeaderRow}>
+                  <TouchableOpacity onPress={closeSkincareGuide} style={styles.backButton}>
+                    <FontAwesome name="arrow-left" size={18} color={colors.text} />
+                    <Text style={[styles.backButtonText, { color: colors.text }]}>{t('common.back') || 'Indietro'}</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={[styles.modalTitle, { color: colors.text }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}>
                   {t(`analysis.skin.guides.${selectedGuide}.title`, { defaultValue: skincareGuides[selectedGuide as keyof typeof skincareGuides]?.title })}
                 </Text>
                 <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
@@ -2131,15 +2136,36 @@ const SkinAnalysisScreenContent: React.FC = () => {
                   <TouchableOpacity
                     style={styles.actionButton}
                     activeOpacity={0.8}
-                    onPress={() => {
+                    onPress={async () => {
                       import('expo-haptics').then(Haptics => {
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                       });
-                      Alert.alert(
-                        t('analysis.skin.guideModal.savedTitle') || 'Salvato!',
-                        t('analysis.skin.guideModal.savedMessage') || 'Questa guida è stata aggiunta alla tua routine.',
-                        [{ text: 'OK', onPress: closeSkincareGuide }]
-                      );
+
+                      // Salva l'attività nel database wellness_activities
+                      const guideData = skincareGuides[selectedGuide as keyof typeof skincareGuides];
+                      const guideTitle = t(`analysis.skin.guides.${selectedGuide}.title`, { defaultValue: guideData?.title || '' });
+                      const guideDescription = t(`analysis.skin.guides.${selectedGuide}.description`, { defaultValue: guideData?.subtitle || '' });
+
+                      const result = await wellnessActivitiesService.saveActivity({
+                        title: guideTitle,
+                        description: guideDescription,
+                        category: 'recovery', // Le guide skincare vanno in recovery
+                        scheduledTime: new Date(), // Oggi
+                      });
+
+                      if (result.success) {
+                        Alert.alert(
+                          t('analysis.skin.guideModal.savedTitle') || 'Salvato!',
+                          t('analysis.skin.guideModal.savedMessage') || 'Questa guida è stata aggiunta alla tua routine.',
+                          [{ text: 'OK', onPress: closeSkincareGuide }]
+                        );
+                      } else {
+                        Alert.alert(
+                          t('common.error') || 'Errore',
+                          result.error || t('common.genericError') || 'Impossibile salvare l\'attività',
+                          [{ text: 'OK' }]
+                        );
+                      }
                     }}
                   >
                     <FontAwesome name="heart" size={16} color="#ffffff" />
@@ -3171,29 +3197,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalHeader: {
-    paddingTop: 60,
+    paddingTop: 20,
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
   },
-  closeButton: {
-    position: 'absolute',
-    top: 60,
-    right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  modalHeaderRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingRight: 16,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     marginBottom: 8,
+    paddingRight: 20, // Extra padding to prevent overflow
   },
   modalSubtitle: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 22,
   },
   modalContent: {
     flex: 1,
