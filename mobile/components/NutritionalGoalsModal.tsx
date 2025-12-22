@@ -545,14 +545,15 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                   <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                     <TextInput
                       style={[styles.input, { color: colors.text }]}
-                      value={(goals.carbs_percentage ?? 50).toString()}
-                      onChangeText={(text) => {
-                        const num = parseFloat(text) || 0;
+                      defaultValue={(goals.carbs_percentage ?? 50).toString()}
+                      onEndEditing={(e) => {
+                        const num = parseFloat(e.nativeEvent.text) || 0;
                         updatePercentage('carbs_percentage', num);
                       }}
                       keyboardType="decimal-pad"
                       placeholder="50"
                       placeholderTextColor={colors.textTertiary}
+                      returnKeyType="done"
                     />
                     <Text style={[styles.unitText, { color: colors.textSecondary }]}>%</Text>
                   </View>
@@ -570,14 +571,15 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                   <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                     <TextInput
                       style={[styles.input, { color: colors.text }]}
-                      value={(goals.proteins_percentage ?? 30).toString()}
-                      onChangeText={(text) => {
-                        const num = parseFloat(text) || 0;
+                      defaultValue={(goals.proteins_percentage ?? 30).toString()}
+                      onEndEditing={(e) => {
+                        const num = parseFloat(e.nativeEvent.text) || 0;
                         updatePercentage('proteins_percentage', num);
                       }}
                       keyboardType="decimal-pad"
                       placeholder="30"
                       placeholderTextColor={colors.textTertiary}
+                      returnKeyType="done"
                     />
                     <Text style={[styles.unitText, { color: colors.textSecondary }]}>%</Text>
                   </View>
@@ -595,14 +597,15 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                   <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                     <TextInput
                       style={[styles.input, { color: colors.text }]}
-                      value={(goals.fats_percentage ?? 20).toString()}
-                      onChangeText={(text) => {
-                        const num = parseFloat(text) || 0;
+                      defaultValue={(goals.fats_percentage ?? 20).toString()}
+                      onEndEditing={(e) => {
+                        const num = parseFloat(e.nativeEvent.text) || 0;
                         updatePercentage('fats_percentage', num);
                       }}
                       keyboardType="decimal-pad"
                       placeholder="20"
                       placeholderTextColor={colors.textTertiary}
+                      returnKeyType="done"
                     />
                     <Text style={[styles.unitText, { color: colors.textSecondary }]}>%</Text>
                   </View>

@@ -4356,21 +4356,23 @@ const styles = StyleSheet.create({
   },
   heroStats: {
     flex: 1,
-    marginLeft: 12, // Reduced margin to give more space to stats
-    maxWidth: '70%', // Increased max width for wider boxes
+    marginLeft: 12,
+    maxWidth: '65%',
+    minWidth: 100,
   },
   heroChip: {
-    backgroundColor: 'rgba(255,255,255,0.12)', // Più trasparente per eleganza
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 52,
-    maxWidth: '100%',
+    minHeight: 48,
+    minWidth: 100,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)', // Bordo sottile per definizione
+    borderColor: 'rgba(255,255,255,0.1)',
+    overflow: 'hidden',
   },
   heroChipIcon: {
     width: 28,
@@ -4384,6 +4386,8 @@ const styles = StyleSheet.create({
   heroChipTextContainer: {
     flex: 1,
     justifyContent: 'center',
+    minWidth: 0,
+    flexShrink: 1,
   },
   heroChipLabel: {
     color: 'rgba(255,255,255,0.75)', // Più leggibile
@@ -4392,8 +4396,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   heroChipValue: {
-    color: '#ffffff', // Sarà sovrascritto inline per dark mode
-    fontSize: 14,
+    color: '#ffffff',
+    fontSize: 13,
     fontWeight: '600',
     lineHeight: 16,
   },

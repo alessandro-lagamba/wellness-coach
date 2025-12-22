@@ -30,3 +30,6 @@ Dopo aver creato il bucket, verifica che funzioni provando a caricare un'immagin
 
 
 
+
+
+

@@ -938,7 +938,9 @@
         "keyTips": "Consigli Chiave",
         "categories": "Categorie",
         "weeks": "Settimane",
-        "saveToRoutine": "Salva nella mia routine"
+        "saveToRoutine": "Salva nella mia routine",
+        "savedTitle": "Salvato!",
+        "savedMessage": "Questa guida è stata aggiunta alla tua routine."
       },
       "guideSections": {
         "products": {

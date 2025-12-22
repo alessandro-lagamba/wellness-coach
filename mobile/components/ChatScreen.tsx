@@ -2947,7 +2947,10 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
-                  onPress={() => setIsVoiceMode(true)}
+                  onPress={() => {
+                    setShowVoiceInterface(true);
+                    setVoiceModeDismissed(false);
+                  }}
                   style={[styles.micButton, { backgroundColor: (colors as any).surfaceSecondary ?? colors.surface }]}
                 >
                   <MaterialCommunityIcons name="microphone" size={20} color={colors.text} />

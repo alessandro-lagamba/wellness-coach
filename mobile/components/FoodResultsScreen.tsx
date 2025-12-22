@@ -687,9 +687,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     gap: 12,
+    flexWrap: 'wrap',
   },
   secondaryButton: {
     flex: 1,
+    minWidth: 100,
     height: 54,
     borderRadius: 27,
     borderWidth: 1,
@@ -699,11 +701,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   secondaryButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
+    flexShrink: 1,
   },
   primaryButton: {
     flex: 2,
+    minWidth: 150,
     height: 54,
     borderRadius: 27,
     shadowColor: '#3b82f6',
@@ -722,8 +726,9 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
+    flexShrink: 1,
   },
 });
 

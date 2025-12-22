@@ -118,14 +118,14 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
 
     try {
       // ✅ FIX: Messaggi specifici per tipo di analisi
-      const userMessage = analysisType === 'emotion' 
+      const userMessage = analysisType === 'emotion'
         ? 'Fammi un\'analisi dettagliata SOLAMENTE della mia ultima analisi delle emozioni, non di tutte le analisi precedenti'
         : analysisType === 'food'
-        ? 'Basandoti SOLAMENTE su questa analisi nutrizionale, dammi suggerimenti pratici e concreti per migliorare questo pasto. Suggerisci: 1) Come bilanciare meglio i macronutrienti, 2) Alternative più salutari per alcuni ingredienti, 3) Come completare il pasto per raggiungere i tuoi obiettivi nutrizionali, 4) Consigli per pasti futuri simili. Sii specifico e pratico.'
-        : 'Fammi un\'analisi dettagliata SOLAMENTE della mia ultima analisi della pelle, non di tutte le analisi precedenti';
+          ? 'Basandoti SOLAMENTE su questa analisi nutrizionale, dammi suggerimenti pratici e concreti per migliorare questo pasto. Suggerisci: 1) Come bilanciare meglio i macronutrienti, 2) Alternative più salutari per alcuni ingredienti, 3) Come completare il pasto per raggiungere i tuoi obiettivi nutrizionali, 4) Consigli per pasti futuri simili. Sii specifico e pratico.'
+          : 'Fammi un\'analisi dettagliata SOLAMENTE della mia ultima analisi della pelle, non di tutte le analisi precedenti';
 
       const currentUser = await AuthService.getCurrentUser();
-      
+
       const sessionId = `detailed-analysis-${Date.now()}`;
       const analysisIntent = AnalysisIntentService.detectAnalysisIntent(userMessage);
 
@@ -163,17 +163,17 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
       console.log('🌐 Making request to backend...');
       console.log('📊 Analysis data:', analysisData);
       console.log('🔗 Backend URL:', BACKEND_URL);
-      
+
       // Test di connettività al backend
       try {
-        const testResponse = await fetch(`${BACKEND_URL}/health`, { 
+        const testResponse = await fetch(`${BACKEND_URL}/health`, {
           method: 'GET'
         });
         console.log('🏥 Backend health check:', testResponse.status);
       } catch (testError) {
         console.warn('⚠️ Backend health check failed:', testError);
       }
-      
+
       const response = await fetch(`${BACKEND_URL}/api/chat/respond`, {
         method: 'POST',
         headers: {
@@ -192,7 +192,7 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
       });
 
       console.log('📡 Response status:', response.status);
-      
+
       if (!response.ok) {
         console.error('❌ Backend request failed:', response.status, response.statusText);
         throw new Error(`Backend request failed: ${response.status} ${response.statusText}`);
@@ -293,12 +293,12 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
       onRequestClose={onClose}
     >
       <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <TouchableOpacity 
-          style={styles.backdropTouchable} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.backdropTouchable}
+          activeOpacity={1}
           onPress={onClose}
         />
-        
+
         <Animated.View style={[styles.popupContainer, popupStyle]}>
           {/* Header */}
           <LinearGradient
@@ -309,10 +309,10 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
           >
             <View style={styles.headerContent}>
               <View style={styles.titleContainer}>
-                <MaterialCommunityIcons 
-                  name={getPopupIcon() as any} 
-                  size={24} 
-                  color="#ffffff" 
+                <MaterialCommunityIcons
+                  name={getPopupIcon() as any}
+                  size={24}
+                  color="#ffffff"
                 />
                 <Text style={styles.title}>{getPopupTitle()}</Text>
               </View>
@@ -341,7 +341,7 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
                 <MaterialCommunityIcons name="alert-circle" size={48} color="#ef4444" />
                 <Text style={styles.errorTitle}>Errore</Text>
                 <Text style={styles.errorText}>{error}</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.retryButton, { backgroundColor: getPopupColors()[0] }]}
                   onPress={loadOrGenerateDetailedAnalysis}
                 >
@@ -353,10 +353,10 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
             {analysis && !loading && !error && (
               <View style={styles.analysisContainer}>
                 <View style={styles.analysisHeader}>
-                  <MaterialCommunityIcons 
-                    name="brain" 
-                    size={20} 
-                    color={getPopupColors()[0]} 
+                  <MaterialCommunityIcons
+                    name="brain"
+                    size={20}
+                    color={getPopupColors()[0]}
                   />
                   <Text style={styles.analysisTitle}>Analisi AI</Text>
                 </View>
@@ -420,11 +420,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 8,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
+    flexShrink: 1,
   },
   closeButton: {
     width: 36,

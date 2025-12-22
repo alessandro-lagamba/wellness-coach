@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Path, Text as SvgText, Defs, LinearGradient as SvgLinearGradient, Stop, TSpan } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -7,7 +7,9 @@ import { GaugePopup } from './GaugePopup';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from '../../hooks/useTranslation';
 
-const { width } = Dimensions.get('window');
+// 🔥 Fixed viewBox for consistent coordinates
+const VB_SIZE = 100;
+const REFERENCE_SIZE = 120; // Reference size for scaling calculations
 
 interface GaugeChartProps {
   value: number;
@@ -57,11 +59,24 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
   })();
 
   const percentage = Math.min((safeValue / maxValue) * 100, 100);
-  const radius = 40;
-  const strokeWidth = 6;
-  const circumference = 2 * Math.PI * radius;
+
+  // 🔥 FIX: Dynamic sizing using onLayout - measures actual container width
+  const { width: windowWidth } = useWindowDimensions();
+  const [chartSize, setChartSize] = useState(Math.min(120, Math.max(70, windowWidth * 0.25)));
+
+  const handleChartLayout = (e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    // Take min between container width and reasonable max (clamped 70-140)
+    const size = Math.max(70, Math.min(w * 0.85, 140));
+    setChartSize(size);
+  };
+
+  // Fixed viewBox parameters
+  const r = 40; // radius in viewBox units
+  const strokeWidth = 6; // stroke in viewBox units
+  const circumference = 2 * Math.PI * r;
   const strokeDasharray = circumference;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+  const strokeDashoffset = circumference * (1 - percentage / 100);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return '#10b981'; // Green
@@ -77,14 +92,17 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
     return t('analysis.gauge.poor');
   };
 
-  // 🔧 Per il testo centrale: calcolo posizione numero + unit
+  // 🔧 Scaling for font/offset based on chartSize (pixels)
+  const scale = chartSize / REFERENCE_SIZE;
+  // 🔥 FIX: Larger font sizes for better readability
+  const valueFontSize = Math.max(16, 22 * scale); // Minimum 16, scales with chart
   const valueStr = String(safeValue);
-  const centerX = 50;
-  const valueFontSize = 18;
-  // Stima larghezza di un carattere: aggiusta 0.55 / 0.6 finché ti piace
-  const charWidth = valueFontSize * 0.55;
+  const centerX = VB_SIZE / 2; // 50 in viewBox units
+  // Offset for unit text - convert px to viewBox units
+  const charWidth = valueFontSize * 0.5;
   const valueWidth = valueStr.length * charWidth;
-  const unitOffset = valueWidth / 2 + 2; // +2 = spazio tra numero e unit
+  const unitOffset = (valueWidth / 2 + 2) / (chartSize / VB_SIZE); // Convert to viewBox units
+  const maxFontSize = Math.max(9, 12 * scale); // Minimum 9 for max value label
 
   return (
     <View style={styles.container}>
@@ -100,12 +118,15 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
           style={styles.gaugeCardInner}
         >
           <View style={styles.header}>
-            <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-            {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
+            <Text style={[styles.label, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
+            {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">{subtitle}</Text>}
           </View>
 
-          <View style={styles.chartContainer}>
-            <Svg width={100} height={100} viewBox="0 0 100 100">
+          <View
+            style={styles.chartContainer}
+            onLayout={handleChartLayout}
+          >
+            <Svg width={chartSize} height={chartSize} viewBox={`0 0 ${VB_SIZE} ${VB_SIZE}`}>
               <Defs>
                 <SvgLinearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
                   <Stop offset="0%" stopColor={color} stopOpacity="0.8" />
@@ -115,26 +136,26 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
 
               {/* Background circle */}
               <Circle
-                cx="50"
-                cy="50"
-                r={40}
+                cx={centerX}
+                cy={centerX}
+                r={r}
                 stroke={colors.borderLight}
-                strokeWidth={6}
+                strokeWidth={strokeWidth}
                 fill="none"
               />
 
               {/* Progress circle */}
               <Circle
-                cx="50"
-                cy="50"
-                r={40}
+                cx={centerX}
+                cy={centerX}
+                r={r}
                 stroke="url(#gradient)"
-                strokeWidth={6}
+                strokeWidth={strokeWidth}
                 fill="none"
                 strokeDasharray={strokeDasharray}
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
-                transform="rotate(-90 50 50)"
+                transform={`rotate(-90 ${centerX} ${centerX})`}
               />
 
               {/* Center text - numero centrato + unit spostata a dx */}
@@ -164,10 +185,10 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
 
               {/* Max value sotto */}
               <SvgText
-                x="50"
+                x={centerX}
                 y="62"
                 textAnchor="middle"
-                fontSize="10"
+                fontSize={maxFontSize}
                 fill={colors.textSecondary}
               >
                 /
@@ -224,7 +245,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginHorizontal: 4, // Ridotto da 8 a 4 per più spazio
+    marginHorizontal: 4,
   },
   gaugeCard: {
     borderRadius: 16,
@@ -234,27 +255,29 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     borderWidth: 1,
-    minHeight: 160,
+    minHeight: 150,
   },
   gaugeCardInner: {
     borderRadius: 16,
-    padding: 12,
+    padding: 10,
     alignItems: 'center',
-    minHeight: 160,
+    minHeight: 150,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 12, // Ridotto da 12 a 8
+    marginBottom: 8,
   },
   label: {
-    fontSize: 14, // Ridotto da 14 a 13
+    fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',
+    maxWidth: '100%',
   },
   subtitle: {
-    fontSize: 9, // Ridotto da 10 a 9
+    fontSize: 9,
     fontWeight: '500',
     marginTop: 2,
+    maxWidth: '100%',
   },
   chartContainer: {
     alignItems: 'center',

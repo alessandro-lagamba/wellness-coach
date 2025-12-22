@@ -1,7 +1,7 @@
 "use client"
 
-import React, { memo, useMemo } from "react"
-import { View, Text, StyleSheet, Platform } from "react-native"
+import React, { memo, useMemo, useState } from "react"
+import { View, Text, StyleSheet, Platform, useWindowDimensions, LayoutChangeEvent } from "react-native"
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg"
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons"
 import { useTheme } from "../contexts/ThemeContext"
@@ -42,7 +42,11 @@ interface Props {
 
 const CARD_HEIGHT = 140
 
-const GAUGE_SIZES: Record<WidgetSize, number> = { small: 52, medium: 70, large: 52 }
+// 🔥 FIX: Fixed viewBox for consistent coordinates
+const VB_SIZE = 50; // ViewBox size - all coordinates relative to this
+const VB_CENTER = VB_SIZE / 2; // 25
+const VB_RADIUS = 20; // Radius in viewBox units
+const VB_STROKE = 4; // Stroke in viewBox units
 
 const MiniGaugeChart: React.FC<Props> = memo(({
   value,
@@ -58,12 +62,24 @@ const MiniGaugeChart: React.FC<Props> = memo(({
   // onPress e onLongPress gestiti da EditableWidget
 }) => {
   const { colors } = useTheme()
+
+  // 🔥 FIX: Dynamic sizing using useWindowDimensions
+  const { width: windowWidth } = useWindowDimensions();
+
+  // Calculate dynamic gauge size based on screen width
+  const getGaugeSize = (): number => {
+    const baseSize = size === "medium" ? 60 : 48;
+    // Scale down for narrow screens (< 380px)
+    const scale = Math.min(1, windowWidth / 400);
+    return Math.max(36, Math.floor(baseSize * scale));
+  };
+
+  const gaugeSize = getGaugeSize();
+
   const pct = Math.max(0, Math.min(100, value))
-  const gaugeSize = GAUGE_SIZES[size]
-  const stroke = size === "small" ? 5 : size === "medium" ? 5.5 : 6
-  const R = (gaugeSize - stroke) / 2
-  const C = 2 * Math.PI * R
-  const progress = (pct / maxValue) * C
+  // Fixed viewBox calculations
+  const circumference = 2 * Math.PI * VB_RADIUS;
+  const progress = (pct / maxValue) * circumference;
 
   const getTrendColor = () => {
     if (!trendValue) return "#6b7280"
@@ -132,15 +148,15 @@ const MiniGaugeChart: React.FC<Props> = memo(({
         </View>
 
         <View style={styles.smallGaugeWrapper}>
-          <Svg width={gaugeSize} height={gaugeSize} viewBox={`0 0 ${gaugeSize} ${gaugeSize}`}>
+          <Svg width={gaugeSize} height={gaugeSize} viewBox={`0 0 ${VB_SIZE} ${VB_SIZE}`}>
             <Defs>
               <SvgLinearGradient id={`grad-${color}-s`} x1="0%" y1="0%" x2="100%" y2="100%">
                 <Stop offset="0%" stopColor={color} stopOpacity={0.7} />
                 <Stop offset="100%" stopColor={color} stopOpacity={1} />
               </SvgLinearGradient>
             </Defs>
-            <Circle cx={gaugeSize / 2} cy={gaugeSize / 2} r={R} stroke="#e5e7eb" strokeWidth={stroke} fill="none" opacity={0.35} />
-            <Circle cx={gaugeSize / 2} cy={gaugeSize / 2} r={R} stroke={`url(#grad-${color}-s)`} strokeWidth={stroke} fill="none" strokeDasharray={`${progress}, ${C}`} strokeLinecap="round" transform={`rotate(-90 ${gaugeSize / 2} ${gaugeSize / 2})`} />
+            <Circle cx={VB_CENTER} cy={VB_CENTER} r={VB_RADIUS} stroke="#e5e7eb" strokeWidth={VB_STROKE} fill="none" opacity={0.35} />
+            <Circle cx={VB_CENTER} cy={VB_CENTER} r={VB_RADIUS} stroke={`url(#grad-${color}-s)`} strokeWidth={VB_STROKE} fill="none" strokeDasharray={`${progress}, ${circumference}`} strokeLinecap="round" transform={`rotate(-90 ${VB_CENTER} ${VB_CENTER})`} />
           </Svg>
           <View style={styles.gaugeCenterSmall} pointerEvents="none">
             <Text style={styles.gaugeEmojiSmall}>{icon ?? "📊"}</Text>
@@ -164,15 +180,15 @@ const MiniGaugeChart: React.FC<Props> = memo(({
 
       <View style={styles.mContentRow}>
         <View style={styles.mGaugeBox}>
-          <Svg width={gaugeSize} height={gaugeSize} viewBox={`0 0 ${gaugeSize} ${gaugeSize}`}>
+          <Svg width={gaugeSize} height={gaugeSize} viewBox={`0 0 ${VB_SIZE} ${VB_SIZE}`}>
             <Defs>
               <SvgLinearGradient id={`grad-${color}-m`} x1="0%" y1="0%" x2="100%" y2="100%">
                 <Stop offset="0%" stopColor={color} stopOpacity={0.75} />
                 <Stop offset="100%" stopColor={color} stopOpacity={1} />
               </SvgLinearGradient>
             </Defs>
-            <Circle cx={gaugeSize / 2} cy={gaugeSize / 2} r={R} stroke="#e5e7eb" strokeWidth={stroke} fill="none" opacity={0.4} />
-            <Circle cx={gaugeSize / 2} cy={gaugeSize / 2} r={R} stroke={`url(#grad-${color}-m)`} strokeWidth={stroke} fill="none" strokeDasharray={`${progress}, ${C}`} strokeLinecap="round" transform={`rotate(-90 ${gaugeSize / 2} ${gaugeSize / 2})`} />
+            <Circle cx={VB_CENTER} cy={VB_CENTER} r={VB_RADIUS} stroke="#e5e7eb" strokeWidth={VB_STROKE} fill="none" opacity={0.4} />
+            <Circle cx={VB_CENTER} cy={VB_CENTER} r={VB_RADIUS} stroke={`url(#grad-${color}-m)`} strokeWidth={VB_STROKE} fill="none" strokeDasharray={`${progress}, ${circumference}`} strokeLinecap="round" transform={`rotate(-90 ${VB_CENTER} ${VB_CENTER})`} />
           </Svg>
           <View style={styles.mGaugeCenter} pointerEvents="none">
             <Text style={styles.gaugeEmojiSmall}>{icon ?? "📊"}</Text>
@@ -220,15 +236,15 @@ const MiniGaugeChart: React.FC<Props> = memo(({
 
       {/* Gauge fissato in alto a destra */}
       <View style={styles.lGaugeTopRight} pointerEvents="none">
-        <Svg width={gaugeSize} height={gaugeSize} viewBox={`0 0 ${gaugeSize} ${gaugeSize}`}>
+        <Svg width={gaugeSize} height={gaugeSize} viewBox={`0 0 ${VB_SIZE} ${VB_SIZE}`}>
           <Defs>
             <SvgLinearGradient id={`grad-${color}-l`} x1="0%" y1="0%" x2="100%" y2="100%">
               <Stop offset="0%" stopColor={color} stopOpacity={0.8} />
               <Stop offset="100%" stopColor={color} stopOpacity={1} />
             </SvgLinearGradient>
           </Defs>
-          <Circle cx={gaugeSize / 2} cy={gaugeSize / 2} r={R} stroke="#e5e7eb" strokeWidth={stroke} fill="none" opacity={0.45} />
-          <Circle cx={gaugeSize / 2} cy={gaugeSize / 2} r={R} stroke={`url(#grad-${color}-l)`} strokeWidth={stroke} fill="none" strokeDasharray={`${progress}, ${C}`} strokeLinecap="round" transform={`rotate(-90 ${gaugeSize / 2} ${gaugeSize / 2})`} />
+          <Circle cx={VB_CENTER} cy={VB_CENTER} r={VB_RADIUS} stroke="#e5e7eb" strokeWidth={VB_STROKE} fill="none" opacity={0.45} />
+          <Circle cx={VB_CENTER} cy={VB_CENTER} r={VB_RADIUS} stroke={`url(#grad-${color}-l)`} strokeWidth={VB_STROKE} fill="none" strokeDasharray={`${progress}, ${circumference}`} strokeLinecap="round" transform={`rotate(-90 ${VB_CENTER} ${VB_CENTER})`} />
         </Svg>
         <View style={styles.gaugeCenterLarge} pointerEvents="none">
           <Text style={styles.gaugeEmojiSmall}>{icon ?? "📊"}</Text>

@@ -25,9 +25,19 @@ export class DailyJournalDBService {
       .eq('entry_date', isoDate)
       .maybeSingle();
     if (error) throw error;
-    
+
     if (!data) return null;
-    
+
+    // Helper to check if content looks like encrypted JSON
+    const isEncryptedContent = (content: string): boolean => {
+      try {
+        const parsed = JSON.parse(content);
+        return !!(parsed.ciphertext && parsed.iv && parsed.algorithm);
+      } catch {
+        return false;
+      }
+    };
+
     // Decifra il contenuto se è cifrato
     const entry = data as DailyJournalEntry;
     if (entry.content) {
@@ -35,22 +45,28 @@ export class DailyJournalDBService {
       if (decrypted !== null) {
         entry.content = decrypted;
         await logDecryptionEvent('journal', entry.id);
+      } else if (isEncryptedContent(entry.content)) {
+        // 🔥 FIX: Se è contenuto cifrato ma la decifratura fallisce, mostra un messaggio
+        // invece del ciphertext grezzo (es. chiave non inizializzata)
+        entry.content = '[Contenuto cifrato - effettua il login per visualizzarlo]';
       }
-      // Se decrypted è null, potrebbe essere testo vecchio non cifrato, lo lasciamo così
+      // Se non è cifrato (testo vecchio), lo lasciamo così
     }
-    
+
     // Decifra anche ai_analysis se presente
     if (entry.ai_analysis) {
       const decrypted = await decryptText(entry.ai_analysis, userId);
       if (decrypted !== null) {
         entry.ai_analysis = decrypted;
         await logDecryptionEvent('journal', entry.id);
+      } else if (isEncryptedContent(entry.ai_analysis)) {
+        entry.ai_analysis = '[Analisi cifrata - effettua il login per visualizzarla]';
       }
     }
-    
+
     // Log accesso in lettura
     await logReadEvent('journal', entry.id);
-    
+
     return entry;
   }
 
@@ -64,11 +80,11 @@ export class DailyJournalDBService {
     aiAnalysis?: string;
   }) {
     const { userId, isoDate, content, voiceUrl, aiPrompt, aiScore, aiAnalysis } = params;
-    
+
     // Cifra il contenuto prima di salvarlo
     let encryptedContent: string | null = null;
     let encryptedAnalysis: string | null = null;
-    
+
     try {
       encryptedContent = await encryptText(content, userId);
       if (encryptedContent) {
@@ -85,11 +101,11 @@ export class DailyJournalDBService {
       // Fallback: se la cifratura fallisce, salviamo in chiaro (per backward compatibility)
       // In produzione, potresti voler bloccare il salvataggio invece
     }
-    
+
     // Usa il contenuto cifrato se disponibile, altrimenti fallback al plaintext
     const finalContent = encryptedContent || content;
     const finalAnalysis = encryptedAnalysis || aiAnalysis || null;
-    
+
     const { data, error } = await supabase
       .from('daily_journal_entries')
       .upsert({
@@ -104,7 +120,7 @@ export class DailyJournalDBService {
       .select('*')
       .maybeSingle();
     if (error) throw error;
-    
+
     // Decifra il risultato prima di restituirlo
     const entry = data as DailyJournalEntry;
     if (entry.content) {
@@ -121,10 +137,10 @@ export class DailyJournalDBService {
         await logDecryptionEvent('journal', entry.id);
       }
     }
-    
+
     // Log scrittura
     await logWriteEvent('journal', entry.id);
-    
+
     return entry;
   }
 
@@ -136,7 +152,17 @@ export class DailyJournalDBService {
       .order('entry_date', { ascending: false })
       .limit(limit);
     if (error) throw error;
-    
+
+    // Helper to check if content looks like encrypted JSON
+    const isEncryptedContent = (content: string): boolean => {
+      try {
+        const parsed = JSON.parse(content);
+        return !!(parsed.ciphertext && parsed.iv && parsed.algorithm);
+      } catch {
+        return false;
+      }
+    };
+
     // Decifra tutti i contenuti
     const entries = (data || []) as DailyJournalEntry[];
     for (const entry of entries) {
@@ -145,6 +171,8 @@ export class DailyJournalDBService {
         if (decrypted !== null) {
           entry.content = decrypted;
           await logDecryptionEvent('journal', entry.id);
+        } else if (isEncryptedContent(entry.content)) {
+          entry.content = '[Contenuto cifrato - effettua il login per visualizzarlo]';
         }
       }
       if (entry.ai_analysis) {
@@ -152,12 +180,14 @@ export class DailyJournalDBService {
         if (decrypted !== null) {
           entry.ai_analysis = decrypted;
           await logDecryptionEvent('journal', entry.id);
+        } else if (isEncryptedContent(entry.ai_analysis)) {
+          entry.ai_analysis = '[Analisi cifrata - effettua il login per visualizzarla]';
         }
       }
       // Log accesso in lettura per ogni entry
       await logReadEvent('journal', entry.id);
     }
-    
+
     return entries;
   }
 
@@ -170,7 +200,17 @@ export class DailyJournalDBService {
       .lte('entry_date', endIso)
       .order('entry_date', { ascending: true });
     if (error) throw error;
-    
+
+    // Helper to check if content looks like encrypted JSON
+    const isEncryptedContent = (content: string): boolean => {
+      try {
+        const parsed = JSON.parse(content);
+        return !!(parsed.ciphertext && parsed.iv && parsed.algorithm);
+      } catch {
+        return false;
+      }
+    };
+
     // Decifra tutti i contenuti
     const entries = (data || []) as DailyJournalEntry[];
     for (const entry of entries) {
@@ -179,6 +219,8 @@ export class DailyJournalDBService {
         if (decrypted !== null) {
           entry.content = decrypted;
           await logDecryptionEvent('journal', entry.id);
+        } else if (isEncryptedContent(entry.content)) {
+          entry.content = '[Contenuto cifrato - effettua il login per visualizzarlo]';
         }
       }
       if (entry.ai_analysis) {
@@ -186,12 +228,14 @@ export class DailyJournalDBService {
         if (decrypted !== null) {
           entry.ai_analysis = decrypted;
           await logDecryptionEvent('journal', entry.id);
+        } else if (isEncryptedContent(entry.ai_analysis)) {
+          entry.ai_analysis = '[Analisi cifrata - effettua il login per visualizzarla]';
         }
       }
       // Log accesso in lettura per ogni entry
       await logReadEvent('journal', entry.id);
     }
-    
+
     return entries;
   }
 

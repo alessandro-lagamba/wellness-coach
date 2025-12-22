@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import type { StyleProp, ViewStyle } from 'react-native';
@@ -26,7 +26,14 @@ export default function CheckinCard({
   minHeight, bodyMinHeight, style,
 }: Props) {
   const { mode, colors: themeColors } = useTheme();
-  
+
+  // 🔥 FIX: Responsive sizing for narrow devices
+  const windowWidth = Dimensions.get('window').width;
+  const isNarrowScreen = windowWidth < 380;
+  const iconSize = isNarrowScreen ? 36 : 40;
+  const headerGap = isNarrowScreen ? 8 : 12;
+  const titleSize = isNarrowScreen ? 12 : 13;
+
   // 🆕 Gradient temato: usa colori scuri per dark mode
   const gradient: [string, string] =
     tint === 'mint'
@@ -38,17 +45,17 @@ export default function CheckinCard({
         : ['#EFF6FF', '#DBEAFE'];
 
   return (
-    <Pressable onPress={onPress} style={({pressed}) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
-      <LinearGradient colors={gradient} start={{x:0,y:0}} end={{x:1,y:1}} style={[s.card, minHeight && {minHeight}, { borderColor: themeColors.border }, style]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+      <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.card, minHeight && { minHeight }, { borderColor: themeColors.border }, style]}>
         {/* Glass layer - solo in light mode */}
         {mode === 'light' && <BlurView intensity={15} tint="light" style={s.glass} />}
 
         {/* Header */}
         <View style={s.header}>
-          <View style={s.headerLeft}>
-            <View style={[s.headerIcon, { backgroundColor: mode === 'dark' ? themeColors.surfaceElevated : 'rgba(255,255,255,0.8)' }]}>{headerIcon}</View>
-            <View>
-              <Text style={[s.title, { color: themeColors.text }]}>{title}</Text>
+          <View style={[s.headerLeft, { gap: headerGap }]}>
+            <View style={[s.headerIcon, { width: iconSize, height: iconSize, backgroundColor: mode === 'dark' ? themeColors.surfaceElevated : 'rgba(255,255,255,0.8)' }]}>{headerIcon}</View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.title, { color: themeColors.text, fontSize: titleSize }]} numberOfLines={2}>{title}</Text>
               {!!subtitle && <Text style={[s.subtitle, { color: themeColors.textSecondary }]}>{subtitle}</Text>}
             </View>
           </View>
@@ -80,12 +87,12 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14,
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   headerIcon: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.8)',
+    borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.8)',
     alignItems: 'center', justifyContent: 'center',
   },
-  title: { fontSize: 13, fontWeight: '800', color: '#0f172a' },
+  title: { fontWeight: '800', color: '#0f172a' },
   subtitle: { fontSize: 11, color: '#64748b', marginTop: 2 },
   body: { flex: 1 },
 });

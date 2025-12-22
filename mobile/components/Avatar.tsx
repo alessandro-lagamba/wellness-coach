@@ -8,6 +8,7 @@ import {
   Text,
   Pressable,
   GestureResponderEvent,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSpring } from 'react-native-reanimated';
@@ -15,6 +16,14 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { AuthService } from '../services/auth.service';
 
 const USER_PLUS_ICON = require('../assets/user-plus.png');
+
+// Responsive avatar sizing
+const { width: screenWidth } = Dimensions.get('window');
+const isNarrowScreen = screenWidth < 380;
+const AVATAR_SIZE = isNarrowScreen ? 120 : 160;
+const AVATAR_INNER_SIZE = isNarrowScreen ? 108 : 144;
+const MIC_BUTTON_SIZE = isNarrowScreen ? 40 : 48;
+
 
 interface AvatarProps {
   onMicPress?: () => void;
@@ -115,7 +124,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     micScale.value = withSpring(0.85, { damping: 12, stiffness: 200 });
     micRotation.value = withSpring(5, { damping: 15, stiffness: 150 });
     micOpacity.value = withTiming(0.8, { duration: 100 });
-    
+
     // Reset animation
     setTimeout(() => {
       micScale.value = withSpring(1, { damping: 12, stiffness: 200 });
@@ -285,9 +294,9 @@ export const Avatar: React.FC<AvatarProps> = ({
 
       <View style={styles.micButtonContainer}>
         <Animated.View style={micScaleStyle as any}>
-          <TouchableOpacity 
-            style={styles.micButton} 
-            onPress={handleMicPress} 
+          <TouchableOpacity
+            style={styles.micButton}
+            onPress={handleMicPress}
             activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Increase touch area
           >
@@ -309,18 +318,18 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatarPressable: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
   },
   avatarPressablePressed: {
     opacity: 0.9,
     transform: [{ scale: 0.98 }],
   },
   avatarBackground: {
-    width: 160, // Reduced from 192
-    height: 160, // Reduced from 192
-    borderRadius: 80, // Reduced from 96
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -330,11 +339,11 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   avatarImageContainer: {
-    width: 144, // Reduced from 176
-    height: 144, // Reduced from 176
-    borderRadius: 72, // Reduced from 88
+    width: AVATAR_INNER_SIZE,
+    height: AVATAR_INNER_SIZE,
+    borderRadius: AVATAR_INNER_SIZE / 2,
     overflow: 'hidden',
-    borderWidth: 3,
+    borderWidth: isNarrowScreen ? 2 : 3,
     borderColor: 'white',
   },
   avatarImage: {
@@ -508,13 +517,13 @@ const styles = StyleSheet.create({
   },
   micButtonContainer: {
     position: 'absolute',
-    bottom: -20,
+    bottom: isNarrowScreen ? -15 : -20,
     alignSelf: 'center',
   },
   micButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: MIC_BUTTON_SIZE,
+    height: MIC_BUTTON_SIZE,
+    borderRadius: MIC_BUTTON_SIZE / 2,
     backgroundColor: '#6366f1',
     alignItems: 'center',
     justifyContent: 'center',

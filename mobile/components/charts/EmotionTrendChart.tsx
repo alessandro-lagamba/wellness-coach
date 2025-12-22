@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
-import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
+import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop, Rect, Text as SvgText } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -58,25 +58,27 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
   const chartWidth = width - 120;
   const chartHeight = 120;
   const padding = 20;
-  
+  const leftPadding = 35; // 🔥 FIX: Extra padding for y-axis labels
+  const bottomPadding = 40; // 🔥 FIX: Extra padding for x-axis labels
+
   const createPath = (values: number[], color: string) => {
     // Guard against insufficient data points
     if (values.length < 2) {
       if (values.length === 1) {
         // For single point, create a horizontal line
         const normalizedValue = (values[0] + 1) / 2;
-        const y = padding + (1 - normalizedValue) * (chartHeight - 2 * padding);
-        return `M ${padding} ${y} L ${chartWidth - padding} ${y}`;
+        const y = padding + (1 - normalizedValue) * (chartHeight - padding - bottomPadding);
+        return `M ${leftPadding} ${y} L ${chartWidth - padding} ${y}`;
       }
       // For no data, return empty path
       return '';
     }
-    
+
     const points = values.map((value, index) => {
-      const x = padding + (index * (chartWidth - 2 * padding)) / (values.length - 1);
-      // Convert from [-1, 1] range to [0, chartHeight - 2*padding] range
+      const x = leftPadding + (index * (chartWidth - leftPadding - padding)) / (values.length - 1);
+      // Convert from [-1, 1] range to [0, chartHeight - padding - bottomPadding] range
       const normalizedValue = (value + 1) / 2; // Convert to [0, 1]
-      const y = padding + (1 - normalizedValue) * (chartHeight - 2 * padding);
+      const y = padding + (1 - normalizedValue) * (chartHeight - padding - bottomPadding);
       return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
     }).join(' ');
     return points;
@@ -98,135 +100,179 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
           end={{ x: 1, y: 1 }}
           style={[styles.chartCard, { borderColor: colors.border }]}
         >
-        <View style={styles.header}>
-          <View style={styles.titleContainer}>
-            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-            {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
+          <View style={styles.header}>
+            <View style={styles.titleContainer}>
+              <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+              {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
+            </View>
           </View>
-        </View>
 
-        <View style={styles.chartContainer}>
-          <Svg width={chartWidth} height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
-            <Defs>
-              <SvgLinearGradient id="valenceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <Stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
-                <Stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-              </SvgLinearGradient>
-              <SvgLinearGradient id="arousalGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <Stop offset="0%" stopColor="#ef4444" stopOpacity="0.3" />
-                <Stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
-              </SvgLinearGradient>
-            </Defs>
-            
-            {/* Grid lines */}
-            {[-1, -0.5, 0, 0.5, 1].map((value, index) => {
-              const normalizedValue = (value + 1) / 2;
-              const y = padding + (1 - normalizedValue) * (chartHeight - 2 * padding);
-              return (
-                <Rect
-                  key={index}
-                  x={padding}
-                  y={y}
-                  width={chartWidth - 2 * padding}
-                  height={1}
-                  fill={colors.borderLight}
-                  opacity={0.5}
-                />
-              );
-            })}
-            
-            {/* Valence line */}
-            {valencePath && (
-              <Path
-                d={valencePath}
-                stroke="#10b981"
-                strokeWidth="3"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            )}
-            
-            {/* Arousal line */}
-            {arousalPath && (
-              <Path
-                d={arousalPath}
-                stroke="#ef4444"
-                strokeWidth="3"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            )}
-            
-            {/* Data points for valence */}
-            {showValence && chartData.length > 0 && chartData.map((point, index) => {
-              const x = chartData.length === 1 
-                ? padding + (chartWidth - 2 * padding) / 2  // Center for single point
-                : padding + (index * (chartWidth - 2 * padding)) / (chartData.length - 1);
-              const normalizedValence = (point.valence + 1) / 2;
-              const y = padding + (1 - normalizedValence) * (chartHeight - 2 * padding);
-              return (
-                <Circle
-                  key={`valence-${index}`}
-                  cx={x}
-                  cy={y}
-                  r="3"
-                  fill="#10b981"
-                  stroke={colors.surface}
-                  strokeWidth="2"
-                />
-              );
-            })}
-            
-            {/* Data points for arousal */}
-            {showArousal && chartData.length > 0 && chartData.map((point, index) => {
-              const x = chartData.length === 1 
-                ? padding + (chartWidth - 2 * padding) / 2  // Center for single point
-                : padding + (index * (chartWidth - 2 * padding)) / (chartData.length - 1);
-              const normalizedArousal = (point.arousal + 1) / 2;
-              const y = padding + (1 - normalizedArousal) * (chartHeight - 2 * padding);
-              return (
-                <Circle
-                  key={`arousal-${index}`}
-                  cx={x}
-                  cy={y}
-                  r="3"
-                  fill="#ef4444"
-                  stroke={colors.surface}
-                  strokeWidth="2"
-                />
-              );
-            })}
-          </Svg>
-        </View>
+          <View style={styles.chartContainer}>
+            <Svg width={chartWidth} height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
+              <Defs>
+                <SvgLinearGradient id="valenceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <Stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                  <Stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                </SvgLinearGradient>
+                <SvgLinearGradient id="arousalGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <Stop offset="0%" stopColor="#ef4444" stopOpacity="0.3" />
+                  <Stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+                </SvgLinearGradient>
+              </Defs>
 
-        <View style={[styles.metricsRow, { borderTopColor: colors.border }]}>
-          {showValence && (
-            <View style={styles.metricItem}>
-              <View style={[styles.metricDot, { backgroundColor: '#10b981' }]} />
-              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{labels.valence}</Text>
-              <Text style={[styles.metricValue, { color: colors.text }]}>{latestValence.toFixed(2)}</Text>
+              {/* Grid lines */}
+              {[-1, -0.5, 0, 0.5, 1].map((value, index) => {
+                const normalizedValue = (value + 1) / 2;
+                const y = padding + (1 - normalizedValue) * (chartHeight - padding - bottomPadding);
+                return (
+                  <Rect
+                    key={index}
+                    x={leftPadding}
+                    y={y}
+                    width={chartWidth - leftPadding - padding}
+                    height={1}
+                    fill={colors.borderLight}
+                    opacity={0.5}
+                  />
+                );
+              })}
+
+              {/* 🔥 FIX: Y-axis labels */}
+              {[-1, 0, 1].map((value, index) => {
+                const normalizedValue = (value + 1) / 2;
+                const y = padding + (1 - normalizedValue) * (chartHeight - padding - bottomPadding);
+                return (
+                  <React.Fragment key={`y-label-${index}`}>
+                    <SvgText
+                      x={leftPadding - 8}
+                      y={y + 4}
+                      textAnchor="end"
+                      fontSize="10"
+                      fill={colors.textSecondary}
+                    >
+                      {value > 0 ? `+${value}` : value}
+                    </SvgText>
+                  </React.Fragment>
+                );
+              })}
+
+              {/* 🔥 FIX: X-axis labels */}
+              {chartData.length > 0 && chartData.map((point, index) => {
+                // Show every other label to avoid crowding
+                if (chartData.length > 5 && index % 2 !== 0) return null;
+                const x = chartData.length === 1
+                  ? leftPadding + (chartWidth - leftPadding - padding) / 2
+                  : leftPadding + (index * (chartWidth - leftPadding - padding)) / (chartData.length - 1);
+                const y = chartHeight - bottomPadding + 15;
+                // Extract day from date (e.g., "1/15" -> "15")
+                const dateLabel = point.date.split('/').pop() || point.date;
+                return (
+                  <React.Fragment key={`x-label-${index}`}>
+                    <SvgText
+                      x={x}
+                      y={y}
+                      textAnchor="middle"
+                      fontSize="10"
+                      fill={colors.textSecondary}
+                    >
+                      {dateLabel}
+                    </SvgText>
+                  </React.Fragment>
+                );
+              })}
+
+              {/* Valence line */}
+              {valencePath && (
+                <Path
+                  d={valencePath}
+                  stroke="#10b981"
+                  strokeWidth="3"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+
+              {/* Arousal line */}
+              {arousalPath && (
+                <Path
+                  d={arousalPath}
+                  stroke="#ef4444"
+                  strokeWidth="3"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+
+              {/* Data points for valence */}
+              {showValence && chartData.length > 0 && chartData.map((point, index) => {
+                const x = chartData.length === 1
+                  ? leftPadding + (chartWidth - leftPadding - padding) / 2
+                  : leftPadding + (index * (chartWidth - leftPadding - padding)) / (chartData.length - 1);
+                const normalizedValence = (point.valence + 1) / 2;
+                const y = padding + (1 - normalizedValence) * (chartHeight - padding - bottomPadding);
+                return (
+                  <Circle
+                    key={`valence-${index}`}
+                    cx={x}
+                    cy={y}
+                    r="3"
+                    fill="#10b981"
+                    stroke={colors.surface}
+                    strokeWidth="2"
+                  />
+                );
+              })}
+
+              {/* Data points for arousal */}
+              {showArousal && chartData.length > 0 && chartData.map((point, index) => {
+                const x = chartData.length === 1
+                  ? leftPadding + (chartWidth - leftPadding - padding) / 2
+                  : leftPadding + (index * (chartWidth - leftPadding - padding)) / (chartData.length - 1);
+                const normalizedArousal = (point.arousal + 1) / 2;
+                const y = padding + (1 - normalizedArousal) * (chartHeight - padding - bottomPadding);
+                return (
+                  <Circle
+                    key={`arousal-${index}`}
+                    cx={x}
+                    cy={y}
+                    r="3"
+                    fill="#ef4444"
+                    stroke={colors.surface}
+                    strokeWidth="2"
+                  />
+                );
+              })}
+            </Svg>
+          </View>
+
+          <View style={[styles.metricsRow, { borderTopColor: colors.border }]}>
+            {showValence && (
+              <View style={styles.metricItem}>
+                <View style={[styles.metricDot, { backgroundColor: '#10b981' }]} />
+                <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{labels.valence}</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>{latestValence.toFixed(2)}</Text>
+              </View>
+            )}
+
+            {showArousal && (
+              <View style={styles.metricItem}>
+                <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
+                <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{labels.arousal}</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>{latestArousal.toFixed(2)}</Text>
+              </View>
+            )}
+          </View>
+
+          {!hasData && (
+            <View style={styles.placeholderContainer}>
+              <FontAwesome name="heart" size={24} color={colors.textTertiary} />
+              <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
+                {t('analysis.emotion.trends.emptyState') || 'Inizia a registrare sessioni per vedere l’andamento emotivo'}
+              </Text>
             </View>
           )}
-          
-          {showArousal && (
-            <View style={styles.metricItem}>
-              <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
-              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{labels.arousal}</Text>
-              <Text style={[styles.metricValue, { color: colors.text }]}>{latestArousal.toFixed(2)}</Text>
-            </View>
-          )}
-        </View>
-
-        {!hasData && (
-          <View style={styles.placeholderContainer}>
-            <FontAwesome name="heart" size={24} color={colors.textTertiary} />
-            <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
-              {t('analysis.emotion.trends.emptyState') || 'Inizia a registrare sessioni per vedere l’andamento emotivo'}
-            </Text>
-          </View>
-        )}
         </LinearGradient>
       </TouchableOpacity>
     </View>

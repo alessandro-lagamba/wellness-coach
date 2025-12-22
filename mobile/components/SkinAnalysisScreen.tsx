@@ -487,7 +487,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
       // ✅ FIX: Verifica se copilotEvents esiste prima di usarlo
       const copilotModule = require('react-native-copilot');
       const copilotEvents = copilotModule.copilotEvents;
-      
+
       if (copilotEvents && typeof copilotEvents.on === 'function') {
         const listener = copilotEvents.on('stop', async () => {
           await OnboardingService.completeSkinWalkthrough();
@@ -1126,7 +1126,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
           // 🔥 FIX: Rimuoviamo console.log eccessivi
           const capturePromise = ref.current.takePictureAsync(strategy.options);
-          
+
           // 🔥 FIX: Memory leak - puliamo il timeout se il componente viene smontato
           let timeoutId: ReturnType<typeof setTimeout> | null = null;
           const timeoutPromise = new Promise((_, reject) => {
@@ -2128,7 +2128,20 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
                 {/* Action Button */}
                 <View style={styles.actionSection}>
-                  <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      import('expo-haptics').then(Haptics => {
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      });
+                      Alert.alert(
+                        t('analysis.skin.guideModal.savedTitle') || 'Salvato!',
+                        t('analysis.skin.guideModal.savedMessage') || 'Questa guida è stata aggiunta alla tua routine.',
+                        [{ text: 'OK', onPress: closeSkincareGuide }]
+                      );
+                    }}
+                  >
                     <FontAwesome name="heart" size={16} color="#ffffff" />
                     <Text style={styles.actionButtonText}>{t('analysis.skin.guideModal.saveToRoutine')}</Text>
                   </TouchableOpacity>

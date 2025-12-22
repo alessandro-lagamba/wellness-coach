@@ -83,7 +83,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
   // Helper for translation (keeping existing logic)
   const translateAIText = (text: string): string => {
     if (!text || language === 'en') return text;
-    
+
     // Exact match translations
     const exactTranslations: { [key: string]: string } = {
       // Issues - exact matches
@@ -109,14 +109,14 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
       'whiteheads': 'Punti bianchi',
       'sun damage': 'Danni solari',
       'hyperpigmentation': 'Iperpigmentazione',
-      
+
       // Notes/observations
       'lighting is slightly uneven': 'L\'illuminazione è leggermente irregolare',
       'image is in focus': 'L\'immagine è a fuoco',
       'face is partially covered': 'Il viso è parzialmente coperto',
       'lighting may affect skin appearance': 'L\'illuminazione potrebbe influenzare l\'aspetto della pelle',
       'shadows may hide some imperfections': 'Le ombre possono nascondere alcune imperfezioni',
-      
+
       // Recommendations
       'use gentle cleanser': 'Usa un detergente delicato',
       'apply moisturizer': 'Applica una crema idratante',
@@ -130,14 +130,14 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
       'use retinol': 'Usa retinolo',
       'apply vitamin c serum': 'Applica siero alla vitamina C',
     };
-    
+
     const lowerText = text.toLowerCase();
-    
+
     // Check exact match first
     if (exactTranslations[lowerText]) {
       return exactTranslations[lowerText];
     }
-    
+
     // Try partial matches
     let translatedText = text;
     for (const [key, value] of Object.entries(exactTranslations)) {
@@ -145,7 +145,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
         translatedText = translatedText.replace(new RegExp(key, 'gi'), value);
       }
     }
-    
+
     return translatedText;
   };
 
@@ -343,8 +343,8 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
         edges={['bottom']}
         style={[
           styles.bottomBar,
-          { 
-            backgroundColor: colors.background, 
+          {
+            backgroundColor: colors.background,
             borderTopColor: isDark ? 'rgba(148,163,184,0.18)' : 'rgba(15,23,42,0.08)',
           },
         ]}
@@ -442,9 +442,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     gap: 12,
+    flexWrap: 'wrap',
   },
   secondaryButton: {
     flex: 1,
+    minWidth: 100,
     height: 54,
     borderRadius: 27,
     borderWidth: 1,
@@ -454,11 +456,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   secondaryButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
+    flexShrink: 1,
   },
   primaryButton: {
     flex: 2,
+    minWidth: 150,
     height: 54,
     borderRadius: 27,
     shadowColor: '#3b82f6',
@@ -477,8 +481,9 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
+    flexShrink: 1,
   },
   observationsCard: {
     borderRadius: 16,

@@ -118,3 +118,6 @@ COMMENT ON FUNCTION delete_user_completely IS 'Safely deletes a user and all rel
 
 
 
+
+
+

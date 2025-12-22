@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, TextInput } from 'react-native';
+import { View, Text, Pressable, StyleSheet, TextInput, Dimensions } from 'react-native';
 import CheckinCard from './CheckinCard';
 import * as Haptics from 'expo-haptics';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -8,25 +8,33 @@ import { useTranslation } from '../hooks/useTranslation';
 import { useTheme } from '../contexts/ThemeContext';
 
 type Props = {
-  value: 1|2|3|4|5;
+  value: 1 | 2 | 3 | 4 | 5;
   note?: string;
   hasExistingCheckin?: boolean; // 🆕 Indica se esiste già un check-in salvato per oggi
-  onChange: (v:1|2|3|4|5)=>void;
-  onSave: (payload:{ value:1|2|3|4|5; note:string })=>Promise<void>|void;
+  onChange: (v: 1 | 2 | 3 | 4 | 5) => void;
+  onSave: (payload: { value: 1 | 2 | 3 | 4 | 5; note: string }) => Promise<void> | void;
 };
 
-export default function MoodCheckinCard({ value, note: initialNote='', hasExistingCheckin=false, onChange, onSave }: Props) {
+export default function MoodCheckinCard({ value, note: initialNote = '', hasExistingCheckin = false, onChange, onSave }: Props) {
   const { t } = useTranslation();
   const { colors: themeColors, mode } = useTheme();
+
+  // 🔥 FIX: More aggressive responsive sizing for narrow devices
+  const windowWidth = Dimensions.get('window').width;
+  const isVeryNarrowScreen = windowWidth < 340;
+  const isNarrowScreen = windowWidth < 360;
+  const segmentGap = isVeryNarrowScreen ? 4 : isNarrowScreen ? 5 : 8;
+  const emojiSize = isNarrowScreen ? 18 : 22;
+  const segmentHeight = isNarrowScreen ? 48 : 52;
   const MOODS = [
-    { v:1, emoji:'☹️', label:t('dailyCheckIn.mood.veryLow'), bg:'#fee2e2' },
-    { v:2, emoji:'🙁', label:t('dailyCheckIn.mood.low'),      bg:'#ffedd5' },
-    { v:3, emoji:'😐', label:t('dailyCheckIn.mood.okay'),     bg:'#fef9c3' },
-    { v:4, emoji:'🙂', label:t('dailyCheckIn.mood.good'),     bg:'#dcfce7' },
-    { v:5, emoji:'😄', label:t('dailyCheckIn.mood.great'),    bg:'#bbf7d0' },
+    { v: 1, emoji: '☹️', label: t('dailyCheckIn.mood.veryLow'), bg: '#fee2e2' },
+    { v: 2, emoji: '🙁', label: t('dailyCheckIn.mood.low'), bg: '#ffedd5' },
+    { v: 3, emoji: '😐', label: t('dailyCheckIn.mood.okay'), bg: '#fef9c3' },
+    { v: 4, emoji: '🙂', label: t('dailyCheckIn.mood.good'), bg: '#dcfce7' },
+    { v: 5, emoji: '😄', label: t('dailyCheckIn.mood.great'), bg: '#bbf7d0' },
   ] as const;
-  
-  const current = useMemo(()=> MOODS.find(m => m.v === value) ?? MOODS[2], [value, MOODS]);
+
+  const current = useMemo(() => MOODS.find(m => m.v === value) ?? MOODS[2], [value, MOODS]);
   const [note, setNote] = useState(initialNote);
   const [saving, setSaving] = useState(false);
 
@@ -36,7 +44,7 @@ export default function MoodCheckinCard({ value, note: initialNote='', hasExisti
   }, [initialNote]);
 
   // Cambia solo il valore, senza salvare automaticamente
-  const handleMoodChange = (newValue: 1|2|3|4|5) => {
+  const handleMoodChange = (newValue: 1 | 2 | 3 | 4 | 5) => {
     Haptics.selectionAsync();
     onChange(newValue);
   };
@@ -59,12 +67,12 @@ export default function MoodCheckinCard({ value, note: initialNote='', hasExisti
     <CheckinCard
       tint="mint"
       title={t('dailyCheckIn.mood.title')}
-      headerIcon={<Text style={{fontSize:22}}>😊</Text>}
+      headerIcon={<Text style={{ fontSize: 22 }}>😊</Text>}
       minHeight={350}
       bodyMinHeight={220}
     >
       {/* mood picker */}
-      <View style={styles.segmentRow} accessibilityRole="radiogroup">
+      <View style={[styles.segmentRow, { gap: segmentGap }]} accessibilityRole="radiogroup">
         {MOODS.map(m => {
           const active = m.v === value;
           return (
@@ -72,27 +80,28 @@ export default function MoodCheckinCard({ value, note: initialNote='', hasExisti
               onPress={() => handleMoodChange(m.v as any)}
               style={[
                 styles.segment,
+                { height: segmentHeight },
                 {
-                  backgroundColor: active 
-                    ? m.bg 
-                    : mode === 'dark' 
+                  backgroundColor: active
+                    ? m.bg
+                    : mode === 'dark'
                       ? 'rgba(255,255,255,0.15)' // Più chiaro in dark mode
                       : themeColors.surfaceElevated,
                   borderColor: active ? '#10b981' : themeColors.border,
                 },
                 active && { elevation: 3 }
               ]}
-              accessibilityRole="radio" accessibilityState={{selected:active}} accessibilityLabel={m.label}>
-              <Text style={[styles.segmentEmoji, active && { transform:[{scale:1.06}] }]}>{m.emoji}</Text>
+              accessibilityRole="radio" accessibilityState={{ selected: active }} accessibilityLabel={m.label}>
+              <Text style={[styles.segmentEmoji, { fontSize: emojiSize }, active && { transform: [{ scale: 1.06 }] }]}>{m.emoji}</Text>
             </Pressable>
           );
         })}
       </View>
 
       {/* note */}
-      <View style={{marginTop:32, position: 'relative'}}>
+      <View style={{ marginTop: 32, position: 'relative' }}>
         {!note && (
-          <Text 
+          <Text
             style={[
               styles.placeholderText,
               {
@@ -122,7 +131,7 @@ export default function MoodCheckinCard({ value, note: initialNote='', hasExisti
       </View>
 
       {/* footer - mostra sempre il pulsante Salva/Modifica */}
-      <View style={{height:12}} />
+      <View style={{ height: 12 }} />
       <PrimaryCTA
         label={hasExistingCheckin ? t('dailyCheckIn.mood.editMood') : t('dailyCheckIn.mood.saveMood')}
         onPress={handleSave}
@@ -133,19 +142,25 @@ export default function MoodCheckinCard({ value, note: initialNote='', hasExisti
 }
 
 const styles = StyleSheet.create({
-  pill:{ flexDirection:'row', alignItems:'center', gap:6, paddingHorizontal:12, paddingVertical:8, borderRadius:14,
-    backgroundColor:'rgba(16,185,129,0.18)', borderWidth:1, borderColor:'#bbf7d0' },
-  pillOn:{ backgroundColor:'#10b981', borderColor:'#059669' },
-  pillText:{ fontSize:12, fontWeight:'800', color:'#047857' },
+  pill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14,
+    backgroundColor: 'rgba(16,185,129,0.18)', borderWidth: 1, borderColor: '#bbf7d0'
+  },
+  pillOn: { backgroundColor: '#10b981', borderColor: '#059669' },
+  pillText: { fontSize: 12, fontWeight: '800', color: '#047857' },
 
-  segmentRow:{ flexDirection:'row', justifyContent:'space-between', gap:8, marginTop:8 },
-  segment:{ flex:1, height:52, borderRadius:26, borderWidth:1.2,
-    alignItems:'center', justifyContent:'center' },
-  segmentEmoji:{ fontSize:22, fontWeight:'700' },
+  segmentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  segment: {
+    flex: 1, height: 52, borderRadius: 26, borderWidth: 1.2,
+    alignItems: 'center', justifyContent: 'center'
+  },
+  segmentEmoji: { fontWeight: '700' },
 
-  fieldLabel:{ fontSize:13, fontWeight:'700', marginBottom:6 },
-  textarea:{ borderWidth:1, borderRadius:16, padding:12, minHeight:96,
-    fontSize:14 },
+  fieldLabel: { fontSize: 13, fontWeight: '700', marginBottom: 6 },
+  textarea: {
+    borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 96,
+    fontSize: 14
+  },
   placeholderText: {
     position: 'absolute',
     top: 12,

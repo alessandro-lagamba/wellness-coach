@@ -68,6 +68,18 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
   }, [onGoBack]);
 
 
+  // Helper to filter out AU (Action Unit) technical observations
+  const filterObservations = (observations: string[]): string[] => {
+    if (!observations) return [];
+    return observations.filter(obs => {
+      const lower = obs.toLowerCase();
+      // Filter out AU codes like "AU1:", "AU12:", etc.
+      if (/\bau\d+\b/i.test(obs)) return false;
+      // Filter out technical facial muscle terms
+      if (lower.includes('action unit')) return false;
+      return true;
+    });
+  };
 
   // Helper for translation - handles AI observations
   const translateAIText = (text: string): string => {
@@ -87,7 +99,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
       'Relaxed facial muscles detected.': 'Muscoli facciali rilassati rilevati.',
       'Eyebrows are slightly raised.': 'Le sopracciglia sono leggermente sollevate.',
       'Signs of stress detected.': 'Segni di stress rilevati.',
-      
+
       // Exact matches - Recommendations
       'Consider engaging in activities that promote positive emotions.': 'Considera di impegnarti in attività che promuovono emozioni positive.',
       'Monitor for any changes in emotional expression.': 'Monitora eventuali cambiamenti nell\'espressione emotiva.',
@@ -145,7 +157,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
       { pattern: /Eyes are/gi, replacement: 'Gli occhi sono' },
       { pattern: /Overall/gi, replacement: 'Complessivamente' },
       { pattern: /l\'espressione facciale/gi, replacement: 'l\'espressione facciale' },
-      
+
       // Original patterns
       { pattern: /face is partially occluded by/gi, replacement: 'il viso è parzialmente coperto da' },
       { pattern: /facial expression is mostly/gi, replacement: 'l\'espressione facciale è principalmente' },
@@ -456,10 +468,10 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
                   <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]} />
                 )}
 
-                {/* Key Cues List */}
-                {fullAnalysisResult?.observations && fullAnalysisResult.observations.map((obs: string, index: number) => (
+                {/* Key Cues List - filtered to remove AU codes */}
+                {fullAnalysisResult?.observations && filterObservations(fullAnalysisResult.observations).map((obs: string, index: number) => (
                   <View key={index} style={styles.observationItem}>
-                    <MaterialCommunityIcons name="eye-outline" size={18} color={colors.text} style={{ opacity: 0.7 }} />
+                    <View style={styles.bulletPoint} />
                     <Text style={[styles.observationText, { color: colors.text }]}>
                       {capitalizeFirst(translateAIText(obs))}
                     </Text>
@@ -515,8 +527,8 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         edges={['bottom']}
         style={[
           styles.bottomBar,
-          { 
-            backgroundColor: colors.background, 
+          {
+            backgroundColor: colors.background,
             borderTopColor: isDark ? 'rgba(148,163,184,0.18)' : 'rgba(15,23,42,0.08)',
           },
         ]}
@@ -611,9 +623,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     gap: 12,
+    flexWrap: 'wrap',
   },
   secondaryButton: {
     flex: 1,
+    minWidth: 100,
     height: 54,
     borderRadius: 27,
     borderWidth: 1,
@@ -623,11 +637,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   secondaryButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
+    flexShrink: 1,
   },
   primaryButton: {
     flex: 2,
+    minWidth: 150,
     height: 54,
     borderRadius: 27,
     shadowColor: '#3b82f6',
@@ -646,8 +662,9 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
+    flexShrink: 1,
   },
   section: {
     marginTop: 24,
@@ -666,6 +683,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     alignItems: 'flex-start',
+  },
+  bulletPoint: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#6366f1',
+    marginTop: 7, // Center with text line height
   },
   observationText: {
     flex: 1,
