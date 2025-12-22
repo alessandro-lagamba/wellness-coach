@@ -26,6 +26,7 @@
   },
   "packageManager": "pnpm@10.17.1",
   "dependencies": {
-    "@radix-ui/react-use-callback-ref": "^1.1.1"
+    "@radix-ui/react-use-callback-ref": "^1.1.1",
+    "next": "^15.5.9"
   }
 }
