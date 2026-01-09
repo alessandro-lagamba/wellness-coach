@@ -70,7 +70,7 @@ export class UnifiedAnalysisService {
     imageUri: string,
     sessionId?: string,
     language?: string,
-    options?: AnalysisOptions
+    options?: AnalysisOptions & { userId?: string }
   ): Promise<AnalysisResponse<EmotionAnalysisResult>> {
     return traceAnalysis<EmotionAnalysisResult>(
       'emotion',
@@ -82,6 +82,7 @@ export class UnifiedAnalysisService {
             sessionId,
             timestamp: new Date(),
             language,
+            userId: options?.userId, // 🆕 Pass userId for historical context
           };
 
           const result = await this.openaiService.analyzeEmotion(request);

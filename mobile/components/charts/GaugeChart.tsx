@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Path, Text as SvgText, Defs, LinearGradient as SvgLinearGradient, Stop, TSpan } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,7 +25,8 @@ interface GaugeChartProps {
   unit?: string; // 🔥 NEW: Unit to display (e.g., 'g', 'kcal', '%')
 }
 
-export const GaugeChart: React.FC<GaugeChartProps> = ({
+// 🔥 PERF: Memoized to prevent unnecessary re-renders
+export const GaugeChart: React.FC<GaugeChartProps> = memo(({
   value,
   maxValue,
   label,
@@ -45,7 +46,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
   // ✅ Robust value validation and fallback
   const safeValue = (() => {
     if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
-      console.warn(`⚠️ Invalid value for ${label}:`, value, 'Using fallback');
+      // 🔥 PERF: Removed console.warn - fires too often on renders
       return 50; // Default fallback value
     }
     return Math.max(0, Math.min(value, maxValue)); // Clamp between 0 and maxValue
@@ -240,7 +241,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
       />
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

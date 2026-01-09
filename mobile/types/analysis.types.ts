@@ -140,6 +140,7 @@ export interface AnalysisRequest {
   prefs?: string[];
   allergies?: string[];
   language?: string; // e.g., 'it', 'en'
+  userId?: string; // For historical context in emotion analysis
 }
 
 export interface AnalysisResponse<T> {

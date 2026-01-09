@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 import {
   View,
   Text,
@@ -34,7 +34,8 @@ interface DailyCopilotProps {
   compact?: boolean;
 }
 
-export const DailyCopilot: React.FC<DailyCopilotProps> = ({
+// 🔥 PERF: Memoized component to prevent unnecessary re-renders
+export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
   onRecommendationPress,
   onViewDetails,
   onViewHistory,
@@ -42,25 +43,11 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
 }) => {
   const { copilotData, loading, error, reload } = useDailyCopilot();
   const { colors: themeColors } = useTheme();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [showScoreModal, setShowScoreModal] = useState(false);
 
-  // 🔥 DEBUG: Log per capire perché non mostra i dati
-  useEffect(() => {
-    if (loading) {
-      console.log('🔄 DailyCopilot: Loading...');
-    } else if (error) {
-      console.log('❌ DailyCopilot: Error:', error);
-    } else if (copilotData) {
-      console.log('✅ DailyCopilot: Data loaded:', {
-        overallScore: copilotData.overallScore,
-        recommendationsCount: copilotData.recommendations?.length || 0,
-        summary: copilotData.summary
-      });
-    } else {
-      console.log('⚠️ DailyCopilot: No data, no error, not loading');
-    }
-  }, [copilotData, loading, error]);
+  // 🔥 PERF: Removed debug useEffect that logged on every state change
+  // This was causing unnecessary logging and potential performance impact
 
   // Animation values
   const fadeInValue = useSharedValue(0);
@@ -136,7 +123,9 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
       <View style={[styles.container, compact && styles.compactContainer]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#8b5cf6" />
-          <Text style={styles.loadingText}>Analizzando i tuoi dati...</Text>
+          <Text style={styles.loadingText}>
+            {language === 'it' ? 'Analizzando i tuoi dati...' : 'Analyzing your data...'}
+          </Text>
         </View>
       </View>
     );
@@ -198,13 +187,14 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
   }
 
   // 🔥 FIX: Assicurati che recommendations sia sempre un array
-  const recommendations = Array.isArray(copilotData.recommendations) 
-    ? copilotData.recommendations 
+  const recommendations = Array.isArray(copilotData.recommendations)
+    ? copilotData.recommendations
     : [];
 
   // 🔥 FIX: Assicurati che summary abbia tutti i campi necessari
   const summary = copilotData.summary || {
     focus: 'Benessere generale',
+    focusEn: 'General Wellness',
     energy: 'medium' as const,
     recovery: 'good' as const,
     mood: 'neutral' as const,
@@ -236,12 +226,15 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
               </Text>
             </View>
           </View>
-          
+
           <View style={styles.compactContent}>
             <Text style={styles.compactFocus}>
-              Oggi focus su: <Text style={styles.compactFocusBold}>{copilotData.summary.focus}</Text>
+              {language === 'it' ? 'Oggi focus su: ' : 'Today focus on: '}
+              <Text style={styles.compactFocusBold}>
+                {language === 'it' ? copilotData.summary.focus : (copilotData.summary.focusEn || copilotData.summary.focus)}
+              </Text>
             </Text>
-            
+
             <View style={styles.compactRecommendations}>
               {copilotData.recommendations.slice(0, 2).map((rec, index) => (
                 <View
@@ -270,10 +263,10 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                   </Text>
                   <View style={styles.compactRecFooter}>
                     <View style={styles.compactCategoryBadge}>
-                      <MaterialCommunityIcons 
-                        name={getCategoryIcon(rec.category) as any} 
-                        size={12} 
-                        color={getCategoryColor(rec.category)} 
+                      <MaterialCommunityIcons
+                        name={getCategoryIcon(rec.category) as any}
+                        size={12}
+                        color={getCategoryColor(rec.category)}
                       />
                       <Text style={[
                         styles.compactCategoryText,
@@ -290,7 +283,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
               ))}
             </View>
           </View>
-          
+
           {onViewDetails && (
             <TouchableOpacity style={styles.compactViewDetails} onPress={onViewDetails}>
               <Text style={styles.compactViewDetailsText}>Vedi dettagli</Text>
@@ -312,42 +305,70 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
       >
         {/* Header - Riorganizzato */}
         <View style={styles.header}>
-          {/* Left: Focus con emoticon */}
+          {/* Left: Focus con emoticon - NOW DYNAMIC */}
           <View style={styles.focusContainer}>
             <Text style={[styles.focusText, { color: themeColors.text }]}>
-              Oggi focus su: <Text style={[styles.focusBold, { color: themeColors.text }]}>{summary.focus}</Text>
+              {language === 'it' ? 'Oggi focus su: ' : 'Today focus on: '}
+              <Text style={[styles.focusBold, { color: themeColors.text }]}>
+                {language === 'it' ? summary.focus : (summary.focusEn || summary.focus)}
+              </Text>
             </Text>
-            
+
+            {/* DYNAMIC THEME INDICATORS - based on actual recommendations */}
             <View style={styles.statusRow}>
-              <View style={styles.statusItem}>
-                <MaterialCommunityIcons 
-                  name="lightning-bolt" 
-                  size={18} 
-                  color={summary.energy === 'high' ? '#10b981' : summary.energy === 'medium' ? '#f59e0b' : '#ef4444'} 
-                />
-                <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>Energia</Text>
-              </View>
-              <View style={styles.statusItem}>
-                <MaterialCommunityIcons 
-                  name="bed" 
-                  size={18} 
-                  color={summary.recovery === 'excellent' ? '#10b981' : summary.recovery === 'good' ? '#f59e0b' : '#ef4444'} 
-                />
-                <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>Recupero</Text>
-              </View>
-              <View style={styles.statusItem}>
-                <MaterialCommunityIcons 
-                  name="emoticon-happy" 
-                  size={18} 
-                  color={summary.mood === 'positive' ? '#10b981' : summary.mood === 'neutral' ? '#f59e0b' : '#ef4444'} 
-                />
-                <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>Umore</Text>
-              </View>
+              {copilotData.themeIndicators && copilotData.themeIndicators.length > 0 ? (
+                copilotData.themeIndicators.map((indicator, index) => (
+                  <View key={index} style={styles.statusItem}>
+                    <MaterialCommunityIcons
+                      name={indicator.icon as any}
+                      size={18}
+                      color={indicator.color}
+                    />
+                    <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
+                      {language === 'it' ? indicator.label : indicator.labelEn}
+                    </Text>
+                  </View>
+                ))
+              ) : (
+                // Fallback to original static icons if no theme indicators
+                <>
+                  <View style={styles.statusItem}>
+                    <MaterialCommunityIcons
+                      name="lightning-bolt"
+                      size={18}
+                      color={summary.energy === 'high' ? '#10b981' : summary.energy === 'medium' ? '#f59e0b' : '#ef4444'}
+                    />
+                    <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
+                      {language === 'it' ? 'Energia' : 'Energy'}
+                    </Text>
+                  </View>
+                  <View style={styles.statusItem}>
+                    <MaterialCommunityIcons
+                      name="bed"
+                      size={18}
+                      color={summary.recovery === 'excellent' ? '#10b981' : summary.recovery === 'good' ? '#f59e0b' : '#ef4444'}
+                    />
+                    <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
+                      {language === 'it' ? 'Recupero' : 'Recovery'}
+                    </Text>
+                  </View>
+                  <View style={styles.statusItem}>
+                    <MaterialCommunityIcons
+                      name="emoticon-happy"
+                      size={18}
+                      color={summary.mood === 'positive' ? '#10b981' : summary.mood === 'neutral' ? '#f59e0b' : '#ef4444'}
+                    />
+                    <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
+                      {language === 'it' ? 'Umore' : 'Mood'}
+                    </Text>
+                  </View>
+                </>
+              )}
             </View>
           </View>
-          
+
           {/* Right: Score Circle - Più visibile e cliccabile */}
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => {
               console.log('Score circle pressed');
               setShowScoreModal(true);
@@ -397,73 +418,75 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
 
         {/* Recommendations - Simplified */}
         <View style={styles.recommendationsContainer}>
-          <Text style={[styles.recommendationsTitle, { color: themeColors.text }]}>Raccomandazioni per oggi</Text>
-          
+          <Text style={[styles.recommendationsTitle, { color: themeColors.text }]}>
+            {language === 'it' ? 'Raccomandazioni per oggi' : 'Today\'s Recommendations'}
+          </Text>
+
           <View style={styles.recommendationsList}>
             {recommendations.length === 0 ? (
               <View style={[styles.emptyRecommendations, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
                 <MaterialCommunityIcons name="information-outline" size={24} color={themeColors.textSecondary} />
                 <Text style={[styles.emptyRecommendationsText, { color: themeColors.textSecondary }]}>
-                  Nessuna raccomandazione disponibile al momento
+                  {language === 'it' ? 'Nessuna raccomandazione disponibile al momento' : 'No recommendations available at the moment'}
                 </Text>
               </View>
             ) : (
               recommendations.map((rec, index) => (
-              <TouchableOpacity
-                key={rec.id}
-                style={[
-                  styles.recommendationCardSimple,
-                  { 
-                    borderLeftColor: getPriorityColor(rec.priority),
-                    backgroundColor: themeColors.surfaceElevated,
-                    borderColor: themeColors.border,
-                  }
-                ]}
-                onPress={() => onRecommendationPress?.(rec)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.recommendationHeaderSimple}>
-                  <Text style={styles.recommendationIconSimple}>{rec.icon}</Text>
-                  <View style={[
-                    styles.priorityBadgeSimple,
-                    { backgroundColor: getPriorityColor(rec.priority) + '20' }
-                  ]}>
-                    <Text style={[
-                      styles.priorityTextSimple,
-                      { color: getPriorityColor(rec.priority) }
+                <TouchableOpacity
+                  key={rec.id}
+                  style={[
+                    styles.recommendationCardSimple,
+                    {
+                      borderLeftColor: getPriorityColor(rec.priority),
+                      backgroundColor: themeColors.surfaceElevated,
+                      borderColor: themeColors.border,
+                    }
+                  ]}
+                  onPress={() => onRecommendationPress?.(rec)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.recommendationHeaderSimple}>
+                    <Text style={styles.recommendationIconSimple}>{rec.icon}</Text>
+                    <View style={[
+                      styles.priorityBadgeSimple,
+                      { backgroundColor: getPriorityColor(rec.priority) + '20' }
                     ]}>
-                      {getPriorityEmoji(rec.priority)}
-                    </Text>
+                      <Text style={[
+                        styles.priorityTextSimple,
+                        { color: getPriorityColor(rec.priority) }
+                      ]}>
+                        {getPriorityEmoji(rec.priority)}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                
-                <Text style={[styles.recommendationActionSimple, { color: themeColors.text }]}>
-                  {rec.action}
-                </Text>
-                
-                <Text style={[styles.recommendationReasonSimple, { color: themeColors.textSecondary }]}>
-                  {rec.reason}
-                </Text>
-                
-                <View style={styles.recommendationFooterSimple}>
-                  <View style={styles.categoryBadgeSimple}>
-                    <MaterialCommunityIcons 
-                      name={getCategoryIcon(rec.category) as any} 
-                      size={14} 
-                      color={getCategoryColor(rec.category)} 
-                    />
-                    <Text style={[
-                      styles.categoryTextSimple,
-                      { color: getCategoryColor(rec.category) }
-                    ]}>
-                      {t(`popups.recommendation.categories.${rec.category}`)}
-                    </Text>
+
+                  <Text style={[styles.recommendationActionSimple, { color: themeColors.text }]}>
+                    {rec.action}
+                  </Text>
+
+                  <Text style={[styles.recommendationReasonSimple, { color: themeColors.textSecondary }]}>
+                    {rec.reason}
+                  </Text>
+
+                  <View style={styles.recommendationFooterSimple}>
+                    <View style={styles.categoryBadgeSimple}>
+                      <MaterialCommunityIcons
+                        name={getCategoryIcon(rec.category) as any}
+                        size={14}
+                        color={getCategoryColor(rec.category)}
+                      />
+                      <Text style={[
+                        styles.categoryTextSimple,
+                        { color: getCategoryColor(rec.category) }
+                      ]}>
+                        {t(`popups.recommendation.categories.${rec.category}`)}
+                      </Text>
+                    </View>
+                    {rec.estimatedTime && (
+                      <Text style={[styles.timeTextSimple, { color: themeColors.textTertiary }]}>{rec.estimatedTime}</Text>
+                    )}
                   </View>
-                  {rec.estimatedTime && (
-                    <Text style={[styles.timeTextSimple, { color: themeColors.textTertiary }]}>{rec.estimatedTime}</Text>
-                  )}
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
               ))
             )}
           </View>
@@ -510,9 +533,9 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                   <MaterialCommunityIcons name="close" size={20} color={themeColors.textSecondary} />
                 </TouchableOpacity>
               </View>
-              
-              <ScrollView 
-                style={styles.modalScroll} 
+
+              <ScrollView
+                style={styles.modalScroll}
                 contentContainerStyle={styles.modalScrollContent}
                 showsVerticalScrollIndicator={true}
                 nestedScrollEnabled={true}
@@ -520,7 +543,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
                 <Text style={[styles.modalDescription, { color: themeColors.textSecondary }]}>
                   {t('home.dailyCopilot.scoreModal.description')}
                 </Text>
-                
+
                 <View style={styles.scoreBreakdown}>
                   <View style={styles.scoreBreakdownRow}>
                     <View style={styles.scoreBreakdownHeader}>
@@ -614,7 +637,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = ({
       </Modal>
     </Animated.View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

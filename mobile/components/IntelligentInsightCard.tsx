@@ -95,7 +95,7 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
   if (compact) {
     return (
       <TouchableOpacity
-        style={[styles.compactCard, { 
+        style={[styles.compactCard, {
           borderLeftColor: getPriorityColor(insight.priority),
           backgroundColor: colors.surface,
           borderColor: colors.border,
@@ -105,10 +105,10 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
       >
         <View style={styles.compactHeader}>
           <View style={[styles.compactIconContainer, { backgroundColor: colors.surfaceMuted }]}>
-            <MaterialCommunityIcons 
-              name={getCategoryIcon(insight.category) as any} 
-              size={16} 
-              color={getCategoryColor(insight.category)} 
+            <MaterialCommunityIcons
+              name={getCategoryIcon(insight.category) as any}
+              size={16}
+              color={getCategoryColor(insight.category)}
             />
           </View>
           <View style={[
@@ -123,21 +123,21 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
             </Text>
           </View>
         </View>
-        
+
         <Text style={[styles.compactTitle, { color: colors.text }]} numberOfLines={2}>
           {insight.title}
         </Text>
-        
-        <Text style={[styles.compactDescription, { color: colors.textSecondary }]} numberOfLines={2}>
+
+        <Text style={[styles.compactDescription, { color: colors.textSecondary }]} numberOfLines={3}>
           {insight.description}
         </Text>
-        
+
         <View style={styles.compactFooter}>
           <View style={styles.actionTypeContainer}>
-            <MaterialCommunityIcons 
-              name={getActionTypeIcon(insight.actionType) as any} 
-              size={14} 
-              color={getCategoryColor(insight.category)} 
+            <MaterialCommunityIcons
+              name={getActionTypeIcon(insight.actionType) as any}
+              size={14}
+              color={getCategoryColor(insight.category)}
             />
             <Text style={[
               styles.actionTypeText,
@@ -157,7 +157,7 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
   return (
     <Animated.View style={[styles.card, animatedStyle]}>
       <TouchableOpacity
-        style={[styles.cardContent, { 
+        style={[styles.cardContent, {
           borderLeftColor: getPriorityColor(insight.priority),
           backgroundColor: colors.surface,
           borderColor: colors.border,
@@ -168,10 +168,10 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <View style={[styles.iconContainer, { backgroundColor: colors.surfaceMuted }]}>
-              <MaterialCommunityIcons 
-                name={getCategoryIcon(insight.category) as any} 
-                size={20} 
-                color={getCategoryColor(insight.category)} 
+              <MaterialCommunityIcons
+                name={getCategoryIcon(insight.category) as any}
+                size={20}
+                color={getCategoryColor(insight.category)}
               />
             </View>
             <View style={styles.titleTextContainer}>
@@ -179,7 +179,7 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
               <Text style={[styles.description, { color: colors.textSecondary }]}>{insight.description}</Text>
             </View>
           </View>
-          
+
           <View style={[
             styles.priorityBadge,
             { backgroundColor: getPriorityColor(insight.priority) + '20' }
@@ -195,10 +195,10 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
 
         <View style={styles.metaContainer}>
           <View style={styles.actionTypeContainer}>
-            <MaterialCommunityIcons 
-              name={getActionTypeIcon(insight.actionType) as any} 
-              size={16} 
-              color={getCategoryColor(insight.category)} 
+            <MaterialCommunityIcons
+              name={getActionTypeIcon(insight.actionType) as any}
+              size={16}
+              color={getCategoryColor(insight.category)}
             />
             <Text style={[
               styles.actionTypeText,
@@ -207,7 +207,7 @@ export const IntelligentInsightCard: React.FC<IntelligentInsightCardProps> = ({
               {insight.actionType}
             </Text>
           </View>
-          
+
           {insight.estimatedTime && (
             <Text style={[styles.timeText, { color: colors.textTertiary }]}>{insight.estimatedTime}</Text>
           )}

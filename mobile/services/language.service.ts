@@ -56,11 +56,11 @@ export async function getUserLanguage(): Promise<'it' | 'en'> {
 export function getLanguageInstruction(language: 'it' | 'en'): string {
   const targetLanguage = language === 'it' ? 'Italian (Italiano)' : 'English';
 
-  return `IMPORTANT LANGUAGE INSTRUCTIONS:
-- You MUST return ONLY valid JSON with the exact structure specified in the schema.
-- Translate ONLY the string values (text content) to ${targetLanguage}.
-- Do NOT translate property names, keys, or the JSON structure itself.
-- Do NOT write any text outside the JSON object.
-- Return ONLY raw JSON. No markdown. No code fences. No prose. No explanations.`;
+  return `CRITICAL LANGUAGE REQUIREMENT:
+- ALL text/string values in the JSON response MUST be written entirely in ${targetLanguage}.
+- This includes: observations, recommendations, analysis_description, notes, and issues.
+- Do NOT mix languages. Every single sentence must be completely in ${targetLanguage}.
+- Property names and keys remain in English (as per the JSON schema).
+- Return ONLY valid JSON. No markdown, no code fences, no explanations.`;
 }
 

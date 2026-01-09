@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback, memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 const { width } = Dimensions.get('window');
 
 interface VideoHeroProps {
-  videoUri: any; // Cambiato da string a any per supportare require()
+  videoUri: any;
   title: string;
   subtitle: string;
   onPlayPress?: () => void;
@@ -16,10 +16,11 @@ interface VideoHeroProps {
   loop?: boolean;
   muted?: boolean;
   style?: any;
-  fallbackImageUri?: string; // Aggiunto per fallback
+  fallbackImageUri?: string;
 }
 
-export const VideoHero: React.FC<VideoHeroProps> = ({
+// 🔥 PERF: Memoized to prevent unnecessary re-renders
+export const VideoHero: React.FC<VideoHeroProps> = memo(({
   videoUri,
   title,
   subtitle,
@@ -36,7 +37,7 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  const handlePlayPause = async () => {
+  const handlePlayPause = useCallback(async () => {
     if (videoRef.current) {
       if (isPlaying) {
         await videoRef.current.pauseAsync();
@@ -47,28 +48,21 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
       }
     }
     onPlayPress?.();
-  };
+  }, [isPlaying, onPlayPress]);
 
-  const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+  const handlePlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
     if (status.isLoaded) {
       setIsLoaded(true);
       if (status.didJustFinish && !loop) {
         setIsPlaying(false);
       }
-    } else {
-      // @ts-ignore
-      if (status.error) {
-        // @ts-ignore
-        console.error('❌ Video playback error:', status.error);
-      }
     }
-  };
+  }, [loop]);
 
-  const handleVideoError = (error: any) => {
+  const handleVideoError = useCallback((error: any) => {
     console.error('❌ Video loading error:', error);
-    console.log('❌ Failed video URI:', videoUri);
     setHasError(true);
-  };
+  }, []);
 
   return (
     <View style={[styles.container, style]}>
@@ -98,7 +92,7 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
         style={styles.overlay}
       />
 
-      {/* Content - Text removed for cleaner video experience */}
+      {/* Content */}
       <View style={styles.content}>
 
         {showPlayButton && (
@@ -122,7 +116,7 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
           </TouchableOpacity>
         )}
 
-        {/* Touch overlay per interazione con il video quando non c'è il pulsante */}
+        {/* Touch overlay */}
         {!showPlayButton && onPlayPress && (
           <TouchableOpacity
             style={styles.touchOverlay}
@@ -133,7 +127,7 @@ export const VideoHero: React.FC<VideoHeroProps> = ({
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

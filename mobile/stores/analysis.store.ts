@@ -51,22 +51,22 @@ interface AnalysisStore {
   // Skin Analysis
   latestSkinCapture: SkinCapture | null;
   skinHistory: SkinCapture[];
-  
+
   // Emotion Analysis  
   latestEmotionSession: EmotionSession | null;
   emotionHistory: EmotionSession[];
-  
+
   // Food Analysis
   latestFoodSession: FoodSession | null;
   foodHistory: FoodSession[];
-  
+
   // Actions
   addSkinCapture: (capture: SkinCapture) => void;
   addEmotionSession: (session: EmotionSession) => void;
   addFoodSession: (session: FoodSession) => void;
   setFoodSessions: (sessions: FoodSession[]) => void;
   clearHistory: () => void;
-  
+
   // ✅ FIX: Add safe getters for empty state handling
   getSafeSkinHistory: () => SkinCapture[];
   getSafeEmotionHistory: () => EmotionSession[];
@@ -81,26 +81,26 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   emotionHistory: [],
   latestFoodSession: null,
   foodHistory: [],
-  
+
   // Actions
   addSkinCapture: (capture: SkinCapture) => {
-    console.log('📊 Adding skin capture to store:', capture.id);
+    // 🔥 PERF: Removed logging on every store update
     set((state) => ({
       latestSkinCapture: capture,
       skinHistory: [capture, ...state.skinHistory.slice(0, 29)], // Keep last 30
     }));
   },
-  
+
   addEmotionSession: (session: EmotionSession) => {
-    console.log('📊 Adding emotion session to store:', session.id);
+    // 🔥 PERF: Removed logging on every store update
     set((state) => ({
       latestEmotionSession: session,
       emotionHistory: [session, ...state.emotionHistory.slice(0, 29)], // Keep last 30
     }));
   },
-  
+
   addFoodSession: (session: FoodSession) => {
-    console.log('📊 Adding food session to store:', session.id);
+    // 🔥 PERF: Removed logging on every store update
     set((state) => {
       const filteredHistory = state.foodHistory.filter((item) => item.id !== session.id);
       const updatedHistory = [session, ...filteredHistory].slice(0, 30);
@@ -114,17 +114,17 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       };
     });
   },
-  
+
   setFoodSessions: (sessions: FoodSession[]) => {
-    console.log('📊 Setting food sessions in store:', sessions.length);
+    // 🔥 PERF: Removed logging on every store update
     set(() => ({
       latestFoodSession: sessions.length > 0 ? sessions[0] : null,
       foodHistory: sessions.slice(0, 30),
     }));
   },
-  
+
   clearHistory: () => {
-    console.log('📊 Clearing analysis history');
+    // 🔥 PERF: Removed logging on every store update
     set({
       latestSkinCapture: null,
       skinHistory: [],
@@ -134,18 +134,18 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       foodHistory: [],
     });
   },
-  
+
   // ✅ FIX: Safe getters that always return arrays
   getSafeSkinHistory: () => {
     const state = get();
     return Array.isArray(state.skinHistory) ? state.skinHistory : [];
   },
-  
+
   getSafeEmotionHistory: () => {
     const state = get();
     return Array.isArray(state.emotionHistory) ? state.emotionHistory : [];
   },
-  
+
   getSafeFoodHistory: () => {
     const state = get();
     return Array.isArray(state.foodHistory) ? state.foodHistory : [];

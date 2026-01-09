@@ -86,14 +86,19 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
 
   const formatValue = (value: number) => {
     if (value === undefined || value === null) return '--';
-    // Per emotion metrics, mostra con segno + o -
+
+    // 🆕 Valence: normalize from [-1, 1] to [0, 100]
     if (metric === 'valence') {
-      return (value >= 0 ? '+' : '') + value.toFixed(2);
+      const normalized = Math.round(((value + 1) / 2) * 100);
+      return String(normalized);
     }
-    // Arousal is 0-1, display as percentage
+
+    // 🆕 Arousal: normalize from [-1, 1] to [0, 100] (same as valence)
     if (metric === 'arousal') {
-      return Math.round(value * 100) + '%';
+      const normalized = Math.round(((value + 1) / 2) * 100);
+      return String(normalized);
     }
+
     // 🔥 FIX: Append unit if provided
     const formatted = value.toFixed(0);
     return unit ? `${formatted}${unit}` : formatted;

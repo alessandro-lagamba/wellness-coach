@@ -33,15 +33,15 @@ export const useLiveKitConnection = () => {
     isConnecting: false,
     isDisconnected: true,
   });
-  
+
   const [audioLevels, setAudioLevels] = useState<LiveKitAudioLevels>({
     inputLevel: 0,
     outputLevel: 0,
   });
-  
+
   const [isMicrophoneEnabled, setIsMicrophoneEnabled] = useState(false);
   const [isSpeakerEnabled, setIsSpeakerEnabled] = useState(true);
-  
+
   const roomRef = useRef<Room | null>(null);
   const participantIdRef = useRef<string>('');
 
@@ -52,9 +52,9 @@ export const useLiveKitConnection = () => {
    */
   const getLiveKitToken = useCallback(async (roomName: string, participantId: string): Promise<LiveKitRoomInfo | null> => {
     try {
-      console.log('[LiveKit Hook] 🔑 Requesting token for room:', roomName, 'participant:', participantId);
-      
-      const response = await fetch(`${ BACKEND_URL }/api/livekit/token`, {
+      // 🔥 PERF: Removed verbose logging
+
+      const response = await fetch(`${BACKEND_URL}/api/livekit/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,13 +71,13 @@ export const useLiveKitConnection = () => {
       }
 
       const data = await response.json();
-      
+
       if (!data.success) {
         throw new Error(data.error || 'Token generation failed');
       }
 
-      console.log('[LiveKit Hook] ✅ Token received successfully');
-      
+      // 🔥 PERF: Removed verbose logging
+
       return {
         roomName: data.roomName,
         participantId: data.identity,
@@ -97,8 +97,8 @@ export const useLiveKitConnection = () => {
    */
   const connectToRoom = useCallback(async (roomName: string, participantId: string): Promise<boolean> => {
     try {
-      console.log('[LiveKit Hook] 🚀 Connecting to room:', roomName);
-      
+      // 🔥 PERF: Removed verbose logging
+
       setConnectionState({
         isConnected: false,
         isConnecting: true,
@@ -116,15 +116,15 @@ export const useLiveKitConnection = () => {
       // Start native audio session before connecting
       try {
         await AudioSession.startAudioSession();
-        console.log('[LiveKit Hook] 🎧 AudioSession started');
+        // 🔥 PERF: Removed verbose logging
       } catch (e) {
         console.warn('[LiveKit Hook] ⚠️ AudioSession start failed', e);
       }
 
       // For React Native, we should use LiveKitRoom component instead of low-level Room API
       // The LiveKitRoom component handles the connection internally
-      console.log('[LiveKit Hook] ✅ Ready for LiveKitRoom component connection');
-      
+      // 🔥 PERF: Removed verbose logging
+
       setConnectionState({
         isConnected: true,
         isConnecting: false,
@@ -135,7 +135,7 @@ export const useLiveKitConnection = () => {
 
     } catch (error) {
       console.error('[LiveKit Hook] ❌ Connection failed:', error);
-      
+
       setConnectionState({
         isConnected: false,
         isConnecting: false,
@@ -152,8 +152,8 @@ export const useLiveKitConnection = () => {
    */
   const disconnectFromRoom = useCallback(async (): Promise<void> => {
     try {
-      console.log('[LiveKit Hook] 🛑 Disconnecting from room');
-      
+      // 🔥 PERF: Removed verbose logging
+
       if (roomRef.current) {
         await roomRef.current.disconnect();
         roomRef.current = null;
@@ -161,7 +161,7 @@ export const useLiveKitConnection = () => {
 
       try {
         await AudioSession.stopAudioSession();
-        console.log('[LiveKit Hook] 🎧 AudioSession stopped');
+        // 🔥 PERF: Removed verbose logging
       } catch (e) {
         console.warn('[LiveKit Hook] ⚠️ AudioSession stop failed', e);
       }
@@ -175,7 +175,7 @@ export const useLiveKitConnection = () => {
       setIsMicrophoneEnabled(false);
       setAudioLevels({ inputLevel: 0, outputLevel: 0 });
 
-      console.log('[LiveKit Hook] ✅ Disconnected successfully');
+      // 🔥 PERF: Removed verbose logging
 
     } catch (error) {
       console.error('[LiveKit Hook] ❌ Disconnect failed:', error);
@@ -193,7 +193,7 @@ export const useLiveKitConnection = () => {
       }
 
       const newState = !isMicrophoneEnabled;
-      
+
       if (newState) {
         // Enable microphone
         await roomRef.current.localParticipant.setMicrophoneEnabled(true);
@@ -201,7 +201,7 @@ export const useLiveKitConnection = () => {
       } else {
         // Disable microphone
         await roomRef.current.localParticipant.setMicrophoneEnabled(false);
-        console.log('[LiveKit Hook] 🔇 Microphone disabled');
+        // 🔥 PERF: Removed verbose logging
       }
 
       setIsMicrophoneEnabled(newState);
@@ -224,9 +224,9 @@ export const useLiveKitConnection = () => {
       }
 
       const newState = !isSpeakerEnabled;
-      
+
       // Speaker routing is platform-specific; defer to system audio routing for now
-      console.log('[LiveKit Hook] 🔊 Speaker state set to', newState);
+      // 🔥 PERF: Removed verbose logging
 
       setIsSpeakerEnabled(newState);
       return newState;
@@ -243,11 +243,11 @@ export const useLiveKitConnection = () => {
   const setupRoomEventListeners = useCallback((room: Room) => {
     // Connection events
     room.on(RoomEvent.Connected, () => {
-      console.log('[LiveKit Hook] ✅ Room connected');
+      // 🔥 PERF: Removed verbose logging
     });
 
     room.on(RoomEvent.Disconnected, (reason: any) => {
-      console.log('[LiveKit Hook] 🔌 Room disconnected:', reason);
+      // 🔥 PERF: Removed verbose logging
       setConnectionState({
         isConnected: false,
         isConnecting: false,
@@ -257,20 +257,20 @@ export const useLiveKitConnection = () => {
 
     // Participant events
     room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
-      console.log('[LiveKit Hook] 👤 Participant connected:', participant.identity);
+      // 🔥 PERF: Removed verbose logging
     });
 
     room.on(RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
-      console.log('[LiveKit Hook] 👋 Participant disconnected:', participant.identity);
+      // 🔥 PERF: Removed verbose logging
     });
 
     // Track events
     room.on(RoomEvent.TrackSubscribed, (track: Track, publication: any, participant: RemoteParticipant) => {
-      console.log('[LiveKit Hook] 🎵 Track subscribed:', track.kind, 'from', participant.identity);
+      // 🔥 PERF: Removed verbose logging
     });
 
     room.on(RoomEvent.TrackUnsubscribed, (track: Track, publication: any, participant: RemoteParticipant) => {
-      console.log('[LiveKit Hook] 🔇 Track unsubscribed:', track.kind, 'from', participant.identity);
+      // 🔥 PERF: Removed verbose logging
     });
 
     // Audio level event subscription omitted due to SDK variance across platforms
@@ -283,7 +283,7 @@ export const useLiveKitConnection = () => {
   const startVoiceChat = useCallback(async (roomName: string, participantId: string): Promise<boolean> => {
     try {
       console.log('[LiveKit Hook] 🎤 Starting voice chat session');
-      
+
       // Configure audio session for recording (platform-aware)
       try {
         await Audio.setAudioModeAsync(
@@ -319,7 +319,7 @@ export const useLiveKitConnection = () => {
 
       // Notify backend agent to start
       try {
-        const response = await fetch(`${ BACKEND_URL }/api/agent/start`, {
+        const response = await fetch(`${BACKEND_URL}/api/agent/start`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -331,7 +331,7 @@ export const useLiveKitConnection = () => {
         });
 
         if (response.ok) {
-          console.log('[LiveKit Hook] ✅ Agent started successfully');
+          // 🔥 PERF: Removed verbose logging
         } else {
           console.warn('[LiveKit Hook] ⚠️ Agent start failed:', response.status);
         }
@@ -352,12 +352,12 @@ export const useLiveKitConnection = () => {
    */
   const stopVoiceChat = useCallback(async (): Promise<void> => {
     try {
-      console.log('[LiveKit Hook] 🛑 Stopping voice chat session');
-      
+      // 🔥 PERF: Removed verbose logging
+
       // Notify backend agent to stop
       if (participantIdRef.current) {
         try {
-          await fetch(`${ BACKEND_URL }/api/agent/stop`, {
+          await fetch(`${BACKEND_URL}/api/agent/stop`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -366,7 +366,7 @@ export const useLiveKitConnection = () => {
               participantId: participantIdRef.current,
             }),
           });
-          console.log('[LiveKit Hook] ✅ Agent stopped successfully');
+          // 🔥 PERF: Removed verbose logging
         } catch (error) {
           console.warn('[LiveKit Hook] ⚠️ Agent stop request failed:', error);
         }
@@ -398,7 +398,7 @@ export const useLiveKitConnection = () => {
     audioLevels,
     isMicrophoneEnabled,
     isSpeakerEnabled,
-    
+
     // Actions
     connectToRoom,
     disconnectFromRoom,
@@ -406,7 +406,7 @@ export const useLiveKitConnection = () => {
     toggleSpeaker,
     startVoiceChat,
     stopVoiceChat,
-    
+
     // Utils
     getLiveKitToken,
   };

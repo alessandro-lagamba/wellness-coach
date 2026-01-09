@@ -84,19 +84,29 @@ export class MetricsService {
     return { label: "EXCELLENT", color: "#06b6d4", icon: "🌟", description: "Pelle in ottima salute! Tutti i parametri sono eccellenti. Complimenti per la tua routine di cura." };
   }
 
-  // Emotion Metric Buckets
+  // Emotion Metric Buckets (normalized to 0-100 scale)
   private static getValenceBucket(value: number): BucketInfo {
-    if (value < -0.3) return { label: "Negative", color: "#ef4444", icon: "😞", description: "Espressione negativa" };
-    if (value < 0.1) return { label: "Neutral", color: "#6b7280", icon: "😐", description: "Espressione neutra" };
-    if (value < 0.5) return { label: "Positive", color: "#10b981", icon: "😊", description: "Espressione positiva" };
-    return { label: "Very Positive", color: "#06b6d4", icon: "😄", description: "Espressione molto positiva" };
+    // 🆕 If value is in old -1 to 1 range, normalize to 0-100
+    const normalizedValue = value <= 1 && value >= -1 ? ((value + 1) / 2) * 100 : value;
+
+    // User's scale: 0-19 Molto negativo, 20-39 Tendenzialmente negativo, 40-59 Neutro, 60-79 Tendenzialmente positivo, 80-100 Molto positivo
+    if (normalizedValue < 20) return { label: "gauge.buckets.veryNegative", color: "#dc2626", icon: "😢", description: "Stato emotivo difficile" };
+    if (normalizedValue < 40) return { label: "gauge.buckets.negative", color: "#ef4444", icon: "😞", description: "Più segnali negativi che positivi" };
+    if (normalizedValue < 60) return { label: "gauge.buckets.neutral", color: "#6b7280", icon: "😐", description: "Espressione neutra, nessuna direzione emotiva forte" };
+    if (normalizedValue < 80) return { label: "gauge.buckets.positive", color: "#10b981", icon: "😊", description: "Più segnali positivi che neutri" };
+    return { label: "gauge.buckets.veryPositive", color: "#06b6d4", icon: "😄", description: "Stato chiaramente positivo" };
   }
 
   private static getArousalBucket(value: number): BucketInfo {
-    if (value < 0.3) return { label: "Low", color: "#6b7280", icon: "😴", description: "Bassa energia" };
-    if (value < 0.6) return { label: "Medium", color: "#f59e0b", icon: "😐", description: "Energia moderata" };
-    if (value < 0.8) return { label: "High", color: "#ef4444", icon: "😤", description: "Alta energia" };
-    return { label: "Very High", color: "#dc2626", icon: "🔥", description: "Energia molto alta" };
+    // 🆕 If value is in old -1 to 1 range, normalize to 0-100 (same as valence!)
+    const normalizedValue = value <= 1 && value >= -1 ? ((value + 1) / 2) * 100 : value;
+
+    // User's scale: 0-19 Molto basso, 20-39 Basso, 40-59 Moderato, 60-79 Alto, 80-100 Molto alto
+    if (normalizedValue < 20) return { label: "gauge.buckets.veryLow", color: "#3b82f6", icon: "😴", description: "Stato molto calmo o affaticato" };
+    if (normalizedValue < 40) return { label: "gauge.buckets.low", color: "#6b7280", icon: "😌", description: "Energia ridotta / rilassata" };
+    if (normalizedValue < 60) return { label: "gauge.buckets.medium", color: "#f59e0b", icon: "😐", description: "Attivazione nella norma" };
+    if (normalizedValue < 80) return { label: "gauge.buckets.high", color: "#ef4444", icon: "⚡", description: "Stato attivo / vigile" };
+    return { label: "gauge.buckets.veryHigh", color: "#dc2626", icon: "🔥", description: "Forte attivazione" };
   }
 
   private static getDefaultBucket(value: number): BucketInfo {
@@ -108,12 +118,12 @@ export class MetricsService {
   // Helper per estrarre valori storici per una metrica specifica
   static extractHistoricalValues(historical: any[], metric: string): number[] {
     if (!historical || !Array.isArray(historical)) return [];
-    
+
     return historical.reduce((acc, item) => {
       if (!item) return acc;
-      
+
       let value: number | null = null;
-      
+
       if (metric === 'valence' && item.avg_valence !== undefined) {
         value = item.avg_valence;
       } else if (metric === 'arousal' && item.avg_arousal !== undefined) {
@@ -129,11 +139,11 @@ export class MetricsService {
       } else if (metric === 'overall' && item.scores?.overall !== undefined) {
         value = item.scores.overall;
       }
-      
+
       if (value !== null && value !== undefined && !isNaN(value)) {
         acc.push(value);
       }
-      
+
       return acc;
     }, [] as number[]);
   }

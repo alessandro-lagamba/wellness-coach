@@ -28,7 +28,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>wellnesscoach</string>
-				<string>com.wellnesscoach.app</string>
+				<string>com.neurotracer.wellnesscoach</string>
 			</array>
 		</dict>
 		<dict>

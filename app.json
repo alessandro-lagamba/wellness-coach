@@ -1,0 +1,8 @@
+{
+  "android": {
+    "package": "com.lbp_manager.wellnesscoach"
+  },
+  "ios": {
+    "bundleIdentifier": "com.lbp-manager.wellnesscoach"
+  }
+}

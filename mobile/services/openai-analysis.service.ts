@@ -10,6 +10,7 @@ import {
 } from '../types/analysis.types';
 import * as FileSystem from 'expo-file-system/legacy';
 import { getUserLanguage, getLanguageInstruction } from './language.service';
+import { EmotionAnalysisService } from './emotion-analysis.service';
 
 class OpenAIRefusalError extends Error {
   constructor(message: string, public details?: any) {
@@ -41,153 +42,72 @@ export class OpenAIAnalysisService {
   private readonly version = '1.0.0';
 
   // Prompts esatti come specificati dall'utente
-  private readonly EMOTION_DETECTION_PROMPT = `You are an expert in facial emotion analysis using the Facial Action Coding System (FACS).  
-Your task is to analyze ONE face photo and return STRICT JSON matching the provided JSON Schema.
+  private readonly EMOTION_DETECTION_PROMPT = `
+You are an expert facial emotion analyst trained in FACS and micro-expression reading.
 
-GENERAL RULES
-- Base your analysis ONLY on visible facial muscle cues (brows, eyes, mouth).  
-- NEVER infer emotions from background, pose, style, age, or context.  
-- If cues are weak, ambiguous, or inconsistent → increase “neutral”.  
-- You MUST describe actual AU-like cues when determining emotion.
+TASK
+Analyze ONE face photo and return ONE JSON object (no markdown, no schema, no extra keys).
+This is a consumer wellness app: results must feel specific, accurate, and useful today.
 
-----------------------------------------------------------------------
-FACS-BASED EMOTION RULES (HIGH PRECISION)
-----------------------------------------------------------------------
+CONSTRAINTS (HARD)
+- Use ONLY visible facial cues: eyebrows, eyes/eyelids, mouth/lips, jaw/cheeks.
+- Do NOT infer from background, clothing, age, gender, identity, or context.
+- If confidence is low, make fewer claims and increase neutral.
 
-Detect emotions only when AT LEAST TWO confirming cues are present.
+STYLE (HARD)
+- User-centered, warm, non-clinical.
+- NO textbook explanations (“a smile means joy”).
+- NO deficit framing: never say “lack of joy”, “below normal”, “something missing”.
+  Use “quieter / more inward / lower outward expressiveness / calmer tone” instead.
 
-1. Joy (Happiness)
-Required cues (≥2):
-- AU12: lip corner puller (clear smile)
-- AU6: cheek raiser (crow’s feet, eye squint)
-- AU7: lower lid tightening
-Optional enhancers: AU25, AU26
-Rules:
-- Smile WITHOUT AU6 = polite smile → reduce joy
-- Weak mouth curvature alone = neutral
+SCORING (HARD)
+Emotions: joy, sadness, anger, fear, surprise, disgust, neutral.
+- Values in [0,1] and MUST sum to 1 (normalize if needed).
+- At least one non-neutral emotion MUST be > 0.15 unless the face is truly blank.
+- Neutral is NOT a default; neutral > 0.7 only if face is blank OR confidence < 0.5.
 
-2. Sadness
-Typical cues (≥2):
-- AU1: inner brow raise
-- AU4: brow lowering (with AU1)
-- AU15: lip corner depressor
-- AU17: chin raiser
-Notes:
-- AU1 + AU4 strongly reinforce sadness
+Intensity guide:
+- strong 0.50–0.80, moderate 0.30–0.50, subtle 0.15–0.30, minimal 0.00–0.10.
 
-3. Anger
-Typical cues (≥2):
-- AU4: brow lowering with inward tension
-- AU5: upper lid raise (intense stare)
-- AU7: lid tightener
-- AU23/24: lip tightening / pressing
-Notes:
-- Brow tension + relaxed mouth = concentration, NOT anger
+Consistency:
+- Visible smile => joy > 0.
+- Fear/anger > 0.3 => arousal must be > 0.
+- Joy > 0.3 => valence must be > 0.
+- Sadness dominant => valence < 0 and arousal <= 0.
 
-4. Fear
-Typical cues (≥2):
-- AU1 + AU2: brows raised (angled)
-- AU5: wide-open tense eyes
-- AU20: horizontal lip stretch
-Notes:
-- Fear = tension + asymmetry
-- Surprise = relaxed, symmetrical
+VALENCE & AROUSAL (HARD)
+- valence and arousal MUST be in [-1, +1], never 0–100.
+- Avoid exact 0 unless the face is truly blank.
+Valence: clear positive +0.4..+0.8, mild +0.15..+0.4, ambiguous -0.1..+0.1, mild negative -0.15..-0.4, strong negative -0.5..-0.8.
+Arousal: high +0.4..+0.8, moderate +0.2..+0.4, calm awake -0.1..+0.1, low -0.2..-0.5, very low -0.5..-0.8.
 
-5. Surprise
-Typical cues (≥2):
-- AU1 + AU2: brows raised symmetrically
-- AU5: widened eyes
-- AU26 or AU27: jaw drop / O-shaped mouth
+HISTORICAL CONTEXT (IF PROVIDED)
+You may receive a short baseline summary.
+- Use it ONLY to add ONE brief comparison in analysis_description (soft, non-judgmental).
+- Do NOT invent causes. Use cautious language (“may”, “could”).
 
-6. Disgust
-Typical cues (≥2):
-- AU9: nose wrinkler
-- AU10: upper lip raiser
-Optional: AU17, AU4
+OUTPUT (STRICT)
+Return ONLY this JSON shape and EXACT keys:
+{
+  "dominant_emotion": "joy|sadness|anger|fear|surprise|disgust|neutral",
+  "emotions": {"joy":n,"sadness":n,"anger":n,"fear":n,"surprise":n,"disgust":n,"neutral":n},
+  "valence": n,
+  "arousal": n,
+  "confidence": n,
+  "observations": [string,string,string],
+  "recommendations": [string,string,string],
+  "analysis_description": string,
+  "version": "1.0"
+}
 
-7. Neutral
-Choose neutral when:
-- No strong AUs present
-- Micro-expressions are weak
-- Face muscles appear relaxed
+Rules for observations (EXACTLY 3):
+- Each must reference 2+ visible cues AND include a “so what” for today.
+- No brackets [], no arrows, no bullet formatting inside strings.
 
-----------------------------------------------------------------------
-VALENCE & AROUSAL MAPPING GUIDELINES
-----------------------------------------------------------------------
-
-Valence (−1 = negative, +1 = positive):
-- Joy → positive (+0.5 to +1)
-- Neutral → ~0
-- Sadness, Anger, Fear, Disgust → negative (−0.3 to −1)
-- Surprise → slightly positive to neutral (+0.1 to 0.3) unless paired with tension (then neutral)
-
-Arousal (−1 = low, +1 = high):
-- Fear, Anger, Surprise → high (0.4 to 1)
-- Joy → moderate (0.2 to 0.6)
-- Disgust → moderate-low (−0.2 to 0.3)
-- Sadness → low (−0.4 to −0.1)
-- Neutral → very low (−0.2 to 0.2)
-
-Rules:
-- Use the emotion scores to weight valence/arousal.
-- If emotions are mixed or uncertain → shift values toward neutral (0).
-
-----------------------------------------------------------------------
-FALSE-POSITIVE PREVENTION
-----------------------------------------------------------------------
-- One single weak cue never determines an emotion.
-- Mouth curvature alone does NOT imply joy.
-- Wide eyes alone do NOT imply fear/surprise.
-- Brow tension with relaxed mouth often = focus, not anger.
-- If cues conflict → increase neutral.
-
-----------------------------------------------------------------------
-OUTPUT REQUIREMENTS
-----------------------------------------------------------------------
-
-You MUST output:
-- dominant_emotion
-- emotions (7 scores)
-- valence
-- arousal
-- confidence
-- 3–5 objective observations
-- 3–5 wellness recommendations (WHAT + WHY)
-- a 2–3 sentence analysis description
-- version string
-
-Normalization rule:
-- If the emotion scores do not sum to 1, normalize them automatically before returning JSON.
-
-Respond ONLY with valid JSON.
-
-Schema: {
-  "type": "object",
-  "required": ["dominant_emotion","emotions","valence","arousal","confidence","observations","recommendations","analysis_description","version"],
-  "properties": {
-    "dominant_emotion": {"type":"string","enum":["joy","sadness","anger","fear","surprise","disgust","neutral"]},
-    "emotions": {
-      "type":"object",
-      "required":["joy","sadness","anger","fear","surprise","disgust","neutral"],
-      "properties": {
-        "joy":{"type":"number","minimum":0,"maximum":1},
-        "sadness":{"type":"number","minimum":0,"maximum":1},
-        "anger":{"type":"number","minimum":0,"maximum":1},
-        "fear":{"type":"number","minimum":0,"maximum":1},
-        "surprise":{"type":"number","minimum":0,"maximum":1},
-        "disgust":{"type":"number","minimum":0,"maximum":1},
-        "neutral":{"type":"number","minimum":0,"maximum":1}
-      }
-    },
-    "valence":{"type":"number","minimum":-1,"maximum":1},
-    "arousal":{"type":"number","minimum":-1,"maximum":1},
-    "confidence":{"type":"number","minimum":0,"maximum":1},
-    "observations":{"type":"array","items":{"type":"string"}, "maxItems":5},
-    "recommendations":{"type":"array","items":{"type":"string"}, "maxItems":5},
-    "analysis_description":{"type":"string"},
-    "version":{"type":"string"}
-  }
-}`;
+Rules for recommendations (EXACTLY 3):
+- Under 5 minutes, decision-oriented, linked to the detected state.
+- Focus on what this state is GOOD FOR right now (focus/social/decision/reflection/energy regulation).
+`;
 
   private readonly SKIN_ANALYSIS_PROMPT = `You are a dermatology-assistant focused on NON-diagnostic cosmetic skin assessment from a single photo.
   Your goal is to provide practical, everyday, cosmetic guidance based on visible features. You may describe common cosmetic issues—including acne-like breakouts, clogged pores, shaving irritation, or sensitivity-related redness—but you must NOT diagnose medical skin diseases.
@@ -239,7 +159,7 @@ Schema: {
       "analysis_description":{"type":"string"},
       "version":{"type":"string"}
     }
-  }`;  
+  }`;
 
   public static getInstance(): OpenAIAnalysisService {
     if (!OpenAIAnalysisService.instance) {
@@ -308,8 +228,17 @@ Schema: {
       const userLanguage = await getUserLanguage();
       const languageInstruction = getLanguageInstruction(userLanguage);
 
+      // 🆕 Build historical context if userId is provided
+      let historicalContext = '';
+      if (request.userId) {
+        historicalContext = await this.buildHistoricalContext(request.userId);
+      }
+
+      // Combine base prompt with historical context
+      const fullPrompt = this.EMOTION_DETECTION_PROMPT + historicalContext;
+
       const analysisResult = await this.runVisionAnalysis<EmotionAnalysisResult>({
-        basePrompt: this.EMOTION_DETECTION_PROMPT,
+        basePrompt: fullPrompt,
         languageInstruction,
         imageBase64,
         parser: (content) => this.parseAndValidateEmotionResult(content),
@@ -950,6 +879,111 @@ Schema: {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
+    }
+  }
+
+  /**
+   * Build historical context string for emotion analysis prompt
+   * Fetches last 7 analyses and computes baseline for comparison
+   */
+  async buildHistoricalContext(userId: string): Promise<string> {
+    try {
+      const history = await EmotionAnalysisService.getEmotionHistory(userId, 7);
+
+      if (history.length < 2) {
+        // Not enough data for meaningful comparison
+        return '';
+      }
+
+      // Calculate averages from history (excluding the most recent which is the current one)
+      const historicalData = history.slice(1); // Skip current analysis
+      const avgValence = historicalData.reduce((sum, a) => sum + a.valence, 0) / historicalData.length;
+      const avgArousal = historicalData.reduce((sum, a) => sum + a.arousal, 0) / historicalData.length;
+
+      // Calculate dominant emotion distribution
+      const emotionCounts: Record<string, number> = {};
+      historicalData.forEach(a => {
+        emotionCounts[a.dominant_emotion] = (emotionCounts[a.dominant_emotion] || 0) + 1;
+      });
+      const sortedEmotions = Object.entries(emotionCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([emotion, count]) => `${emotion} (${Math.round(count / historicalData.length * 100)}%)`);
+
+      // Get trend from service
+      const context = await EmotionAnalysisService.getEmotionContextForAI(userId);
+      const trendText = context.trend === 'improving' ? 'migliorando' :
+        context.trend === 'declining' ? 'peggiorando' : 'stabile';
+
+      // 🆕 Extract contextual data from recent analyses (sleep, activity, stress patterns)
+      let contextualPatterns = '';
+      const analysesWithContext = historicalData.filter(a =>
+        a.analysis_data?.contextual_data?.sleep ||
+        a.analysis_data?.contextual_data?.activity ||
+        a.analysis_data?.contextual_data?.stress
+      );
+
+      if (analysesWithContext.length > 0) {
+        // Count patterns
+        const sleepCounts: Record<string, number> = {};
+        const activityCounts: Record<string, number> = {};
+        const stressCounts: Record<string, number> = {};
+
+        analysesWithContext.forEach(a => {
+          const ctx = a.analysis_data?.contextual_data;
+          if (ctx?.sleep) sleepCounts[ctx.sleep] = (sleepCounts[ctx.sleep] || 0) + 1;
+          if (ctx?.activity) activityCounts[ctx.activity] = (activityCounts[ctx.activity] || 0) + 1;
+          if (ctx?.stress) stressCounts[ctx.stress] = (stressCounts[ctx.stress] || 0) + 1;
+        });
+
+        const mostCommonSleep = Object.entries(sleepCounts).sort((a, b) => b[1] - a[1])[0];
+        const mostCommonActivity = Object.entries(activityCounts).sort((a, b) => b[1] - a[1])[0];
+        const mostCommonStress = Object.entries(stressCounts).sort((a, b) => b[1] - a[1])[0];
+
+        contextualPatterns = `
+CONTEXTUAL PATTERNS (from user's self-reports):
+- Most common sleep quality: ${mostCommonSleep ? mostCommonSleep[0] : 'unknown'}
+- Most common activity before check-in: ${mostCommonActivity ? mostCommonActivity[0] : 'unknown'}
+- Most common stress level: ${mostCommonStress ? mostCommonStress[0] : 'unknown'}
+
+Use these patterns to:
+1. Correlate emotional state with sleep quality (e.g., "quando dormi meno di 5h, la tua valence tende a essere più bassa")
+2. Suggest relevant activities based on what works for this user
+3. Acknowledge stress patterns and provide targeted recommendations
+`;
+      }
+
+      // 🆕 Convert to 0-100 scale for display in text
+      const avgValence0100 = Math.round(((avgValence + 1) / 2) * 100);
+      const avgArousal0100 = Math.round(((avgArousal + 1) / 2) * 100);
+
+      return `
+
+----------------------------------------------------------------------
+HISTORICAL CONTEXT (USE CAREFULLY)
+----------------------------------------------------------------------
+
+The user has ${historicalData.length} recent check-ins in the last 7 days.
+
+Recent baseline (for narrative context ONLY — do not change numeric field scales):
+- baseline_mood_score_0_100: ${avgValence0100} (50 = neutral, 0 = very negative, 100 = very positive)
+- baseline_energy_score_0_100: ${avgArousal0100} (50 = neutral, 0 = very calm/low, 100 = very activated/high)
+- dominant emotions: ${sortedEmotions.join(', ')}
+- overall trend: ${context.trend} (${trendText})
+
+${contextualPatterns} 
+
+INSTRUCTIONS:
+- Keep numeric JSON fields:
+  - "valence" in [-1, 1]
+  - "arousal" in [-1, 1]
+- You MAY reference baseline_mood_score_0_100 / baseline_energy_score_0_100 ONLY inside "analysis_description" as plain text.
+- If today seems meaningfully higher/lower than the baseline, mention it briefly (one sentence max).
+- Do not invent causal explanations. Use cautious language.
+`;
+    } catch (error) {
+      console.error('Error building historical context:', error);
+      return ''; // Return empty string on error - analysis continues without context
     }
   }
 }

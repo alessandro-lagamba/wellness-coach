@@ -120,9 +120,9 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
                 </SvgLinearGradient>
               </Defs>
 
-              {/* Grid lines */}
-              {[-1, -0.5, 0, 0.5, 1].map((value, index) => {
-                const normalizedValue = (value + 1) / 2;
+              {/* Grid lines - 🆕 Using 0-100 scale */}
+              {[0, 25, 50, 75, 100].map((value, index) => {
+                const normalizedValue = value / 100; // Convert 0-100 to 0-1 for positioning
                 const y = padding + (1 - normalizedValue) * (chartHeight - padding - bottomPadding);
                 return (
                   <Rect
@@ -137,9 +137,9 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
                 );
               })}
 
-              {/* 🔥 FIX: Y-axis labels */}
-              {[-1, 0, 1].map((value, index) => {
-                const normalizedValue = (value + 1) / 2;
+              {/* 🆕 FIX: Y-axis labels - Using 0-100 scale */}
+              {[0, 50, 100].map((value, index) => {
+                const normalizedValue = value / 100; // Convert 0-100 to 0-1 for positioning
                 const y = padding + (1 - normalizedValue) * (chartHeight - padding - bottomPadding);
                 return (
                   <React.Fragment key={`y-label-${index}`}>
@@ -150,7 +150,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
                       fontSize="10"
                       fill={colors.textSecondary}
                     >
-                      {value > 0 ? `+${value}` : value}
+                      {value}
                     </SvgText>
                   </React.Fragment>
                 );
@@ -252,7 +252,8 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
               <View style={styles.metricItem}>
                 <View style={[styles.metricDot, { backgroundColor: '#10b981' }]} />
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{labels.valence}</Text>
-                <Text style={[styles.metricValue, { color: colors.text }]}>{latestValence.toFixed(2)}</Text>
+                {/* 🆕 FIX: Normalize valence from [-1,1] to [0,100] */}
+                <Text style={[styles.metricValue, { color: colors.text }]}>{Math.round(((latestValence + 1) / 2) * 100)}</Text>
               </View>
             )}
 
@@ -260,7 +261,8 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
               <View style={styles.metricItem}>
                 <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{labels.arousal}</Text>
-                <Text style={[styles.metricValue, { color: colors.text }]}>{latestArousal.toFixed(2)}</Text>
+                {/* 🆕 FIX: Normalize arousal from [-1,1] to [0,100] */}
+                <Text style={[styles.metricValue, { color: colors.text }]}>{Math.round(((latestArousal + 1) / 2) * 100)}</Text>
               </View>
             )}
           </View>

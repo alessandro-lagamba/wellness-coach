@@ -5,6 +5,14 @@ import DailyCopilotDBService from './daily-copilot-db.service';
 import { RetryService } from './retry.service';
 import { getUserLanguage, getLanguageInstruction } from './language.service';
 
+export interface ThemeIndicator {
+  icon: string;
+  label: string;
+  labelEn: string;
+  color: string;
+  category: 'nutrition' | 'movement' | 'recovery' | 'mindfulness' | 'energy';
+}
+
 export interface DailyCopilotData {
   overallScore: number;        // 0-100
   mood: number;               // 1-5 dal check-in
@@ -36,10 +44,12 @@ export interface DailyCopilotData {
   }[];
   summary: {
     focus: string;
+    focusEn: string;
     energy: 'high' | 'medium' | 'low';
     recovery: 'excellent' | 'good' | 'needs_attention';
     mood: 'positive' | 'neutral' | 'low';
   };
+  themeIndicators: ThemeIndicator[];
 }
 
 export interface CopilotAnalysisRequest {
@@ -75,7 +85,7 @@ class DailyCopilotService {
     try {
       const currentUser = await AuthService.getCurrentUser();
       if (!currentUser?.id) {
-        console.log('No authenticated user for Daily Copilot');
+        // 🔥 PERF: Removed verbose logging
         return null;
       }
 
@@ -85,17 +95,13 @@ class DailyCopilotService {
 
       const dbResult = await this.dbService.getDailyCopilotData(currentUser.id, today);
       if (dbResult.success && dbResult.data) {
-        console.log('✅ Daily Copilot: Found existing analysis in database for today');
+        // 🔥 PERF: Removed verbose logging
         const savedData = this.convertDBRecordToCopilotData(dbResult.data);
-        console.log('✅ Daily Copilot: Converted data:', {
-          overallScore: savedData.overallScore,
-          recommendationsCount: savedData.recommendations?.length || 0,
-          summary: savedData.summary
-        });
+        // 🔥 PERF: Removed verbose logging
         this.setCachedAnalysis(cacheKey, savedData);
         return savedData;
       } else {
-        console.log('ℹ️ Daily Copilot: No existing analysis in database for today, will generate new one');
+        // 🔥 PERF: Removed verbose logging
       }
 
       // Check cache as fallback
@@ -104,9 +110,10 @@ class DailyCopilotService {
         return cached;
       }
 
-      console.log('🔄 Daily Copilot: Collecting analysis data...');
+      // 🔥 PERF: Removed verbose logging
       const analysisData = await this.collectAnalysisData(currentUser.id);
       if (!analysisData) {
+        // 🔥 PERF: Keep only warning
         console.warn('⚠️ Daily Copilot: No data available for analysis, using fallback');
         const fallbackData: CopilotAnalysisRequest = {
           mood: 3,
@@ -125,19 +132,10 @@ class DailyCopilotService {
         return fallbackAnalysis;
       }
 
-      console.log('✅ Daily Copilot: Analysis data collected:', {
-        mood: analysisData.mood,
-        sleep: analysisData.sleep,
-        healthMetrics: {
-          steps: analysisData.healthMetrics.steps,
-          hrv: analysisData.healthMetrics.hrv,
-          hydration: analysisData.healthMetrics.hydration,
-          restingHR: analysisData.healthMetrics.restingHR
-        }
-      });
+      // 🔥 PERF: Removed verbose logging
 
       // Genera l'analisi tramite AI
-      console.log('🤖 Daily Copilot: Generating AI analysis...');
+      // 🔥 PERF: Removed verbose logging
       const copilotData = await this.generateAIAnalysis(analysisData, currentUser.id);
       if (!copilotData) {
         console.warn('⚠️ Daily Copilot: AI analysis failed, using fallback');
@@ -148,10 +146,7 @@ class DailyCopilotService {
         return fallbackAnalysis;
       }
 
-      console.log('✅ Daily Copilot: AI analysis generated successfully:', {
-        overallScore: copilotData.overallScore,
-        recommendationsCount: copilotData.recommendations.length
-      });
+      // 🔥 PERF: Removed verbose logging
 
       // Save to database
       const saveResult = await this.dbService.saveDailyCopilotData(currentUser.id, copilotData);
@@ -769,33 +764,61 @@ OUTPUT FORMAT (return ONLY valid JSON):
       }
 
       if (parsedData && parsedData.recommendations) {
+        // Map AI recommendations
+        let recommendations = parsedData.recommendations.map((rec: any, index: number) => ({
+          id: rec.id || `ai-rec-${index}`,
+          priority: rec.priority || 'medium',
+          category: rec.category || 'energy',
+          action: rec.action || 'Azione generica',
+          reason: rec.reason || 'Motivo generico',
+          icon: rec.icon || '💡',
+          estimatedTime: rec.estimatedTime || '5 min',
+          actionable: true,
+          detailedExplanation: rec.detailedExplanation || (rec.reason ? `${rec.reason} Questa raccomandazione è basata sui tuoi dati attuali e può aiutarti a migliorare il tuo benessere generale.` : ''),
+          correlations: Array.isArray(rec.correlations) && rec.correlations.length > 0 ? rec.correlations : (rec.reason ? [`Questa raccomandazione è basata sui tuoi dati attuali`] : []),
+          expectedBenefits: Array.isArray(rec.expectedBenefits) && rec.expectedBenefits.length > 0 ? rec.expectedBenefits : (rec.reason ? [`Miglioramento del benessere generale`, `Supporto ai tuoi obiettivi di salute`] : [])
+        }));
+
+        // 🔥 NEW: Ensure at least 3 recommendations by supplementing with fallbacks
+        if (recommendations.length < 3) {
+          const fallbackRecs = this.generateRecommendations(data);
+          const usedCategories = new Set(recommendations.map(r => r.category));
+
+          for (const fallback of fallbackRecs) {
+            if (recommendations.length >= 3) break;
+            // Add fallbacks from different categories for variety
+            if (!usedCategories.has(fallback.category)) {
+              recommendations.push(fallback);
+              usedCategories.add(fallback.category);
+            }
+          }
+
+          // If still not enough, add any remaining fallbacks
+          for (const fallback of fallbackRecs) {
+            if (recommendations.length >= 3) break;
+            if (!recommendations.find(r => r.id === fallback.id)) {
+              recommendations.push(fallback);
+            }
+          }
+        }
+
         return {
           overallScore: parsedData.overallScore || this.calculateOverallScore(data),
           mood: data.mood,
           sleep: data.sleep,
           healthMetrics: data.healthMetrics,
-          recommendations: parsedData.recommendations.map((rec: any, index: number) => ({
-            id: rec.id || `ai-rec-${index}`,
-            priority: rec.priority || 'medium',
-            category: rec.category || 'energy',
-            action: rec.action || 'Azione generica',
-            reason: rec.reason || 'Motivo generico',
-            icon: rec.icon || '💡',
-            estimatedTime: rec.estimatedTime || '5 min',
-            actionable: true,
-            detailedExplanation: rec.detailedExplanation || (rec.reason ? `${rec.reason} Questa raccomandazione è basata sui tuoi dati attuali e può aiutarti a migliorare il tuo benessere generale.` : ''),
-            correlations: Array.isArray(rec.correlations) && rec.correlations.length > 0 ? rec.correlations : (rec.reason ? [`Questa raccomandazione è basata sui tuoi dati attuali`] : []),
-            expectedBenefits: Array.isArray(rec.expectedBenefits) && rec.expectedBenefits.length > 0 ? rec.expectedBenefits : (rec.reason ? [`Miglioramento del benessere generale`, `Supporto ai tuoi obiettivi di salute`] : [])
-          })),
+          recommendations,
           summary: (() => {
-            const fallbackSummary = this.generateSummary(data);
+            const fallbackSummary = this.generateSummary(data, recommendations);
             return {
               focus: parsedData.focus || fallbackSummary.focus,
+              focusEn: parsedData.focusEn || fallbackSummary.focusEn,
               energy: parsedData.energy || fallbackSummary.energy,
               recovery: parsedData.recovery || fallbackSummary.recovery,
               mood: parsedData.mood || fallbackSummary.mood
             };
-          })()
+          })(),
+          themeIndicators: this.extractThemeIndicators(recommendations),
         };
       }
     } catch (error) {
@@ -849,8 +872,8 @@ OUTPUT FORMAT (return ONLY valid JSON):
   private generateFallbackAnalysis(data: CopilotAnalysisRequest): DailyCopilotData {
     const overallScore = this.calculateOverallScore(data);
     const recommendations = this.generateRecommendations(data);
-    const summary = this.generateSummary(data);
-
+    const summary = this.generateSummary(data, recommendations);
+    const themeIndicators = this.extractThemeIndicators(recommendations);
 
     return {
       overallScore,
@@ -858,7 +881,8 @@ OUTPUT FORMAT (return ONLY valid JSON):
       sleep: data.sleep,
       healthMetrics: data.healthMetrics,
       recommendations,
-      summary
+      summary,
+      themeIndicators,
     };
   }
 
@@ -1047,9 +1071,76 @@ OUTPUT FORMAT (return ONLY valid JSON):
       });
     }
 
-    // Raccomandazione di energia se tutto va bene
-    if (recommendations.length === 0) {
-      recommendations.push({
+    // 🔥 NEW: Always add diverse "general wellness" recommendations to ensure variety
+    // These are positive suggestions that are always relevant
+    const generalRecommendations = [
+      {
+        id: 'mindfulness-moment',
+        priority: 'low' as const,
+        category: 'mindfulness' as const,
+        action: 'Prenditi 5 minuti per respirare profondamente',
+        reason: 'Un momento di calma migliora focus e concentrazione',
+        icon: '🧘',
+        estimatedTime: '5 min',
+        actionable: true,
+        detailedExplanation: `La respirazione profonda attiva il sistema nervoso parasimpatico, riducendo cortisolo e stress. Bastano 5 minuti di respiro consapevole per migliorare la chiarezza mentale e ridurre la tensione accumulata. Questa pratica può aumentare la variabilità della frequenza cardiaca (HRV) e migliorare la resilienza allo stress.`,
+        correlations: [
+          `Pratiche di mindfulness possono migliorare l'HRV (attualmente ${data.healthMetrics.hrv}ms)`,
+          `La respirazione profonda riduce la pressione sanguigna`,
+          `Momenti di calma migliorano la qualità del sonno`
+        ],
+        expectedBenefits: [
+          'Riduzione dello stress e dell\'ansia',
+          'Miglioramento della concentrazione',
+          'Aumento della chiarezza mentale',
+          'Supporto al recupero del sistema nervoso'
+        ]
+      },
+      {
+        id: 'movement-wellness',
+        priority: 'low' as const,
+        category: 'movement' as const,
+        action: 'Fai stretching per 5-10 minuti',
+        reason: 'Lo stretching mantiene flessibilità e riduce tensioni',
+        icon: '🤸',
+        estimatedTime: '10 min',
+        actionable: true,
+        detailedExplanation: `Lo stretching regolare migliora la flessibilità muscolare, riduce il rischio di infortuni e allevia le tensioni accumulate. È particolarmente utile se passi molto tempo seduto. Lo stretching può anche migliorare la circolazione e ridurre dolori muscolari.`,
+        correlations: [
+          `Lo stretching migliora la circolazione sanguigna`,
+          `Riduce la rigidità muscolare da sedentarietà`,
+          `Può migliorare la qualità del sonno riducendo tensioni`
+        ],
+        expectedBenefits: [
+          'Miglioramento della flessibilità',
+          'Riduzione delle tensioni muscolari',
+          'Prevenzione del dolore alla schiena',
+          'Miglioramento della postura'
+        ]
+      },
+      {
+        id: 'nutrition-boost',
+        priority: 'low' as const,
+        category: 'nutrition' as const,
+        action: 'Aggiungi una porzione di frutta o verdura al prossimo pasto',
+        reason: 'Vitamine e antiossidanti supportano energia e benessere',
+        icon: '🥗',
+        estimatedTime: '5 min',
+        actionable: true,
+        detailedExplanation: `Frutta e verdura forniscono vitamine, minerali e antiossidanti essenziali per il funzionamento ottimale del corpo. Aumentare l'assunzione di questi alimenti può migliorare energia, umore e salute generale.`,
+        correlations: [
+          `Una dieta ricca di nutrienti supporta l'energia mentale`,
+          `Gli antiossidanti riducono l'infiammazione e lo stress ossidativo`,
+          `Le fibre migliorano la salute digestiva`
+        ],
+        expectedBenefits: [
+          'Aumento dell\'energia naturale',
+          'Supporto al sistema immunitario',
+          'Miglioramento della salute digestiva',
+          'Protezione antiossidante per le cellule'
+        ]
+      },
+      {
         id: 'energy-maintenance',
         priority: 'low' as const,
         category: 'energy' as const,
@@ -1058,34 +1149,156 @@ OUTPUT FORMAT (return ONLY valid JSON):
         icon: '☀️',
         estimatedTime: '10 min',
         actionable: true,
-        detailedExplanation: `I tuoi parametri mostrano un buon equilibrio: umore ${data.mood}/5, sonno ${data.sleep.hours}h con qualità ${data.sleep.quality}%, HRV ${data.healthMetrics.hrv}ms. Una passeggiata al sole può ottimizzare ulteriormente questi valori. L'esposizione alla luce naturale regola il ritmo circadiano, aumenta la produzione di vitamina D e migliora l'umore attraverso la stimolazione della serotonina. Questo tipo di attività fisica leggera supporta anche la circolazione sanguigna e può migliorare la variabilità della frequenza cardiaca.`,
+        detailedExplanation: `I tuoi parametri mostrano un buon equilibrio: umore ${data.mood}/5, sonno ${data.sleep.hours}h con qualità ${data.sleep.quality}%, HRV ${data.healthMetrics.hrv}ms. Una passeggiata al sole può ottimizzare ulteriormente questi valori. L'esposizione alla luce naturale regola il ritmo circadiano, aumenta la produzione di vitamina D e migliora l'umore.`,
         correlations: [
           `Mood positivo (${data.mood}/5) supportato da buon sonno`,
           `HRV ${data.healthMetrics.hrv}ms indica buon recupero`,
-          `Sonno ${data.sleep.hours}h con qualità ${data.sleep.quality}% ottimale`,
-          `Steps ${data.healthMetrics.steps} possono essere incrementati per benefici aggiuntivi`,
-          `Idratazione ${data.healthMetrics.hydration}/8 bicchieri supporta l'energia`
+          `La luce solare regola il ritmo circadiano`
         ],
         expectedBenefits: [
           'Aumento della produzione di vitamina D',
           'Miglioramento del ritmo circadiano',
-          'Incremento della serotonina (ormone del buonumore)',
-          'Supporto al sistema immunitario',
-          'Miglioramento della qualità del sonno notturno',
-          'Riduzione dello stress e dell\'ansia',
-          'Miglioramento della circolazione sanguigna'
+          'Incremento della serotonina',
+          'Supporto al sistema immunitario'
         ]
-      });
+      }
+    ];
+
+    // Add general recommendations to fill gaps - prioritize different categories
+    const usedCategories = new Set(recommendations.map(r => r.category));
+    for (const generalRec of generalRecommendations) {
+      if (recommendations.length >= 4) break;
+      if (!usedCategories.has(generalRec.category)) {
+        recommendations.push(generalRec);
+        usedCategories.add(generalRec.category);
+      }
     }
 
     return recommendations.slice(0, 4); // Max 4 raccomandazioni
   }
 
   /**
-   * Genera il riassunto
+   * Category configuration for theme indicators
    */
-  private generateSummary(data: CopilotAnalysisRequest): {
+  private readonly CATEGORY_CONFIG: Record<string, { icon: string; labelIt: string; labelEn: string; color: string }> = {
+    nutrition: { icon: 'food-apple', labelIt: 'Nutrizione', labelEn: 'Nutrition', color: '#f59e0b' },
+    movement: { icon: 'run', labelIt: 'Movimento', labelEn: 'Movement', color: '#10b981' },
+    recovery: { icon: 'bed', labelIt: 'Recupero', labelEn: 'Recovery', color: '#3b82f6' },
+    mindfulness: { icon: 'meditation', labelIt: 'Mindfulness', labelEn: 'Mindfulness', color: '#8b5cf6' },
+    energy: { icon: 'lightning-bolt', labelIt: 'Energia', labelEn: 'Energy', color: '#f97316' },
+  };
+
+  /**
+   * Extracts theme indicators from recommendations
+   * ALWAYS returns exactly 3 indicators for consistent UI
+   * Fills with smart defaults if not enough recommendations
+   */
+  private extractThemeIndicators(recommendations: DailyCopilotData['recommendations']): ThemeIndicator[] {
+    // Default indicators for common wellness areas (always available)
+    const defaultIndicators: ThemeIndicator[] = [
+      { icon: 'lightning-bolt', label: 'Energia', labelEn: 'Energy', color: '#f97316', category: 'energy' },
+      { icon: 'food-apple', label: 'Nutrizione', labelEn: 'Nutrition', color: '#f59e0b', category: 'nutrition' },
+      { icon: 'run', label: 'Movimento', labelEn: 'Movement', color: '#10b981', category: 'movement' },
+      { icon: 'bed', label: 'Recupero', labelEn: 'Recovery', color: '#3b82f6', category: 'recovery' },
+      { icon: 'meditation', label: 'Mindfulness', labelEn: 'Mindfulness', color: '#8b5cf6', category: 'mindfulness' },
+    ];
+
+    if (!recommendations || recommendations.length === 0) {
+      // Return first 3 defaults
+      return defaultIndicators.slice(0, 3);
+    }
+
+    // Get unique categories from recommendations, preserving order by priority
+    const sortedRecs = [...recommendations].sort((a, b) => {
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
+
+    const uniqueCategories: string[] = [];
+    for (const rec of sortedRecs) {
+      if (!uniqueCategories.includes(rec.category)) {
+        uniqueCategories.push(rec.category);
+      }
+    }
+
+    // Build result from actual categories
+    const result: ThemeIndicator[] = uniqueCategories.map(category => {
+      const config = this.CATEGORY_CONFIG[category] || this.CATEGORY_CONFIG.energy;
+      return {
+        icon: config.icon,
+        label: config.labelIt,
+        labelEn: config.labelEn,
+        color: config.color,
+        category: category as ThemeIndicator['category'],
+      };
+    });
+
+    // ALWAYS fill to 3 indicators with defaults not already used
+    const usedCategories = new Set(result.map(r => r.category));
+    for (const defaultInd of defaultIndicators) {
+      if (result.length >= 3) break;
+      if (!usedCategories.has(defaultInd.category)) {
+        result.push(defaultInd);
+        usedCategories.add(defaultInd.category);
+      }
+    }
+
+    return result.slice(0, 3);
+  }
+
+  /**
+   * Generates dynamic focus phrase based on actual recommendation categories
+   */
+  private generateDynamicFocus(recommendations: DailyCopilotData['recommendations']): { focus: string; focusEn: string } {
+    if (!recommendations || recommendations.length === 0) {
+      return { focus: 'Benessere Generale', focusEn: 'General Wellness' };
+    }
+
+    // Count categories weighted by priority
+    const categoryWeight: Record<string, number> = {};
+    for (const rec of recommendations) {
+      const weight = rec.priority === 'high' ? 3 : rec.priority === 'medium' ? 2 : 1;
+      categoryWeight[rec.category] = (categoryWeight[rec.category] || 0) + weight;
+    }
+
+    // Sort by weight and get top 2
+    const sorted = Object.entries(categoryWeight)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map(([cat]) => cat);
+
+    const focusPhrases: Record<string, { it: string; en: string }> = {
+      nutrition: { it: 'Nutrizione', en: 'Nutrition' },
+      movement: { it: 'Movimento', en: 'Movement' },
+      recovery: { it: 'Recupero', en: 'Recovery' },
+      mindfulness: { it: 'Equilibrio Mentale', en: 'Mental Balance' },
+      energy: { it: 'Energia', en: 'Energy' },
+    };
+
+    if (sorted.length >= 2) {
+      const first = focusPhrases[sorted[0]] || { it: 'Benessere', en: 'Wellness' };
+      const second = focusPhrases[sorted[1]] || { it: 'Crescita', en: 'Growth' };
+      return {
+        focus: `${first.it} & ${second.it}`,
+        focusEn: `${first.en} & ${second.en}`,
+      };
+    } else if (sorted.length === 1) {
+      const single = focusPhrases[sorted[0]] || { it: 'Benessere', en: 'Wellness' };
+      return {
+        focus: `${single.it} & Benessere`,
+        focusEn: `${single.en} & Wellness`,
+      };
+    }
+
+    return { focus: 'Benessere Generale', focusEn: 'General Wellness' };
+  }
+
+  /**
+   * Genera il riassunto - now uses dynamic focus based on recommendations
+   */
+  private generateSummary(data: CopilotAnalysisRequest, recommendations?: DailyCopilotData['recommendations']): {
     focus: string;
+    focusEn: string;
     energy: 'high' | 'medium' | 'low';
     recovery: 'excellent' | 'good' | 'needs_attention';
     mood: 'positive' | 'neutral' | 'low';
@@ -1098,12 +1311,21 @@ OUTPUT FORMAT (return ONLY valid JSON):
 
     const mood: 'positive' | 'neutral' | 'low' = data.mood >= 4 ? 'positive' : data.mood >= 3 ? 'neutral' : 'low';
 
-    const focus = energy === 'low' ? 'Energia & Recupero' :
-      recovery === 'needs_attention' ? 'Riposo & Benessere' :
-        data.healthMetrics.steps < 5000 ? 'Movimento & Vitalità' :
-          'Mantenimento & Crescita';
+    // Use dynamic focus based on recommendations if available
+    const { focus, focusEn } = recommendations && recommendations.length > 0
+      ? this.generateDynamicFocus(recommendations)
+      : {
+        focus: energy === 'low' ? 'Energia & Recupero' :
+          recovery === 'needs_attention' ? 'Riposo & Benessere' :
+            data.healthMetrics.steps < 5000 ? 'Movimento & Vitalità' :
+              'Mantenimento & Crescita',
+        focusEn: energy === 'low' ? 'Energy & Recovery' :
+          recovery === 'needs_attention' ? 'Rest & Wellness' :
+            data.healthMetrics.steps < 5000 ? 'Movement & Vitality' :
+              'Maintenance & Growth',
+      };
 
-    return { focus, energy, recovery, mood };
+    return { focus, focusEn, energy, recovery, mood };
   }
 
   /**
@@ -1160,10 +1382,14 @@ OUTPUT FORMAT (return ONLY valid JSON):
       // 🔥 FIX: Assicurati che summary abbia i campi necessari
       const summaryData = {
         focus: summary.focus || 'Mantenimento & Crescita',
+        focusEn: summary.focusEn || 'Maintenance & Growth',
         energy: summary.energy || 'medium',
         recovery: summary.recovery || 'good',
         mood: summary.mood || 'neutral',
       };
+
+      // Extract theme indicators from recommendations
+      const themeIndicators = this.extractThemeIndicators(recommendationsArray);
 
       return {
         overallScore: dbRecord.overall_score || 50,
@@ -1177,6 +1403,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
         healthMetrics: healthMetrics,
         recommendations: recommendationsArray,
         summary: summaryData,
+        themeIndicators,
       };
     } catch (error) {
       console.error('❌ Error converting DB record to CopilotData:', error);
@@ -1198,10 +1425,12 @@ OUTPUT FORMAT (return ONLY valid JSON):
         recommendations: [],
         summary: {
           focus: 'Mantenimento & Crescita',
+          focusEn: 'Maintenance & Growth',
           energy: 'medium',
           recovery: 'good',
           mood: 'neutral',
         },
+        themeIndicators: this.extractThemeIndicators([]),
       };
     }
   }

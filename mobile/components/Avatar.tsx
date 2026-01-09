@@ -20,9 +20,9 @@ const USER_PLUS_ICON = require('../assets/user-plus.png');
 // Responsive avatar sizing
 const { width: screenWidth } = Dimensions.get('window');
 const isNarrowScreen = screenWidth < 380;
-const AVATAR_SIZE = isNarrowScreen ? 120 : 160;
-const AVATAR_INNER_SIZE = isNarrowScreen ? 108 : 144;
-const MIC_BUTTON_SIZE = isNarrowScreen ? 40 : 48;
+const AVATAR_SIZE = isNarrowScreen ? 100 : 120;
+const AVATAR_INNER_SIZE = isNarrowScreen ? 90 : 108;
+const MIC_BUTTON_SIZE = isNarrowScreen ? 36 : 42;
 
 
 interface AvatarProps {

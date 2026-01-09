@@ -9,7 +9,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 const { width } = Dimensions.get('window');
 
 interface SkinHealthChartProps {
-  data: Array<{ date: string; texture: number; redness: number; hydration: number; overall: number }>;
+  data: Array<{ date: string; texture: number; redness: number; hydration: number; oiliness?: number; overall: number }>;
   title: string;
   subtitle?: string;
   onPress?: () => void;
@@ -20,13 +20,13 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
   const { t } = useTranslation();
   // Generate sample data if none provided
   const chartData = data.length > 0 ? data : [
-    { date: '1/1', texture: 65, redness: 25, hydration: 40, overall: 55 },
-    { date: '1/2', texture: 68, redness: 22, hydration: 42, overall: 58 },
-    { date: '1/3', texture: 70, redness: 20, hydration: 45, overall: 60 },
-    { date: '1/4', texture: 72, redness: 18, hydration: 48, overall: 62 },
-    { date: '1/5', texture: 75, redness: 15, hydration: 50, overall: 65 },
-    { date: '1/6', texture: 73, redness: 17, hydration: 47, overall: 63 },
-    { date: '1/7', texture: 76, redness: 14, hydration: 52, overall: 66 },
+    { date: '1/1', texture: 65, redness: 25, hydration: 40, oiliness: 35, overall: 55 },
+    { date: '1/2', texture: 68, redness: 22, hydration: 42, oiliness: 38, overall: 58 },
+    { date: '1/3', texture: 70, redness: 20, hydration: 45, oiliness: 40, overall: 60 },
+    { date: '1/4', texture: 72, redness: 18, hydration: 48, oiliness: 42, overall: 62 },
+    { date: '1/5', texture: 75, redness: 15, hydration: 50, oiliness: 45, overall: 65 },
+    { date: '1/6', texture: 73, redness: 17, hydration: 47, oiliness: 43, overall: 63 },
+    { date: '1/7', texture: 76, redness: 14, hydration: 52, oiliness: 46, overall: 66 },
   ];
 
   const hasData = data.length > 0;
@@ -228,6 +228,12 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
               <View style={[styles.metricDot, { backgroundColor: '#f59e0b' }]} />
               <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{t('analysis.skin.metrics.hydration')}</Text>
               <Text style={[styles.metricValue, { color: colors.text }]}>{chartData[chartData.length - 1]?.hydration || 0}</Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <View style={[styles.metricDot, { backgroundColor: '#a855f7' }]} />
+              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{t('analysis.skin.metrics.oiliness')}</Text>
+              <Text style={[styles.metricValue, { color: colors.text }]}>{chartData[chartData.length - 1]?.oiliness || 0}</Text>
             </View>
           </View>
 

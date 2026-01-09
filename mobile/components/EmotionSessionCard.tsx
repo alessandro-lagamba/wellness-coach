@@ -159,13 +159,18 @@ const MetricTile: React.FC<{
         ? '#f59e0b'
         : '#3b82f6';
 
-  const display = value.toFixed(2);
+  // 🆕 Normalize valence [-1..1] → 0..100, arousal [-1..1] → 0..100 (SAME FORMULA!)
+  const normalizedValue =
+    metricKey === 'valence'
+      ? Math.round(((value + 1) / 2) * 100)
+      : Math.round(((value + 1) / 2) * 100); // Arousal is also -1 to 1!
+  const display = String(normalizedValue);
 
-  // percentuale barra: valence [-1..1] → 0..100, arousal [0..1] → 0..100
+  // percentuale barra: both valence and arousal are [-1..1] → 0..100
   const percent =
     metricKey === 'valence'
       ? Math.max(0, Math.min(100, ((value + 1) / 2) * 100))
-      : Math.max(0, Math.min(100, value * 100));
+      : Math.max(0, Math.min(100, ((value + 1) / 2) * 100));
 
   return (
     <View style={[styles.tile, { borderColor: `${valueColor}22`, backgroundColor: colors.surface }]}>

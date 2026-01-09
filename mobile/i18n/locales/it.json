@@ -592,8 +592,8 @@
           "veryLow": "Molto Basso",
           "veryHigh": "Molto Alto"
         },
-        "valenceDescription": "Valence misura quanto positive o negative sono le tue emozioni. Valori alti indicano felicità e soddisfazione, mentre valori bassi indicano tristezza o preoccupazione. Questo metrico ti aiuta a capire il tuo stato emotivo generale.",
-        "arousalDescription": "Arousal misura l'intensità delle tue emozioni, indipendentemente dal fatto che siano positive o negative. Valori alti indicano eccitazione o stress, mentre valori bassi indicano calma o rilassamento. Ti aiuta a capire il tuo livello di attivazione emotiva.",
+        "valenceDescription": "Valence misura quanto positive o negative sono le tue emozioni (0-100). Valori alti (>70) indicano felicità, mentre valori bassi (<30) indicano tristezza. Un valore di 50 è neutro. Calcolato dai segnali facciali rilevati.",
+        "arousalDescription": "Arousal misura l'intensità delle tue emozioni (0-100). Valori alti (>70) indicano eccitazione o stress, mentre valori bassi (<30) indicano calma e rilassamento. Calcolato dall'intensità dei segnali espressivi.",
         "sessionsDescription": "Il numero di sessioni di analisi emotiva che hai completato questo mese. Tracciare regolarmente le tue emozioni ti aiuta a comprendere meglio i tuoi pattern emotivi e il tuo benessere generale."
       },
       "names": {
@@ -723,10 +723,10 @@
             "Concentrati su alternative positive"
           ],
           "neutral": [
-            "Pratica la consapevolezza",
-            "Impegnati in attività di routine",
-            "Usa questa calma per la riflessione",
-            "Mantieni questo equilibrio"
+            "Fai una passeggiata all'aria aperta per prendere un po' di sole",
+            "Chiama o incontra qualcuno che ti fa stare bene",
+            "Dedica del tempo a un'attività creativa che ti piace",
+            "Goditi questo momento di calma con qualcosa che ami"
           ]
         },
         "noTips": "Nessun consiglio disponibile al momento",
@@ -2310,5 +2310,23 @@
     "lastUpdated": "Ultimo aggiornamento alle {{time}}",
     "syncHint": "Per mostrare sempre i dati più recenti, sincronizza manualmente il tuo fitness tracker con Health Connect",
     "noData": "Nessun dato recente disponibile"
+  },
+  "insights": {
+    "actions": {
+      "start": "Inizia",
+      "remind": "Promemoria"
+    }
+  },
+  "gauge": {
+    "buckets": {
+      "negative": "Negativo",
+      "neutral": "Neutro",
+      "positive": "Positivo",
+      "veryPositive": "Molto Positivo",
+      "low": "Basso",
+      "medium": "Medio",
+      "high": "Alto",
+      "veryHigh": "Molto Alto"
+    }
   }
 }

@@ -59,6 +59,7 @@ import { IntelligentInsightsSection } from './IntelligentInsightsSection';
 import { VideoHero } from './VideoHero';
 import { EmptyStateCard } from './EmptyStateCard';
 import { FirstAnalysisCelebration } from './FirstAnalysisCelebration';
+import { WeeklyEmotionRecap } from './WeeklyEmotionRecap';
 // 🔥 FIX: ContextualPermissionModal rimosso - non serve più
 import { OnboardingService } from '../services/onboarding.service';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
@@ -142,16 +143,16 @@ export const EmotionDetectionScreen: React.FC = () => {
 
   // State to force re-render when data is loaded
   const [dataLoaded, setDataLoaded] = useState(false);
-  
+
   // Loading state to prevent empty state flash
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
-  
+
   // First analysis celebration
   const [showFirstAnalysisCelebration, setShowFirstAnalysisCelebration] = useState(false);
-  
+
   // Contextual permission modal
   // 🔥 FIX: Modal rimosso - non serve più
 
@@ -238,7 +239,7 @@ export const EmotionDetectionScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
-      
+
       const reloadData = async () => {
         try {
           await ChartDataService.loadEmotionDataForCharts();
@@ -499,12 +500,16 @@ export const EmotionDetectionScreen: React.FC = () => {
 
         // Analyze the selected image
         // 🔥 FIX: Rimuoviamo console.log eccessivi
+        // 🆕 Get user ID for historical context
+        const currentUser = await AuthService.getCurrentUser();
+        const userId = currentUser?.id;
+
         // Perform analysis
         const result = await analysisServiceRef.current.analyzeEmotion(
           asset.uri,
           sessionId,
           i18n?.language || 'en',
-          { source: 'gallery' }
+          { source: 'gallery', userId }
         );
         if (result.success && result.data) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
@@ -676,7 +681,7 @@ export const EmotionDetectionScreen: React.FC = () => {
 
         try {
           const capturePromise = ref.current.takePictureAsync(strategy.options);
-          
+
           // 🔥 FIX: Memory leak - puliamo il timeout se il componente viene smontato
           let timeoutId: ReturnType<typeof setTimeout> | null = null;
           const timeoutPromise = new Promise((_, reject) => {
@@ -754,11 +759,15 @@ export const EmotionDetectionScreen: React.FC = () => {
       const dataUrl = `data:image/jpeg;base64,${photo.base64}`;
       // 🔥 FIX: Rimuoviamo console.log eccessivi
 
+      // 🆕 Get user ID for historical context
+      const currentUser = await AuthService.getCurrentUser();
+      const userId = currentUser?.id;
+
       const analysisResult = await analysisServiceRef.current.analyzeEmotion(
         dataUrl,
         'emotion-analysis-session',
         i18n?.language || 'en',
-        { source: 'camera' }
+        { source: 'camera', userId }
       );
       if (!analysisResult.success || !analysisResult.data) {
         throw new Error(analysisResult.error || 'Analysis failed.');
@@ -785,6 +794,10 @@ export const EmotionDetectionScreen: React.FC = () => {
               confidence: analysisResult.data.confidence || 0,
               analysisData: {
                 ...analysisResult.data,
+                // 🆕 Explicitly include AI text outputs for persistence
+                analysis_description: analysisResult.data.analysis_description || '',
+                observations: analysisResult.data.observations || [],
+                recommendations: analysisResult.data.recommendations || [],
                 // Include the full emotions breakdown
                 emotions: analysisResult.data.emotions || {},
                 timestamp: analysisResult.data.timestamp || new Date().toISOString(),
@@ -817,13 +830,10 @@ export const EmotionDetectionScreen: React.FC = () => {
               const store = useAnalysisStore.getState();
               store.addEmotionSession(emotionSession);
 
-              // 🆕 FIX: Reload data from database to ensure latest session is shown
-              // This ensures the store is synced with the database
-              try {
-                await ChartDataService.loadEmotionDataForCharts();
-              } catch (reloadError) {
-                console.error('Error reloading emotion data after save:', reloadError);
-              }
+              // ✅ FIX: REMOVED loadEmotionDataForCharts() call here
+              // addEmotionSession already correctly updates latestEmotionSession
+              // Calling loadEmotionDataForCharts was causing clearHistory() which
+              // reset latestEmotionSession to null, making EmotionSessionCard show fallback (50/50)
 
               // 🔥 FIX: Rimosso modal FirstAnalysisCelebration - utente lo trova brutto
               // Ora segniamo solo il completamento della prima analisi senza mostrare il modal
@@ -1219,96 +1229,103 @@ export const EmotionDetectionScreen: React.FC = () => {
             />
           )}
 
+          {/* 🆕 Weekly Emotion Recap - Show if there are any sessions */}
+          {latestEmotionSession && (
+            <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+              <WeeklyEmotionRecap />
+            </View>
+          )}
+
           {/* Recent Session Section - Only show if there are sessions */}
           {latestEmotionSession && (
             <>
-          <View style={styles.sectionHeader}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View>
-                <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.recent.title')}</Text>
-                <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.recent.subtitle')}</Text>
+              <View style={styles.sectionHeader}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View>
+                    <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.recent.title')}</Text>
+                    <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.recent.subtitle')}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      // 🔥 FIX: Rimuoviamo console.log eccessivi
+                      try {
+                        await ChartDataService.loadEmotionDataForCharts();
+                        if (isMountedRef.current) {
+                          setDataLoaded(prev => !prev); // Toggle to force re-render
+                        }
+                        // 🔥 FIX: Rimuoviamo console.log eccessivi
+                      } catch (error) {
+                        console.error('❌ Manual reload failed:', error);
+                      }
+                    }}
+                    style={{
+                      padding: 8,
+                      backgroundColor: themeColors.surfaceMuted,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: themeColors.border
+                    }}
+                  >
+                    <FontAwesome name="refresh" size={16} color={themeColors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
               </View>
+
+              {(() => {
+                try {
+                  // Always show the card, with fallback data if no session exists
+                  const fallbackSession = {
+                    id: 'fallback',
+                    timestamp: new Date(),
+                    dominant: 'neutral',
+                    avg_valence: 0,
+                    avg_arousal: 0.5,
+                    confidence: 0.5,
+                    duration: 0,
+                  };
+
+                  return (
+                    <EmotionSessionCard
+                      session={latestEmotionSession || fallbackSession}
+                    />
+                  );
+                } catch (error) {
+                  // 🔥 FIX: Solo errori critici in console
+                  console.error('❌ Failed to load latest emotion session:', error);
+                  // Fallback session in case of error
+                  const fallbackSession = {
+                    id: 'error-fallback',
+                    timestamp: new Date(),
+                    dominant: 'neutral',
+                    avg_valence: 0,
+                    avg_arousal: 0.5,
+                    confidence: 0.5,
+                    duration: 0,
+                  };
+                  return <EmotionSessionCard session={fallbackSession} />;
+                }
+              })()}
+
+              {/* Detailed Analysis Button */}
               <TouchableOpacity
-                onPress={async () => {
-                  // 🔥 FIX: Rimuoviamo console.log eccessivi
-                  try {
-                    await ChartDataService.loadEmotionDataForCharts();
-                    if (isMountedRef.current) {
-                      setDataLoaded(prev => !prev); // Toggle to force re-render
-                    }
-                    // 🔥 FIX: Rimuoviamo console.log eccessivi
-                  } catch (error) {
-                    console.error('❌ Manual reload failed:', error);
-                  }
-                }}
-                style={{
-                  padding: 8,
-                  backgroundColor: themeColors.surfaceMuted,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: themeColors.border
-                }}
+                style={styles.detailedAnalysisButton}
+                onPress={() => setShowDetailedAnalysis(true)}
+                activeOpacity={0.8}
               >
-                <FontAwesome name="refresh" size={16} color={themeColors.textSecondary} />
+                <LinearGradient
+                  colors={['#8b5cf6', '#a855f7']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.detailedAnalysisButtonGradient}
+                >
+                  <MaterialCommunityIcons name="brain" size={20} color="#ffffff" />
+                  <Text style={styles.detailedAnalysisButtonText}>
+                    {t('analysis.emotion.detailedAnalysis.buttonText')}
+                  </Text>
+                  <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
+                </LinearGradient>
               </TouchableOpacity>
-            </View>
-          </View>
-
-          {(() => {
-            try {
-              // Always show the card, with fallback data if no session exists
-              const fallbackSession = {
-                id: 'fallback',
-                timestamp: new Date(),
-                dominant: 'neutral',
-                avg_valence: 0,
-                avg_arousal: 0.5,
-                confidence: 0.5,
-                duration: 0,
-              };
-
-              return (
-                <EmotionSessionCard
-                  session={latestEmotionSession || fallbackSession}
-                />
-              );
-            } catch (error) {
-              // 🔥 FIX: Solo errori critici in console
-              console.error('❌ Failed to load latest emotion session:', error);
-              // Fallback session in case of error
-              const fallbackSession = {
-                id: 'error-fallback',
-                timestamp: new Date(),
-                dominant: 'neutral',
-                avg_valence: 0,
-                avg_arousal: 0.5,
-                confidence: 0.5,
-                duration: 0,
-              };
-              return <EmotionSessionCard session={fallbackSession} />;
-            }
-          })()}
-
-          {/* Detailed Analysis Button */}
-          <TouchableOpacity
-            style={styles.detailedAnalysisButton}
-            onPress={() => setShowDetailedAnalysis(true)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#8b5cf6', '#a855f7']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.detailedAnalysisButtonGradient}
-            >
-              <MaterialCommunityIcons name="brain" size={20} color="#ffffff" />
-              <Text style={styles.detailedAnalysisButtonText}>
-                {t('analysis.emotion.detailedAnalysis.buttonText')}
-              </Text>
-              <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
-            </LinearGradient>
-          </TouchableOpacity>
-          </>
+            </>
           )}
 
           {/* Quick Stats Section */}
@@ -1330,11 +1347,11 @@ export const EmotionDetectionScreen: React.FC = () => {
                   : 0;
                 const normalizedValence = Math.round(((avgValence + 1) / 2) * 100);
 
-                // Calculate average arousal (normalize from 0..1 to 0..100)
+                // 🆕 FIX: Calculate average arousal (normalize from -1..1 to 0..100, SAME as valence!)
                 const avgArousal = emotionHistory.length > 0
                   ? emotionHistory.reduce((sum, session) => sum + (session.avg_arousal || 0), 0) / emotionHistory.length
-                  : 0.5;
-                const normalizedArousal = Math.round(avgArousal * 100);
+                  : 0; // Default to 0 which normalizes to 50
+                const normalizedArousal = Math.round(((avgArousal + 1) / 2) * 100);
 
                 // Format dates for historical data (use actual timestamps)
                 const formatDate = (timestamp: Date) => {
@@ -1370,7 +1387,8 @@ export const EmotionDetectionScreen: React.FC = () => {
                       description={t('analysis.emotion.metrics.arousalDescription')}
                       historicalData={emotionHistory.map((session) => ({
                         date: formatDate(session.timestamp),
-                        value: Math.round((session.avg_arousal || 0) * 100),
+                        // 🆕 FIX: Normalize arousal from -1..1 to 0..100 (same as valence)
+                        value: Math.round(((session.avg_arousal || 0) + 1) / 2 * 100),
                       }))}
                       metric="arousal"
                       icon="trending-up"
@@ -1435,13 +1453,13 @@ export const EmotionDetectionScreen: React.FC = () => {
             try {
               const store = useAnalysisStore.getState();
               const emotionHistory = store.getSafeEmotionHistory();
-              
+
               // Format date helper function
               const formatDate = (timestamp: Date) => {
                 const date = new Date(timestamp);
                 return `${date.getDate()}/${date.getMonth() + 1}`;
               };
-              
+
               return (
                 <EmotionTrendChart
                   data={emotionHistory.map((session) => ({

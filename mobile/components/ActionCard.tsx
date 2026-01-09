@@ -42,7 +42,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   const { language } = useTranslation();
   const isDark = mode === 'dark';
   const labels = {
-    addButton: language === 'it' ? 'Aggiungi oggi' : 'Add today',
+    addButton: language === 'it' ? 'Aggiungi' : 'Add',
     addedTitle: language === 'it' ? 'Attività aggiunta' : 'Added to routine',
     addedMessage:
       language === 'it'
@@ -465,13 +465,11 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: 0,
     gap: 8,
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
+    alignItems: 'center',
   },
   completeButton: {
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 'auto',
-    minWidth: 100,
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

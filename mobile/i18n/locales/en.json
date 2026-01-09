@@ -569,8 +569,8 @@
         },
         "valenceDesc": "Tracks the positivity of your expression and overall affect.",
         "arousalDesc": "Measures the intensity or energy level detected at the moment.",
-        "valenceDescription": "Valence measures how positive or negative your emotions are. High values indicate happiness and satisfaction, while low values indicate sadness or worry. This metric helps you understand your overall emotional state.",
-        "arousalDescription": "Arousal measures the intensity of your emotions, regardless of whether they are positive or negative. High values indicate excitement or stress, while low values indicate calm or relaxation. It helps you understand your level of emotional activation.",
+        "valenceDescription": "Valence measures how positive or negative your emotions are (0-100). High values (>70) indicate happiness, while low values (<30) indicate sadness. A value of 50 is neutral. Calculated from detected facial signals.",
+        "arousalDescription": "Arousal measures the intensity of your emotions (0-100). High values (>70) indicate excitement or stress, while low values (<30) indicate calm and relaxation. Calculated from the intensity of expressive signals.",
         "sessionsDescription": "The number of emotion analysis sessions you have completed this month. Regularly tracking your emotions helps you better understand your emotional patterns and overall well-being."
       },
       "names": {
@@ -700,10 +700,10 @@
             "Focus on positive alternatives"
           ],
           "neutral": [
-            "Practice mindfulness",
-            "Engage in routine activities",
-            "Use this calm for reflection",
-            "Maintain this balance"
+            "Take a walk outside and soak up some sunlight",
+            "Call or meet someone who makes you feel good",
+            "Spend time on a creative activity you enjoy",
+            "Embrace this calm moment with something you love"
           ]
         },
         "noTips": "No tips available at the moment",
@@ -2257,5 +2257,23 @@
     "lastUpdated": "Last updated at {{time}}",
     "syncHint": "To always show the latest data, manually sync your fitness tracker with Health Connect",
     "noData": "No recent data available"
+  },
+  "insights": {
+    "actions": {
+      "start": "Start",
+      "remind": "Reminder"
+    }
+  },
+  "gauge": {
+    "buckets": {
+      "negative": "Negative",
+      "neutral": "Neutral",
+      "positive": "Positive",
+      "veryPositive": "Very Positive",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "veryHigh": "Very High"
+    }
   }
 }

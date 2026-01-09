@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,9 @@ import { EnhancedMetricTile } from './EnhancedMetricTile';
 import { ActionCard } from './ActionCard';
 import { MetricsService } from '../services/metrics.service';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
+import { AuthService } from '../services/auth.service';
+import { EmotionAnalysisService } from '../services/emotion-analysis.service';
+import { Feather } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -67,6 +70,69 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
     return () => subscription.remove();
   }, [onGoBack]);
 
+  // 🆕 Contextual Questions State
+  const [contextAnswers, setContextAnswers] = useState<{
+    sleep?: string;
+    activity?: string;
+    stress?: string;
+  }>({});
+  const [contextSubmitted, setContextSubmitted] = useState(false);
+
+  // 🆕 Contextual Questions definitions with emoji-enhanced labels
+  const contextualQuestions = useMemo(() => [
+    {
+      id: 'sleep',
+      question: language === 'it' ? 'Come hai dormito?' : 'How did you sleep?',
+      icon: 'moon' as const,
+      options: language === 'it'
+        ? [{ value: 'good', label: '✨ Bene (7-9h)' }, { value: 'okay', label: '😐 Discretamente (5-7h)' }, { value: 'bad', label: '😫 Male (<5h)' }]
+        : [{ value: 'good', label: '✨ Well (7-9h)' }, { value: 'okay', label: '😐 Okay (5-7h)' }, { value: 'bad', label: '😫 Poorly (<5h)' }],
+    },
+    {
+      id: 'activity',
+      question: language === 'it' ? "Cosa hai fatto nell'ultima ora?" : 'What were you doing?',
+      icon: 'activity' as const,
+      options: language === 'it'
+        ? [{ value: 'work', label: '💼 Lavoro' }, { value: 'relax', label: '🛋️ Relax' }, { value: 'exercise', label: '🏃 Esercizio' }, { value: 'social', label: '👥 Social' }]
+        : [{ value: 'work', label: '💼 Work' }, { value: 'relax', label: '🛋️ Relax' }, { value: 'exercise', label: '🏃 Exercise' }, { value: 'social', label: '👥 Social' }],
+    },
+    {
+      id: 'stress',
+      question: language === 'it' ? 'Livello di stress oggi?' : 'Stress level today?',
+      icon: 'thermometer' as const,
+      options: language === 'it'
+        ? [{ value: 'low', label: '😌 Basso' }, { value: 'medium', label: '😅 Medio' }, { value: 'high', label: '😤 Alto' }]
+        : [{ value: 'low', label: '😌 Low' }, { value: 'medium', label: '😅 Medium' }, { value: 'high', label: '😤 High' }],
+    },
+  ], [language]);
+
+  // 🆕 Save contextual answers to database
+  const handleSaveContext = useCallback(async () => {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (currentUser && fullAnalysisResult) {
+        // Get the latest analysis and update its analysis_data
+        const latest = await EmotionAnalysisService.getLatestEmotionAnalysis(currentUser.id, true);
+        if (latest) {
+          // 🆕 Actually persist the context data to Supabase
+          const success = await EmotionAnalysisService.updateContextData(latest.id, {
+            sleep: contextAnswers.sleep,
+            activity: contextAnswers.activity,
+            stress: contextAnswers.stress,
+          });
+
+          if (success) {
+            console.log('✅ Context answers saved to database:', contextAnswers);
+            setContextSubmitted(true);
+          } else {
+            console.error('Failed to save context answers');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error saving context:', error);
+    }
+  }, [contextAnswers, fullAnalysisResult]);
 
   // Helper to filter out AU (Action Unit) technical observations
   const filterObservations = (observations: string[]): string[] => {
@@ -394,10 +460,11 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Section */}
+        {/* 🆕 Dynamic wellness score: 70% valence + 30% arousal for balanced score */}
         <ResultHero
           title={emotionData.title}
           subtitle={language === 'it' ? 'Punteggio Benessere' : 'Wellness Score'}
-          score={emotionData.wellnessScore}
+          score={Math.round((((valence + 1) / 2) * 0.7 + ((arousal + 1) / 2) * 0.3) * 100)} // Both normalized: valence 70% + arousal 30%
           color={emotionData.gradient[0]}
           style={styles.hero}
         />
@@ -515,6 +582,105 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
                 />
               ))}
             </>
+          )}
+
+          {/* 🆕 Contextual Questions Card */}
+          {/* 🆕 Contextual Questions Card - Premium Design */}
+          {!contextSubmitted && (
+            <View style={[styles.contextCard, { backgroundColor: colors.surface, borderColor: 'transparent', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 }]}>
+              <View style={styles.contextHeader}>
+                <View style={[styles.contextIconBadge, { backgroundColor: colors.primary + '15' }]}>
+                  <Feather name="help-circle" size={20} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.contextTitle, { color: colors.text }]}>
+                    {language === 'it' ? 'Aiutaci a capire meglio' : 'Help us understand'}
+                  </Text>
+                  <Text style={[styles.contextSubtitle, { color: colors.textSecondary, marginBottom: 0 }]}>
+                    {language === 'it'
+                      ? 'Confrontiamo i tuoi risultati con il tuo contesto'
+                      : 'We match your results with your context'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={{ gap: 20, marginTop: 16 }}>
+                {contextualQuestions.map((q) => (
+                  <View key={q.id}>
+                    <View style={styles.questionHeader}>
+                      <Text style={[styles.questionText, { color: colors.text }]}>{q.question}</Text>
+                    </View>
+                    <View style={styles.optionsRow}>
+                      {q.options.map((opt) => {
+                        const isSelected = contextAnswers[q.id as keyof typeof contextAnswers] === opt.value;
+                        return (
+                          <TouchableOpacity
+                            key={opt.value}
+                            activeOpacity={0.8}
+                            style={[
+                              styles.optionButton,
+                              {
+                                backgroundColor: isSelected ? colors.primary : colors.surface,
+                                borderColor: isSelected ? colors.primary : colors.border,
+                                borderWidth: isSelected ? 0 : 1,
+                              },
+                              !isSelected && { backgroundColor: isDark ? '#1f2937' : '#f8fafc' } // Subtle background for unselected
+                            ]}
+                            onPress={() => setContextAnswers(prev => ({ ...prev, [q.id]: opt.value }))}
+                          >
+                            <Text
+                              style={[
+                                styles.optionText,
+                                { color: isSelected ? '#fff' : colors.textSecondary },
+                                isSelected && { fontWeight: '600' }
+                              ]}
+                            >
+                              {opt.label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              {Object.keys(contextAnswers).length >= 1 && (
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  style={[styles.saveContextButton, { marginTop: 24 }]} // Gradient handled in child or style
+                  onPress={handleSaveContext}
+                >
+                  <LinearGradient
+                    colors={[colors.primary, colors.primary + 'E6']} // Slight gradient
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 16, flexDirection: 'row', gap: 8 }}
+                  >
+                    <Text style={styles.saveContextText}>
+                      {language === 'it' ? 'Salva Contesto' : 'Save Context'}
+                    </Text>
+                    <Feather name="arrow-right" size={16} color="#fff" />
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {contextSubmitted && (
+            <View style={[styles.contextCard, { backgroundColor: colors.card, borderColor: colors.primary }]}>
+              <View style={styles.contextHeader}>
+                <Feather name="check-circle" size={20} color={colors.primary} />
+                <Text style={[styles.contextTitle, { color: colors.primary }]}>
+                  {language === 'it' ? 'Grazie!' : 'Thanks!'}
+                </Text>
+              </View>
+              <Text style={[styles.contextSubtitle, { color: colors.textSecondary }]}>
+                {language === 'it'
+                  ? 'Le tue risposte ci aiuteranno a fornirti insight migliori.'
+                  : 'Your answers will help us provide better insights.'}
+              </Text>
+            </View>
           )}
 
           {/* Bottom spacer for FAB */}
@@ -734,6 +900,77 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
+  },
+  // 🆕 Contextual Questions Styles (Premium)
+  contextCard: {
+    borderRadius: 24,
+    padding: 20,
+    marginTop: 24,
+    borderWidth: 1, // Will be overridden to 0 in JSX for premium look
+  },
+  contextHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  contextIconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contextTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  contextSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  questionContainer: {
+    marginBottom: 16,
+  },
+  questionHeader: {
+    marginBottom: 10,
+  },
+  questionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  optionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999, // Pill shape
+    borderWidth: 1,
+    minWidth: 70,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  saveContextButton: {
+    height: 50,
+    borderRadius: 16,
+    marginTop: 8,
+    overflow: 'hidden', // For gradient
+  },
+  saveContextText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });
 

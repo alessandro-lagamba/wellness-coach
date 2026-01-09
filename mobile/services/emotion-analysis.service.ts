@@ -52,14 +52,14 @@ export class EmotionAnalysisService {
 
               // 🆕 Se esiste un'analisi recente simile, aggiornala invece di crearne una nuova
               if (recentAnalysis && !checkError) {
-                const isSimilar = 
+                const isSimilar =
                   recentAnalysis.dominant_emotion === analysis.dominantEmotion &&
                   Math.abs(recentAnalysis.valence - analysis.valence) < 0.1 &&
                   Math.abs(recentAnalysis.arousal - analysis.arousal) < 0.1;
 
                 if (isSimilar) {
                   EnhancedLoggingService.logDatabaseOperation('update', 'emotion_analysis', true);
-                  
+
                   const { data: updated, error: updateError } = await supabase
                     .from(Tables.EMOTION_ANALYSES)
                     .update({
@@ -81,11 +81,11 @@ export class EmotionAnalysisService {
                   }
 
                   EnhancedLoggingService.logSaveOperation('emotion_analysis', userId, true, undefined, updated.id);
-                  
+
                   // 🆕 Invalida cache quando si aggiorna un'analisi
                   await cacheService.invalidatePrefix(`emotion:${userId}`);
                   await cacheService.invalidate(`ai_context:${userId}`);
-                  
+
                   // 🆕 Verifica post-salvataggio che i dati siano nel database
                   if (updated?.id) {
                     const verification = await DatabaseVerificationService.verifyEmotionAnalysis(userId, updated.id);
@@ -93,7 +93,7 @@ export class EmotionAnalysisService {
                       EnhancedLoggingService.logVerification('emotion_analysis', userId, false, new Error('Data not found after update'));
                     }
                   }
-                  
+
                   return updated;
                 }
               }
@@ -120,11 +120,11 @@ export class EmotionAnalysisService {
               }
 
               EnhancedLoggingService.logSaveOperation('emotion_analysis', userId, true, undefined, data.id);
-              
+
               // 🆕 Invalida cache quando si salva una nuova analisi
               await cacheService.invalidatePrefix(`emotion:${userId}`);
               await cacheService.invalidate(`ai_context:${userId}`);
-              
+
               // 🆕 Verifica post-salvataggio che i dati siano nel database
               if (data?.id) {
                 const verification = await DatabaseVerificationService.verifyEmotionAnalysis(userId, data.id);
@@ -132,7 +132,7 @@ export class EmotionAnalysisService {
                   EnhancedLoggingService.logVerification('emotion_analysis', userId, false, new Error('Data not found after save'));
                 }
               }
-              
+
               return data;
             } catch (error) {
               const err = error instanceof Error ? error : new Error('Unknown error');
@@ -159,7 +159,7 @@ export class EmotionAnalysisService {
   static async getLatestEmotionAnalysis(userId: string, forceRefresh: boolean = false): Promise<EmotionAnalysis | null> {
     try {
       const cacheKey = `emotion:${userId}:latest`;
-      
+
       // 🆕 Prova cache prima
       if (!forceRefresh) {
         const cached = await cacheService.get<EmotionAnalysis>(cacheKey);
@@ -167,7 +167,7 @@ export class EmotionAnalysisService {
           return cached;
         }
       }
-      
+
       // 🔥 FIX: Usa maybeSingle() invece di single() per evitare errori quando non ci sono risultati
       const { data, error } = await supabase
         .from(Tables.EMOTION_ANALYSES)
@@ -181,7 +181,7 @@ export class EmotionAnalysisService {
         console.error('Error getting latest emotion analysis:', error);
         return null;
       }
-      
+
       // Se non ci sono risultati, data sarà null (non un errore)
       if (!data) {
         return null;
@@ -224,6 +224,35 @@ export class EmotionAnalysisService {
   }
 
   /**
+   * 🆕 Ottiene le analisi emotive degli ultimi N GIORNI (non limitate per numero)
+   * Usato per il weekly recap per avere TUTTI i check-in della settimana
+   */
+  static async getEmotionHistoryByDays(userId: string, days: number = 7): Promise<EmotionAnalysis[]> {
+    try {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      startDate.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from(Tables.EMOTION_ANALYSES)
+        .select('*')
+        .eq('user_id', userId)
+        .gte('created_at', startDate.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting emotion history by days:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getEmotionHistoryByDays:', error);
+      return [];
+    }
+  }
+
+  /**
    * Ottiene il contesto emotivo completo per l'AI
    */
   static async getEmotionContextForAI(userId: string): Promise<{
@@ -239,15 +268,15 @@ export class EmotionAnalysisService {
 
       // Calcola il trend basato sulle ultime analisi
       let trend: 'improving' | 'stable' | 'declining' = 'stable';
-      
+
       if (history.length >= 3) {
         const recent = history.slice(0, 3);
         const older = history.slice(3);
-        
+
         if (recent.length > 0 && older.length > 0) {
           const recentAvgValence = recent.reduce((sum, h) => sum + h.valence, 0) / recent.length;
           const olderAvgValence = older.reduce((sum, h) => sum + h.valence, 0) / older.length;
-          
+
           if (recentAvgValence > olderAvgValence + 0.1) {
             trend = 'improving';
           } else if (recentAvgValence < olderAvgValence - 0.1) {
@@ -275,7 +304,7 @@ export class EmotionAnalysisService {
    * Ottiene statistiche emotive per un periodo
    */
   static async getEmotionStats(
-    userId: string, 
+    userId: string,
     days: number = 30
   ): Promise<{
     totalAnalyses: number;
@@ -309,7 +338,7 @@ export class EmotionAnalysisService {
       let totalArousal = 0;
 
       analyses.forEach(analysis => {
-        dominantEmotions[analysis.dominant_emotion] = 
+        dominantEmotions[analysis.dominant_emotion] =
           (dominantEmotions[analysis.dominant_emotion] || 0) + 1;
         totalValence += analysis.valence;
         totalArousal += analysis.arousal;
@@ -329,6 +358,63 @@ export class EmotionAnalysisService {
         averageValence: 0,
         averageArousal: 0
       };
+    }
+  }
+
+  /**
+   * 🆕 Aggiorna i dati contestuali di un'analisi emotiva esistente
+   * Usato per salvare le risposte alle domande post-analisi (sonno, attività, stress)
+   */
+  static async updateContextData(
+    analysisId: string,
+    contextData: {
+      sleep?: string;
+      activity?: string;
+      stress?: string;
+    }
+  ): Promise<boolean> {
+    try {
+      // Prima otteniamo l'analisi corrente per preservare analysis_data esistente
+      const { data: existing, error: fetchError } = await supabase
+        .from(Tables.EMOTION_ANALYSES)
+        .select('analysis_data')
+        .eq('id', analysisId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching existing analysis:', fetchError);
+        return false;
+      }
+
+      // Merge context data into existing analysis_data
+      const updatedAnalysisData = {
+        ...(existing?.analysis_data || {}),
+        contextual_data: {
+          sleep: contextData.sleep,
+          activity: contextData.activity,
+          stress: contextData.stress,
+          recorded_at: new Date().toISOString(),
+        }
+      };
+
+      const { error: updateError } = await supabase
+        .from(Tables.EMOTION_ANALYSES)
+        .update({ analysis_data: updatedAnalysisData })
+        .eq('id', analysisId);
+
+      if (updateError) {
+        console.error('Error updating context data:', updateError);
+        return false;
+      }
+
+      // Invalida la cache
+      cacheService.invalidatePrefix('emotion');
+
+      EnhancedLoggingService.logDatabaseOperation('update', 'emotion_analysis_context', true);
+      return true;
+    } catch (error) {
+      console.error('Error in updateContextData:', error);
+      return false;
     }
   }
 }

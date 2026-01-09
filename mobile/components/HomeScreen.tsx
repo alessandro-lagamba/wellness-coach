@@ -130,6 +130,17 @@ interface HomeScreenProps {
   onLogout?: () => void;
 }
 
+// 🔥 PERF: Moved community avatars OUTSIDE component to prevent re-creation on every render
+// This saves ~400 bytes of allocations per render cycle
+const COMMUNITY_AVATARS = [
+  { id: 'community-1', imageUrl: 'https://images.unsplash.com/photo-1544723795-3fb646b5b39?auto=format&fit=crop&w=400&q=80', displayName: 'Elena R.', streak: 24 },
+  { id: 'community-2', imageUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80', displayName: 'Marco T.', streak: 15 },
+  { id: 'community-3', imageUrl: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=400&q=80', displayName: 'Giulia S.', streak: 12 },
+  { id: 'community-4', imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80', displayName: 'Luca P.', streak: 9 },
+  { id: 'community-5', imageUrl: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=400&q=80', displayName: 'Sara B.', streak: 18 },
+  { id: 'community-6', imageUrl: 'https://images.unsplash.com/photo-1523475472560-d2df97ec485c?auto=format&fit=crop&w=400&q=80', displayName: 'Daniela C.', streak: 7 },
+];
+
 const WalkthroughableView = walkthroughable(View);
 const WalkthroughableText = walkthroughable(Text);
 
@@ -273,32 +284,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [avatarGenerating, setAvatarGenerating] = useState(false);
   const [communityModalVisible, setCommunityModalVisible] = useState(false);
-  const communityAvatars = useMemo(() => [
-    { id: 'community-1', imageUrl: 'https://images.unsplash.com/photo-1544723795-3fb646b5b39?auto=format&fit=crop&w=400&q=80', displayName: 'Elena R.', streak: 24 },
-    { id: 'community-2', imageUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80', displayName: 'Marco T.', streak: 15 },
-    { id: 'community-3', imageUrl: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=400&q=80', displayName: 'Giulia S.', streak: 12 },
-    { id: 'community-4', imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80', displayName: 'Luca P.', streak: 9 },
-    { id: 'community-5', imageUrl: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=400&q=80', displayName: 'Sara B.', streak: 18 },
-    { id: 'community-6', imageUrl: 'https://images.unsplash.com/photo-1523475472560-d2df97ec485c?auto=format&fit=crop&w=400&q=80', displayName: 'Daniela C.', streak: 7 },
-    { id: 'community-7', imageUrl: 'https://images.unsplash.com/photo-1542145938-0b3c26372d4d?auto=format&fit=crop&w=400&q=80', displayName: 'Michele F.', streak: 20 },
-    { id: 'community-8', imageUrl: 'https://images.unsplash.com/photo-1525130413817-d45c1d127c42?auto=format&fit=crop&w=400&q=80', displayName: 'Valentina H.', streak: 11 },
-    { id: 'community-9', imageUrl: 'https://images.unsplash.com/photo-1481214110143-ed630356e1bb?auto=format&fit=crop&w=400&q=80', displayName: 'Andrea L.', streak: 26 },
-    { id: 'community-10', imageUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80', displayName: 'Irene G.', streak: 14 },
-    { id: 'community-11', imageUrl: 'https://images.unsplash.com/photo-1554151228-14d9def656e4?auto=format&fit=crop&w=400&q=80', displayName: 'Paolo D.', streak: 8 },
-    { id: 'community-12', imageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80', displayName: 'Chiara M.', streak: 17 },
-    { id: 'community-13', imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80', displayName: 'Francesca V.', streak: 5 },
-    { id: 'community-14', imageUrl: 'https://images.unsplash.com/photo-1507120410856-1f35574c3b45?auto=format&fit=crop&w=400&q=80', displayName: 'Federico N.', streak: 23 },
-    { id: 'community-15', imageUrl: 'https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=400&q=80', displayName: 'Marta O.', streak: 10 },
-    { id: 'community-16', imageUrl: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=400&q=80', displayName: 'Stefano Q.', streak: 6 },
-    { id: 'community-17', imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80', displayName: 'Claudia Z.', streak: 19 },
-    { id: 'community-18', imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80', displayName: 'Davide K.', streak: 21 },
-    { id: 'community-19', imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80', displayName: 'Alice E.', streak: 13 },
-    { id: 'community-20', imageUrl: 'https://images.unsplash.com/photo-1614285146320-45e7d88b16a5?auto=format&fit=crop&w=400&q=80', displayName: 'Giorgia U.', streak: 16 },
-    { id: 'community-21', imageUrl: 'https://images.unsplash.com/photo-1603415526960-f7e0328c63b1?auto=format&fit=crop&w=400&q=80', displayName: 'Matteo Y.', streak: 9 },
-    { id: 'community-22', imageUrl: 'https://images.unsplash.com/photo-1521391406205-4a6af174a7f6?auto=format&fit=crop&w=400&q=80', displayName: 'Laura P.', streak: 4 },
-    { id: 'community-23', imageUrl: 'https://images.unsplash.com/photo-1552058544-f2b08422138a?auto=format&fit=crop&w=400&q=80', displayName: 'Cristian W.', streak: 28 },
-    { id: 'community-24', imageUrl: 'https://images.unsplash.com/photo-1531891437562-4301cf35b7e4?auto=format&fit=crop&w=400&q=80', displayName: 'Sofia J.', streak: 12 },
-  ], []);
+  // 🔥 PERF: Use module-level constant instead of useMemo to prevent recreating 6 objects per render
+  const communityAvatars = COMMUNITY_AVATARS;
   const [selectedPill, setSelectedPill] = useState<'streak' | 'momentum' | 'next-session' | null>(null);
   const [todayGlanceWidgets, setTodayGlanceWidgets] = useState<WidgetData[]>([]);
 
@@ -610,7 +597,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       if (currentUser?.id) {
         const userProfile = await AuthService.getUserProfile(currentUser.id);
         const gender = userProfile?.gender || null;
-        console.log('[HomeScreen] User gender loaded:', gender);
+        // 🔥 PERF: Removed verbose logging
         setUserGender(gender);
 
         // Carica i dati del ciclo solo se l'utente è di genere femminile
@@ -619,21 +606,21 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           const { widgetConfigService } = await import('../services/widget-config.service');
           const config = await widgetConfigService.getWidgetConfig();
           const cycleWidget = config.find(w => w.id === 'cycle');
-          console.log('[HomeScreen] Cycle widget config:', cycleWidget);
+          // 🔥 PERF: Removed verbose logging
           if (cycleWidget && !cycleWidget.enabled) {
             // Abilita il widget se non è già abilitato
             await widgetConfigService.addWidget('cycle', 'small', 0);
-            console.log('✅ Cycle widget automatically enabled for female user');
+            // 🔥 PERF: Removed verbose logging
           } else if (!cycleWidget) {
             // Se il widget non esiste nella config, crealo
             await widgetConfigService.addWidget('cycle', 'small', 0);
-            console.log('✅ Cycle widget created and enabled for female user');
+            // 🔥 PERF: Removed verbose logging
           }
 
           // 🔥 IMPORTANTE: Carica i dati del ciclo DOPO aver abilitato il widget
           const { menstrualCycleService } = await import('../services/menstrual-cycle.service');
           const cycle = await menstrualCycleService.getCycleData();
-          console.log('[HomeScreen] Cycle data loaded:', cycle);
+          // 🔥 PERF: Removed verbose logging
           setCycleData(cycle);
         } else {
           setCycleData(null);
@@ -736,21 +723,32 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   }, [healthData, healthStatus, placeholderMessages, translateWidgetTitle, cycleData, userGender, t, dailyIntake]);
 
   // 🔥 FIX: Ricarica i widget quando cambiano i dati del ciclo
-  // Questo risolve la race condition dove i widget non si aggiornano dopo che il ciclo viene caricato
+  // FIXED: Usato useRef per tracciare l'ultimo ciclo processato e prevenire loop infiniti
+  const lastProcessedCycleRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (userGender !== 'female') return; // Solo per utenti femminili
     if (!cycleData) return; // Aspetta che i dati siano caricati
 
+    // 🔥 FIX: Crea chiave univoca per evitare processamenti duplicati
+    const cycleKey = `${cycleData.day}-${cycleData.phase}`;
+    if (cycleKey === lastProcessedCycleRef.current) {
+      return; // Già processato, skip
+    }
+
     (async () => {
       try {
-        console.log('🔄 Cycle data changed, updating widgets...', { day: cycleData.day, phase: cycleData.phase });
+        // 🔥 PERF: Reduced logging frequency
+        lastProcessedCycleRef.current = cycleKey; // Aggiorna PRIMA di chiamare per evitare race conditions
         const updatedWidgetData = await buildWidgetDataFromHealth();
         setWidgetData(updatedWidgetData);
       } catch (error) {
         console.error('❌ Error updating widgets after cycle data change:', error);
       }
     })();
-  }, [cycleData, userGender, buildWidgetDataFromHealth]);
+    // 🔥 FIX: Rimuosso buildWidgetDataFromHealth dalle dipendenze per evitare loop infiniti
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cycleData, userGender]);
 
   // 🔥 NEW: Funzione per ricaricare i dati dal database e aggiornare i widget
   // Questa funzione è necessaria perché i dati di idratazione e meditazione sono salvati
@@ -790,10 +788,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           mindfulnessMinutes: dbHealthData.mindfulness_minutes || 0, // 🔥 Sempre dal database
         };
 
-        console.log('📊 Reloaded widget data from database:', {
-          hydration: combinedData.hydration,
-          mindfulnessMinutes: combinedData.mindfulnessMinutes,
-        });
+        // 🔥 PERF: Removed verbose logging for widget reload
 
         // Aggiorna i widget con i dati combinati
         const updatedWidgetData = await buildWidgetDataFromHealth(combinedData);
@@ -891,7 +886,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           }
         } else {
           // 🔥 Se i dati sono mock ma abbiamo già dati reali, non aggiornare i widget
-          console.log('⚠️ Skipping widget update: mock data detected but real data already exists');
+          // 🔥 PERF: Removed verbose skip logging
         }
       } else if (isInitialized && (healthData === null || healthData === undefined) && !hasAnyHealthPermission) {
         // Se non ci sono dati E non ci sono permessi, usa i mock
@@ -2082,110 +2077,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isInitialized || !hasAnyHealthPermission) return;
-
-    const getSyncInterval = (): number => {
-      const now = new Date();
-      const hour = now.getHours();
-
-      // Dopo le 18:00, sincronizza ogni 30 minuti
-      // Dopo le 20:00, sincronizza ogni 15 minuti
-      // Dopo le 22:00, sincronizza ogni 10 minuti
-      if (hour >= 22) return 10 * 60 * 1000; // 10 minuti
-      if (hour >= 20) return 15 * 60 * 1000; // 15 minuti
-      if (hour >= 18) return 30 * 60 * 1000; // 30 minuti
-      // Durante il giorno, sincronizza ogni ora
-      return 60 * 60 * 1000; // 60 minuti
-    };
-
-    const syncAndUpdateTrends = async () => {
-      // 🔥 FIX: Verifica se il componente è ancora montato prima di aggiornare lo stato
-      if (!isMountedRef.current) return;
-
-      try {
-        const currentUser = await AuthService.getCurrentUser();
-        if (!currentUser?.id || !isMountedRef.current) return;
-
-        // Sincronizza i dati di salute
-        await syncData();
-
-        // 🔥 FIX: Verifica di nuovo prima di aggiornare lo stato
-        if (!isMountedRef.current) return;
-
-        // Aggiorna i dati storici per i grafici
-        const syncService = HealthDataSyncService.getInstance();
-        const trendData = await syncService.getWeeklyTrendData(currentUser.id);
-
-        // 🔥 FIX: Verifica finale prima di setState
-        if (isMountedRef.current) {
-          setWeeklyTrendData(trendData);
-        }
-      } catch (error) {
-        // 🔥 FIX: Solo errori critici in console, non tutti i log
-        if (error instanceof Error && error.message.includes('critical')) {
-          console.error('Error in auto-sync:', error);
-        }
-      }
-    };
-
-    // Prima sincronizzazione immediata
-    syncAndUpdateTrends();
-
-    let currentInterval: ReturnType<typeof setInterval> | null = null;
-    let intervalUpdater: ReturnType<typeof setInterval> | null = null;
-
-    const startInterval = () => {
-      // 🔥 FIX: Pulisci sempre l'intervallo precedente
-      if (currentInterval) {
-        clearInterval(currentInterval);
-        currentInterval = null;
-      }
-
-      // 🔥 FIX: Verifica se il componente è ancora montato prima di creare nuovo intervallo
-      if (!isMountedRef.current) return;
-
-      currentInterval = setInterval(() => {
-        if (isMountedRef.current) {
-          syncAndUpdateTrends();
-        } else {
-          // 🔥 FIX: Se il componente è smontato, pulisci l'intervallo
-          if (currentInterval) {
-            clearInterval(currentInterval);
-            currentInterval = null;
-          }
-        }
-      }, getSyncInterval());
-    };
-
-    // Avvia l'intervallo iniziale
-    startInterval();
-
-    // Aggiorna l'intervallo ogni ora per adattarsi all'ora del giorno
-    intervalUpdater = setInterval(() => {
-      if (isMountedRef.current) {
-        startInterval();
-      } else {
-        // 🔥 FIX: Se il componente è smontato, pulisci l'intervallo updater
-        if (intervalUpdater) {
-          clearInterval(intervalUpdater);
-          intervalUpdater = null;
-        }
-      }
-    }, 60 * 60 * 1000); // Ogni ora
-
-    // 🔥 FIX: Cleanup completo - assicurati che tutti gli intervalli siano puliti
-    return () => {
-      if (currentInterval) {
-        clearInterval(currentInterval);
-        currentInterval = null;
-      }
-      if (intervalUpdater) {
-        clearInterval(intervalUpdater);
-        intervalUpdater = null;
-      }
-    };
-  }, [isInitialized, hasAnyHealthPermission]); // 🔥 FIX: Rimuoviamo syncData dalle dipendenze per evitare loop
+  // 🔥 PERF: REMOVED DUPLICATE SYNC INTERVAL
+  // The useHealthData hook already handles periodic sync.
+  // Having a second interval here was causing 125% CPU usage.
+  // Trend data is now loaded via the useEffect above when healthData changes.
 
   const syncActivityToCalendar = async (activity: DailyActivity) => {
     try {

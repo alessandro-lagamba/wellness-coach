@@ -45,29 +45,29 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
   // Calcola bucket e trend personalizzato
   const getBucketAndTrend = () => {
     if (!metric) return { bucket: null, trendInfo: null, action: null };
-    
+
     try {
       let bucket, trendInfo, action;
-      
+
       // Extract historical values from historicalData (which is {date, value}[])
       const historicalValues = historicalData.map(item => item.value).filter(v => typeof v === 'number' && !isNaN(v));
-      
+
       if (metric === 'valence' || metric === 'arousal') {
         bucket = MetricsService.getEmotionBucket(metric, value);
         // Use getPersonalizedTrend directly with extracted values
-        trendInfo = historicalValues.length > 0 
+        trendInfo = historicalValues.length > 0
           ? MetricsService.getPersonalizedTrend(value, historicalValues)
           : { trend: '→' as const, text: 'Prima misurazione', percentage: 0 };
         action = ActionsService.getNextBestAction(metric, value, bucket);
       } else {
         bucket = MetricsService.getSkinBucket(metric, value);
         // Use getPersonalizedTrend directly with extracted values
-        trendInfo = historicalValues.length > 0 
+        trendInfo = historicalValues.length > 0
           ? MetricsService.getPersonalizedTrend(value, historicalValues)
           : { trend: '→' as const, text: 'Prima misurazione', percentage: 0 };
         action = ActionsService.getNextBestAction(metric, value, bucket);
       }
-      
+
       return { bucket, trendInfo, action };
     } catch (error) {
       console.warn('Error calculating bucket and trend:', error);
@@ -182,7 +182,7 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
                 <Text style={[styles.valueText, { color }]}>{value}/{maxValue}</Text>
                 {bucket && (
                   <View style={[styles.bucketBadge, { backgroundColor: `${bucket.color}20`, borderColor: `${bucket.color}40` }]}>
-                    <Text style={[styles.bucketText, { color: bucket.color }]}>{bucket.label}</Text>
+                    <Text style={[styles.bucketText, { color: bucket.color }]}>{t(bucket.label)}</Text>
                   </View>
                 )}
               </View>
@@ -190,7 +190,7 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
               {/* Trend Section */}
               {trendInfo && (
                 <View style={[styles.trendSection, { backgroundColor: colors.surfaceMuted }]}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.trend')}</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.trend')}</Text>
                   <View style={styles.trendRow}>
                     <FontAwesome
                       name={trendInfo.trend === '↑' ? 'arrow-up' : trendInfo.trend === '↓' ? 'arrow-down' : 'arrow-right'}

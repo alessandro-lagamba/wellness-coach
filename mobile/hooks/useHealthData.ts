@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { HealthDataService } from '../services/health-data.service';
-import { 
-  HealthData, 
-  HealthPermissions, 
+import {
+  HealthData,
+  HealthPermissions,
   HealthDataSyncResult,
   HealthDataStatus,
 } from '../types/health.types';
@@ -22,7 +22,7 @@ export interface UseHealthDataReturn {
   syncData: () => Promise<HealthDataSyncResult>;
   refreshData: () => Promise<void>;
   refreshPermissions: () => Promise<HealthPermissions>; // 🔥 NEW: Refresh permissions state
-  
+
   // Status
   isPermissionGranted: (metric: string) => boolean;
   hasData: boolean;
@@ -54,10 +54,10 @@ export function useHealthData(): UseHealthDataReturn {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         const success = await healthService.initialize();
         setIsInitialized(success);
-        
+
         if (success) {
           // Snapshot permessi e sync forzata se già concessi
           const currentPerms = healthService.getPermissions();
@@ -82,35 +82,33 @@ export function useHealthData(): UseHealthDataReturn {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const newPermissions = await healthService.requestPermissions();
-      
+
       // 🔥 CRITICO: Aspetta un momento per assicurarci che Health Connect abbia processato i permessi
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       // 🔥 CRITICO: Aggiorna i permessi nel servizio prima di sincronizzare
       await healthService.refreshPermissions();
       const refreshedPermissions = healthService.getPermissions();
-      
-      console.log('🔄 Permissions after refresh:', refreshedPermissions);
+
+      // 🔥 PERF: Removed verbose logging
+      // console.log('🔄 Permissions after refresh:', refreshedPermissions);
       setPermissions(refreshedPermissions);
-      
+
       // Sync data after getting permissions
       if (Object.values(refreshedPermissions).some(Boolean)) {
-        console.log('🔄 Starting data sync after permission grant...');
+        // 🔥 PERF: Removed verbose logging
+        // console.log('🔄 Starting data sync after permission grant...');
         // 🔥 Forza una nuova sync pulita
         const result = await healthService.syncHealthData(true);
         if (result.success && result.data) {
-          console.log('✅ Data synced successfully:', {
-            steps: result.data.steps,
-            heartRate: result.data.heartRate,
-            sleepHours: result.data.sleepHours,
-          });
+          // 🔥 PERF: Removed verbose logging
           setHealthData(result.data);
           setLastSyncDate(result.lastSyncDate || new Date());
         }
       }
-      
+
       return refreshedPermissions;
     } catch (err) {
       console.error('Failed to request permissions:', err);
@@ -138,38 +136,33 @@ export function useHealthData(): UseHealthDataReturn {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // 🔥 CRITICO: Aggiorna i permessi prima di sincronizzare
       await healthService.refreshPermissions();
-      
+
       const result = await healthService.syncHealthData(true);
       let resolvedResult = result;
-      
+
       // 🔥 CRITICO: Aggiorna sempre i dati se disponibili, ma SOLO se sono reali (non mock)
       // Verifica che i dati siano reali controllando se hanno valori significativi
       if (result.success && result.data) {
         const hasRealData = (result.data.steps && result.data.steps > 0) ||
-                            (result.data.heartRate && result.data.heartRate > 0) ||
-                            (result.data.sleepHours && result.data.sleepHours > 0) ||
-                            (result.data.hrv && result.data.hrv > 0);
-        
+          (result.data.heartRate && result.data.heartRate > 0) ||
+          (result.data.sleepHours && result.data.sleepHours > 0) ||
+          (result.data.hrv && result.data.hrv > 0);
+
         // 🔥 Aggiorna lo stato SOLO se i dati sono reali o se non abbiamo ancora dati
         if (hasRealData || !healthData) {
           setHealthData(result.data);
           setLastSyncDate(result.lastSyncDate || new Date());
-          console.log('✅ Health data updated in hook:', {
-            steps: result.data.steps,
-            heartRate: result.data.heartRate,
-            hrv: result.data.hrv,
-            sleepHours: result.data.sleepHours,
-          });
+          // 🔥 PERF: Removed verbose logging
         } else {
           // 🔥 Se i dati sono mock ma abbiamo già dati reali, mantieni i dati reali
-          console.log('⚠️ Sync returned mock data, keeping existing real data');
+          // 🔥 PERF: Removed verbose logging
         }
       } else if (result.success && !result.data) {
         // Se la sync è riuscita ma non ci sono dati nuovi, mantieni i dati esistenti
-        console.log('⚠️ Sync successful but no new data returned');
+        // 🔥 PERF: Removed verbose logging
       } else {
         setError(result.error || 'Sync failed');
       }
@@ -179,10 +172,10 @@ export function useHealthData(): UseHealthDataReturn {
         if (fallback.data && hasMeaningfulData(fallback.data)) {
           // 🔥 Verifica che i dati di fallback siano reali
           const hasRealFallbackData = (fallback.data.steps && fallback.data.steps > 0) ||
-                                      (fallback.data.heartRate && fallback.data.heartRate > 0) ||
-                                      (fallback.data.sleepHours && fallback.data.sleepHours > 0) ||
-                                      (fallback.data.hrv && fallback.data.hrv > 0);
-          
+            (fallback.data.heartRate && fallback.data.heartRate > 0) ||
+            (fallback.data.sleepHours && fallback.data.sleepHours > 0) ||
+            (fallback.data.hrv && fallback.data.hrv > 0);
+
           if (hasRealFallbackData || !healthData) {
             setHealthData(fallback.data);
             setLastSyncDate(fallback.syncedAt || new Date());
@@ -203,20 +196,20 @@ export function useHealthData(): UseHealthDataReturn {
           lastSyncDate: result.lastSyncDate,
         };
       }
-      
+
       return resolvedResult;
     } catch (err) {
       console.error('Failed to sync health data:', err);
       const errorMessage = err instanceof Error ? err.message : 'Sync failed';
       setError(errorMessage);
-      
+
       // 🔥 Se abbiamo dati reali esistenti, restituiscili invece di un errore
       if (healthData) {
         const hasRealData = (healthData.steps && healthData.steps > 0) ||
-                            (healthData.heartRate && healthData.heartRate > 0) ||
-                            (healthData.sleepHours && healthData.sleepHours > 0) ||
-                            (healthData.hrv && healthData.hrv > 0);
-        
+          (healthData.heartRate && healthData.heartRate > 0) ||
+          (healthData.sleepHours && healthData.sleepHours > 0) ||
+          (healthData.hrv && healthData.hrv > 0);
+
         if (hasRealData) {
           return {
             success: true,
@@ -225,7 +218,7 @@ export function useHealthData(): UseHealthDataReturn {
           };
         }
       }
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -244,17 +237,17 @@ export function useHealthData(): UseHealthDataReturn {
   const refreshPermissions = useCallback(async (): Promise<HealthPermissions> => {
     try {
       setIsLoading(true);
-      
+
       // Refresh permissions in the service
       await healthService.refreshPermissions();
-      
+
       // Get updated permissions
       const updatedPermissions = healthService.getPermissions();
-      console.log('🔄 Permissions refreshed in hook:', updatedPermissions);
-      
+      // 🔥 PERF: Removed verbose logging
+
       // Update state
       setPermissions(updatedPermissions);
-      
+
       return updatedPermissions;
     } catch (err) {
       console.error('Failed to refresh permissions:', err);
@@ -298,6 +291,12 @@ export function useHealthData(): UseHealthDataReturn {
   }, [isInitialized, isLoading, hasAnyPermission, healthData, error]);
 
   // Schedule periodic background sync based on service configuration
+  // 🔥 FIX: Use ref to avoid circular dependency (syncData depends on healthData)
+  const syncDataRef = useRef(syncData);
+  useEffect(() => {
+    syncDataRef.current = syncData;
+  }, [syncData]);
+
   useEffect(() => {
     if (!isInitialized || !hasAnyPermission) {
       return;
@@ -313,15 +312,17 @@ export function useHealthData(): UseHealthDataReturn {
 
     const intervalMs = intervalMinutes * 60_000;
     const intervalId = setInterval(() => {
-      syncData().catch(err => {
+      syncDataRef.current().catch(err => {
         console.warn('⚠️ Periodic health sync failed:', err);
       });
     }, intervalMs);
 
-    console.log(`⏱️ Health data auto-sync scheduled every ${intervalMinutes} minute(s)`);
+    // 🔥 PERF: Removed verbose logging
+    // console.log(`⏱️ Health data auto-sync scheduled every ${intervalMinutes} minute(s)`);
 
     return () => clearInterval(intervalId);
-  }, [isInitialized, hasAnyPermission, syncData, healthService]);
+    // 🔥 FIX: Removed syncData from dependencies to prevent interval recreation loop
+  }, [isInitialized, hasAnyPermission, healthService]);
 
   return {
     // Data
@@ -338,7 +339,7 @@ export function useHealthData(): UseHealthDataReturn {
     syncData,
     refreshData,
     refreshPermissions, // 🔥 NEW
-    
+
     // Status
     isPermissionGranted,
     hasData: hasData && hasAnyPermission,
@@ -348,10 +349,10 @@ export function useHealthData(): UseHealthDataReturn {
 // Hook for specific health metrics
 export function useHealthMetric(metric: string) {
   const { healthData, isPermissionGranted, isLoading, error } = useHealthData();
-  
+
   const value = healthData ? (healthData as any)[metric] : null;
   const hasPermission = isPermissionGranted(metric);
-  
+
   return {
     value,
     hasPermission,
@@ -369,7 +370,7 @@ export function useStepsData() {
 // Hook for sleep data
 export function useSleepData() {
   const { healthData, isPermissionGranted, isLoading, error } = useHealthData();
-  
+
   const sleepData = healthData ? {
     hours: healthData.sleepHours,
     quality: healthData.sleepQuality,
@@ -377,9 +378,9 @@ export function useSleepData() {
     remSleep: healthData.remSleepMinutes,
     lightSleep: healthData.lightSleepMinutes,
   } : null;
-  
+
   const hasPermission = isPermissionGranted('sleepHours');
-  
+
   return {
     data: sleepData,
     hasPermission,
@@ -392,15 +393,15 @@ export function useSleepData() {
 // Hook for heart rate data
 export function useHeartRateData() {
   const { healthData, isPermissionGranted, isLoading, error } = useHealthData();
-  
+
   const heartRateData = healthData ? {
     current: healthData.heartRate,
     resting: healthData.restingHeartRate,
     hrv: healthData.hrv,
   } : null;
-  
+
   const hasPermission = isPermissionGranted('heartRate');
-  
+
   return {
     data: heartRateData,
     hasPermission,

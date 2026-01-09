@@ -36,7 +36,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   // 🔥 FIX: Esponiamo un metodo per forzare la visualizzazione del tutorial
   // Questo permette di rivisualizzare il tutorial da altre schermate (es. HomeScreen)
   const forceShowTutorial = useCallback(async () => {
-    console.log('🔄 Forcing tutorial to show...');
+    // 🔥 PERF: Removed verbose logging
     // Reset tutorial state
     await OnboardingService.resetOnboarding(); // Reset anche tutorial
     // Force show tutorial
@@ -81,7 +81,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       const onboardingCompleted = await OnboardingService.isOnboardingCompleted();
       const tutorialCompleted = await OnboardingService.isTutorialCompleted();
 
-      console.log('🔍 checkAndShowTutorial - onboardingCompleted:', onboardingCompleted, 'tutorialCompleted:', tutorialCompleted);
+      // 🔥 PERF: Removed verbose logging
 
       // 🔥 CRITICO: Verifica se l'utente è nuovo o esistente controllando il profilo nel database
       // Se l'utente ha già un profilo, è un utente esistente e non dovrebbe vedere il tutorial
@@ -90,7 +90,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         const { AuthService } = await import('../services/auth.service');
         const existingProfile = await AuthService.getUserProfile(user.id);
         isExistingUser = !!existingProfile;
-        console.log('🔍 checkAndShowTutorial - isExistingUser:', isExistingUser);
+        // 🔥 PERF: Removed verbose logging
       } catch (error) {
         console.warn('⚠️ Could not check user profile in useEffect, assuming new user:', error);
       }
@@ -101,15 +101,15 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       // 3. Il tutorial non è già visibile
       // Questo previene che utenti esistenti vedano il tutorial dopo aver eliminato l'app
       if (!tutorialCompleted && !isExistingUser && !showTutorial) {
-        console.log('🎓 New user detected, tutorial should be shown, scheduling in 2s...');
+        // 🔥 PERF: Removed verbose logging
         setTimeout(() => {
-          console.log('🎓 Showing tutorial now via useEffect');
+          // 🔥 PERF: Removed verbose logging
           setShowTutorial(true);
         }, 2000);
       } else if (isExistingUser && !tutorialCompleted) {
         // 🔥 Se l'utente è esistente ma il tutorial non è completato (AsyncStorage resettato),
         // marca il tutorial come completato automaticamente
-        console.log('✅ Existing user detected in useEffect, marking tutorial as completed automatically');
+        // 🔥 PERF: Removed verbose logging
         OnboardingService.completeTutorial().catch(err => {
           console.error('Error completing tutorial:', err);
         });
@@ -125,12 +125,12 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   const proceedAfterAuthentication = useCallback(async (currentUser: any) => {
     // 🔥 FIX: Evita doppie chiamate per lo stesso utente
     if (isProcessingAuthRef.current) {
-      console.log('⚠️ Authentication already in progress, skipping...');
+      // 🔥 PERF: Removed verbose logging
       return;
     }
 
     if (processedUserIdRef.current === currentUser?.id && isAuthenticatedRef.current) {
-      console.log('⚠️ User already processed, skipping...');
+      // 🔥 PERF: Removed verbose logging
       return;
     }
 
@@ -146,7 +146,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       try {
         const { AuthService } = await import('../services/auth.service');
         const emailVerified = Boolean(currentUser.email_confirmed_at);
-        
+
         if (emailVerified) {
           // 🔥 FIX: Estrai i dati dai metadata PRIMA di creare/aggiornare il profilo
           const firstName = currentUser.user_metadata?.first_name;
@@ -155,19 +155,19 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           const ageValue = currentUser.user_metadata?.age;
           const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : undefined);
           const gender = currentUser.user_metadata?.gender;
-          
-          console.log('📋 User metadata:', { firstName, lastName, age, gender, ageValue });
-          
+
+          // 🔥 PERF: Removed verbose logging
+
           const existingProfile = await AuthService.getUserProfile(currentUser.id);
-          
+
           if (!existingProfile) {
-            console.log('✅ Email verified, creating user profile with metadata...');
+            // 🔥 PERF: Removed verbose logging
             // Crea il profilo con i dati disponibili dall'utente
-            const fullName = currentUser.user_metadata?.full_name || 
-                            currentUser.user_metadata?.name || 
-                            currentUser.email?.split('@')[0] || 
-                            'User';
-            
+            const fullName = currentUser.user_metadata?.full_name ||
+              currentUser.user_metadata?.name ||
+              currentUser.email?.split('@')[0] ||
+              'User';
+
             // 🔥 CRITICAL: Crea il profilo con TUTTI i dati disponibili
             await AuthService.createUserProfile(
               currentUser.id,
@@ -178,32 +178,25 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
               age,
               gender
             );
-            
-            console.log('✅ User profile created successfully with:', { firstName, lastName, age, gender });
+            // 🔥 PERF: Removed verbose logging
           } else {
-            console.log('✅ User profile already exists, checking for updates...');
-            console.log('📋 Existing profile:', { 
-              first_name: existingProfile.first_name, 
-              last_name: existingProfile.last_name, 
-              age: existingProfile.age, 
-              gender: existingProfile.gender 
-            });
-            
+            // 🔥 PERF: Removed verbose logging
+
             // 🔥 CRITICAL: SEMPRE aggiorna il profilo con i metadata se sono disponibili
             const updateData: any = {};
             if (firstName) updateData.first_name = firstName;
             if (lastName) updateData.last_name = lastName;
             if (age !== undefined && age !== null) updateData.age = age;
             if (gender) updateData.gender = gender;
-            
+
             if (Object.keys(updateData).length > 0) {
-              console.log('🔄 Updating profile with metadata:', updateData);
+              // 🔥 PERF: Removed verbose logging
               await AuthService.updateUserProfile(currentUser.id, updateData);
-              console.log('✅ User profile updated successfully');
+              // 🔥 PERF: Removed verbose logging
             }
           }
         } else {
-          console.log('⚠️ Email not verified yet, profile will be created after verification');
+          // 🔥 PERF: Removed verbose logging
         }
       } catch (profileError) {
         console.error('❌ Error checking/creating user profile:', profileError);
@@ -213,15 +206,15 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       // 🔥 FIX: Non mostriamo più OnboardingScreen, andiamo direttamente al tutorial
       // Controlla se mostrare il tutorial
       const tutorialCompleted = await OnboardingService.isTutorialCompleted();
-      console.log('🔍 proceedAfterAuthentication - tutorialCompleted:', tutorialCompleted);
-      
+      // 🔥 PERF: Removed verbose logging
+
       // 🔥 FIX: Marca l'onboarding come completato automaticamente (non lo mostriamo più)
       const onboardingCompleted = await OnboardingService.isOnboardingCompleted();
       if (!onboardingCompleted) {
         await OnboardingService.completeOnboarding();
-        console.log('✅ Onboarding marked as completed automatically (skipping OnboardingScreen)');
+        // 🔥 PERF: Removed verbose logging
       }
-      
+
       // 🔥 CRITICO: Verifica se l'utente è nuovo o esistente controllando il profilo nel database
       // Se l'utente ha già un profilo, è un utente esistente e non dovrebbe vedere il tutorial
       // anche se AsyncStorage è stato resettato (es. dopo aver eliminato l'app)
@@ -230,29 +223,28 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         const { AuthService } = await import('../services/auth.service');
         const existingProfile = await AuthService.getUserProfile(currentUser.id);
         isExistingUser = !!existingProfile;
-        console.log('🔍 User profile check - isExistingUser:', isExistingUser);
+        // 🔥 PERF: Removed verbose logging
       } catch (error) {
         console.warn('⚠️ Could not check user profile, assuming new user:', error);
       }
-      
+
       // 🔥 FIX: Mostra il tutorial SOLO se:
       // 1. Il tutorial non è completato E
       // 2. L'utente è nuovo (non ha un profilo esistente) E
       // 3. Non stiamo processando un deep link
       if (!tutorialCompleted && !isExistingUser && !isProcessingDeepLink.current) {
-        // Delay più lungo per permettere all'app di renderizzarsi completamente
-        console.log('🎓 New user detected, scheduling InteractiveTutorial to show in 2s after authentication...');
+        // 🔥 PERF: Removed verbose logging
         setTimeout(() => {
-          console.log('🎓 Showing InteractiveTutorial after authentication');
+          // 🔥 PERF: Removed verbose logging
           setShowTutorial(true);
         }, 2000);
       } else if (isExistingUser && !tutorialCompleted) {
         // 🔥 Se l'utente è esistente ma il tutorial non è completato (AsyncStorage resettato),
         // marca il tutorial come completato automaticamente
-        console.log('✅ Existing user detected, marking tutorial as completed automatically');
+        // 🔥 PERF: Removed verbose logging
         await OnboardingService.completeTutorial();
       } else {
-        console.log('⚠️ Tutorial already completed or user is existing, skipping... (processingDeepLink:', isProcessingDeepLink.current, ')');
+        // 🔥 PERF: Removed verbose logging
       }
 
       onAuthSuccessRef.current(currentUser);
@@ -271,7 +263,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
       if (isAuth && currentUser) {
         await proceedAfterAuthentication(currentUser);
-        
+
         // 🔥 FIX: Mostra il modal di verifica email solo se necessario
         if (!currentUser.email_confirmed_at && !isProcessingDeepLink.current) {
           console.log('⚠️ Email not verified, showing verification modal...');
@@ -298,14 +290,11 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       async (event, session) => {
         console.log('🔄 Auth state changed:', event, 'user:', session?.user?.id);
         if (event === 'SIGNED_IN' && session?.user) {
-          // 🔥 FIX: Evita di chiamare proceedAfterAuthentication se già chiamato da handleAuthSuccess
-          // Il listener onAuthStateChange viene chiamato automaticamente dopo signIn/signUp
-          // ma handleAuthSuccess viene chiamato prima, quindi controlliamo se l'utente è già stato processato
           if (processedUserIdRef.current !== session.user.id || !isAuthenticatedRef.current) {
-            console.log('🔄 Auth state changed, processing user...');
+            // 🔥 PERF: Removed verbose logging
             proceedAfterAuthentication(session.user);
           } else {
-            console.log('⚠️ User already processed via handleAuthSuccess, skipping onAuthStateChange');
+            // 🔥 PERF: Removed verbose logging
           }
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);
@@ -325,20 +314,20 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   // ✅ Gestione Deep Links per conferma email
   const { t } = useTranslation();
   const isProcessingDeepLink = useRef(false);
-  
+
   // State for showing email verified success modal
   const [showEmailVerifiedSuccess, setShowEmailVerifiedSuccess] = useState(false);
-  
+
   // 🔥 CRITICAL FIX: Extract tokens from URL and set session manually
   const handleEmailConfirmationDeepLink = async (url: string) => {
     if (isProcessingDeepLink.current) {
-      console.log('⚠️ Already processing deep link, skipping...');
+      // 🔥 PERF: Removed verbose logging
       return;
     }
     isProcessingDeepLink.current = true;
-    
-    console.log('📧 Processing email confirmation deep link:', url);
-    
+
+    // 🔥 PERF: Removed verbose logging
+
     try {
       // Extract tokens from URL fragment (after #)
       // URL format: wellnesscoach://auth/confirm#access_token=xxx&refresh_token=xxx&type=signup
@@ -349,47 +338,47 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
         const type = params.get('type');
-        
-        console.log('🔑 Extracted tokens - type:', type, 'hasAccess:', !!accessToken, 'hasRefresh:', !!refreshToken);
-        
+
+        // 🔥 PERF: Removed verbose logging
+
         if (accessToken && refreshToken) {
           // 🔥 CRITICAL: Set the session manually with the tokens from the URL
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
-          
+
           if (error) {
             console.error('❌ Error setting session from tokens:', error);
             isProcessingDeepLink.current = false;
             return;
           }
-          
+
           if (data.user) {
-            console.log('✅ Session set successfully, email_confirmed_at:', data.user.email_confirmed_at);
-            
+            // 🔥 PERF: Removed verbose logging
+
             // Update app state
             setUser(data.user);
             setIsAuthenticated(true);
             setShowEmailVerificationModal(false);
-            
+
             // 🔥 FIX: Create/update user profile immediately after email confirmation
             try {
               const { AuthService } = await import('../services/auth.service');
               const existingProfile = await AuthService.getUserProfile(data.user.id);
-              
+
               if (!existingProfile) {
-                console.log('📝 Creating user profile after email confirmation...');
+                // 🔥 PERF: Removed verbose logging
                 const firstName = data.user.user_metadata?.first_name;
                 const lastName = data.user.user_metadata?.last_name;
                 const ageValue = data.user.user_metadata?.age;
                 const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : undefined);
                 const gender = data.user.user_metadata?.gender;
-                const fullName = data.user.user_metadata?.full_name || 
-                                data.user.user_metadata?.name || 
-                                data.user.email?.split('@')[0] || 
-                                'User';
-                
+                const fullName = data.user.user_metadata?.full_name ||
+                  data.user.user_metadata?.name ||
+                  data.user.email?.split('@')[0] ||
+                  'User';
+
                 await AuthService.createUserProfile(
                   data.user.id,
                   data.user.email || '',
@@ -399,38 +388,38 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
                   age,
                   gender
                 );
-                console.log('✅ User profile created successfully');
+                // 🔥 PERF: Removed verbose logging
               } else {
-                console.log('✅ User profile already exists');
+                // 🔥 PERF: Removed verbose logging
                 // Update profile with metadata if needed
                 const firstName = data.user.user_metadata?.first_name;
                 const lastName = data.user.user_metadata?.last_name;
                 const ageValue = data.user.user_metadata?.age;
                 const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : undefined);
                 const gender = data.user.user_metadata?.gender;
-                
+
                 const updateData: any = {};
                 if (firstName) updateData.first_name = firstName;
                 if (lastName) updateData.last_name = lastName;
                 if (age !== undefined && age !== null) updateData.age = age;
                 if (gender) updateData.gender = gender;
-                
+
                 if (Object.keys(updateData).length > 0) {
                   await AuthService.updateUserProfile(data.user.id, updateData);
-                  console.log('✅ User profile updated with metadata');
+                  // 🔥 PERF: Removed verbose logging
                 }
               }
             } catch (profileError) {
               console.error('❌ Error creating/updating profile:', profileError);
             }
-            
+
             // 🔥 NEW: Show success modal
             setShowEmailVerifiedSuccess(true);
-            
+
             // Proceed with authentication (but skip tutorial since user is returning)
             await proceedAfterAuthentication(data.user);
-            
-            console.log('✅ Email confirmation complete, user authenticated');
+
+            // 🔥 PERF: Removed verbose logging
           }
         } else {
           console.warn('⚠️ No tokens found in URL fragment');
@@ -440,7 +429,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         // Try to get existing session
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user?.email_confirmed_at) {
-          console.log('✅ Found existing confirmed session');
+          // 🔥 PERF: Removed verbose logging
           setUser(session.user);
           setIsAuthenticated(true);
           setShowEmailVerificationModal(false);
@@ -453,7 +442,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       isProcessingDeepLink.current = false;
     }
   };
-  
+
   useEffect(() => {
     // Handle deep link when app opens from a link
     const handleInitialURL = async () => {
@@ -608,8 +597,8 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
   // Renderizza l'app principale con il contesto di autenticazione
   // 🔥 DEBUG: Log dello stato del tutorial
-  console.log('🔍 AuthWrapper render - showTutorial:', showTutorial);
-  
+  // 🔥 PERF: Removed render-time debug logging - this was running on EVERY RENDER!
+
   return (
     <View style={styles.appContainer}>
       {children}
@@ -618,11 +607,11 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       <InteractiveTutorial
         visible={showTutorial}
         onClose={async () => {
-          console.log('🚪 Tutorial closed by user');
+          // 🔥 PERF: Removed verbose logging
           setShowTutorial(false);
           // Mark tutorial as completed even if closed early
           await OnboardingService.completeTutorial();
-          
+
           // 🔥 NEW: Se l'email non è verificata, mostra il modal di verifica
           if (user && !user.email_confirmed_at) {
             console.log('📧 Email not verified, showing verification modal');
@@ -632,11 +621,11 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           }
         }}
         onComplete={async () => {
-          console.log('✅ Tutorial completed by user');
+          // 🔥 PERF: Removed verbose logging
           setShowTutorial(false);
           // Mark tutorial as completed
           await OnboardingService.completeTutorial();
-          
+
           // 🔥 NEW: Se l'email non è verificata, mostra il modal di verifica
           if (user && !user.email_confirmed_at) {
             console.log('📧 Email not verified, showing verification modal');
@@ -691,12 +680,12 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           // Email verificata! Ricarica l'utente per aggiornare lo stato
           console.log('✅ Email verified, reloading user...');
           setShowEmailVerificationModal(false);
-          
+
           try {
             // 🔥 FIX: Forza il refresh dell'utente per ottenere i metadata aggiornati
             const { supabase } = await import('../lib/supabase');
             const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
-            
+
             if (refreshError) {
               console.error('Error refreshing user after email verification:', refreshError);
               // Fallback: usa getCurrentUser
@@ -706,7 +695,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
               }
               return;
             }
-            
+
             if (refreshedUser) {
               console.log('✅ User refreshed with metadata:', {
                 first_name: refreshedUser.user_metadata?.first_name,
@@ -730,7 +719,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           }
         }}
       />
-      
+
       {/* 🆕 Email Verified Success Modal */}
       <EmailVerifiedSuccessModal
         visible={showEmailVerifiedSuccess}

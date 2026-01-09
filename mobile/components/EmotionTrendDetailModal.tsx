@@ -101,6 +101,9 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
     const valenceValues = data.map(d => d.valence);
     const arousalValues = data.map(d => d.arousal);
 
+    // 🆕 FIX: Helper to normalize from [-1,1] to [0,100]
+    const normalize = (v: number) => Math.round(((v + 1) / 2) * 100);
+
     const avgValence = valenceValues.reduce((a, b) => a + b, 0) / valenceValues.length;
     const avgArousal = arousalValues.reduce((a, b) => a + b, 0) / arousalValues.length;
     const maxValence = Math.max(...valenceValues);
@@ -123,17 +126,18 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
     data.forEach(d => {
       emotionCounts[d.emotion] = (emotionCounts[d.emotion] || 0) + 1;
     });
-    const dominantEmotion = Object.entries(emotionCounts).reduce((a, b) => 
+    const dominantEmotion = Object.entries(emotionCounts).reduce((a, b) =>
       emotionCounts[a[0]] > emotionCounts[b[0]] ? a : b
     )[0];
 
+    // 🆕 FIX: Return normalized values (0-100 scale) for display
     return {
-      avgValence,
-      avgArousal,
-      maxValence,
-      minValence,
-      maxArousal,
-      minArousal,
+      avgValence: normalize(avgValence),
+      avgArousal: normalize(avgArousal),
+      maxValence: normalize(maxValence),
+      minValence: normalize(minValence),
+      maxArousal: normalize(maxArousal),
+      minArousal: normalize(minArousal),
       valenceTrend,
       arousalTrend,
       dominantEmotion,
@@ -300,102 +304,102 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
 
                 {/* Valence Stats */}
                 {selectedMetrics.includes('valence') && (
-                <View style={styles.metricSection}>
-                  <View style={styles.metricHeader}>
-                    <View style={[styles.metricDot, { backgroundColor: '#10b981' }]} />
-                    <Text style={[styles.metricTitle, { color: themeColors.text }]} numberOfLines={1} ellipsizeMode="tail">
-                      {t('analysis.emotion.metrics.valence') || 'Valence'}
-                    </Text>
-                  </View>
-                  <View style={styles.statsRow}>
-                    <View style={[styles.statCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
-                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
-                        {t('home.weeklyProgress.average') || 'Media'}
-                      </Text>
-                      <Text style={[styles.statValue, { color: themeColors.text }]}>
-                        {stats.avgValence.toFixed(2)}
+                  <View style={styles.metricSection}>
+                    <View style={styles.metricHeader}>
+                      <View style={[styles.metricDot, { backgroundColor: '#10b981' }]} />
+                      <Text style={[styles.metricTitle, { color: themeColors.text }]} numberOfLines={1} ellipsizeMode="tail">
+                        {t('analysis.emotion.metrics.valence') || 'Valence'}
                       </Text>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
-                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
-                        {t('home.weeklyProgress.max') || 'Massimo'}
-                      </Text>
-                      <Text style={[styles.statValue, { color: themeColors.text }]}>
-                        {stats.maxValence.toFixed(2)}
-                      </Text>
+                    <View style={styles.statsRow}>
+                      <View style={[styles.statCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
+                        <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
+                          {t('home.weeklyProgress.average') || 'Media'}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.text }]}>
+                          {stats.avgValence}
+                        </Text>
+                      </View>
+                      <View style={[styles.statCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
+                        <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
+                          {t('home.weeklyProgress.max') || 'Massimo'}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.text }]}>
+                          {stats.maxValence}
+                        </Text>
+                      </View>
+                      <View style={[styles.statCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
+                        <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
+                          {t('home.weeklyProgress.min') || 'Minimo'}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.text }]}>
+                          {stats.minValence}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
-                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
-                        {t('home.weeklyProgress.min') || 'Minimo'}
-                      </Text>
-                      <Text style={[styles.statValue, { color: themeColors.text }]}>
-                        {stats.minValence.toFixed(2)}
+                    <View style={styles.trendIndicator}>
+                      <MaterialCommunityIcons
+                        name={stats.valenceTrend === 'up' ? 'trending-up' : stats.valenceTrend === 'down' ? 'trending-down' : 'trending-neutral'}
+                        size={16}
+                        color={stats.valenceTrend === 'up' ? '#10b981' : stats.valenceTrend === 'down' ? '#ef4444' : themeColors.textSecondary}
+                      />
+                      <Text style={[styles.trendText, { color: themeColors.textSecondary }]}>
+                        {stats.valenceTrend === 'up' ? t('analysis.emotion.trends.improving') || 'In miglioramento' :
+                          stats.valenceTrend === 'down' ? t('analysis.emotion.trends.declining') || 'In calo' :
+                            t('analysis.emotion.trends.stable') || 'Stabile'}
                       </Text>
                     </View>
                   </View>
-                  <View style={styles.trendIndicator}>
-                    <MaterialCommunityIcons
-                      name={stats.valenceTrend === 'up' ? 'trending-up' : stats.valenceTrend === 'down' ? 'trending-down' : 'trending-neutral'}
-                      size={16}
-                      color={stats.valenceTrend === 'up' ? '#10b981' : stats.valenceTrend === 'down' ? '#ef4444' : themeColors.textSecondary}
-                    />
-                    <Text style={[styles.trendText, { color: themeColors.textSecondary }]}>
-                      {stats.valenceTrend === 'up' ? t('analysis.emotion.trends.improving') || 'In miglioramento' :
-                       stats.valenceTrend === 'down' ? t('analysis.emotion.trends.declining') || 'In calo' :
-                       t('analysis.emotion.trends.stable') || 'Stabile'}
-                    </Text>
-                  </View>
-                </View>
                 )}
 
                 {/* Arousal Stats */}
                 {selectedMetrics.includes('arousal') && (
-                <View style={styles.metricSection}>
-                  <View style={styles.metricHeader}>
-                    <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
-                    <Text style={[styles.metricTitle, { color: themeColors.text }]}>
-                      {t('analysis.emotion.metrics.arousal') || 'Arousal'}
-                    </Text>
-                  </View>
-                  <View style={styles.statsRow}>
-                    <View style={[styles.statCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
-                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
-                        {t('home.weeklyProgress.average') || 'Media'}
-                      </Text>
-                      <Text style={[styles.statValue, { color: themeColors.text }]}>
-                        {stats.avgArousal.toFixed(2)}
+                  <View style={styles.metricSection}>
+                    <View style={styles.metricHeader}>
+                      <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
+                      <Text style={[styles.metricTitle, { color: themeColors.text }]}>
+                        {t('analysis.emotion.metrics.arousal') || 'Arousal'}
                       </Text>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
-                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
-                        {t('home.weeklyProgress.max') || 'Massimo'}
-                      </Text>
-                      <Text style={[styles.statValue, { color: themeColors.text }]}>
-                        {stats.maxArousal.toFixed(2)}
-                      </Text>
+                    <View style={styles.statsRow}>
+                      <View style={[styles.statCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
+                        <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
+                          {t('home.weeklyProgress.average') || 'Media'}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.text }]}>
+                          {stats.avgArousal}
+                        </Text>
+                      </View>
+                      <View style={[styles.statCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
+                        <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
+                          {t('home.weeklyProgress.max') || 'Massimo'}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.text }]}>
+                          {stats.maxArousal}
+                        </Text>
+                      </View>
+                      <View style={[styles.statCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
+                        <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
+                          {t('home.weeklyProgress.min') || 'Minimo'}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.text }]}>
+                          {stats.minArousal}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
-                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
-                        {t('home.weeklyProgress.min') || 'Minimo'}
-                      </Text>
-                      <Text style={[styles.statValue, { color: themeColors.text }]}>
-                        {stats.minArousal.toFixed(2)}
+                    <View style={styles.trendIndicator}>
+                      <MaterialCommunityIcons
+                        name={stats.arousalTrend === 'up' ? 'trending-up' : stats.arousalTrend === 'down' ? 'trending-down' : 'trending-neutral'}
+                        size={16}
+                        color={stats.arousalTrend === 'up' ? '#10b981' : stats.arousalTrend === 'down' ? '#ef4444' : themeColors.textSecondary}
+                      />
+                      <Text style={[styles.trendText, { color: themeColors.textSecondary }]}>
+                        {stats.arousalTrend === 'up' ? t('analysis.emotion.trends.increasing') || 'In aumento' :
+                          stats.arousalTrend === 'down' ? t('analysis.emotion.trends.decreasing') || 'In diminuzione' :
+                            t('analysis.emotion.trends.stable') || 'Stabile'}
                       </Text>
                     </View>
                   </View>
-                  <View style={styles.trendIndicator}>
-                    <MaterialCommunityIcons
-                      name={stats.arousalTrend === 'up' ? 'trending-up' : stats.arousalTrend === 'down' ? 'trending-down' : 'trending-neutral'}
-                      size={16}
-                      color={stats.arousalTrend === 'up' ? '#10b981' : stats.arousalTrend === 'down' ? '#ef4444' : themeColors.textSecondary}
-                    />
-                    <Text style={[styles.trendText, { color: themeColors.textSecondary }]}>
-                      {stats.arousalTrend === 'up' ? t('analysis.emotion.trends.increasing') || 'In aumento' :
-                       stats.arousalTrend === 'down' ? t('analysis.emotion.trends.decreasing') || 'In diminuzione' :
-                       t('analysis.emotion.trends.stable') || 'Stabile'}
-                    </Text>
-                  </View>
-                </View>
                 )}
 
                 {/* Summary */}
