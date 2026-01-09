@@ -264,19 +264,7 @@ export const EmotionSessionCard: React.FC<EmotionSessionCardProps> = ({ session 
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            {isFallback ? t('analysis.emotion.card.sampleTitle') : t('analysis.emotion.card.lastTitle')}
-          </Text>
-        </View>
-        {isFallback && (
-          <Text style={[styles.fallbackText, { color: colors.textSecondary }]}>
-            {t('analysis.emotion.card.sampleHint')}
-          </Text>
-        )}
-      </View>
+      {/* 🆕 FIX: Removed header with title - now using section header in parent screen */}
 
       {/* Banner Dominant Emotion */}
       <DominantBanner emotion={session.dominant} />

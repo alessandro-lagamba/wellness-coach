@@ -79,17 +79,23 @@ export const GaugeChart: React.FC<GaugeChartProps> = memo(({
   const strokeDasharray = circumference;
   const strokeDashoffset = circumference * (1 - percentage / 100);
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return '#10b981'; // Green
-    if (score >= 60) return '#f59e0b'; // Yellow
-    if (score >= 40) return '#ef4444'; // Red
+  // 🆕 FIX: For redness/oiliness, LOWER values are BETTER (inverted scale)
+  const isInvertedMetric = metric === 'redness' || metric === 'oiliness';
+  // Calculate effective score for color/label (invert if needed)
+  const scoreForLabel = isInvertedMetric ? (maxValue - safeValue) : safeValue;
+  const percentageForLabel = (scoreForLabel / maxValue) * 100;
+
+  const getScoreColor = (pctScore: number) => {
+    if (pctScore >= 80) return '#10b981'; // Green
+    if (pctScore >= 60) return '#f59e0b'; // Yellow
+    if (pctScore >= 40) return '#ef4444'; // Red
     return '#6b7280'; // Gray
   };
 
-  const getScoreLabel = (score: number) => {
-    if (score >= 80) return t('analysis.gauge.excellent');
-    if (score >= 60) return t('analysis.gauge.good');
-    if (score >= 40) return t('analysis.gauge.fair');
+  const getScoreLabel = (pctScore: number) => {
+    if (pctScore >= 80) return t('analysis.gauge.excellent');
+    if (pctScore >= 60) return t('analysis.gauge.good');
+    if (pctScore >= 40) return t('analysis.gauge.fair');
     return t('analysis.gauge.poor');
   };
 
@@ -166,7 +172,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = memo(({
                 textAnchor="middle"
                 fontSize={valueFontSize}
                 fontWeight="700"
-                fill={getScoreColor(safeValue)}
+                fill={getScoreColor(percentageForLabel)}
               >
                 {valueStr}
               </SvgText>
@@ -178,7 +184,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = memo(({
                   textAnchor="start"
                   fontSize={valueFontSize * 0.8}
                   fontWeight="600"
-                  fill={getScoreColor(safeValue)}
+                  fill={getScoreColor(percentageForLabel)}
                 >
                   {unit}
                 </SvgText>
@@ -203,8 +209,8 @@ export const GaugeChart: React.FC<GaugeChartProps> = memo(({
 
           <View style={styles.footer}>
             <View style={styles.scoreContainer}>
-              <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(safeValue) }]}>
-                <Text style={styles.scoreText}>{getScoreLabel(safeValue)}</Text>
+              <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(percentageForLabel) }]}>
+                <Text style={styles.scoreText}>{getScoreLabel(percentageForLabel)}</Text>
               </View>
 
               {safeTrend !== undefined && safeTrend !== 0 && (

@@ -216,33 +216,40 @@ class IntelligentInsightService {
     const trend = emotionData?.trend || emotionData?.emotionTrend || 'stable';
     const insights = emotionData?.insights || [];
 
+    // 🆕 FIX: Helper to normalize from [-1, 1] to [0, 100]
+    const normalize = (v: number) => Math.round(((v + 1) / 2) * 100);
+
     // Valori attuali - supporta sia EmotionSession che altre strutture
     const currentEmotion = latestSession?.dominant || latestSession?.emotion || latestSession?.dominantEmotion || 'neutral';
-    const currentValence = latestSession?.avg_valence ?? latestSession?.valence ?? latestSession?.valence_score ?? 0;
-    const currentArousal = latestSession?.avg_arousal ?? latestSession?.arousal ?? latestSession?.arousal_score ?? 0;
+    const rawValence = latestSession?.avg_valence ?? latestSession?.valence ?? latestSession?.valence_score ?? 0;
+    const rawArousal = latestSession?.avg_arousal ?? latestSession?.arousal ?? latestSession?.arousal_score ?? 0;
     const currentConfidence = latestSession?.confidence ?? latestSession?.confidence_score ?? 0;
     const currentDate = latestSession?.date || (latestSession?.timestamp ? new Date(latestSession.timestamp).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+
+    // 🆕 FIX: Convert to 0-100 scale for display
+    const currentValence = normalize(rawValence);
+    const currentArousal = normalize(rawArousal);
 
     // Analizza trend storico
     let valenceTrend = 'stabile';
     let arousalTrend = 'stabile';
     let emotionPattern = 'nessun pattern evidente';
-    
+
     if (emotionHistory && emotionHistory.length > 0) {
       const recentSessions = emotionHistory.slice(-5);
-      const valences = recentSessions.map((s: any) => s.avg_valence ?? s.valence ?? s.valence_score ?? 0).filter((v: number) => v !== 0);
-      const arousals = recentSessions.map((s: any) => s.avg_arousal ?? s.arousal ?? s.arousal_score ?? 0).filter((a: number) => a !== 0);
-      
+      const valences = recentSessions.map((s: any) => normalize(s.avg_valence ?? s.valence ?? s.valence_score ?? 0));
+      const arousals = recentSessions.map((s: any) => normalize(s.avg_arousal ?? s.arousal ?? s.arousal_score ?? 0));
+
       if (valences.length > 1) {
         const avgValence = valences.reduce((a: number, b: number) => a + b, 0) / valences.length;
-        if (currentValence > avgValence + 0.1) valenceTrend = 'in miglioramento';
-        else if (currentValence < avgValence - 0.1) valenceTrend = 'in calo';
+        if (currentValence > avgValence + 5) valenceTrend = 'in miglioramento';
+        else if (currentValence < avgValence - 5) valenceTrend = 'in calo';
       }
-      
+
       if (arousals.length > 1) {
         const avgArousal = arousals.reduce((a: number, b: number) => a + b, 0) / arousals.length;
-        if (currentArousal > avgArousal + 0.1) arousalTrend = 'più alto del solito';
-        else if (currentArousal < avgArousal - 0.1) arousalTrend = 'più basso del solito';
+        if (currentArousal > avgArousal + 5) arousalTrend = 'più alto del solito';
+        else if (currentArousal < avgArousal - 5) arousalTrend = 'più basso del solito';
       }
 
       // Analizza pattern emotivi
@@ -267,16 +274,20 @@ class IntelligentInsightService {
     const recommendationsText = recommendations.length > 0 ? `\n💡 RACCOMANDAZIONI INIZIALI:\n${recommendations.map((r: string) => `- ${r}`).join('\n')}` : '';
     const insightsText = insights.length > 0 ? `\n🧠 INSIGHT PREVIOUS:\n${insights.slice(0, 3).map((i: string) => `- ${i}`).join('\n')}` : '';
     const trendText = trend === 'improving' ? 'miglioramento' : trend === 'declining' ? 'peggioramento' : 'stabile';
-    const valenceState = currentValence < -0.3 ? 'molto negativa' : currentValence < 0 ? 'leggermente negativa' : currentValence > 0.3 ? 'molto positiva' : 'neutra';
-    const moodAction = currentValence < 0 ? 'migliorare' : 'mantenere';
+    // 🆕 FIX: Updated thresholds for 0-100 scale
+    const valenceState = currentValence < 35 ? 'molto negativa' : currentValence < 50 ? 'leggermente negativa' : currentValence > 65 ? 'molto positiva' : 'neutra';
+    const moodAction = currentValence < 50 ? 'migliorare' : 'mantenere';
+
+    // 🆕 FIX: Updated arousal thresholds for 0-100 scale
+    const arousalState = currentArousal > 65 ? 'alto (stress/ansia)' : currentArousal < 35 ? 'basso (stanchezza/apatia)' : 'normale';
 
     return `Sei un assistente wellness specializzato in benessere emotivo. 
 Analizza i dati specifici dell'utente e fornisci insight pratici e personalizzati basati sui valori reali.
 
 📊 STATO EMOTIVO ATTUALE (${currentDate}):
 - Emozione dominante: ${currentEmotion}
-- Valence: ${currentValence.toFixed(2)} (da -1 negativo a +1 positivo)
-- Arousal: ${currentArousal.toFixed(2)} (da -1 calmo a +1 eccitato)
+- Valence: ${currentValence}/100 (0 = molto negativo, 50 = neutro, 100 = molto positivo)
+- Arousal: ${currentArousal}/100 (0 = molto calmo, 50 = normale, 100 = molto eccitato)
 - Confidenza: ${(currentConfidence * 100).toFixed(0)}%
 
 📈 TREND E PATTERN:
@@ -290,12 +301,13 @@ ${recommendationsText}
 ${insightsText}
 
 🎯 ISTRUZIONI PER GLI INSIGHT:
-1. **Usa i valori specifici**: Riferisciti esplicitamente ai valori di valence (${currentValence.toFixed(2)}), arousal (${currentArousal.toFixed(2)}), e emozione (${currentEmotion}) nei tuoi insight.
+1. **Usa i valori specifici**: Riferisciti esplicitamente ai valori di valence (${currentValence}/100), arousal (${currentArousal}/100), e emozione (${currentEmotion}) nei tuoi insight.
 2. **Basati sul trend**: Se il trend è "${trendText}", crea insight che supportino o contrastino questo trend in modo appropriato.
 3. **Personalizza**: Se valence è ${valenceState}, suggerisci azioni specifiche per ${moodAction} l'umore.
-4. **Considera arousal**: Se arousal è ${currentArousal > 0.5 ? 'alto (stress/ansia)' : currentArousal < -0.5 ? 'basso (depressione/fatica)' : 'normale'}, adatta le raccomandazioni di conseguenza.
+4. **Considera arousal**: Se arousal è ${arousalState}, adatta le raccomandazioni di conseguenza.
 5. **Action-oriented**: Ogni insight deve essere una **azione concreta** che l'utente può fare OGGI, non teoria.
 6. **Massimo 3 insight**: Scegli i 3 più rilevanti basati sui dati reali.
+7. **OBBLIGATORIO**: OGNI insight DEVE avere un "title" (titolo breve dell'azione) E una "description" (spiegazione di 1-2 frasi che motiva l'azione basandosi sui dati). Non lasciare mai campi vuoti!
 
 IMPORTANTE: Rispondi SOLO con un JSON valido nel seguente formato:
 
@@ -304,28 +316,25 @@ IMPORTANTE: Rispondi SOLO con un JSON valido nel seguente formato:
     {
       "id": "emotion-insight-1",
       "title": "Passeggiata rilassante",
-      "description": "La valence è calata per 3 giorni consecutivi. Prova a fare una camminata breve oggi per stimolare un umore più positivo.",
+      "description": "Con una valence a ${currentValence}/100, una breve camminata può aiutarti a ritrovare energia positiva.",
       "actionType": "routine",
       "estimatedTime": "15 min",
       "priority": "medium",
       "category": "emotion",
       "actionable": true,
-      "detailedExplanation": "La camminata all'aperto stimola la produzione di endorfine e serotonina, migliorando naturalmente l'umore. L'esposizione alla luce naturale regola anche il ritmo circadiano.",
+      "detailedExplanation": "La camminata all'aperto stimola la produzione di endorfine e serotonina, migliorando naturalmente l'umore.",
       "correlations": [
-        "Valence in calo per 3 giorni consecutivi",
-        "Arousal stabile ma leggermente alto",
-        "Tendenza a emozioni neutre/negative"
+        "Valence attuale: ${currentValence}/100",
+        "Arousal attuale: ${currentArousal}/100"
       ],
       "expectedBenefits": [
         "Aumento della produzione di endorfine",
-        "Miglioramento del ritmo circadiano",
-        "Riduzione dello stress e ansia",
-        "Incremento dell'energia fisica"
+        "Miglioramento dell'umore"
       ]
     }
   ],
-  "trendSummary": "Trend emozionale: calo graduale della valence negli ultimi giorni.",
-  "overallScore": 65,
+  "trendSummary": "Trend emozionale: ${trendText}.",
+  "overallScore": ${currentValence},
   "focus": "Miglioramento dell'umore"
 }
 
@@ -356,7 +365,7 @@ Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
     let hydrationTrend = 'stabile';
     let textureTrend = 'stabile';
     let overallTrend = 'stabile';
-    
+
     if (skinHistory && skinHistory.length > 0) {
       const recentSessions = skinHistory.slice(-5);
       const scores = recentSessions.map((s: any) => {
@@ -566,41 +575,41 @@ Rispondi in italiano nella lingua dell'utente e limita la lunghezza a poche fras
         }
 
         if (!parsedData) {
-        // Try to extract JSON from the response with better regex
-        const jsonMatch = analysisText.match(/\{[\s\S]*?\}(?=\s*$|\s*[^}])/);
-        if (jsonMatch) {
-          try {
-            // Try to fix incomplete JSON by adding missing closing braces
-            let jsonStr = jsonMatch[0];
+          // Try to extract JSON from the response with better regex
+          const jsonMatch = analysisText.match(/\{[\s\S]*?\}(?=\s*$|\s*[^}])/);
+          if (jsonMatch) {
+            try {
+              // Try to fix incomplete JSON by adding missing closing braces
+              let jsonStr = jsonMatch[0];
 
-            // Count opening and closing braces
-            const openBraces = (jsonStr.match(/\{/g) || []).length;
-            const closeBraces = (jsonStr.match(/\}/g) || []).length;
+              // Count opening and closing braces
+              const openBraces = (jsonStr.match(/\{/g) || []).length;
+              const closeBraces = (jsonStr.match(/\}/g) || []).length;
 
-            // Add missing closing braces
-            if (openBraces > closeBraces) {
-              jsonStr += '}'.repeat(openBraces - closeBraces);
-            }
-
-            // Try to fix incomplete strings
-            if (jsonStr.includes('"description": "') && !jsonStr.includes('",')) {
-              // Find the last incomplete description and close it
-              const lastDescMatch = jsonStr.match(/"description":\s*"([^"]*?)(?:"|$)/g);
-              if (lastDescMatch) {
-                const lastMatch = lastDescMatch[lastDescMatch.length - 1];
-                const fixedMatch = lastMatch.replace(/([^"]*?)(?:"|$)/, '$1"');
-                jsonStr = jsonStr.replace(lastMatch, fixedMatch);
+              // Add missing closing braces
+              if (openBraces > closeBraces) {
+                jsonStr += '}'.repeat(openBraces - closeBraces);
               }
-            }
 
-            parsedData = JSON.parse(jsonStr);
-            console.log('📋 Extracted and fixed JSON parse successful:', parsedData);
-          } catch (fixError) {
-            console.log('⚠️ Could not fix JSON, trying partial parsing:', fixError);
-            // Try to extract individual insights even if the overall JSON is broken
-            parsedData = this.extractPartialInsights(analysisText, request.category);
+              // Try to fix incomplete strings
+              if (jsonStr.includes('"description": "') && !jsonStr.includes('",')) {
+                // Find the last incomplete description and close it
+                const lastDescMatch = jsonStr.match(/"description":\s*"([^"]*?)(?:"|$)/g);
+                if (lastDescMatch) {
+                  const lastMatch = lastDescMatch[lastDescMatch.length - 1];
+                  const fixedMatch = lastMatch.replace(/([^"]*?)(?:"|$)/, '$1"');
+                  jsonStr = jsonStr.replace(lastMatch, fixedMatch);
+                }
+              }
+
+              parsedData = JSON.parse(jsonStr);
+              console.log('📋 Extracted and fixed JSON parse successful:', parsedData);
+            } catch (fixError) {
+              console.log('⚠️ Could not fix JSON, trying partial parsing:', fixError);
+              // Try to extract individual insights even if the overall JSON is broken
+              parsedData = this.extractPartialInsights(analysisText, request.category);
+            }
           }
-        }
         }
       }
 
@@ -611,7 +620,7 @@ Rispondi in italiano nella lingua dell'utente e limita la lunghezza a poche fras
           insights: parsedData.insights.map((insight: any, index: number) => ({
             id: insight.id || `${request.category}-insight-${index}`,
             title: insight.title || 'Insight generico',
-            description: insight.description || 'Descrizione non disponibile',
+            description: insight.description || insight.detailedExplanation || `Scopri di più su: ${insight.title || 'questo suggerimento'}`,
             actionType: insight.actionType || 'routine',
             estimatedTime: insight.estimatedTime || '5 min',
             priority: insight.priority || 'medium',
@@ -652,7 +661,7 @@ Rispondi in italiano nella lingua dell'utente e limita la lunghezza a poche fras
             return {
               id: `${category}-insight-${index}`,
               title: titleMatch ? titleMatch[1] : 'Insight generico',
-              description: descMatch ? descMatch[1] : 'Descrizione non disponibile',
+              description: descMatch ? descMatch[1] : `Scopri di più su: ${titleMatch?.[1] || 'questo suggerimento'}`,
               actionType: 'routine',
               estimatedTime: '5 min',
               priority: 'medium'

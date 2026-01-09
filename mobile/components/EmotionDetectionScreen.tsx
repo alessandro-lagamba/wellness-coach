@@ -1239,72 +1239,48 @@ export const EmotionDetectionScreen: React.FC = () => {
           {/* Recent Session Section - Only show if there are sessions */}
           {latestEmotionSession && (
             <>
+              {/* 🆕 FIX: Restored section header without refresh button */}
               <View style={styles.sectionHeader}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View>
-                    <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.recent.title')}</Text>
-                    <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.recent.subtitle')}</Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={async () => {
-                      // 🔥 FIX: Rimuoviamo console.log eccessivi
-                      try {
-                        await ChartDataService.loadEmotionDataForCharts();
-                        if (isMountedRef.current) {
-                          setDataLoaded(prev => !prev); // Toggle to force re-render
-                        }
-                        // 🔥 FIX: Rimuoviamo console.log eccessivi
-                      } catch (error) {
-                        console.error('❌ Manual reload failed:', error);
-                      }
-                    }}
-                    style={{
-                      padding: 8,
-                      backgroundColor: themeColors.surfaceMuted,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: themeColors.border
-                    }}
-                  >
-                    <FontAwesome name="refresh" size={16} color={themeColors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+                <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.recent.title')}</Text>
+                <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.recent.subtitle')}</Text>
               </View>
 
-              {(() => {
-                try {
-                  // Always show the card, with fallback data if no session exists
-                  const fallbackSession = {
-                    id: 'fallback',
-                    timestamp: new Date(),
-                    dominant: 'neutral',
-                    avg_valence: 0,
-                    avg_arousal: 0.5,
-                    confidence: 0.5,
-                    duration: 0,
-                  };
+              <View style={{ paddingHorizontal: 0, marginTop: 0 }}>
+                {(() => {
+                  try {
+                    // Always show the card, with fallback data if no session exists
+                    const fallbackSession = {
+                      id: 'fallback',
+                      timestamp: new Date(),
+                      dominant: 'neutral',
+                      avg_valence: 0,
+                      avg_arousal: 0.5,
+                      confidence: 0.5,
+                      duration: 0,
+                    };
 
-                  return (
-                    <EmotionSessionCard
-                      session={latestEmotionSession || fallbackSession}
-                    />
-                  );
-                } catch (error) {
-                  // 🔥 FIX: Solo errori critici in console
-                  console.error('❌ Failed to load latest emotion session:', error);
-                  // Fallback session in case of error
-                  const fallbackSession = {
-                    id: 'error-fallback',
-                    timestamp: new Date(),
-                    dominant: 'neutral',
-                    avg_valence: 0,
-                    avg_arousal: 0.5,
-                    confidence: 0.5,
-                    duration: 0,
-                  };
-                  return <EmotionSessionCard session={fallbackSession} />;
-                }
-              })()}
+                    return (
+                      <EmotionSessionCard
+                        session={latestEmotionSession || fallbackSession}
+                      />
+                    );
+                  } catch (error) {
+                    // 🔥 FIX: Solo errori critici in console
+                    console.error('❌ Failed to load latest emotion session:', error);
+                    // Fallback session in case of error
+                    const fallbackSession = {
+                      id: 'error-fallback',
+                      timestamp: new Date(),
+                      dominant: 'neutral',
+                      avg_valence: 0,
+                      avg_arousal: 0.5,
+                      confidence: 0.5,
+                      duration: 0,
+                    };
+                    return <EmotionSessionCard session={fallbackSession} />;
+                  }
+                })()}
+              </View>
 
               {/* Detailed Analysis Button */}
               <TouchableOpacity

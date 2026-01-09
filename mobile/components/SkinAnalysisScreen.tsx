@@ -1938,7 +1938,8 @@ const SkinAnalysisScreenContent: React.FC = () => {
               date: `${index + 1}`,
               texture: capture.scores?.texture || 0,
               redness: capture.scores?.redness || 0,
-              hydration: capture.scores?.hydration || 0,  // ✅ FIXED: Use hydration instead of shine
+              hydration: capture.scores?.hydration || 0,
+              oiliness: capture.scores?.oiliness || 0,  // 🆕 FIX: Added missing oiliness field
               overall: capture.scores?.overall || 0,
             }))}
             title={t('analysis.skin.trends.title')}

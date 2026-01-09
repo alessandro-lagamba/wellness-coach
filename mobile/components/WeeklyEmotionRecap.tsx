@@ -128,6 +128,25 @@ export const WeeklyEmotionRecap: React.FC = () => {
     const topEmotion = Object.entries(data.dominantEmotions)
         .sort((a, b) => b[1] - a[1])[0];
 
+    // 🆕 Emotion translation map for Italian
+    const emotionTranslations: Record<string, string> = {
+        neutral: 'neutro',
+        joy: 'gioia',
+        happiness: 'felicità',
+        sadness: 'tristezza',
+        anger: 'rabbia',
+        fear: 'paura',
+        surprise: 'sorpresa',
+        disgust: 'disgusto',
+        contempt: 'disprezzo',
+    };
+
+    // Helper to get translated and capitalized emotion name
+    const getEmotionDisplay = (emotion: string) => {
+        const translated = language === 'it' ? (emotionTranslations[emotion.toLowerCase()] || emotion) : emotion;
+        return translated.charAt(0).toUpperCase() + translated.slice(1);
+    };
+
     return (
         <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {/* Header */}
@@ -168,21 +187,21 @@ export const WeeklyEmotionRecap: React.FC = () => {
                     <View style={[styles.statDot, { backgroundColor: '#10b981' }]} />
                     <Text style={[styles.statNumber, { color: colors.text }]}>{data.positiveDays}</Text>
                     <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                        {language === 'it' ? 'Positivi' : 'Positive'}
+                        {language === 'it' ? 'Positivo' : 'Positive'}
                     </Text>
                 </View>
                 <View style={styles.statItem}>
                     <View style={[styles.statDot, { backgroundColor: '#6366f1' }]} />
                     <Text style={[styles.statNumber, { color: colors.text }]}>{data.neutralDays}</Text>
                     <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                        {language === 'it' ? 'Neutri' : 'Neutral'}
+                        {language === 'it' ? 'Neutro' : 'Neutral'}
                     </Text>
                 </View>
                 <View style={styles.statItem}>
                     <View style={[styles.statDot, { backgroundColor: '#ef4444' }]} />
                     <Text style={[styles.statNumber, { color: colors.text }]}>{data.negativeDays}</Text>
                     <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                        {language === 'it' ? 'Difficili' : 'Tough'}
+                        {language === 'it' ? 'Negativo' : 'Tough'}
                     </Text>
                 </View>
             </View>
@@ -193,8 +212,8 @@ export const WeeklyEmotionRecap: React.FC = () => {
                     <Feather name="zap" size={14} color={colors.primary} />
                     <Text style={[styles.insightText, { color: colors.text }]}>
                         {language === 'it'
-                            ? `Emozione principale: ${topEmotion[0]} (${Math.round(topEmotion[1] / data.totalAnalyses * 100)}%)`
-                            : `Top emotion: ${topEmotion[0]} (${Math.round(topEmotion[1] / data.totalAnalyses * 100)}%)`}
+                            ? `Emozione principale: ${getEmotionDisplay(topEmotion[0])} (${Math.round(topEmotion[1] / data.totalAnalyses * 100)}%)`
+                            : `Top emotion: ${getEmotionDisplay(topEmotion[0])} (${Math.round(topEmotion[1] / data.totalAnalyses * 100)}%)`}
                     </Text>
                 </View>
             )}
