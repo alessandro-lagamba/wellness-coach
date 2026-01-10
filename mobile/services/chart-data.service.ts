@@ -18,12 +18,12 @@ export class ChartDataService {
         .from(Tables.USER_PROFILES)
         .select('id')
         .limit(1);
-      
+
       if (error) {
         console.error('❌ Supabase connection test failed:', error);
         return false;
       }
-      
+
       console.log('✅ Supabase connection test successful');
       return true;
     } catch (error) {
@@ -47,12 +47,12 @@ export class ChartDataService {
         return result;
       } catch (error) {
         console.error(`❌ ${operationName} - Attempt ${attempt} failed:`, error);
-        
+
         if (attempt === this.maxRetries) {
           console.error(`❌ ${operationName} - All attempts failed`);
           return null;
         }
-        
+
         // Wait before retry
         await new Promise(resolve => setTimeout(resolve, this.retryDelay * attempt));
       }
@@ -134,16 +134,30 @@ export class ChartDataService {
 
       // Aggiorna lo store locale con i dati del database
       const store = useAnalysisStore.getState();
-      
-      // ✅ FIX: Clear existing data first to avoid duplicates
+
+      // 🆕 FIX: Don't use addEmotionSession in a loop - it sets latestEmotionSession to EACH item,
+      // resulting in the oldest session becoming latestEmotionSession (because data is sorted descending).
+      // Instead, directly set the state with the correct values.
+
+      // emotionSessions[0] is the most recent (data is sorted by created_at DESC)
+      const latestSession = emotionSessions.length > 0 ? emotionSessions[0] : null;
+
+      // Use zustand's set function through a workaround: clear first, then add in reverse order
+      // so that the LAST addEmotionSession call is the MOST RECENT session
       store.clearHistory();
-      
-      // Aggiungi tutte le sessioni allo store
-      emotionSessions.forEach(session => {
+
+      // Add sessions in REVERSE order so the most recent is added last
+      // This ensures latestEmotionSession is correctly set to the most recent
+      [...emotionSessions].reverse().forEach(session => {
         store.addEmotionSession(session);
       });
 
-      console.log('✅ Emotion data synchronized with local store');
+      console.log('✅ Emotion data synchronized with local store', {
+        totalSessions: emotionSessions.length,
+        latestId: latestSession?.id,
+        latestValence: latestSession?.avg_valence,
+        latestArousal: latestSession?.avg_arousal
+      });
 
     } catch (error) {
       console.error('❌ Error in loadEmotionDataForCharts:', error);
@@ -283,10 +297,10 @@ export class ChartDataService {
 
       // Aggiorna lo store locale con i dati del database
       const store = useAnalysisStore.getState();
-      
+
       // ✅ FIX: Clear existing data first to avoid duplicates
       store.clearHistory();
-      
+
       // Aggiungi tutte le catture allo store
       skinCaptures.forEach(capture => {
         store.addSkinCapture(capture);
@@ -352,11 +366,11 @@ export class ChartDataService {
         overall: typeof analysis.overall_score === 'number'
           ? analysis.overall_score
           : Math.round((
-              (analysis.texture_score || 0) +
-              (analysis.redness_score || 0) +
-              (analysis.oiliness_score || 0) +
-              (analysis.hydration_score || 0)
-            ) / 4),
+            (analysis.texture_score || 0) +
+            (analysis.redness_score || 0) +
+            (analysis.oiliness_score || 0) +
+            (analysis.hydration_score || 0)
+          ) / 4),
       }));
     } catch (error) {
       console.error('❌ Error in loadSkinDataForPeriod:', error);
@@ -450,13 +464,13 @@ export class ChartDataService {
    */
   static async loadAllChartData(): Promise<void> {
     console.log('📊 Loading all chart data from Supabase...');
-    
+
     await Promise.all([
       this.loadEmotionDataForCharts(),
       this.loadSkinDataForCharts(),
       this.loadFoodDataForCharts(),
     ]);
-    
+
     console.log('✅ All chart data loaded and synchronized');
   }
 
@@ -468,12 +482,12 @@ export class ChartDataService {
     latestSession: any | null;
   }> {
     const store = useAnalysisStore.getState();
-    
+
     // Se non ci sono dati locali, prova a caricare dal database
     if (store.emotionHistory.length === 0) {
       await this.loadEmotionDataForCharts();
     }
-    
+
     return {
       emotionHistory: store.emotionHistory,
       latestSession: store.latestEmotionSession,
@@ -488,12 +502,12 @@ export class ChartDataService {
     latestCapture: any | null;
   }> {
     const store = useAnalysisStore.getState();
-    
+
     // Se non ci sono dati locali, prova a caricare dal database
     if (store.skinHistory.length === 0) {
       await this.loadSkinDataForCharts();
     }
-    
+
     return {
       skinHistory: store.skinHistory,
       latestCapture: store.latestSkinCapture,
