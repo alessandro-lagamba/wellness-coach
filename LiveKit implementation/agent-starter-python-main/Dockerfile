@@ -1,10 +1,8 @@
 # syntax=docker/dockerfile:1
 
-# Use the official UV Python base image with Python 3.12 on Debian Bookworm
-# UV is a fast Python package manager that provides better performance than pip
-# We use the slim variant to keep the image size smaller while still having essential tools
-# 🔥 FIX: Changed from 3.13 to 3.12 because av package only has wheels for Python 3.10-3.12
-ARG PYTHON_VERSION=3.12
+# Use the official UV Python base image with Python 3.11 on Debian Bookworm
+# Python 3.11 has better wheel support for 'av' and other libraries than 3.12/3.13
+ARG PYTHON_VERSION=3.11
 FROM ghcr.io/astral-sh/uv:python${PYTHON_VERSION}-bookworm-slim AS base
 
 # Keeps Python from buffering stdout and stderr to avoid situations where
