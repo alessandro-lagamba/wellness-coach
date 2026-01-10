@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -12,6 +12,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { EmotionAnalysisService } from '../services/emotion-analysis.service';
 import { AuthService } from '../services/auth.service';
+import { useAnalysisStore } from '../stores/analysis.store';
 
 interface WeeklyRecapData {
     totalAnalyses: number;
@@ -31,11 +32,12 @@ export const WeeklyEmotionRecap: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<WeeklyRecapData | null>(null);
 
-    useEffect(() => {
-        loadRecapData();
-    }, []);
+    // 🆕 Subscribe to store to trigger refetch when new analyses are added
+    const emotionHistoryLength = useAnalysisStore((state) => state.emotionHistory?.length ?? 0);
+    const latestEmotionSession = useAnalysisStore((state) => state.latestEmotionSession);
 
-    const loadRecapData = async () => {
+    // 🆕 Memoized load function
+    const loadRecapData = useCallback(async () => {
         try {
             const user = await AuthService.getCurrentUser();
             if (!user) {
@@ -103,7 +105,12 @@ export const WeeklyEmotionRecap: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []); // Empty deps - function doesn't depend on external state
+
+    // 🆕 Refetch when emotion history changes (new analysis saved)
+    useEffect(() => {
+        loadRecapData();
+    }, [loadRecapData, emotionHistoryLength, latestEmotionSession?.id]);
 
     if (loading) {
         return (
