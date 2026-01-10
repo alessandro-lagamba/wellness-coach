@@ -50,7 +50,8 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
   ];
 
   const hasData = data.length > 0;
-  const latestDataPoint = chartData[chartData.length - 1];
+  // 🆕 FIX: Data is sorted descending (newest first), so [0] is the most recent
+  const latestDataPoint = chartData[0];
   const latestValence = latestDataPoint?.valence || 0;
   const latestArousal = latestDataPoint?.arousal || 0;
 
