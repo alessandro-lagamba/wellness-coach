@@ -977,12 +977,12 @@ Use these patterns to:
 HISTORICAL CONTEXT (USE CAREFULLY)
 ----------------------------------------------------------------------
 
-The user has ${historicalData.length} recent check-ins in the last 7 days.
+The user has ${historicalData.length} PREVIOUS check-ins (excluding this current one).
 
-Recent baseline (for narrative context ONLY — do not change numeric field scales):
-- baseline_mood_score_0_100: ${avgValence0100} (50 = neutral, 0 = very negative, 100 = very positive)
-- baseline_energy_score_0_100: ${avgArousal0100} (50 = neutral, 0 = very calm/low, 100 = very activated/high)
-- dominant emotions: ${sortedEmotions.join(', ')}
+PREVIOUS BASELINE (for comparison with TODAY's analysis):
+- previous_mood_score_0_100: ${avgValence0100} (50 = neutral, 0 = very negative, 100 = very positive)
+- previous_energy_score_0_100: ${avgArousal0100} (50 = neutral, 0 = very calm/low, 100 = very activated/high)
+- dominant emotions in past sessions: ${sortedEmotions.join(', ')}
 - overall trend: ${context.trend} (${trendText})
 
 ${contextualPatterns} 
@@ -991,7 +991,9 @@ INSTRUCTIONS:
 - Keep numeric JSON fields:
   - "valence" in [-1, 1]
   - "arousal" in [-1, 1]
-- You MAY reference baseline_mood_score_0_100 / baseline_energy_score_0_100 ONLY inside "analysis_description" as plain text.
+- You MAY compare TODAY's detected values to the PREVIOUS baseline in "analysis_description".
+- Use phrases like "rispetto alle tue sessioni precedenti" or "compared to your recent sessions".
+- Do NOT show raw numbers like "47" - instead say "leggermente sopra/sotto la tua media recente".
 - If today seems meaningfully higher/lower than the baseline, mention it briefly (one sentence max).
 - Do not invent causal explanations. Use cautious language.
 `;
