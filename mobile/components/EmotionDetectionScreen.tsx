@@ -1451,8 +1451,8 @@ export const EmotionDetectionScreen: React.FC = () => {
           {/* Emotion Trend Chart */}
           {(() => {
             try {
-              const store = useAnalysisStore.getState();
-              const emotionHistory = store.getSafeEmotionHistory();
+              // 🆕 FIX: Use storeEmotionHistory from hook (reactive) instead of getState() (non-reactive)
+              const emotionHistory = storeEmotionHistory || [];
 
               // Format date helper function
               const formatDate = (timestamp: Date) => {
