@@ -7,7 +7,7 @@
  */
 
 import OpenAI from 'openai';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -16,10 +16,23 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
-const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_KEY || ''
-);
+// 🔥 FIX: Lazy initialization to avoid crash when env vars not loaded
+let _supabase: SupabaseClient | null = null;
+
+function getSupabase(): SupabaseClient {
+    if (!_supabase) {
+        const url = process.env.SUPABASE_URL;
+        const key = process.env.SUPABASE_SERVICE_KEY;
+
+        if (!url || !key) {
+            console.error('[Embedding] ❌ SUPABASE_URL or SUPABASE_SERVICE_KEY not configured');
+            throw new Error('Supabase not configured for embeddings');
+        }
+
+        _supabase = createClient(url, key);
+    }
+    return _supabase;
+}
 
 // Use text-embedding-3-small for cost efficiency (1536 dimensions)
 const EMBEDDING_MODEL = 'text-embedding-3-small';
@@ -90,7 +103,7 @@ export async function storeJournalEmbedding(
         // Convert array to pgvector format string
         const vectorString = `[${embedding.join(',')}]`;
 
-        const { error } = await supabase
+        const { error } = await getSupabase()
             .from('daily_journal_entries')
             .update({ embedding: vectorString })
             .eq('id', entryId);
@@ -161,7 +174,7 @@ export async function searchJournalEntries(
         const vectorString = `[${queryResult.embedding.join(',')}]`;
 
         // Call the Supabase RPC function
-        const { data, error } = await supabase.rpc('search_journal_entries', {
+        const { data, error } = await getSupabase().rpc('search_journal_entries', {
             query_embedding: vectorString,
             user_id_param: userId,
             match_threshold: threshold,
@@ -190,7 +203,7 @@ export async function backfillUserEmbeddings(userId: string): Promise<number> {
         console.log('[Embedding] 🔄 Backfilling embeddings for user:', userId);
 
         // Get all entries without embeddings
-        const { data: entries, error } = await supabase
+        const { data: entries, error } = await getSupabase()
             .from('daily_journal_entries')
             .select('id, content, ai_analysis')
             .eq('user_id', userId)
