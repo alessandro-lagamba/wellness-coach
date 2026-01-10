@@ -163,6 +163,7 @@ export const EmotionDetectionScreen: React.FC = () => {
 
   // 🆕 FIX: Use reactive hook to get latest emotion session (triggers re-render when store updates)
   const latestEmotionSession = useAnalysisStore((state) => state.latestEmotionSession);
+  const storeEmotionHistory = useAnalysisStore((state) => state.emotionHistory);
 
   const latestEmotionAnalysisDate = useMemo(() => {
     if (!latestEmotionSession?.timestamp) {
@@ -170,7 +171,30 @@ export const EmotionDetectionScreen: React.FC = () => {
     }
     return toLocalISODate(new Date(latestEmotionSession.timestamp));
   }, [latestEmotionSession]);
-  const hasTodayEmotionAnalysis = latestEmotionAnalysisDate === getTodayISODate();
+
+  // 🆕 FIX: Check BOTH latestEmotionSession AND storeEmotionHistory for today's analysis
+  const hasTodayEmotionAnalysis = useMemo(() => {
+    const today = getTodayISODate();
+
+    // Check if latestEmotionSession is from today
+    if (latestEmotionAnalysisDate === today) {
+      return true;
+    }
+
+    // Also check storeEmotionHistory for any entry from today
+    if (storeEmotionHistory && storeEmotionHistory.length > 0) {
+      const hasTodayEntry = storeEmotionHistory.some((session) => {
+        if (!session?.timestamp) return false;
+        const sessionDate = toLocalISODate(new Date(session.timestamp));
+        return sessionDate === today;
+      });
+      if (hasTodayEntry) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [latestEmotionAnalysisDate, storeEmotionHistory]);
 
   const emotionDisplayData = useMemo(() => {
     const mapped = {} as Record<Emotion, EmotionData>;

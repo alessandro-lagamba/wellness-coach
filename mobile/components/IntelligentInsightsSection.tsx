@@ -91,7 +91,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
 
     try {
       console.log(`🧠 Loading intelligent insights for ${category}...`);
-      
+
       const response = await insightService.generateIntelligentInsights({
         category,
         data,
@@ -104,9 +104,9 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
       setInsights(response.insights.slice(0, maxInsights));
       // Filter out the fallback trend summary text and empty/placeholder messages
       const filteredTrendSummary = (
-        response.trendSummary === 'Analisi trend non disponibile' || 
+        response.trendSummary === 'Analisi trend non disponibile' ||
         response.trendSummary === 'Nessun trend disponibile' ||
-        !response.trendSummary || 
+        !response.trendSummary ||
         response.trendSummary.trim() === ''
       ) ? '' : response.trendSummary;
       setTrendSummary(filteredTrendSummary);
@@ -136,8 +136,8 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
             `Vuoi iniziare la routine: "${insight.title}"?`,
             [
               { text: 'Annulla', style: 'cancel' },
-              { 
-                text: 'Inizia', 
+              {
+                text: 'Inizia',
                 onPress: () => {
                   onActionPress?.(insight, action);
                   Alert.alert('Routine Avviata', 'La routine è stata aggiunta alle tue attività di oggi!');
@@ -152,8 +152,8 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
             `Vuoi impostare un promemoria per: "${insight.title}"?`,
             [
               { text: 'Annulla', style: 'cancel' },
-              { 
-                text: 'Imposta', 
+              {
+                text: 'Imposta',
                 onPress: () => {
                   onActionPress?.(insight, action);
                   Alert.alert('Promemoria Impostato', 'Ti ricorderemo di questa attività!');
@@ -229,7 +229,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
             <Text style={[styles.subtitle, { color: subtitleColor }]}>{categoryInfo.subtitle}</Text>
           </View>
         )}
-        
+
         <View style={[styles.loadingCard, { backgroundColor: cardBackground, borderColor: cardBorder }]}>
           <ActivityIndicator size="large" color={accentColor} />
           <Text style={[styles.loadingText, { color: titleColor }]}>
@@ -252,12 +252,12 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
             <Text style={[styles.subtitle, { color: subtitleColor }]}>{categoryInfo.subtitle}</Text>
           </View>
         )}
-        
+
         <View style={[styles.errorCard, { backgroundColor: cardBackground, borderColor: cardBorder }]}>
           <MaterialCommunityIcons name="alert-circle" size={32} color="#ef4444" />
           <Text style={[styles.errorTitle, { color: titleColor }]}>Errore</Text>
           <Text style={[styles.errorText, { color: subtitleColor }]}>{error}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.retryButton, { backgroundColor: accentColor }]}
             onPress={loadIntelligentInsights}
           >
@@ -277,7 +277,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
             <Text style={[styles.subtitle, { color: subtitleColor }]}>{categoryInfo.subtitle}</Text>
           </View>
         )}
-        
+
         <View style={[styles.emptyCard, { backgroundColor: cardBackground, borderColor: cardBorder }]}>
           <MaterialCommunityIcons name="lightbulb-outline" size={32} color={accentColor} />
           <Text style={[styles.emptyTitle, { color: titleColor }]}>Nessun insight disponibile</Text>
@@ -298,7 +298,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
               <Text style={[styles.title, { color: titleColor }]}>{sectionTitle}</Text>
               <Text style={[styles.subtitle, { color: subtitleColor }]}>{categoryInfo.subtitle}</Text>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.refreshButton, { backgroundColor: `${accentColor}22` }]}
               onPress={loadIntelligentInsights}
             >

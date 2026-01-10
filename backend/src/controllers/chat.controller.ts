@@ -5,15 +5,16 @@
 
 import { Request, Response } from 'express';
 import { generateWellnessResponse, ChatMessage } from '../services/llm.service';
+import { searchJournalEntries } from '../services/embedding.service';
 
 export const respondToChat = async (req: Request, res: Response) => {
   try {
-    const { 
-      message, 
-      sessionId, 
-      context, 
-      emotionContext, 
-      skinContext, 
+    const {
+      message,
+      sessionId,
+      context,
+      emotionContext,
+      skinContext,
       userContext,
       userId,
       analysisIntent,
@@ -44,11 +45,43 @@ export const respondToChat = async (req: Request, res: Response) => {
     // Extract message history if provided
     const messageHistory: ChatMessage[] = req.body.messageHistory || [];
 
+    // 🆕 RAG: Search diary entries for relevant context
+    let enrichedUserContext = { ...userContext };
+
+    if (userId) {
+      try {
+        console.log('[Chat] 🔍 Searching diary entries for context...');
+        const journalResults = await searchJournalEntries(message, userId, 5, 0.4);
+
+        if (journalResults.length > 0) {
+          console.log('[Chat] 📔 Found', journalResults.length, 'relevant diary entries');
+
+          enrichedUserContext = {
+            ...userContext,
+            journalContext: {
+              searchQuery: message,
+              relevantEntries: journalResults.map(entry => ({
+                date: entry.entry_date,
+                content: entry.content,
+                aiAnalysis: entry.ai_analysis,
+                similarity: entry.similarity
+              }))
+            }
+          };
+        } else {
+          console.log('[Chat] ℹ️ No relevant diary entries found');
+        }
+      } catch (searchError) {
+        console.log('[Chat] ⚠️ Diary search failed (non-blocking):', searchError);
+        // Continue without diary context - non-blocking error
+      }
+    }
+
     // Generate real LLM response with complete context
     const responseText = await generateWellnessResponse(message, messageHistory, {
       emotionContext,
       skinContext,
-      userContext,
+      userContext: enrichedUserContext,
       analysisIntent,
       tone,
       responseLength,
@@ -69,6 +102,7 @@ export const respondToChat = async (req: Request, res: Response) => {
         emotionContext: emotionContext?.dominantEmotion || 'neutral',
         skinContext: skinContext?.overallScore || null,
         hasUserHistory: !!(userContext?.emotionHistory?.length || userContext?.skinHistory?.length),
+        hasJournalContext: !!(enrichedUserContext?.journalContext?.relevantEntries?.length),
         model: 'wellness-coach-v2'
       }
     });
@@ -81,4 +115,5 @@ export const respondToChat = async (req: Request, res: Response) => {
     });
   }
 };
+
 

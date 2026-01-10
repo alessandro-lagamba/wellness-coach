@@ -21,6 +21,7 @@ import livekitRoutes from './routes/livekit.routes';
 import agentRoutes from './routes/agent.routes';
 import nutritionRoutes from './routes/nutrition.routes';
 import coachRoutes from './routes/coach.routes';
+import journalRoutes from './routes/journal.routes';
 // Gemini proxy removed
 
 // ✅ Valida variabili d'ambiente critiche all'avvio
@@ -46,8 +47,8 @@ app.use((req, res, next) => {
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     message: 'WellnessCoach Backend is healthy',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
@@ -67,6 +68,7 @@ app.use('/api/livekit', livekitRoutes);
 app.use('/api/agent', agentRoutes);
 app.use('/api/nutrition', nutritionRoutes);
 app.use('/api/coach', coachRoutes);
+app.use('/api/journal', journalRoutes);
 // app.use('/api/gemini', geminiProxyRoutes); // removed
 
 // Basic error handling

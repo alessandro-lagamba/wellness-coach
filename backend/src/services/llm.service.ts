@@ -111,6 +111,16 @@ export interface LLMOptions {
       macros?: any;
       identifiedFoods?: string[];
     } | null;
+    // 🆕 RAG: Journal context from semantic search
+    journalContext?: {
+      relevantEntries?: Array<{
+        date: string;
+        content: string;
+        aiAnalysis?: string | null;
+        similarity: number;
+      }>;
+      searchQuery?: string;
+    } | null;
   };
   // 🆕 NUOVO: Intent di analisi rilevato dal messaggio
   analysisIntent?: {
@@ -630,6 +640,45 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
     }
 
     contextualPrompt += `\n\n💡 USA QUESTE INFORMAZIONI per dare consigli nutrizionali personalizzati, rispondere a domande sull'alimentazione e verificare il progresso verso gli obiettivi.`;
+  }
+
+  // 🆕 RAG: Aggiungi contesto diario da ricerca semantica
+  if (userContext?.journalContext?.relevantEntries && userContext.journalContext.relevantEntries.length > 0) {
+    const journalEntries = userContext.journalContext.relevantEntries;
+
+    contextualPrompt += `\n\n📔 VOCI DEL DIARIO RILEVANTI:\n- HAI ACCESSO ALLE VOCI DEL DIARIO DELL'UTENTE trovate tramite ricerca semantica!`;
+
+    if (userContext.journalContext.searchQuery) {
+      contextualPrompt += `\n- Query di ricerca: "${userContext.journalContext.searchQuery}"`;
+    }
+
+    contextualPrompt += `\n\n📝 VOCI TROVATE (${journalEntries.length}):`;
+
+    journalEntries.forEach((entry, index) => {
+      const date = entry.date;
+      const similarity = (entry.similarity * 100).toFixed(0);
+      // Limit content to avoid token explosion
+      const content = entry.content.length > 500
+        ? entry.content.slice(0, 500) + '...'
+        : entry.content;
+
+      contextualPrompt += `\n\n--- VOCE ${index + 1} (${date}, rilevanza: ${similarity}%) ---`;
+      contextualPrompt += `\n${content}`;
+
+      if (entry.aiAnalysis) {
+        const analysis = entry.aiAnalysis.length > 200
+          ? entry.aiAnalysis.slice(0, 200) + '...'
+          : entry.aiAnalysis;
+        contextualPrompt += `\n[Analisi AI]: ${analysis}`;
+      }
+    });
+
+    contextualPrompt += `\n\n💡 USA QUESTE VOCI DEL DIARIO per:
+- Ricordare eventi specifici menzionati dall'utente
+- Collegare il presente con esperienze passate
+- Mostrare che "ti ricordi" di ciò che ha scritto
+- Personalizzare i consigli basandoti sulla sua storia personale
+- NON inventare dettagli non presenti nelle voci`;
   }
 
   // Istruzioni finali migliorate

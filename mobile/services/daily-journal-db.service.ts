@@ -141,7 +141,41 @@ export class DailyJournalDBService {
     // Log scrittura
     await logWriteEvent('journal', entry.id);
 
+    // 🆕 RAG: Generate embedding asynchronously (non-blocking)
+    this.generateEmbeddingAsync(entry.id, content, aiAnalysis);
+
     return entry;
+  }
+
+  /**
+   * Generate embedding for a journal entry (non-blocking)
+   */
+  private static async generateEmbeddingAsync(entryId: string, content: string, aiAnalysis?: string) {
+    try {
+      const { getBackendURL } = await import('../constants/env');
+      const backendURL = await getBackendURL();
+
+      console.log('[JournalDB] 🔄 Generating embedding for entry:', entryId);
+
+      const response = await fetch(`${backendURL}/api/journal/embed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entryId,
+          content,
+          aiAnalysis
+        })
+      });
+
+      if (response.ok) {
+        console.log('[JournalDB] ✅ Embedding generated successfully');
+      } else {
+        console.warn('[JournalDB] ⚠️ Embedding generation failed:', response.status);
+      }
+    } catch (error) {
+      // Non-blocking - just log the error
+      console.warn('[JournalDB] ⚠️ Failed to generate embedding (non-blocking):', error);
+    }
   }
 
   static async listRecent(userId: string, limit = 10) {

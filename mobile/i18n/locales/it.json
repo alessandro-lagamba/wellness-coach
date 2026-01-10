@@ -544,11 +544,11 @@
       "saved": "{{count}} salvati",
       "noneYet": "Nessuno ancora",
       "recent": {
-        "title": "Ultima sessione",
+        "title": "Ultima Sessione di Analisi Emotiva",
         "subtitle": "I risultati più recenti dell'analisi emotiva"
       },
       "quickStats": {
-        "title": "Statistiche rapide",
+        "title": "Statistiche Rapide",
         "subtitle": "Panoramica del tuo benessere emotivo"
       },
       "trends": {
@@ -831,7 +831,7 @@
         "subtitle": "I risultati più recenti"
       },
       "quickStats": {
-        "title": "Statistiche rapide",
+        "title": "Statistiche Rapide",
         "subtitle": "Panoramica della salute della pelle"
       },
       "trends": {
@@ -981,7 +981,7 @@
         "step3": "Ottieni un report dettagliato con consigli personalizzati"
       },
       "advancedModules": {
-        "title": "Moduli avanzati",
+        "title": "Moduli Avanzati",
         "subtitle": "Sblocca diagnosi più approfondite",
         "tapForGuide": "Apri guida dettagliata"
       },
@@ -1275,7 +1275,7 @@
         }
       },
       "mealPlanner": {
-        "title": "Pianificazione pasti",
+        "title": "Pianificazione dei Pasti",
         "subtitle": "Organizza i pasti della settimana e tieni traccia dei macronutrienti.",
         "customRecipe": "Ricetta personalizzata",
         "add": "Aggiungi",

@@ -300,45 +300,90 @@ ${observationsText}
 ${recommendationsText}
 ${insightsText}
 
-🎯 ISTRUZIONI PER GLI INSIGHT:
-1. **Usa i valori specifici**: Riferisciti esplicitamente ai valori di valence (${currentValence}/100), arousal (${currentArousal}/100), e emozione (${currentEmotion}) nei tuoi insight.
-2. **Basati sul trend**: Se il trend è "${trendText}", crea insight che supportino o contrastino questo trend in modo appropriato.
-3. **Personalizza**: Se valence è ${valenceState}, suggerisci azioni specifiche per ${moodAction} l'umore.
-4. **Considera arousal**: Se arousal è ${arousalState}, adatta le raccomandazioni di conseguenza.
-5. **Action-oriented**: Ogni insight deve essere una **azione concreta** che l'utente può fare OGGI, non teoria.
-6. **Massimo 3 insight**: Scegli i 3 più rilevanti basati sui dati reali.
-7. **OBBLIGATORIO**: OGNI insight DEVE avere un "title" (titolo breve dell'azione) E una "description" (spiegazione di 1-2 frasi che motiva l'azione basandosi sui dati). Non lasciare mai campi vuoti!
+🎯 ISTRUZIONI PER GLI INSIGHT (CRITICAL - READ CAREFULLY):
 
-IMPORTANTE: Rispondi SOLO con un JSON valido nel seguente formato:
+1. **GENERATE EXACTLY 3 INSIGHTS - NO MORE, NO LESS**
+2. **OGNI insight DEVE essere COMPLETO** con TUTTI i campi richiesti
+3. **PRIORITÀ**: Se hai difficoltà, è meglio 3 insight completi che 5 incompleti
+4. **MANDATORY FIELDS** per ogni insight:
+   - "title": string (max 50 caratteri, azione chiara)
+   - "description": string (1-3 frasi, MUST reference specific data values like valence=${currentValence}, arousal=${currentArousal})
+   - "detailedExplanation": string (2-4 frasi, spiega il WHY scientifico)
+   - "actionType": "routine" | "reminder" | "tracking"
+   - "priority": "high" | "medium" | "low"
+   - "estimatedTime": string (es. "5 min", "10 min")
+   
+5. **VALIDATION BEFORE OUTPUT**: 
+   - Check each insight has ALL required fields
+   - Check "description" is NOT empty, NOT "Descrizione non disponibile"
+   - Check JSON is properly closed with all brackets
 
+6. **USE SPECIFIC DATA**: Reference actual values in descriptions:
+   - ✅ GOOD: "Con valence a ${currentValence}/100 e arousal a ${currentArousal}/100, questa pratica può aiutarti a..."
+   - ❌ BAD: "Questa pratica può aiutarti a migliorare l'umore"
+
+7. **PRIORITIZE COMPLETION OVER QUANTITY**: 
+   - 3 complete insights > 5 incomplete insights
+   - If you're running out of tokens, STOP at 3
+
+CRITICAL: Rispondi SOLO con JSON valido. NO markdown, NO explanations, NO truncated objects.
+
+EXAMPLE OF CORRECT OUTPUT:
 {
   "insights": [
     {
       "id": "emotion-insight-1",
-      "title": "Passeggiata rilassante",
-      "description": "Con una valence a ${currentValence}/100, una breve camminata può aiutarti a ritrovare energia positiva.",
+      "title": "Passeggiata energizzante",
+      "description": "Con valence a ${currentValence}/100, una breve camminata può stimolare endorfine e migliorare il tuo umore di 10-15 punti.",
       "actionType": "routine",
       "estimatedTime": "15 min",
       "priority": "medium",
       "category": "emotion",
       "actionable": true,
-      "detailedExplanation": "La camminata all'aperto stimola la produzione di endorfine e serotonina, migliorando naturalmente l'umore.",
-      "correlations": [
-        "Valence attuale: ${currentValence}/100",
-        "Arousal attuale: ${currentArousal}/100"
-      ],
-      "expectedBenefits": [
-        "Aumento della produzione di endorfine",
-        "Miglioramento dell'umore"
-      ]
+      "detailedExplanation": "L'esercizio fisico leggero aumenta la produzione di endorfine e serotonina, migliorando naturalmente l'umore entro 15-20 minuti. Studi mostrano che 15 minuti di camminata possono aumentare la valence del 15-20%.",
+      "correlations": ["Valence: ${currentValence}/100", "Arousal: ${currentArousal}/100"],
+      "expectedBenefits": ["Aumento endorfine", "Miglioramento umore", "Riduzione stress"]
+    },
+    {
+      "id": "emotion-insight-2",
+      "title": "Respirazione 4-7-8",
+      "description": "Il tuo arousal a ${currentArousal}/100 può beneficiare di una tecnica di respirazione calmante per ridurre la tensione.",
+      "actionType": "routine",
+      "estimatedTime": "5 min",
+      "priority": "high",
+      "category": "emotion",
+      "actionable": true,
+      "detailedExplanation": "La tecnica 4-7-8 attiva il sistema nervoso parasimpatico, riducendo cortisolo e adrenalina. Ripeti 4 cicli per effetto ottimale.",
+      "correlations": ["Arousal: ${currentArousal}/100"],
+      "expectedBenefits": ["Riduzione tensione", "Calma mentale"]
+    },
+    {
+      "id": "emotion-insight-3",
+      "title": "Journaling guidato",
+      "description": "Con emozione dominante ${currentEmotion}, scrivere per 10 minuti può aiutarti a processare e dare senso a ciò che stai vivendo.",
+      "actionType": "tracking",
+      "estimatedTime": "10 min",
+      "priority": "medium",
+      "category": "emotion",
+      "actionable": true,
+      "detailedExplanation": "Il journaling aiuta a esternalizzare pensieri ed emozioni, riducendo il carico cognitivo del 30-40% secondo ricerche in psicologia cognitiva.",
+      "correlations": ["Emozione: ${currentEmotion}"],
+      "expectedBenefits": ["Chiarezza mentale", "Riduzione rumination"]
     }
   ],
-  "trendSummary": "Trend emozionale: ${trendText}.",
+  "trendSummary": "Trend emozionale: ${trendText}. ${valenceTrend}.",
   "overallScore": ${currentValence},
-  "focus": "Miglioramento dell'umore"
+  "focus": "Miglioramento umore e gestione stress"
 }
 
-Rispondi SOLO con il JSON, senza testo aggiuntivo.`;
+CRITICAL VALIDATION CHECKLIST BEFORE SENDING:
+☑️ All 3 insights have "title"
+☑️ All 3 insights have "description" (NOT empty, NOT "non disponibile")
+☑️ All 3 insights have "detailedExplanation"
+☑️ JSON is properly closed
+☑️ No markdown formatting (no \`\`\`json)
+
+Respond ONLY with the JSON. Nothing else.`;
   }
 
   /**
@@ -617,19 +662,27 @@ Rispondi in italiano nella lingua dell'utente e limita la lunghezza a poche fras
         console.log('🎯 Using AI-generated insights');
 
         return {
-          insights: parsedData.insights.map((insight: any, index: number) => ({
-            id: insight.id || `${request.category}-insight-${index}`,
-            title: insight.title || 'Insight generico',
-            description: insight.description || insight.detailedExplanation || `Scopri di più su: ${insight.title || 'questo suggerimento'}`,
-            actionType: insight.actionType || 'routine',
-            estimatedTime: insight.estimatedTime || '5 min',
-            priority: insight.priority || 'medium',
-            category: request.category,
-            actionable: true,
-            detailedExplanation: insight.detailedExplanation || insight.description || 'Spiegazione dettagliata non disponibile',
-            correlations: insight.correlations || [],
-            expectedBenefits: insight.expectedBenefits || []
-          })),
+          insights: parsedData.insights.map((insight: any, index: number) => {
+            // 🆕 FIX: Sanitize description - replace 'Descrizione non disponibile' with fallback
+            let description = insight.description;
+            if (!description || description === 'Descrizione non disponibile' || description.includes('non disponibile')) {
+              description = insight.detailedExplanation || `Scopri come "${insight.title || 'questo suggerimento'}" può migliorare il tuo benessere oggi.`;
+            }
+
+            return {
+              id: insight.id || `${request.category}-insight-${index}`,
+              title: insight.title || 'Insight generico',
+              description,
+              actionType: insight.actionType || 'routine',
+              estimatedTime: insight.estimatedTime || '5 min',
+              priority: insight.priority || 'medium',
+              category: request.category,
+              actionable: true,
+              detailedExplanation: insight.detailedExplanation || insight.description || 'Spiegazione dettagliata non disponibile',
+              correlations: insight.correlations || [],
+              expectedBenefits: insight.expectedBenefits || []
+            };
+          }),
           trendSummary: parsedData.trendSummary || '',
           overallScore: parsedData.overallScore || 70,
           focus: parsedData.focus || 'Miglioramento generale'
