@@ -22,7 +22,7 @@ let _supabase: SupabaseClient | null = null;
 function getSupabase(): SupabaseClient {
     if (!_supabase) {
         const url = process.env.SUPABASE_URL;
-        const key = process.env.SUPABASE_SERVICE_KEY;
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
         if (!url || !key) {
             console.error('[Embedding] ❌ SUPABASE_URL or SUPABASE_SERVICE_KEY not configured');
