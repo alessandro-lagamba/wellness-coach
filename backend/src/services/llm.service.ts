@@ -646,13 +646,11 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
   if (userContext?.journalContext) {
     const journalEntries = userContext.journalContext.relevantEntries || [];
 
-    contextualPrompt += `\n\n📔 ACCESSO AL DIARIO PERSONALE DELL'UTENTE:`;
-    contextualPrompt += `\n- HAI ACCESSO al diario dell'utente. Puoi citare e riferire ciò che ha scritto.`;
-
     if (journalEntries.length > 0) {
-      contextualPrompt += `\n- TROVATE ${journalEntries.length} voci del diario:\n`;
+      contextualPrompt += `\n\n📔 CONTESTO DAL DIARIO PERSONALE:`;
+      contextualPrompt += `\n(Hai accesso al diario dell'utente - usa queste informazioni per essere più empatico e personale)\n`;
 
-      journalEntries.forEach((entry: any, index: number) => {
+      journalEntries.forEach((entry: any) => {
         const date = entry.date;
         const content = entry.content || '';
 
@@ -661,40 +659,51 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
           return;
         }
 
-        contextualPrompt += `\n--- DIARIO ${date} ---`;
-        contextualPrompt += `\n"${content}"`;
-        contextualPrompt += `\n--- FINE VOCE ---\n`;
+        contextualPrompt += `\n[${date}]: "${content}"\n`;
       });
 
-      contextualPrompt += `\n💡 ISTRUZIONI CRITICHE PER IL DIARIO:
-- CITA ESATTAMENTE le parole dell'utente quando rispondi a domande sul diario.
-- Esempio: Se ha scritto "mi sento stanca", rispondi "Ricordo che hai scritto: 'mi sento stanca'"
-- Mostra che RICORDI ciò che ha scritto, collegando passato e presente.
-- Se chiedono "cosa ho scritto a dicembre?", LEGGI e CITA le voci di dicembre.
-- NON inventare contenuti non presenti nelle voci.`;
+      contextualPrompt += `\n💡 COME UTILIZZARE IL DIARIO:
+- NON citare l'intera entry parola per parola (risulta robotico)
+- DIMOSTRA di aver compreso il contenuto con una breve sintesi personale
+- Esempio BUONO: "So che ultimamente ti sei sentita stanca e frustrata per le lunghe ore al PC..."
+- Esempio CATTIVO: "Ricordo che hai scritto: 'Oggi mi sento particolarmente stanca, in quanto sono stata tutto il giorno...'" (troppo lungo)
+- COLLEGA la situazione passata con il presente per offrire supporto contestualizzato
+- Offri EMPATIA genuina seguita da AZIONI CONCRETE che possano aiutare
+- Se l'utente esprime malessere, riconosci prima i suoi sentimenti, poi offri aiuto pratico`;
 
     } else {
-      contextualPrompt += `\n- Nessuna voce del diario disponibile al momento.
-      
-💡 Se l'utente chiede del diario:
-- Spiega che non hai trovato voci pertinenti.
-- Offriti di discutere l'argomento ora.`;
+      contextualPrompt += `\n\n📔 DIARIO: Nessuna voce rilevante disponibile.`;
     }
   }
 
 
-  // Istruzioni finali migliorate
-  contextualPrompt += `\n\n🎯 ISTRUZIONI FINALI PER QUESTA RISPOSTA:
-  - Analizza TUTTI i dati forniti sopra per creare una risposta personalizzata
-    - Se vedi indicatori di stress → offri supporto immediato e pratico
-      - Se rilevi pattern negativi → suggerisci interventi specifici basati sui dati
-        - Se vedi miglioramenti → celebra i progressi e rafforza i comportamenti positivi
-          - Considera il periodo della giornata per suggerimenti appropriati
-            - Collega sempre emozioni e pelle quando i dati lo supportano
-              - Usa i numeri specifici(valence, arousal, punteggi) per essere preciso
-                - Se l'urgenza è alta → suggerisci azioni immediate
-                  - Se l'urgenza è bassa → offri consigli per il lungo termine
-                    - Sii specifico: non dire "mangia meglio", ma "mangia 3 porzioni di verdure verdi oggi"`;
+  // Istruzioni finali migliorate per risposte più supportive
+  contextualPrompt += `\n\n🎯 ISTRUZIONI FINALI - COME STRUTTURARE LA RISPOSTA:
+
+1. EMPATIA PRIMA DI TUTTO:
+   - Inizia SEMPRE riconoscendo i sentimenti dell'utente
+   - Usa frasi come "Capisco che...", "È normale sentirsi così quando...", "Mi dispiace che..."
+   - MAI saltare direttamente ai consigli senza prima validare le emozioni
+
+2. COLLEGA I DATI:
+   - Se hai dati dal diario, emozioni, pelle, alimentazione → collegali in modo naturale
+   - "So che ultimamente stai affrontando X, e combinato con Y..."
+   - Non elencare dati roboticamente, integra le informazioni in modo fluido
+
+3. AZIONI CONCRETE E IMMEDIATE:
+   - Offri 2-3 suggerimenti SPECIFICI e REALIZZABILI oggi
+   - ❌ Evita: "dovresti rilassarti di più" (troppo vago)
+   - ✅ Preferisci: "Prova a fare 10 minuti di stretching per collo e spalle ogni 2 ore di lavoro al PC"
+   
+4. PROSSIMO PASSO CHIARO:
+   - Concludi SEMPRE con un'azione immediata e specifica
+   - "Il prossimo passo che ti consiglio è..."
+   - L'utente deve sapere esattamente cosa fare ORA
+
+5. TONO:
+   - Sii caldo, supportivo, ma anche pratico
+   - Come un amico esperto che vuole genuinamente aiutare
+   - Evita toni clinici o distaccati`;
 
   return contextualPrompt;
 }

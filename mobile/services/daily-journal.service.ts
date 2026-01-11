@@ -74,7 +74,7 @@ export class DailyJournalService {
     const { getUserLanguage, getLanguageInstruction } = await import('./language.service');
     const userLanguage = await getUserLanguage();
     const languageInstruction = getLanguageInstruction(userLanguage);
-    
+
     if (userLanguage === 'en') {
       return `You are a supportive and empathetic wellness coach with expertise in providing actionable, concrete solutions.
 
@@ -139,21 +139,33 @@ REQUISITI CRITICI:
 La tua analisi dovrebbe:
 1. Riconoscere ciò che l'utente sta vivendo (sii specifico, cita le sue esatte parole)
 2. Fornire una breve interpretazione del perché questo potrebbe accadere
-3. Offrire 2-3 soluzioni o passi SPECIFICI e ACTIONABLE che possono intraprendere (questa è la parte più importante - sii dettagliato e pratico)
-4. Includere almeno un'azione immediata che possono fare subito (sii molto specifico)
+3. Offrire 2-3 soluzioni o passi SPECIFICI e ACTIONABLE che possono intraprendere
+4. Includere almeno un'azione immediata che possono fare subito
 
 Restituisci un oggetto JSON con i seguenti campi:
 
-- ai_score (1–3):
-    1 = Basso / Richiede attenzione (emozioni negative, problemi, preoccupazioni)
-    2 = Medio / Monitorare (sentimenti misti, problemi minori)
-    3 = Buono / Positivo (emozioni positive, progressi, soddisfazione)
+- ai_score (1–3) - CRITERI PRECISI:
+    1 = NEGATIVO (USA QUESTO SE PRESENTI): stanchezza, frustrazione, stress, ansia, problemi fisici, 
+        disagio, tensione, preoccupazione, tristezza, rabbia, fatica, dolore, malessere
+        ESEMPI SCORE 1: "mi sento stanca", "sono stressata", "mi fa male", "sono frustrata", 
+        "non ce la faccio", "gambe pesanti", "collo teso", "sono esausta"
+    
+    2 = MISTO/NEUTRO: sentimenti ambivalenti, giornata normale senza problemi né entusiasmo,
+        piccole difficoltà bilanciate da aspetti positivi
+        ESEMPI SCORE 2: "giornata nella norma", "un po' stanca ma è andata bene", "niente di speciale"
+    
+    3 = POSITIVO (USA QUESTO SE PRESENTI): felicità, soddisfazione, energia, gratitudine,
+        risultati positivi, progressi, benessere, relax, serenità
+        ESEMPI SCORE 3: "giornata fantastica", "mi sento bene", "sono felice", "ho fatto progressi"
+
+    ⚠️ IMPORTANTE: Se l'entry contiene QUALSIASI termine negativo (stanca, frustrata, stress, dolore, 
+    tensione, pesante, male, esausta, etc.), assegna score 1. Non bilanciare con altri fattori.
 
 - ai_analysis (testo, 150-250 parole):
     Un'analisi personalizzata e actionable. Strutturala così:
     - Breve riconoscimento della loro situazione specifica (1-2 frasi)
     - Interpretazione di cosa potrebbe causare i loro sentimenti/problemi (1-2 frasi)
-    - 2-3 soluzioni o azioni SPECIFICHE e CONCRETE che possono intraprendere (questa è la parte più importante - sii dettagliato e pratico)
+    - 2-3 soluzioni o azioni SPECIFICHE e CONCRETE che possono intraprendere
     - Un'azione immediata che possono fare oggi (sii molto specifico)
 
 Contesto aggiuntivo da considerare:
@@ -174,9 +186,9 @@ Rispondi SOLO con un oggetto JSON valido.`;
       const { getUserLanguage } = await import('./language.service');
       const backendURL = await getBackendURL();
       const userLanguage = await getUserLanguage();
-      
+
       const prompt = await this.buildAIJudgmentPrompt(content, moodNote, sleepNote);
-      
+
       const response = await fetch(`${backendURL}/api/chat/respond`, {
         method: 'POST',
         headers: {
@@ -199,7 +211,7 @@ Rispondi SOLO con un oggetto JSON valido.`;
 
       const data = await response.json();
       const aiResponse = data.response || data.message || '';
-      
+
       // Try to parse JSON from the response
       try {
         const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
@@ -212,7 +224,7 @@ Rispondi SOLO con un oggetto JSON valido.`;
           } else if (normalizedScore < 1) {
             normalizedScore = 1;
           }
-          
+
           return {
             ai_score: Math.max(1, Math.min(3, Math.round(normalizedScore))),
             ai_analysis: parsed.ai_analysis || (userLanguage === 'en' ? 'Analysis not available' : 'Analisi non disponibile'),
