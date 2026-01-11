@@ -12,6 +12,7 @@ import { HealthPermissionsModal } from './HealthPermissionsModal';
 import { useHealthData } from '../hooks/useHealthData';
 import { useTranslation } from '../hooks/useTranslation';
 import { saveLanguage } from '../i18n';
+import { DailyJournalDBService } from '../services/daily-journal-db.service';
 import { Switch } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext'; // 🆕 Theme hook
 import { EmptyStateCard } from './EmptyStateCard';
@@ -30,14 +31,14 @@ interface SettingsScreenProps {
 
 // 🆕 Items verranno costruiti dinamicamente con traduzioni nel componente
 
-const UserProfileCard = ({ 
-  userProfile, 
-  isLoading, 
-  t, 
-  colors 
-}: { 
-  userProfile: UserProfile | null; 
-  isLoading: boolean; 
+const UserProfileCard = ({
+  userProfile,
+  isLoading,
+  t,
+  colors
+}: {
+  userProfile: UserProfile | null;
+  isLoading: boolean;
   t: (key: string) => string;
   colors: any; // 🆕 Theme colors
 }) => {
@@ -69,7 +70,7 @@ const UserProfileCard = ({
           <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>{userProfile.email}</Text>
         </View>
       </View>
-      
+
       <View style={[styles.profileDetails, { borderTopColor: colors.divider }]}>
         <View style={styles.profileDetailRow}>
           <Text style={[styles.profileDetailLabel, { color: colors.textSecondary }]}>{t('settings.profile.age')}</Text>
@@ -78,10 +79,10 @@ const UserProfileCard = ({
         <View style={styles.profileDetailRow}>
           <Text style={[styles.profileDetailLabel, { color: colors.textSecondary }]}>{t('settings.profile.gender')}</Text>
           <Text style={[styles.profileDetailValue, { color: colors.text }]}>
-            {userProfile.gender === 'male' ? t('settings.profile.male') : 
-             userProfile.gender === 'female' ? t('settings.profile.female') : 
-             userProfile.gender === 'other' ? t('settings.profile.other') : 
-             t('settings.profile.preferNotToSay')}
+            {userProfile.gender === 'male' ? t('settings.profile.male') :
+              userProfile.gender === 'female' ? t('settings.profile.female') :
+                userProfile.gender === 'other' ? t('settings.profile.other') :
+                  t('settings.profile.preferNotToSay')}
           </Text>
         </View>
         <View style={styles.profileDetailRow}>
@@ -95,15 +96,15 @@ const UserProfileCard = ({
   );
 };
 
-const SettingsSection = ({ 
-  title, 
-  items, 
-  onItemPress, 
-  colors, 
-  darkModeValue 
-}: { 
-  title: string; 
-  items: SettingsItem[]; 
+const SettingsSection = ({
+  title,
+  items,
+  onItemPress,
+  colors,
+  darkModeValue
+}: {
+  title: string;
+  items: SettingsItem[];
   onItemPress: (itemId: string) => void;
   colors: any; // 🆕 Theme colors
   darkModeValue?: boolean; // 🆕 Value for dark mode toggle
@@ -112,9 +113,9 @@ const SettingsSection = ({
     <View style={styles.section}>
       <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
       {items.map((item) => (
-        <TouchableOpacity 
-          key={item.id} 
-          style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]} 
+        <TouchableOpacity
+          key={item.id}
+          style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
           activeOpacity={0.85}
           onPress={() => onItemPress(item.id)}
         >
@@ -204,7 +205,7 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
 
   return (
     <SafeAreaWrapper style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.text }]}>{t('settings.notificationsTitle')}</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {t('settings.notificationsDescription')}
@@ -218,15 +219,15 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('settings.notificationsCategories') || 'Categorie'}</Text>
 
             {[{ id: 'emotionSkin', label: t('settings.notifications.emotionSkin') || 'Analisi Emozioni/Pelle', value: emotionSkin, setter: setEmotionSkin },
-              { id: 'diary', label: t('settings.notifications.diary') || 'Diario', value: diary, setter: setDiary },
-              { id: 'fridge', label: t('settings.notifications.fridgeExpiry') || 'Ingredienti in scadenza', value: fridgeExpiry, setter: setFridgeExpiry },
-              { id: 'breathing', label: t('settings.notifications.breathing') || 'Pausa/Respirazione', value: breathing, setter: setBreathing },
-              { id: 'hydration', label: t('settings.notifications.hydration') || 'Idratazione', value: hydration, setter: setHydration },
-              { id: 'morning', label: t('settings.notifications.morningGreeting') || 'Saluto mattutino', value: morningGreeting, setter: setMorningGreeting },
-              { id: 'evening', label: t('settings.notifications.eveningWinddown') || 'Buona serata', value: eveningWinddown, setter: setEveningWinddown },
-              { id: 'sleep', label: t('settings.notifications.sleepPreparation') || 'Preparazione al sonno', value: sleepPreparation, setter: setSleepPreparation },
+            { id: 'diary', label: t('settings.notifications.diary') || 'Diario', value: diary, setter: setDiary },
+            { id: 'fridge', label: t('settings.notifications.fridgeExpiry') || 'Ingredienti in scadenza', value: fridgeExpiry, setter: setFridgeExpiry },
+            { id: 'breathing', label: t('settings.notifications.breathing') || 'Pausa/Respirazione', value: breathing, setter: setBreathing },
+            { id: 'hydration', label: t('settings.notifications.hydration') || 'Idratazione', value: hydration, setter: setHydration },
+            { id: 'morning', label: t('settings.notifications.morningGreeting') || 'Saluto mattutino', value: morningGreeting, setter: setMorningGreeting },
+            { id: 'evening', label: t('settings.notifications.eveningWinddown') || 'Buona serata', value: eveningWinddown, setter: setEveningWinddown },
+            { id: 'sleep', label: t('settings.notifications.sleepPreparation') || 'Preparazione al sonno', value: sleepPreparation, setter: setSleepPreparation },
             ].map((row) => (
-              <View key={row.id} style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+              <View key={row.id} style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <View style={styles.rowCopy}>
                   <Text style={[styles.rowTitle, { color: colors.text }]}>{row.label}</Text>
                 </View>
@@ -244,7 +245,7 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
           {diary && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('settings.notifications.diaryTimeTitle') || 'Orario Diario'}</Text>
-              <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border, justifyContent: 'space-between' }]}> 
+              <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border, justifyContent: 'space-between' }]}>
                 <Text style={[styles.rowTitle, { color: colors.text }]}>
                   {format2(diaryHour)}:{format2(diaryMinute)}
                 </Text>
@@ -270,7 +271,7 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
 
           {/* Actions */}
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.primary + '40' }]}
               onPress={handleSave}
               disabled={loading}
@@ -285,8 +286,8 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.border }]} 
+            <TouchableOpacity
+              style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={onBack}
               disabled={loading}
             >
@@ -314,10 +315,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   const [currentScreen, setCurrentScreen] = useState<'main' | 'personal-info' | 'notifications' | 'menstrual-cycle'>('main');
   const [healthPermissionsModal, setHealthPermissionsModal] = useState<boolean>(false);
   const emailVerified = Boolean(resolvedUser?.email_confirmed_at);
-  
+
   // Health data hook
   const { permissions: healthPermissions, hasData: hasHealthData, isInitialized } = useHealthData();
-  
+
   // 🆕 Costruisci items con traduzioni
   const accountItems: SettingsItem[] = [
     { id: 'profile', label: t('settings.personalInfo'), description: t('settings.personalInfoDescription'), icon: 'user-circle' },
@@ -385,24 +386,24 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
     try {
       setIsLoading(true);
       const profile = await AuthService.getUserProfile(targetUser.id);
-      
+
       if (profile) {
         setUserProfile(profile);
       } else {
         // 🔥 FIX: Se il profilo non esiste ancora, usa i metadata dell'utente
         // Questo può succedere subito dopo la conferma email
         console.log('📝 Profile not found, using user metadata...');
-        
+
         const firstName = targetUser.user_metadata?.first_name;
         const lastName = targetUser.user_metadata?.last_name;
         const ageValue = targetUser.user_metadata?.age;
         const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : null);
         const gender = targetUser.user_metadata?.gender || 'prefer_not_to_say';
-        const fullName = targetUser.user_metadata?.full_name || 
-                        (firstName && lastName ? `${firstName} ${lastName}` : null) ||
-                        targetUser.email?.split('@')[0] || 
-                        'User';
-        
+        const fullName = targetUser.user_metadata?.full_name ||
+          (firstName && lastName ? `${firstName} ${lastName}` : null) ||
+          targetUser.email?.split('@')[0] ||
+          'User';
+
         setUserProfile({
           id: targetUser.id,
           email: targetUser.email,
@@ -414,7 +415,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
           created_at: targetUser.created_at || new Date().toISOString(),
           updated_at: targetUser.updated_at || new Date().toISOString(),
         } as UserProfile);
-        
+
         // 🔥 FIX: Se il profilo non esiste, prova a crearlo
         if (retryCount < 2) {
           console.log('📝 Attempting to create profile...');
@@ -444,11 +445,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       const ageValue = targetUser.user_metadata?.age;
       const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : null);
       const gender = targetUser.user_metadata?.gender || 'prefer_not_to_say';
-      const fullName = targetUser.user_metadata?.full_name || 
-                      (firstName && lastName ? `${firstName} ${lastName}` : null) ||
-                      targetUser.email?.split('@')[0] || 
-                      'User';
-      
+      const fullName = targetUser.user_metadata?.full_name ||
+        (firstName && lastName ? `${firstName} ${lastName}` : null) ||
+        targetUser.email?.split('@')[0] ||
+        'User';
+
       setUserProfile({
         id: targetUser.id,
         email: targetUser.email,
@@ -506,14 +507,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       t('settings.resetAppConfirm'),
       [
         { text: t('common.cancel'), style: 'cancel' },
-        { 
-          text: t('settings.resetApp'), 
-          style: 'destructive', 
+        {
+          text: t('settings.resetApp'),
+          style: 'destructive',
           onPress: async () => {
             try {
               const { ResetAppService } = await import('../services/reset-app.service');
               const result = await ResetAppService.resetApp();
-              
+
               if (result.success) {
                 Alert.alert(
                   t('common.success'),
@@ -546,7 +547,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       ]
     );
   };
-  
+
   // 🆕 Handler per cambio lingua
   const handleLanguageChange = async (newLang: 'it' | 'en') => {
     await saveLanguage(newLang);
@@ -554,6 +555,38 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
     Alert.alert(
       t('common.success'),
       t('settings.languageChanged', { lang: newLang === 'it' ? 'Italiano' : 'English' })
+    );
+  };
+
+  // 🆕 Handler per rigenerare embeddings diario
+  const handleReEmbedDiary = async () => {
+    if (!resolvedUser?.id) {
+      Alert.alert(t('common.error'), 'Utente non autenticato');
+      return;
+    }
+    Alert.alert(
+      'Rigenera Embeddings Diario',
+      'Questa operazione rigenera gli embeddings per la ricerca semantica nel diario. Continua?',
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: 'Rigenera',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const result = await DailyJournalDBService.reEmbedAllEntries(resolvedUser.id);
+              Alert.alert(
+                t('common.success'),
+                `Rigenerati: ${result.success}, Falliti: ${result.failed}`
+              );
+            } catch (error) {
+              Alert.alert(t('common.error'), String(error));
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
     );
   };
 
@@ -579,13 +612,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
           t('settings.chooseLanguage'),
           [
             { text: t('common.cancel'), style: 'cancel' },
-            { 
-              text: 'English', 
+            {
+              text: 'English',
               onPress: () => handleLanguageChange('en'),
               style: language === 'en' ? 'default' : 'default'
             },
-            { 
-              text: 'Italiano', 
+            {
+              text: 'Italiano',
               onPress: () => handleLanguageChange('it'),
               style: language === 'it' ? 'default' : 'default'
             },
@@ -702,25 +735,35 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
               showLearnMore={false}
             />
           )}
-          
+
           {/* ✅ FIX: Mostra sempre le sezioni principali, anche se l'email non è verificata o resolvedUser è null */}
-          <SettingsSection 
-            title={t('settings.account')} 
-            items={accountItems} 
+          <SettingsSection
+            title={t('settings.account')}
+            items={accountItems}
             onItemPress={handleItemPress}
             colors={colors}
           />
-          <SettingsSection 
-            title={t('settings.appSettings')} 
-            items={appItems} 
+          <SettingsSection
+            title={t('settings.appSettings')}
+            items={appItems}
             onItemPress={handleItemPress}
             colors={colors}
             darkModeValue={mode === 'dark'} // 🆕 Pass dark mode value
           />
 
+          {/* Re-Embed Diary Button */}
+          <TouchableOpacity
+            style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: '#10b981' + '40' }]}
+            onPress={handleReEmbedDiary}
+            disabled={isLoading}
+          >
+            <MaterialCommunityIcons name="database-refresh" size={16} color="#10b981" />
+            <Text style={[styles.logoutText, { color: '#10b981' }]}>Rigenera Embeddings Diario</Text>
+          </TouchableOpacity>
+
           {/* Reset App Button */}
-          <TouchableOpacity 
-            style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: '#f59e0b' + '40' }]} 
+          <TouchableOpacity
+            style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: '#f59e0b' + '40' }]}
             onPress={handleResetApp}
           >
             <MaterialCommunityIcons name="refresh" size={16} color="#f59e0b" />
@@ -728,8 +771,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
           </TouchableOpacity>
 
           {/* Logout Button */}
-          <TouchableOpacity 
-            style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.error + '40' }]} 
+          <TouchableOpacity
+            style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.error + '40' }]}
             onPress={handleLogout}
           >
             <FontAwesome name="sign-out" size={16} color={colors.error} />
@@ -752,19 +795,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
           try {
             const { HealthDataService } = await import('../services/health-data.service');
             const healthService = HealthDataService.getInstance();
-            
+
             // 🔥 CRITICO: PRIMA aggiorna i permessi nel servizio
             await healthService.refreshPermissions();
-            
+
             // 🔥 Aspetta un momento per assicurarci che i permessi siano effettivamente disponibili
             await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             // 🔥 Forza sincronizzazione immediata
             await healthService.syncHealthData(true);
           } catch (error) {
             console.error('Error syncing health data after permissions:', error);
           }
-          
+
           Alert.alert(
             t('settings.healthPermissionsUpdated'),
             t('settings.healthPermissionsUpdatedMessage'),
