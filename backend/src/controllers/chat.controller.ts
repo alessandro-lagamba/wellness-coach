@@ -50,27 +50,27 @@ export const respondToChat = async (req: Request, res: Response) => {
 
     if (userId) {
       try {
-        console.log('[Chat] 🔍 Searching diary entries for context...');
-        const journalResults = await searchJournalEntries(message, userId, 5, 0.4);
+        // 🆕 RAG: Search diary entries for relevant context (lowered threshold to 0.35)
+        const journalResults = await searchJournalEntries(message, userId, 5, 0.35);
 
-        if (journalResults.length > 0) {
-          console.log('[Chat] 📔 Found', journalResults.length, 'relevant diary entries');
+        console.log('[Chat] 📔 Search results:', journalResults.length > 0
+          ? `Found ${journalResults.length} relevant entries`
+          : 'No relevant entries found'
+        );
 
-          enrichedUserContext = {
-            ...userContext,
-            journalContext: {
-              searchQuery: message,
-              relevantEntries: journalResults.map(entry => ({
-                date: entry.entry_date,
-                content: entry.content,
-                aiAnalysis: entry.ai_analysis,
-                similarity: entry.similarity
-              }))
-            }
-          };
-        } else {
-          console.log('[Chat] ℹ️ No relevant diary entries found');
-        }
+        // Always provide journal context structure so AI knows it HAS access but found nothing
+        enrichedUserContext = {
+          ...userContext,
+          journalContext: {
+            searchQuery: message,
+            relevantEntries: journalResults.map(entry => ({
+              date: entry.entry_date,
+              content: entry.content,
+              aiAnalysis: entry.ai_analysis,
+              similarity: entry.similarity
+            }))
+          }
+        };
       } catch (searchError) {
         console.log('[Chat] ⚠️ Diary search failed (non-blocking):', searchError);
         // Continue without diary context - non-blocking error
