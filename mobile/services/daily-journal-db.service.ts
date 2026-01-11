@@ -281,6 +281,71 @@ export class DailyJournalDBService {
       .eq('entry_date', isoDate);
     if (error) throw error;
   }
+
+  /**
+   * 🆕 Re-embed all entries with decrypted content
+   * This fixes entries that had embeddings generated from ciphertext
+   */
+  static async reEmbedAllEntries(userId: string): Promise<{ success: number; failed: number }> {
+    console.log('[JournalDB] 🔄 Re-embedding all entries for user:', userId);
+
+    try {
+      // Get all entries (already decrypted by listRecent)
+      const entries = await this.listRecent(userId, 100);
+
+      if (entries.length === 0) {
+        console.log('[JournalDB] ℹ️ No entries to re-embed');
+        return { success: 0, failed: 0 };
+      }
+
+      const { getBackendURL } = await import('../constants/env');
+      const backendURL = await getBackendURL();
+
+      let success = 0;
+      let failed = 0;
+
+      for (const entry of entries) {
+        // Skip entries that are still encrypted (decryption failed)
+        if (entry.content.includes('ciphertext') || entry.content.includes('Contenuto cifrato')) {
+          console.log('[JournalDB] ⏭️ Skipping encrypted entry:', entry.id);
+          failed++;
+          continue;
+        }
+
+        try {
+          const response = await fetch(`${backendURL}/api/journal/embed`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              entryId: entry.id,
+              content: entry.content,
+              aiAnalysis: entry.ai_analysis
+            })
+          });
+
+          if (response.ok) {
+            console.log('[JournalDB] ✅ Re-embedded:', entry.entry_date);
+            success++;
+          } else {
+            console.warn('[JournalDB] ⚠️ Failed to re-embed:', entry.entry_date);
+            failed++;
+          }
+        } catch (err) {
+          console.warn('[JournalDB] ⚠️ Error re-embedding:', entry.entry_date, err);
+          failed++;
+        }
+
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      console.log('[JournalDB] ✅ Re-embed complete:', { success, failed });
+      return { success, failed };
+    } catch (error) {
+      console.error('[JournalDB] ❌ Re-embed failed:', error);
+      throw error;
+    }
+  }
 }
 
 
