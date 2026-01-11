@@ -642,52 +642,43 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
     contextualPrompt += `\n\n💡 USA QUESTE INFORMAZIONI per dare consigli nutrizionali personalizzati, rispondere a domande sull'alimentazione e verificare il progresso verso gli obiettivi.`;
   }
 
-  // 🆕 RAG: Aggiungi contesto diario da ricerca semantica
+  // 🆕 RAG: Aggiungi contesto diario (plaintext dal client)
   if (userContext?.journalContext) {
     const journalEntries = userContext.journalContext.relevantEntries || [];
-    const searchQuery = userContext.journalContext.searchQuery || '';
 
-    contextualPrompt += `\n\n📔 GESTIONE DIARIO RILEVANTE:
-- IMPORTANTE: TU HAI ACCESSO AL DIARIO PERSONALE DELL'UTENTE trammite ricerca semantica.
-- Ho effettuato una ricerca automatica nel diario usando la query: "${searchQuery}"`;
+    contextualPrompt += `\n\n📔 ACCESSO AL DIARIO PERSONALE DELL'UTENTE:`;
+    contextualPrompt += `\n- HAI ACCESSO al diario dell'utente. Puoi citare e riferire ciò che ha scritto.`;
 
     if (journalEntries.length > 0) {
-      contextualPrompt += `\n- RISULTATO: Ho trovato ${journalEntries.length} voci pertinenti che puoi usare per rispondere.`;
+      contextualPrompt += `\n- TROVATE ${journalEntries.length} voci del diario:\n`;
 
-      contextualPrompt += `\n\n📝 VOCI TROVATE:`;
-
-      journalEntries.forEach((entry, index) => {
+      journalEntries.forEach((entry: any, index: number) => {
         const date = entry.date;
-        const similarity = (entry.similarity * 100).toFixed(0);
-        // Limit content to avoid token explosion
-        const content = entry.content.length > 500
-          ? entry.content.slice(0, 500) + '...'
-          : entry.content;
+        const content = entry.content || '';
 
-        contextualPrompt += `\n\n--- VOCE ${index + 1} (${date}, rilevanza: ${similarity}%) ---`;
-        contextualPrompt += `\n${content}`;
-
-        if (entry.aiAnalysis) {
-          const analysis = entry.aiAnalysis.length > 200
-            ? entry.aiAnalysis.slice(0, 200) + '...'
-            : entry.aiAnalysis;
-          contextualPrompt += `\n[Analisi AI]: ${analysis}`;
+        // Skip encrypted content
+        if (content.includes('ciphertext') || content.includes('Contenuto cifrato')) {
+          return;
         }
+
+        contextualPrompt += `\n--- DIARIO ${date} ---`;
+        contextualPrompt += `\n"${content}"`;
+        contextualPrompt += `\n--- FINE VOCE ---\n`;
       });
 
-      contextualPrompt += `\n\n💡 ISTRUZIONI DIARIO:
-- Usa queste voci per collegare il presente con il passato.
-- Mostra che "ti ricordi" di ciò che l'utente ha scritto.
-- NON dire "ho trovato queste voci", ma integra le informazioni nella conversazione in modo naturale.`;
+      contextualPrompt += `\n💡 ISTRUZIONI CRITICHE PER IL DIARIO:
+- CITA ESATTAMENTE le parole dell'utente quando rispondi a domande sul diario.
+- Esempio: Se ha scritto "mi sento stanca", rispondi "Ricordo che hai scritto: 'mi sento stanca'"
+- Mostra che RICORDI ciò che ha scritto, collegando passato e presente.
+- Se chiedono "cosa ho scritto a dicembre?", LEGGI e CITA le voci di dicembre.
+- NON inventare contenuti non presenti nelle voci.`;
 
     } else {
-      // No entries found
-      contextualPrompt += `\n- RISULTATO: NON ho trovato voci del diario pertinenti per questa specifica domanda.
+      contextualPrompt += `\n- Nessuna voce del diario disponibile al momento.
       
-💡 ISTRUZIONI IN CASO DI NESSUN RISULTATO:
-- Se l'utente chiede "cosa ho scritto ieri?", spiegagli che non hai trovato voci specifiche per quella data o argomento.
-- NON dire "non ho accesso al diario". Invece di: "Ho cercato nel tuo diario ma non ho trovato nulla riguardo a [argomento]".
-- Chiedi all'utente se vuole parlartene ora.`;
+💡 Se l'utente chiede del diario:
+- Spiega che non hai trovato voci pertinenti.
+- Offriti di discutere l'argomento ora.`;
     }
   }
 

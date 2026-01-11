@@ -1539,6 +1539,25 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         // Ignora errori - i dati alimentari sono opzionali
       }
 
+      // 🆕 RAG: Carica le ultime entry del diario (già decriptate lato client)
+      let journalEntriesForChat: Array<{ date: string; content: string }> = [];
+      try {
+        if (currentUser?.id) {
+          const recentEntries = await DailyJournalDBService.listRecent(currentUser.id, 10);
+          // Filtra solo le entry con contenuto decriptato (non ciphertext)
+          journalEntriesForChat = recentEntries
+            .filter(e => e.content && !e.content.includes('ciphertext') && !e.content.includes('Contenuto cifrato'))
+            .map(e => ({
+              date: e.entry_date,
+              content: e.content // Solo il contenuto utente, non ai_analysis
+            }));
+          console.log('[Chat] 📔 Loaded', journalEntriesForChat.length, 'decrypted journal entries for context');
+        }
+      } catch (error) {
+        console.log('[Chat] ⚠️ Failed to load journal entries (non-blocking):', error);
+      }
+
+
       // Prepare context for AI
       const userContext = aiContext ? {
         emotionHistory: aiContext.emotionHistory,
@@ -1558,6 +1577,8 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
         menstrualCyclePhase: cyclePhaseInfo || undefined,
         // 🆕 Contesto alimentazione (ultimo pasto + dati freschi)
         foodContext: foodContextForChat || undefined,
+        // 🆕 RAG: Entry del diario (decriptate lato client)
+        journalEntries: journalEntriesForChat.length > 0 ? journalEntriesForChat : undefined,
         // 🔧 Aggiungi nome utente per personalizzazione (usa first_name se disponibile)
         firstName: currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente',
         lastName: currentUserProfile?.last_name || currentUser?.user_metadata?.full_name?.split(' ').slice(1).join(' ') || undefined,

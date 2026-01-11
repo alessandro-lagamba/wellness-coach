@@ -45,34 +45,52 @@ export const respondToChat = async (req: Request, res: Response) => {
     // Extract message history if provided
     const messageHistory: ChatMessage[] = req.body.messageHistory || [];
 
-    // 🆕 RAG: Search diary entries for relevant context
+    // 🆕 RAG: Use client-provided journal entries (plaintext) OR search DB (encrypted fallback)
     let enrichedUserContext = { ...userContext };
 
     if (userId) {
       try {
-        // 🆕 RAG: Search diary entries for relevant context (lowered threshold to 0.35)
-        const journalResults = await searchJournalEntries(message, userId, 5, 0.35);
+        // 🔥 PRIORITY 1: Use client-provided journal entries (already decrypted)
+        // Client sends these as userContext.journalEntries from ChatScreen.tsx
+        if (userContext?.journalEntries && Array.isArray(userContext.journalEntries) && userContext.journalEntries.length > 0) {
+          console.log('[Chat] 📔 Using', userContext.journalEntries.length, 'client-provided journal entries (plaintext)');
 
-        console.log('[Chat] 📔 Search results:', journalResults.length > 0
-          ? `Found ${journalResults.length} relevant entries`
-          : 'No relevant entries found'
-        );
+          enrichedUserContext = {
+            ...userContext,
+            journalContext: {
+              searchQuery: message,
+              relevantEntries: userContext.journalEntries.map((entry: { date: string; content: string }) => ({
+                date: entry.date,
+                content: entry.content,
+                similarity: 1.0 // Max similarity since client provides all entries
+              }))
+            }
+          };
+        } else {
+          // 🔥 FALLBACK: Search DB (may return encrypted content - less reliable)
+          console.log('[Chat] 📔 No client entries, attempting DB search (may be encrypted)...');
+          const journalResults = await searchJournalEntries(message, userId, 5, 0.25); // Lowered to 0.25
 
-        // Always provide journal context structure so AI knows it HAS access but found nothing
-        enrichedUserContext = {
-          ...userContext,
-          journalContext: {
-            searchQuery: message,
-            relevantEntries: journalResults.map(entry => ({
-              date: entry.entry_date,
-              content: entry.content,
-              aiAnalysis: entry.ai_analysis,
-              similarity: entry.similarity
-            }))
-          }
-        };
+          console.log('[Chat] 📔 DB search results:', journalResults.length > 0
+            ? `Found ${journalResults.length} entries (may be encrypted)`
+            : 'No relevant entries found'
+          );
+
+          enrichedUserContext = {
+            ...userContext,
+            journalContext: {
+              searchQuery: message,
+              relevantEntries: journalResults.map(entry => ({
+                date: entry.entry_date,
+                content: entry.content,
+                aiAnalysis: entry.ai_analysis,
+                similarity: entry.similarity
+              }))
+            }
+          };
+        }
       } catch (searchError) {
-        console.log('[Chat] ⚠️ Diary search failed (non-blocking):', searchError);
+        console.log('[Chat] ⚠️ Journal context failed (non-blocking):', searchError);
         // Continue without diary context - non-blocking error
       }
     }
