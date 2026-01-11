@@ -305,9 +305,11 @@ export class DailyJournalDBService {
       let failed = 0;
 
       for (const entry of entries) {
+        console.log('[JournalDB] 📝 Processing entry:', entry.entry_date, 'Content starts with:', entry.content?.substring(0, 50));
+
         // Skip entries that are still encrypted (decryption failed)
         if (entry.content.includes('ciphertext') || entry.content.includes('Contenuto cifrato')) {
-          console.log('[JournalDB] ⏭️ Skipping encrypted entry:', entry.id);
+          console.log('[JournalDB] ⏭️ Skipping encrypted entry (decryption failed):', entry.id, entry.entry_date);
           failed++;
           continue;
         }
