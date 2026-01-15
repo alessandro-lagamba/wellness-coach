@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontStyle: 'italic',
     textAlign: 'center',
-    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }),
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'normal' }),
   },
   metricsGrid: {
     flexDirection: 'row',

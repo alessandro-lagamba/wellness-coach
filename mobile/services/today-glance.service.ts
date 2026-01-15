@@ -38,21 +38,21 @@ export class TodayGlanceService {
   private static async getHealthData(): Promise<HealthData> {
     try {
       const healthService = HealthDataService.getInstance();
-      
+
       // 🔥 CRITICO: Verifica se ci sono permessi concessi prima di sincronizzare
       const permissions = healthService.getPermissions();
       const hasAnyPermission = Object.values(permissions).some(Boolean);
-      
+
       // 🔥 Se ci sono permessi concessi, forza la sincronizzazione
       const syncResult = await healthService.syncHealthData(hasAnyPermission);
-      
+
       if (syncResult.success && syncResult.data) {
         // 🔥 Verifica che i dati siano reali (non mock) controllando se hanno valori significativi
         const hasRealData = (syncResult.data.steps && syncResult.data.steps > 0) ||
-                            (syncResult.data.heartRate && syncResult.data.heartRate > 0) ||
-                            (syncResult.data.sleepHours && syncResult.data.sleepHours > 0) ||
-                            (syncResult.data.hrv && syncResult.data.hrv > 0);
-        
+          (syncResult.data.heartRate && syncResult.data.heartRate > 0) ||
+          (syncResult.data.sleepHours && syncResult.data.sleepHours > 0) ||
+          (syncResult.data.hrv && syncResult.data.hrv > 0);
+
         // 🔥 SOLO se i dati sono reali, convertili e restituiscili
         if (hasRealData) {
           const realData = syncResult.data;
@@ -68,16 +68,16 @@ export class TodayGlanceService {
             analysesGoal: 2,
           };
         }
-        
+
         // 🔥 Se i permessi sono concessi ma i dati sono mock, prova a ottenere l'ultimo dato reale
         if (hasAnyPermission) {
           const latestData = await healthService.getLatestSyncedHealthData();
           if (latestData.data) {
             const hasRealLatestData = (latestData.data.steps && latestData.data.steps > 0) ||
-                                      (latestData.data.heartRate && latestData.data.heartRate > 0) ||
-                                      (latestData.data.sleepHours && latestData.data.sleepHours > 0) ||
-                                      (latestData.data.hrv && latestData.data.hrv > 0);
-            
+              (latestData.data.heartRate && latestData.data.heartRate > 0) ||
+              (latestData.data.sleepHours && latestData.data.sleepHours > 0) ||
+              (latestData.data.hrv && latestData.data.hrv > 0);
+
             if (hasRealLatestData) {
               return {
                 steps: latestData.data.steps,
@@ -97,14 +97,14 @@ export class TodayGlanceService {
     } catch (error) {
       console.warn('Failed to get real health data:', error);
     }
-    
+
     // 🔥 SOLO se NON ci sono permessi concessi, usa i mock
     // Se ci sono permessi concessi, restituisci dati vuoti invece di mock
     try {
       const healthService = HealthDataService.getInstance();
       const permissions = healthService.getPermissions();
       const hasAnyPermission = Object.values(permissions).some(Boolean);
-      
+
       if (hasAnyPermission) {
         // 🔥 Se ci sono permessi ma non ci sono dati, restituisci dati vuoti (non mock)
         return {
@@ -123,7 +123,7 @@ export class TodayGlanceService {
       // Se c'è un errore nel controllo dei permessi, usa i mock come fallback
       console.warn('Error checking permissions, using mock data:', error);
     }
-    
+
     // Fallback to mock data SOLO se non ci sono permessi concessi
     return this.generateMockHealthData();
   }
@@ -135,7 +135,7 @@ export class TodayGlanceService {
     try {
       // Try to get real health data first, fallback to mock if needed
       const healthData = await this.getHealthData();
-      
+
       return [
         // Riga 1: steps, meditation, hydration
         {
@@ -273,7 +273,7 @@ export class TodayGlanceService {
   private static async generateMockHealthData(): Promise<HealthData> {
     // Simula dati realistici per il giorno corrente
     const currentHour = new Date().getHours();
-    
+
     return {
       steps: Math.floor(Math.random() * 3000) + (currentHour > 12 ? 5000 : 2000), // Più passi se è pomeriggio
       hydration: Math.min(Math.floor(Math.random() * 3) + (currentHour > 10 ? 3 : 1), 8),
@@ -292,6 +292,16 @@ export class TodayGlanceService {
    * @returns true se l'operazione è riuscita, false altrimenti
    */
   static async removeWaterGlass(userId: string): Promise<{ success: boolean; error?: string; newHydration?: number }> {
+    // 🔥 Use the batch function for a single glass
+    return this.removeWaterGlasses(userId, 1);
+  }
+
+  /**
+   * Rimuove più bicchieri d'acqua in una singola operazione
+   * @param quantity - Numero di bicchieri da rimuovere
+   * @returns true se l'operazione è riuscita, false altrimenti
+   */
+  static async removeWaterGlasses(userId: string, quantity: number): Promise<{ success: boolean; error?: string; newHydration?: number }> {
     try {
       const { supabase } = await import('../lib/supabase');
       const { HealthDataSyncService } = await import('./health-data-sync.service');
@@ -308,9 +318,9 @@ export class TodayGlanceService {
         .eq('date', today)
         .maybeSingle();
 
-      // Calcola la nuova idratazione (rimuovi 250ml, minimo 0)
+      // 🔥 Calcola la nuova idratazione (rimuovi tutti i bicchieri richiesti, minimo 0)
       const currentHydration = existingData?.hydration || 0;
-      const newHydration = Math.max(0, currentHydration - GLASS_SIZE_ML);
+      const newHydration = Math.max(0, currentHydration - (GLASS_SIZE_ML * quantity));
 
       // Se l'idratazione è già 0, non fare nulla
       if (currentHydration === 0) {
@@ -338,7 +348,7 @@ export class TodayGlanceService {
         deepSleepMinutes: existingData?.deep_sleep_minutes ?? currentHealthData.data?.deepSleepMinutes ?? 0,
         remSleepMinutes: existingData?.rem_sleep_minutes ?? currentHealthData.data?.remSleepMinutes ?? 0,
         lightSleepMinutes: existingData?.light_sleep_minutes ?? currentHealthData.data?.lightSleepMinutes ?? 0,
-        hydration: newHydration, // 🔥 Aggiorna con il nuovo valore
+        hydration: newHydration, // 🔥 Aggiorna con il nuovo valore totale
         mindfulnessMinutes: existingData?.mindfulness_minutes ?? currentHealthData.data?.mindfulnessMinutes ?? 0,
       };
 
@@ -358,7 +368,7 @@ export class TodayGlanceService {
         };
       }
     } catch (error) {
-      console.error('❌ Error removing water glass:', error);
+      console.error('❌ Error removing water glasses:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Errore sconosciuto',
@@ -371,11 +381,20 @@ export class TodayGlanceService {
    * @returns true se l'operazione è riuscita, false altrimenti
    */
   static async addWaterGlass(userId: string): Promise<{ success: boolean; error?: string; newHydration?: number }> {
+    // 🔥 Use the batch function for a single glass
+    return this.addWaterGlasses(userId, 1);
+  }
+
+  /**
+   * Aggiunge più bicchieri d'acqua in una singola operazione
+   * @param quantity - Numero di bicchieri da aggiungere
+   * @returns true se l'operazione è riuscita, false altrimenti
+   */
+  static async addWaterGlasses(userId: string, quantity: number): Promise<{ success: boolean; error?: string; newHydration?: number }> {
     try {
       const { supabase } = await import('../lib/supabase');
       const { HealthDataSyncService } = await import('./health-data-sync.service');
       const { HealthDataService } = await import('./health-data.service');
-      const { AuthService } = await import('./auth.service');
 
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const GLASS_SIZE_ML = 250; // Un bicchiere standard è 250ml
@@ -388,9 +407,9 @@ export class TodayGlanceService {
         .eq('date', today)
         .maybeSingle();
 
-      // Calcola la nuova idratazione (aggiungi 250ml)
+      // 🔥 Calcola la nuova idratazione (aggiungi tutti i bicchieri in una volta)
       const currentHydration = existingData?.hydration || 0;
-      const newHydration = currentHydration + GLASS_SIZE_ML;
+      const newHydration = currentHydration + (GLASS_SIZE_ML * quantity);
 
       // Recupera tutti i dati di salute attuali (o usa valori di default)
       const healthService = HealthDataService.getInstance();
@@ -410,7 +429,7 @@ export class TodayGlanceService {
         deepSleepMinutes: existingData?.deep_sleep_minutes ?? currentHealthData.data?.deepSleepMinutes ?? 0,
         remSleepMinutes: existingData?.rem_sleep_minutes ?? currentHealthData.data?.remSleepMinutes ?? 0,
         lightSleepMinutes: existingData?.light_sleep_minutes ?? currentHealthData.data?.lightSleepMinutes ?? 0,
-        hydration: newHydration, // 🔥 Aggiorna con il nuovo valore
+        hydration: newHydration, // 🔥 Aggiorna con il nuovo valore totale
         mindfulnessMinutes: existingData?.mindfulness_minutes ?? currentHealthData.data?.mindfulnessMinutes ?? 0,
       };
 
@@ -430,7 +449,7 @@ export class TodayGlanceService {
         };
       }
     } catch (error) {
-      console.error('❌ Error adding water glass:', error);
+      console.error('❌ Error adding water glasses:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Errore sconosciuto',

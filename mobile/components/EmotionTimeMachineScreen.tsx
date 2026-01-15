@@ -366,14 +366,6 @@ export const EmotionTimeMachineScreen: React.FC<EmotionTimeMachineScreenProps> =
 
                 {/* Evolution Card */}
                 <View style={[styles.evolutionCard, { backgroundColor: isDark ? '#1a1a2e' : '#fff' }]}>
-                    <View style={styles.evolutionHeader}>
-                        <View style={[styles.brainIcon, { backgroundColor: isDark ? '#2d2d3a' : '#f0e6ff' }]}>
-                            <MaterialCommunityIcons name="brain" size={24} color="#a855f7" />
-                        </View>
-                        <Text style={[styles.evolutionTitle, { color: isDark ? '#fff' : '#1a1a2e' }]}>
-                            {language === 'it' ? 'La Tua Evoluzione Emotiva' : 'Your Emotional Evolution'}
-                        </Text>
-                    </View>
 
                     {/* Comparison Cards - ALWAYS show both */}
                     <View style={styles.comparisonRow}>
@@ -427,8 +419,8 @@ export const EmotionTimeMachineScreen: React.FC<EmotionTimeMachineScreenProps> =
                     <View style={[styles.detailsCard, { backgroundColor: isDark ? '#1a1a2e' : '#fff' }]}>
                         <Text style={[styles.detailsTitle, { color: isDark ? '#fff' : '#1a1a2e' }]}>
                             {selectedCard === 'past'
-                                ? (language === 'it' ? 'Dettagli Passato' : 'Past Details')
-                                : (language === 'it' ? 'Dettagli Oggi' : 'Today Details')
+                                ? (language === 'it' ? 'Dettagli del Passato' : 'Past Details')
+                                : (language === 'it' ? 'Dettagli di Oggi' : "Today's Details")
                             }
                         </Text>
 
@@ -520,7 +512,7 @@ const styles = StyleSheet.create({
     placeholder: { width: 40 },
     loadingContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     emptyContent: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
-    emptyTitle: { fontSize: 22, fontWeight: '600', marginTop: 20, textAlign: 'center' },
+    emptyTitle: { fontSize: 22, fontWeight: '600', marginTop: 10, textAlign: 'center' },
     ctaButton: { marginTop: 30, borderRadius: 12, overflow: 'hidden' },
     ctaGradient: { paddingHorizontal: 32, paddingVertical: 14 },
     ctaText: { color: '#fff', fontWeight: '600', fontSize: 16 },

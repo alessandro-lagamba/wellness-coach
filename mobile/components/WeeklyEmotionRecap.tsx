@@ -1,13 +1,17 @@
-// @ts-nocheck
-import React, { useEffect, useState, useCallback } from 'react';
+// WeeklyEmotionRecap.tsx
+// (Versione corretta: borderColor esplicito + shadow/elevation consistenti con overflow 'hidden'
+//  tramite wrapper esterno per shadow e wrapper interno per clipping)
+
+import React, { useEffect, useState, useCallback, memo } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     ActivityIndicator,
+    Platform,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Feather } from '@expo/vector-icons';
+import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { EmotionAnalysisService } from '../services/emotion-analysis.service';
@@ -22,40 +26,91 @@ interface WeeklyRecapData {
     positiveDays: number;
     negativeDays: number;
     neutralDays: number;
-    weeklyChange: number; // valence change from previous week
+    weeklyChange: number;
 }
 
-export const WeeklyEmotionRecap: React.FC = () => {
+// -----------------------------------------------------------------------------
+// Circular progress
+// -----------------------------------------------------------------------------
+interface CircularProgressProps {
+    value: number;
+    size: number;
+    strokeWidth: number;
+    isDark: boolean;
+}
+
+const CircularProgress: React.FC<CircularProgressProps> = ({ value, size, strokeWidth, isDark }) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const strokeDashoffset = circumference - (value / 100) * circumference;
+
+    return (
+        <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
+            <Defs>
+                <SvgLinearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <Stop offset="0%" stopColor="#a78bfa" stopOpacity={1} />
+                    <Stop offset="100%" stopColor="#8B5CF6" stopOpacity={1} />
+                </SvgLinearGradient>
+            </Defs>
+
+            {/* Background circle */}
+            <Circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                stroke={isDark ? 'rgba(167, 139, 250, 0.12)' : 'rgba(139, 92, 246, 0.1)'}
+                strokeWidth={strokeWidth}
+                fill="none"
+            />
+
+            {/* Progress circle */}
+            <Circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                stroke="url(#progressGradient)"
+                strokeWidth={strokeWidth}
+                fill="none"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+            />
+        </Svg>
+    );
+};
+
+// -----------------------------------------------------------------------------
+// Component
+// -----------------------------------------------------------------------------
+const WeeklyEmotionRecapComponent: React.FC = () => {
     const { colors, mode } = useTheme();
     const isDark = mode === 'dark';
     const { language } = useTranslation();
+
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<WeeklyRecapData | null>(null);
 
-    // 🆕 Subscribe to store to trigger refetch when new analyses are added
     const emotionHistoryLength = useAnalysisStore((state) => state.emotionHistory?.length ?? 0);
     const latestEmotionSession = useAnalysisStore((state) => state.latestEmotionSession);
 
-    // 🆕 Memoized load function
     const loadRecapData = useCallback(async () => {
+        setLoading(true);
+
         try {
             const user = await AuthService.getCurrentUser();
             if (!user) {
-                setLoading(false);
+                setData(null);
                 return;
             }
 
-            // 🆕 Get ALL analyses from last 7 days (not limited by count)
             const thisWeekHistory = await EmotionAnalysisService.getEmotionHistoryByDays(user.id, 7);
-
-            if (thisWeekHistory.length === 0) {
-                setLoading(false);
+            if (!thisWeekHistory || thisWeekHistory.length === 0) {
+                setData(null);
                 return;
             }
 
-            // Get last week (days 8-14) for comparison
             const twoWeeksHistory = await EmotionAnalysisService.getEmotionHistoryByDays(user.id, 14);
-            const lastWeekOnly = twoWeeksHistory.filter(a => {
+            const lastWeekOnly = (twoWeeksHistory || []).filter((a: any) => {
                 const analysisDate = new Date(a.created_at);
                 const sevenDaysAgo = new Date();
                 sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -64,17 +119,16 @@ export const WeeklyEmotionRecap: React.FC = () => {
 
             let lastWeekAvgValence = 0;
             if (lastWeekOnly.length > 0) {
-                lastWeekAvgValence = lastWeekOnly.reduce((sum, a) => sum + a.valence, 0) / lastWeekOnly.length;
+                lastWeekAvgValence =
+                    lastWeekOnly.reduce((sum: number, a: any) => sum + a.valence, 0) / lastWeekOnly.length;
             }
 
-            // Calculate positive/negative/neutral for ALL this week's analyses
             const dayStats = { positive: 0, negative: 0, neutral: 0 };
             let totalValence = 0;
             let totalArousal = 0;
             const emotionCounts: Record<string, number> = {};
 
-            thisWeekHistory.forEach(analysis => {
-                // Count by valence threshold (using -1 to 1 scale internally)
+            thisWeekHistory.forEach((analysis: any) => {
                 if (analysis.valence > 0.2) dayStats.positive++;
                 else if (analysis.valence < -0.2) dayStats.negative++;
                 else dayStats.neutral++;
@@ -82,12 +136,12 @@ export const WeeklyEmotionRecap: React.FC = () => {
                 totalValence += analysis.valence;
                 totalArousal += analysis.arousal;
 
-                // Count dominant emotions
-                emotionCounts[analysis.dominant_emotion] = (emotionCounts[analysis.dominant_emotion] || 0) + 1;
+                const key = (analysis.dominant_emotion || 'neutral').toLowerCase();
+                emotionCounts[key] = (emotionCounts[key] || 0) + 1;
             });
 
-            const avgValence = thisWeekHistory.length > 0 ? totalValence / thisWeekHistory.length : 0;
-            const avgArousal = thisWeekHistory.length > 0 ? totalArousal / thisWeekHistory.length : 0;
+            const avgValence = totalValence / thisWeekHistory.length;
+            const avgArousal = totalArousal / thisWeekHistory.length;
             const weeklyChange = avgValence - lastWeekAvgValence;
 
             setData({
@@ -102,230 +156,217 @@ export const WeeklyEmotionRecap: React.FC = () => {
             });
         } catch (error) {
             console.error('Error loading recap:', error);
+            setData(null);
         } finally {
             setLoading(false);
         }
-    }, []); // Empty deps - function doesn't depend on external state
+    }, []);
 
-    // 🆕 Refetch when emotion history changes (new analysis saved)
     useEffect(() => {
         loadRecapData();
     }, [loadRecapData, emotionHistoryLength, latestEmotionSession?.id]);
 
+    // Palette card coerente con l’altra card
+    const cardBg = isDark ? '#1e293b' : '#ffffff';
+    const cardBorder = isDark ? '#334155' : '#f1f5f9';
+
     if (loading) {
         return (
-            <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <ActivityIndicator size="small" color={colors.primary} />
+            <View style={styles.shadowWrap}>
+                <View style={[styles.innerCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                </View>
             </View>
         );
     }
 
     if (!data || data.totalAnalyses === 0) {
-        return null; // Don't show if no data
+        return null;
     }
 
-    // Calculate emotional balance score (0-100)
+    // Score 0-100 (avgValence è in [-1,1])
     const balanceScore = Math.round((data.avgValence + 1) * 50);
 
-    // Determine trend icon
-    const trendIcon = data.weeklyChange > 0.1 ? 'trending-up' : data.weeklyChange < -0.1 ? 'trending-down' : 'minus';
-    const trendColor = data.weeklyChange > 0.1 ? '#10b981' : data.weeklyChange < -0.1 ? '#ef4444' : colors.textSecondary;
-
-    // Get top emotion
-    const topEmotion = Object.entries(data.dominantEmotions)
-        .sort((a, b) => b[1] - a[1])[0];
-
-    // 🆕 Emotion translation map for Italian
-    const emotionTranslations: Record<string, string> = {
-        neutral: 'neutro',
-        joy: 'gioia',
-        happiness: 'felicità',
-        sadness: 'tristezza',
-        anger: 'rabbia',
-        fear: 'paura',
-        surprise: 'sorpresa',
-        disgust: 'disgusto',
-        contempt: 'disprezzo',
-    };
-
-    // Helper to get translated and capitalized emotion name
-    const getEmotionDisplay = (emotion: string) => {
-        const translated = language === 'it' ? (emotionTranslations[emotion.toLowerCase()] || emotion) : emotion;
-        return translated.charAt(0).toUpperCase() + translated.slice(1);
-    };
+    // Percentuali barra
+    const total = data.positiveDays + data.neutralDays + data.negativeDays;
+    const positivePercent = total > 0 ? (data.positiveDays / total) * 100 : 33;
+    const neutralPercent = total > 0 ? (data.neutralDays / total) * 100 : 34;
+    const negativePercent = total > 0 ? (data.negativeDays / total) * 100 : 33;
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.headerLeft}>
-                    <Feather name="calendar" size={18} color={colors.primary} />
-                    <Text style={[styles.title, { color: colors.text }]}>
-                        {language === 'it' ? 'Il tuo recap settimanale' : 'Your weekly recap'}
-                    </Text>
-                </View>
-                <View style={styles.trendBadge}>
-                    <Feather name={trendIcon} size={14} color={trendColor} />
-                </View>
-            </View>
+        <View style={styles.shadowWrap}>
+            <View style={[styles.innerCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                {/* Title */}
+                <Text style={[styles.title, { color: colors.text }]}>
+                    {language === 'it' ? 'Equilibrio Emotivo' : 'Emotional Balance'}
+                </Text>
 
-            {/* Main Score */}
-            <View style={styles.scoreContainer}>
-                <LinearGradient
-                    colors={['#7c3aed', '#9333ea']}
-                    style={styles.scoreCircle}
-                >
-                    <Text style={styles.scoreNumber}>{balanceScore}</Text>
-                    <Text style={styles.scoreLabel}>/ 100</Text>
-                </LinearGradient>
-                <View style={styles.scoreInfo}>
-                    <Text style={[styles.scoreTitle, { color: colors.text }]}>
-                        {language === 'it' ? 'Equilibrio Emotivo' : 'Emotional Balance'}
-                    </Text>
-                    <Text style={[styles.scoreSubtitle, { color: colors.textSecondary }]}>
-                        {data.totalAnalyses} {language === 'it' ? 'check-in questa settimana' : 'check-ins this week'}
-                    </Text>
-                </View>
-            </View>
+                {/* Circular Score */}
+                <View style={styles.scoreSection}>
+                    <View style={styles.circleWrapper}>
+                        <CircularProgress value={balanceScore} size={100} strokeWidth={6} isDark={isDark} />
+                        <View style={styles.scoreInner}>
+                            <Text style={[styles.scoreNumber, { color: colors.text }]}>{balanceScore}</Text>
+                            <Text style={[styles.scoreLabel, { color: colors.textSecondary }]}>SCORE</Text>
+                        </View>
+                    </View>
 
-            {/* Stats Row */}
-            <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                    <View style={[styles.statDot, { backgroundColor: '#10b981' }]} />
-                    <Text style={[styles.statNumber, { color: colors.text }]}>{data.positiveDays}</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                        {language === 'it' ? 'Positivo' : 'Positive'}
-                    </Text>
-                </View>
-                <View style={styles.statItem}>
-                    <View style={[styles.statDot, { backgroundColor: '#6366f1' }]} />
-                    <Text style={[styles.statNumber, { color: colors.text }]}>{data.neutralDays}</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                        {language === 'it' ? 'Neutro' : 'Neutral'}
-                    </Text>
-                </View>
-                <View style={styles.statItem}>
-                    <View style={[styles.statDot, { backgroundColor: '#ef4444' }]} />
-                    <Text style={[styles.statNumber, { color: colors.text }]}>{data.negativeDays}</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                        {language === 'it' ? 'Negativo' : 'Tough'}
-                    </Text>
-                </View>
-            </View>
-
-            {/* Top Emotion */}
-            {topEmotion && (
-                <View style={[styles.insightBox, { backgroundColor: isDark ? 'rgba(124,58,237,0.15)' : 'rgba(124,58,237,0.08)' }]}>
-                    <Feather name="zap" size={14} color={colors.primary} />
-                    <Text style={[styles.insightText, { color: colors.text }]}>
+                    <Text style={[styles.checkInText, { color: colors.textSecondary }]}>
                         {language === 'it'
-                            ? `Emozione principale: ${getEmotionDisplay(topEmotion[0])} (${Math.round(topEmotion[1] / data.totalAnalyses * 100)}%)`
-                            : `Top emotion: ${getEmotionDisplay(topEmotion[0])} (${Math.round(topEmotion[1] / data.totalAnalyses * 100)}%)`}
+                            ? `Basato su ${data.totalAnalyses} check-in`
+                            : `Based on ${data.totalAnalyses} check-ins`}
                     </Text>
                 </View>
-            )}
+
+                {/* Balance Bar */}
+                <View style={styles.balanceSection}>
+                    <View style={styles.balanceLabels}>
+                        <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
+                            {language === 'it' ? 'Positivo' : 'Positive'}
+                        </Text>
+                        <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
+                            {language === 'it' ? 'Neutro' : 'Neutral'}
+                        </Text>
+                        <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
+                            {language === 'it' ? 'Negativo' : 'Negative'}
+                        </Text>
+                    </View>
+
+                    <View
+                        style={[
+                            styles.balanceBar,
+                            { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' },
+                        ]}
+                    >
+                        {positivePercent > 0 && (
+                            <View
+                                style={[
+                                    styles.balanceSegment,
+                                    styles.balanceSegmentFirst,
+                                    { width: `${positivePercent}%`, backgroundColor: '#2ab934ff' },
+                                ]}
+                            />
+                        )}
+                        {neutralPercent > 0 && (
+                            <View
+                                style={[
+                                    styles.balanceSegment,
+                                    positivePercent === 0 && styles.balanceSegmentFirst,
+                                    negativePercent === 0 && styles.balanceSegmentLast,
+                                    { width: `${neutralPercent}%`, backgroundColor: '#f8e554ff' },
+                                ]}
+                            />
+                        )}
+                        {negativePercent > 0 && (
+                            <View
+                                style={[
+                                    styles.balanceSegment,
+                                    styles.balanceSegmentLast,
+                                    { width: `${negativePercent}%`, backgroundColor: '#ff4e4eff' },
+                                ]}
+                            />
+                        )}
+                    </View>
+                </View>
+            </View>
         </View>
     );
 };
 
+// Memoized export
+export const WeeklyEmotionRecap = memo(WeeklyEmotionRecapComponent);
+
 const styles = StyleSheet.create({
-    container: {
-        borderRadius: 16,
+    // Wrapper esterno: SOLO shadow/elevation (NO overflow hidden)
+    shadowWrap: {
+        borderRadius: 24,
+        marginHorizontal: 16,
+        marginVertical: 12,
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.06,
+                shadowRadius: 30,
+            },
+            android: {
+                elevation: 8,
+            },
+        }),
+    },
+
+    // Card interna: clipping e border coerenti
+    innerCard: {
+        borderRadius: 24,
+        padding: 28,
         borderWidth: 1,
-        padding: 16,
-        marginBottom: 16,
+        overflow: 'hidden',
     },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-    },
-    headerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
+
     title: {
-        fontSize: 15,
+        fontSize: 22,
         fontWeight: '600',
+        marginBottom: 12,
     },
-    trendBadge: {
-        padding: 6,
-        borderRadius: 8,
-        backgroundColor: 'rgba(0,0,0,0.05)',
-    },
-    scoreContainer: {
-        flexDirection: 'row',
+
+    scoreSection: {
         alignItems: 'center',
-        gap: 16,
-        marginBottom: 16,
+        marginBottom: 28,
     },
-    scoreCircle: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
+    circleWrapper: {
+        position: 'relative',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 10,
+    },
+    scoreInner: {
+        position: 'absolute',
         alignItems: 'center',
         justifyContent: 'center',
     },
     scoreNumber: {
-        fontSize: 24,
-        fontWeight: '800',
-        color: '#fff',
+        fontSize: 32,
+        fontWeight: '600',
+        letterSpacing: -0.5,
     },
     scoreLabel: {
-        fontSize: 11,
-        color: 'rgba(255,255,255,0.8)',
-        marginTop: -4,
-    },
-    scoreInfo: {
-        flex: 1,
-    },
-    scoreTitle: {
-        fontSize: 16,
+        fontSize: 9,
         fontWeight: '600',
-        marginBottom: 4,
+        letterSpacing: 1.2,
+        marginTop: 1,
     },
-    scoreSubtitle: {
+    checkInText: {
         fontSize: 13,
     },
-    statsRow: {
+
+    balanceSection: {
+        gap: 10,
+    },
+    balanceLabels: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
-        paddingVertical: 12,
-        borderTopWidth: 1,
-        borderBottomWidth: 1,
-        borderColor: 'rgba(0,0,0,0.06)',
-        marginBottom: 12,
+        justifyContent: 'space-between',
+        paddingHorizontal: 2,
     },
-    statItem: {
-        alignItems: 'center',
-        gap: 4,
+    balanceLabel: {
+        fontSize: 12,
+        fontWeight: '500',
     },
-    statDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-    },
-    statNumber: {
-        fontSize: 18,
-        fontWeight: '700',
-    },
-    statLabel: {
-        fontSize: 11,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    insightBox: {
+    balanceBar: {
+        height: 10,
         flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        padding: 12,
-        borderRadius: 10,
+        borderRadius: 5,
+        overflow: 'hidden',
     },
-    insightText: {
-        fontSize: 13,
-        flex: 1,
+    balanceSegment: {
+        height: '100%',
+    },
+    balanceSegmentFirst: {
+        borderTopLeftRadius: 5,
+        borderBottomLeftRadius: 5,
+    },
+    balanceSegmentLast: {
+        borderTopRightRadius: 5,
+        borderBottomRightRadius: 5,
     },
 });
 

@@ -49,8 +49,8 @@ export class HealthDataSyncService {
    * Sync health data to Supabase
    */
   async syncHealthData(
-    userId: string, 
-    healthData: HealthData, 
+    userId: string,
+    healthData: HealthData,
     source: 'healthkit' | 'health_connect' | 'manual' | 'mock' = 'mock'
   ): Promise<HealthDataSyncResult> {
     try {
@@ -64,58 +64,70 @@ export class HealthDataSyncService {
       };
 
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      
-      // 🔥 FIX: Usa UPSERT invece di check + insert/update per evitare race conditions
-      // Questo risolve il problema "duplicate key value violates unique constraint"
-      const healthRecord: Partial<HealthDataRecord> = {
-        user_id: userId,
-        date: today,
-        steps: roundInt(healthData.steps),
-        distance: toDecimal(healthData.distance ?? 0),
-        calories: roundInt(healthData.calories),
-        active_minutes: roundInt(healthData.activeMinutes),
-        heart_rate: roundInt(healthData.heartRate),
-        resting_heart_rate: roundInt(healthData.restingHeartRate),
-        hrv: roundInt(healthData.hrv),
-        sleep_hours: toDecimal(healthData.sleepHours ?? 0),
-        sleep_quality: roundInt(healthData.sleepQuality),
-        deep_sleep_minutes: roundInt(healthData.deepSleepMinutes),
-        rem_sleep_minutes: roundInt(healthData.remSleepMinutes),
-        light_sleep_minutes: roundInt(healthData.lightSleepMinutes),
-        blood_pressure_systolic: healthData.bloodPressure?.systolic ? roundInt(healthData.bloodPressure.systolic) : null,
-        blood_pressure_diastolic: healthData.bloodPressure?.diastolic ? roundInt(healthData.bloodPressure.diastolic) : null,
-        weight: typeof healthData.weight === 'number' ? parseFloat(healthData.weight.toFixed(2)) : null,
-        body_fat: typeof healthData.bodyFat === 'number' ? parseFloat(healthData.bodyFat.toFixed(2)) : null,
-        hydration: roundInt(healthData.hydration),
-        mindfulness_minutes: roundInt(healthData.mindfulnessMinutes),
-        source,
-        updated_at: new Date().toISOString(),
-      };
 
-      // 🔥 FIX: Usa UPSERT con onConflict per gestire automaticamente insert/update
-      // Questo risolve completamente il problema "duplicate key value violates unique constraint"
-      // Il constraint unique è 'health_data_user_id_date_key' quindi usiamo 'user_id,date'
-      const upsertData = {
-        ...healthRecord,
-        created_at: new Date().toISOString(), // Verrà ignorato se il record esiste già (grazie a onConflict)
-      };
-
-      // 🔥 FIX: Controlla prima se esiste SOLO per determinare insert vs update (non per la logica)
-      // L'upsert gestirà comunque correttamente anche in caso di race condition
+      // 1. Recupera prima il record esistente per oggi
       const { data: existingRecord } = await supabase
         .from('health_data')
-        .select('id')
+        .select('*')
         .eq('user_id', userId)
         .eq('date', today)
         .maybeSingle();
 
       const wasInserted = !existingRecord;
 
-      // 🔥 FIX: Usa upsert con onConflict - gestisce automaticamente insert/update senza race conditions
+      // 2. Prepara il record unendo i dati nuovi con quelli esistenti
+      const healthRecord: Partial<HealthDataRecord> = {
+        user_id: userId,
+        date: today,
+
+        // Dati attività: prendi il valore più alto tra nuovo e vecchio
+        steps: Math.max(roundInt(healthData.steps), existingRecord?.steps || 0),
+        distance: Math.max(toDecimal(healthData.distance ?? 0), existingRecord?.distance || 0),
+        calories: Math.max(roundInt(healthData.calories), existingRecord?.calories || 0),
+        active_minutes: Math.max(roundInt(healthData.activeMinutes), existingRecord?.active_minutes || 0),
+
+        // Dati istantanei: usa il nuovo se disponibile (>0), altrimenti tieni il vecchio
+        heart_rate: roundInt(healthData.heartRate) || existingRecord?.heart_rate || 0,
+        resting_heart_rate: roundInt(healthData.restingHeartRate) || existingRecord?.resting_heart_rate || 0,
+        hrv: roundInt(healthData.hrv) || existingRecord?.hrv || 0,
+
+        // Sonno
+        sleep_hours: toDecimal(healthData.sleepHours ?? 0) || existingRecord?.sleep_hours || 0,
+        sleep_quality: roundInt(healthData.sleepQuality) || existingRecord?.sleep_quality || 0,
+        deep_sleep_minutes: roundInt(healthData.deepSleepMinutes) || existingRecord?.deep_sleep_minutes || 0,
+        rem_sleep_minutes: roundInt(healthData.remSleepMinutes) || existingRecord?.rem_sleep_minutes || 0,
+        light_sleep_minutes: roundInt(healthData.lightSleepMinutes) || existingRecord?.light_sleep_minutes || 0,
+
+        // Parametri medici (Pressione, Peso, ecc.)
+        blood_pressure_systolic: (healthData.bloodPressure?.systolic ? roundInt(healthData.bloodPressure.systolic) : null) || existingRecord?.blood_pressure_systolic,
+        blood_pressure_diastolic: (healthData.bloodPressure?.diastolic ? roundInt(healthData.bloodPressure.diastolic) : null) || existingRecord?.blood_pressure_diastolic,
+        weight: (typeof healthData.weight === 'number' ? parseFloat(healthData.weight.toFixed(2)) : null) || existingRecord?.weight,
+        body_fat: (typeof healthData.bodyFat === 'number' ? parseFloat(healthData.bodyFat.toFixed(2)) : null) || existingRecord?.body_fat,
+
+        // 🔥 PROTEZIONE IDRATAZIONE E MEDITAZIONE
+        // Se manuale salva il nuovo valore, se automatico non sovrascrivere con 0
+        hydration: (source === 'manual')
+          ? roundInt(healthData.hydration)
+          : Math.max(roundInt(healthData.hydration), existingRecord?.hydration || 0),
+
+        mindfulness_minutes: (source === 'manual')
+          ? roundInt(healthData.mindfulnessMinutes)
+          : Math.max(roundInt(healthData.mindfulnessMinutes), existingRecord?.mindfulness_minutes || 0),
+
+        source,
+        updated_at: new Date().toISOString(),
+      };
+
+      const upsertData = {
+        ...healthRecord,
+        created_at: existingRecord?.created_at || new Date().toISOString(),
+      };
+
+      // 3. Esegui l'upsert finale
       const { data: upsertedData, error: upsertError } = await supabase
         .from('health_data')
         .upsert(upsertData, {
-          onConflict: 'user_id,date', // 🔥 FIX: Specifica il constraint unique 'health_data_user_id_date_key'
+          onConflict: 'user_id,date',
         })
         .select()
         .single();
@@ -150,8 +162,8 @@ export class HealthDataSyncService {
    * Get health data for a specific date range
    */
   async getHealthData(
-    userId: string, 
-    startDate: string, 
+    userId: string,
+    startDate: string,
     endDate: string
   ): Promise<HealthDataRecord[]> {
     try {
@@ -338,7 +350,7 @@ export class HealthDataSyncService {
 
       // Crea un array per gli ultimi N giorni
       const daysMap: { [key: string]: { steps: number; sleepHours: number; hrv: number; heartRate: number; hydration: number; meditation: number } } = {};
-      
+
       // Inizializza tutti i giorni con 0
       for (let i = 0; i < days; i++) {
         const date = new Date(startDate);

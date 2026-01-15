@@ -23,13 +23,13 @@ interface TrendChartProps {
 
 export const TrendChart: React.FC<TrendChartProps> = ({
   data,
-  color = '#10b981',
+  color = '#f97316',
   maxValue,
   formatValue = (v) => v.toLocaleString(),
   days,
 }) => {
   const { colors } = useTheme();
-  
+
   // Genera le etichette dei giorni
   const getDayLabels = (): string[] => {
     const labels: string[] = [];
@@ -54,7 +54,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   };
 
   const dayLabels = getDayLabels();
-  
+
   if (!data || data.length === 0) {
     return (
       <View style={styles.container}>
@@ -160,7 +160,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
           strokeWidth={1}
           opacity={0.3}
         />
-        
+
         {/* Linea del trend */}
         {points.length > 1 && pathData && (
           <Path
@@ -172,7 +172,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             strokeLinejoin="round"
           />
         )}
-        
+
         {/* Cerchio sul primo punto */}
         {firstPoint && (
           <Circle
@@ -183,7 +183,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             opacity={0.7}
           />
         )}
-        
+
         {/* Cerchio sull'ultimo punto */}
         {lastPoint && (
           <Circle

@@ -85,8 +85,8 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
     return points;
   };
 
-  const valencePath = showValence ? createPath(chartData.map(d => d.valence), '#10b981') : '';
-  const arousalPath = showArousal ? createPath(chartData.map(d => d.arousal), '#ef4444') : '';
+  const valencePath = showValence ? createPath(chartData.map(d => d.valence), '#f97316') : '';
+  const arousalPath = showArousal ? createPath(chartData.map(d => d.arousal), '#3b82f6') : '';;
 
   return (
     <View style={styles.container}>
@@ -112,12 +112,12 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
             <Svg width={chartWidth} height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
               <Defs>
                 <SvgLinearGradient id="valenceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <Stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
-                  <Stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                  <Stop offset="0%" stopColor="#f97316" stopOpacity="0.3" />
+                  <Stop offset="100%" stopColor="#f97316" stopOpacity="0" />
                 </SvgLinearGradient>
                 <SvgLinearGradient id="arousalGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <Stop offset="0%" stopColor="#ef4444" stopOpacity="0.3" />
-                  <Stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+                  <Stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
+                  <Stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
                 </SvgLinearGradient>
               </Defs>
 
@@ -186,7 +186,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
               {valencePath && (
                 <Path
                   d={valencePath}
-                  stroke="#10b981"
+                  stroke="#f97316"
                   strokeWidth="3"
                   fill="none"
                   strokeLinecap="round"
@@ -198,7 +198,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
               {arousalPath && (
                 <Path
                   d={arousalPath}
-                  stroke="#ef4444"
+                  stroke="#3b82f6"
                   strokeWidth="3"
                   fill="none"
                   strokeLinecap="round"
@@ -219,7 +219,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
                     cx={x}
                     cy={y}
                     r="3"
-                    fill="#10b981"
+                    fill="#f97316"
                     stroke={colors.surface}
                     strokeWidth="2"
                   />
@@ -239,7 +239,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
                     cx={x}
                     cy={y}
                     r="3"
-                    fill="#ef4444"
+                    fill="#3b82f6"
                     stroke={colors.surface}
                     strokeWidth="2"
                   />
@@ -251,7 +251,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
           <View style={[styles.metricsRow, { borderTopColor: colors.border }]}>
             {showValence && (
               <View style={styles.metricItem}>
-                <View style={[styles.metricDot, { backgroundColor: '#10b981' }]} />
+                <View style={[styles.metricDot, { backgroundColor: '#f97316' }]} />
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{labels.valence}</Text>
                 {/* 🆕 FIX: Normalize valence from [-1,1] to [0,100] */}
                 <Text style={[styles.metricValue, { color: colors.text }]}>{Math.round(((latestValence + 1) / 2) * 100)}</Text>
@@ -260,7 +260,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
 
             {showArousal && (
               <View style={styles.metricItem}>
-                <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
+                <View style={[styles.metricDot, { backgroundColor: '#3b82f6' }]} />
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{labels.arousal}</Text>
                 {/* 🆕 FIX: Normalize arousal from [-1,1] to [0,100] */}
                 <Text style={[styles.metricValue, { color: colors.text }]}>{Math.round(((latestArousal + 1) / 2) * 100)}</Text>

@@ -77,22 +77,6 @@ const { width } = Dimensions.get('window');
 // Aumentiamo la larghezza sottraendo meno spazio (150 invece di 180) per avvicinarci al look Android
 const CHART_WIDTH = Math.min(400, width - 150);
 
-const PLACEHOLDER_TREND_DATA = {
-  steps: [6200, 6800, 7000, 7300, 7100, 7600, 7800],
-  sleepHours: [7.2, 7.5, 7.1, 7.8, 7.4, 7.6, 7.3],
-  hrv: [35, 38, 36, 40, 39, 41, 38],
-  heartRate: [66, 65, 67, 64, 66, 65, 63],
-  hydration: [750, 900, 1100, 1000, 1200, 1300, 1400],
-  meditation: [8, 10, 12, 9, 14, 11, 13],
-};
-
-const PLACEHOLDER_WIDGET_SNAPSHOT = {
-  steps: 6777,
-  hydrationMl: 1250,
-  hydrationGlasses: 5,
-  meditationMinutes: 18,
-};
-
 // Removed QuickLink interface - replaced with Today at a glance widgets
 
 interface HighlightCard {
@@ -221,34 +205,34 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
   const placeholderChartSamples = useMemo(() => ({
     steps: {
-      value: 7800,
-      trend: [3200, 4800, 5600, 6800, 7200, 7600, 7800],
+      value: 0,
+      trend: [0, 0, 0, 0, 0, 0, 0],
       max: 10000,
     },
     sleepHours: {
-      value: 7.5,
-      trend: [6.2, 6.8, 7.1, 7.6, 7.4, 7.9, 8.0],
+      value: 0,
+      trend: [0, 0, 0, 0, 0, 0, 0],
       max: 10,
     },
     hrv: {
-      value: 38,
-      trend: [28, 30, 35, 34, 36, 37, 38],
-      max: 60,
+      value: 0,
+      trend: [0, 0, 0, 0, 0, 0, 0],
+      max: 140,
     },
     heartRate: {
-      value: 72,
-      trend: [72, 70, 68, 73, 74, 71, 72],
-      max: 120,
+      value: 0,
+      trend: [0, 0, 0, 0, 0, 0, 0],
+      max: 150,
     },
     hydration: {
-      value: 6,
-      trend: [3, 4, 5, 6, 5, 7, 6],
+      value: 0,
+      trend: [0, 0, 0, 0, 0, 0, 0],
       max: 10,
     },
     meditation: {
-      value: 18,
-      trend: [5, 8, 10, 12, 14, 16, 18],
-      max: 40,
+      value: 0,
+      trend: [0, 0, 0, 0, 0, 0, 0],
+      max: 60,
     },
   }), []);
 
@@ -434,7 +418,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     meditationGoal: number,
     sleepGoal: number,
     cycle?: CycleData | null,
-    dailyIntake?: { calories: number; carbohydrates: number; proteins: number; fats: number } | null
+    dailyIntake?: { calories: number; carbohydrates: number; proteins: number; fats: number } | null,
+    currentUserGender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null // 🔥 FIX: Pass userGender as parameter
   ): Promise<WidgetData[]> => {
     // 🔥 FIX: Converti goal e valore corrente all'unità preferita per la visualizzazione
     const { hydrationUnitService } = await import('../services/hydration-unit.service');
@@ -523,8 +508,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         }
       },
       // 🆕 Aggiungi widget ciclo solo se l'utente è di genere femminile E ci sono dati disponibili
-      // 🔥 FIX: Includi il widget ciclo per utenti femminili anche se i dati del ciclo non sono ancora caricati
-      ...(userGender === 'female' ? [{
+      // 🔥 FIX: Usa currentUserGender passato come parametro invece di userGender dal closure
+      ...(currentUserGender === 'female' ? [{
         id: 'cycle',
         title: t('widgets.cycle'),
         icon: '🌸',
@@ -713,40 +698,43 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       };
       // 🔥 FIX: Always pass cycleData and dailyIntake even when healthData is null
       const cycleForWidget = userGender === 'female' ? cycleData : null;
-      return await buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoalInGlasses, meditationGoal, sleepGoal, cycleForWidget, dailyIntake);
+      return await buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoalInGlasses, meditationGoal, sleepGoal, cycleForWidget, dailyIntake, userGender);
     }
 
     const hd = dataToUse;
     // 🆕 Passa cycleData solo se l'utente è di genere femminile
     const cycleForWidget = userGender === 'female' ? cycleData : null;
-    return await buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoalInGlasses, meditationGoal, sleepGoal, cycleForWidget, dailyIntake);
+    return await buildWidgetDataFromHealthDataHelper(hd, stepsGoal, hydrationGoalInGlasses, meditationGoal, sleepGoal, cycleForWidget, dailyIntake, userGender);
   }, [healthData, healthStatus, placeholderMessages, translateWidgetTitle, cycleData, userGender, t, dailyIntake]);
 
-  // 🔥 FIX: Ricarica i widget quando cambiano i dati del ciclo
+  // 🔥 FIX: Ricarica i widget quando cambiano i dati del ciclo o il genere dell'utente
   // FIXED: Usato useRef per tracciare l'ultimo ciclo processato e prevenire loop infiniti
   const lastProcessedCycleRef = useRef<string | null>(null);
+  const lastProcessedGenderRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (userGender !== 'female') return; // Solo per utenti femminili
-    if (!cycleData) return; // Aspetta che i dati siano caricati
+    // 🔥 FIX: Refresh widgets whenever userGender changes (for cycle widget visibility)
+    const genderKey = userGender || 'null';
+    const cycleKey = `${cycleData?.day || 'no'}-${cycleData?.phase || 'no'}`;
 
-    // 🔥 FIX: Crea chiave univoca per evitare processamenti duplicati
-    const cycleKey = `${cycleData.day}-${cycleData.phase}`;
-    if (cycleKey === lastProcessedCycleRef.current) {
-      return; // Già processato, skip
+    // Skip if nothing changed
+    if (genderKey === lastProcessedGenderRef.current && cycleKey === lastProcessedCycleRef.current) {
+      return;
     }
+
+    // Update refs BEFORE processing to prevent race conditions
+    lastProcessedGenderRef.current = genderKey;
+    lastProcessedCycleRef.current = cycleKey;
 
     (async () => {
       try {
-        // 🔥 PERF: Reduced logging frequency
-        lastProcessedCycleRef.current = cycleKey; // Aggiorna PRIMA di chiamare per evitare race conditions
         const updatedWidgetData = await buildWidgetDataFromHealth();
         setWidgetData(updatedWidgetData);
       } catch (error) {
-        console.error('❌ Error updating widgets after cycle data change:', error);
+        console.error('❌ Error updating widgets after gender/cycle change:', error);
       }
     })();
-    // 🔥 FIX: Rimuosso buildWidgetDataFromHealth dalle dipendenze per evitare loop infiniti
+    // 🔥 FIX: Rimosso buildWidgetDataFromHealth dalle dipendenze per evitare loop infiniti
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cycleData, userGender]);
 
@@ -756,43 +744,57 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   const reloadWidgetDataFromDatabase = useCallback(async () => {
     try {
       const currentUser = await AuthService.getCurrentUser();
-      if (!currentUser?.id) return;
+      if (!currentUser?.id) {
+        console.warn('⚠️ reloadWidgetDataFromDatabase: No current user');
+        return;
+      }
 
       const { supabase } = await import('../lib/supabase');
       const today = new Date().toISOString().split('T')[0];
 
       // Recupera i dati di salute dal database
-      const { data: dbHealthData } = await supabase
+      const { data: dbHealthData, error } = await supabase
         .from('health_data')
         .select('*')
         .eq('user_id', currentUser.id)
         .eq('date', today)
         .maybeSingle();
 
-      if (dbHealthData) {
-        // Combina i dati dal database con i dati di Health Connect
-        const combinedData = {
-          steps: dbHealthData.steps || healthData?.steps || 0,
-          distance: dbHealthData.distance || healthData?.distance || 0,
-          calories: dbHealthData.calories || healthData?.calories || 0,
-          activeMinutes: dbHealthData.active_minutes || healthData?.activeMinutes || 0,
-          heartRate: dbHealthData.heart_rate || healthData?.heartRate || 0,
-          restingHeartRate: dbHealthData.resting_heart_rate || healthData?.restingHeartRate || 0,
-          hrv: dbHealthData.hrv || healthData?.hrv || 0,
-          sleepHours: dbHealthData.sleep_hours || healthData?.sleepHours || 0,
-          sleepQuality: dbHealthData.sleep_quality || healthData?.sleepQuality || 0,
-          deepSleepMinutes: dbHealthData.deep_sleep_minutes || healthData?.deepSleepMinutes || 0,
-          remSleepMinutes: dbHealthData.rem_sleep_minutes || healthData?.remSleepMinutes || 0,
-          lightSleepMinutes: dbHealthData.light_sleep_minutes || healthData?.lightSleepMinutes || 0,
-          hydration: dbHealthData.hydration || 0, // 🔥 Sempre dal database
-          mindfulnessMinutes: dbHealthData.mindfulness_minutes || 0, // 🔥 Sempre dal database
-        };
+      if (error) {
+        console.error('❌ reloadWidgetDataFromDatabase: Database error:', error);
+      }
 
-        // 🔥 PERF: Removed verbose logging for widget reload
+      // 🔥 FIX: Prepara i dati combinati anche se il database non ha record
+      // Usa i valori dal database se disponibili, altrimenti dalle sorgenti esistenti
+      const combinedData = {
+        steps: dbHealthData?.steps || healthData?.steps || 0,
+        distance: dbHealthData?.distance || healthData?.distance || 0,
+        calories: dbHealthData?.calories || healthData?.calories || 0,
+        activeMinutes: dbHealthData?.active_minutes || healthData?.activeMinutes || 0,
+        heartRate: dbHealthData?.heart_rate || healthData?.heartRate || 0,
+        restingHeartRate: dbHealthData?.resting_heart_rate || healthData?.restingHeartRate || 0,
+        hrv: dbHealthData?.hrv || healthData?.hrv || 0,
+        sleepHours: dbHealthData?.sleep_hours || healthData?.sleepHours || 0,
+        sleepQuality: dbHealthData?.sleep_quality || healthData?.sleepQuality || 0,
+        deepSleepMinutes: dbHealthData?.deep_sleep_minutes || healthData?.deepSleepMinutes || 0,
+        remSleepMinutes: dbHealthData?.rem_sleep_minutes || healthData?.remSleepMinutes || 0,
+        lightSleepMinutes: dbHealthData?.light_sleep_minutes || healthData?.lightSleepMinutes || 0,
+        hydration: dbHealthData?.hydration || 0, // 🔥 Sempre dal database
+        mindfulnessMinutes: dbHealthData?.mindfulness_minutes || 0, // 🔥 Sempre dal database
+      };
 
-        // Aggiorna i widget con i dati combinati
-        const updatedWidgetData = await buildWidgetDataFromHealth(combinedData);
-        setWidgetData(updatedWidgetData);
+      // Aggiorna i widget con i dati combinati
+      const updatedWidgetData = await buildWidgetDataFromHealth(combinedData);
+      setWidgetData(updatedWidgetData);
+
+      // 🔥 FIX: Aggiorna anche i dati del trend settimanale per i grafici
+      // Questo assicura che i grafici di idratazione e meditazione si aggiornino immediatamente
+      try {
+        const syncService = HealthDataSyncService.getInstance();
+        const trendData = await syncService.getWeeklyTrendData(currentUser.id);
+        setWeeklyTrendData(trendData);
+      } catch (trendError) {
+        console.warn('⚠️ Failed to update weekly trend data:', trendError);
       }
     } catch (error) {
       console.error('❌ Error reloading widget data from database:', error);
@@ -844,11 +846,16 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     (async () => {
       if (healthStatus !== 'ready') {
         try {
+          // Prima prova a caricare i dati reali dal database
+          await reloadWidgetDataFromDatabase();
+
+          // Nota: reloadWidgetDataFromDatabase aggiornerà i widget solo se trova dati.
+          // Se vuoi che i mockup appaiano solo in caso di errore totale:
+        } catch (error) {
+          console.error('❌ Errore durante il caricamento dal DB, uso i mockup:', error);
           const placeholderData = await buildWidgetDataFromHealth();
           lastProcessedHealthDataRef.current = `placeholder-${healthStatus}`;
           setWidgetData(placeholderData);
-        } catch (error) {
-          console.error('❌ Error building placeholder widget data:', error);
         }
         return;
       }
@@ -1605,64 +1612,52 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
   // Handle widget interactions
   const handleWidgetPress = async (widgetId: string) => {
-    if (healthStatus !== 'ready') {
-      if (healthStatus === 'waiting-permission') {
-        setHealthPermissionsModal(true);
-      }
-      return;
-    }
-    // 🆕 Rimosso log per performance
+    // 🆕 Rimosso il blocco iniziale che bloccava tutto se healthStatus !== 'ready'
     switch (widgetId) {
       case 'steps':
+      case 'hrv':
+        // Questi hanno bisogno dei permessi salute
+        if (healthStatus !== 'ready') {
+          if (healthStatus === 'waiting-permission') {
+            setHealthPermissionsModal(true);
+          }
+          return;
+        }
         break;
       case 'hydration':
-        // 🔥 FIX: Mostra menu per aggiungere/rimuovere acqua quando si fa tap sul widget
         try {
           const currentUser = await AuthService.getCurrentUser();
           if (!currentUser?.id) {
             UserFeedbackService.showWarning('Devi essere loggato per gestire l\'acqua.');
             return;
           }
-
-          // Mostra modal personalizzato
           setHydrationActionModal(true);
         } catch (error) {
           console.error('❌ Error managing water:', error);
-          UserFeedbackService.showError(
-            t('home.hydrationActions.addError') || 'Errore durante la gestione dell\'acqua',
-            t('common.error') || 'Errore'
-          );
         }
         break;
       case 'meditation':
-        // 🔥 FIX: Mostra modal per aggiungere/rimuovere minuti di meditazione quando si fa tap sul widget
         try {
           const currentUser = await AuthService.getCurrentUser();
           if (!currentUser?.id) {
             UserFeedbackService.showWarning('Devi essere loggato per gestire la meditazione.');
             return;
           }
-
-          // Mostra modal personalizzato
           setMeditationActionModal(true);
         } catch (error) {
           console.error('❌ Error managing meditation:', error);
-          UserFeedbackService.showError(
-            t('home.meditationActions.addError') || 'Errore durante la gestione della meditazione',
-            t('common.error') || 'Errore'
-          );
         }
         break;
-      case 'hrv':
+      case 'cycle':
+        setCycleModal(true);
         break;
       case 'sleep':
-        break;
-      case 'cycle':
-        // 🆕 Apri modal per configurare/visualizzare il ciclo mestruale
-        setCycleModal(true);
+        // Se vuoi permettere il check-in manuale del sonno anche senza permessi
+        setGoalModal({ visible: true, widgetId: 'sleep' });
         break;
     }
   };
+
 
   const handleWidgetLongPress = async (widgetId: string) => {
     // Apri le preferenze solo per i widget che hanno goal
@@ -2570,39 +2565,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             </View>
           </View>
         </View>
-        {healthStatus !== 'ready' && (
-          <View
-            style={[
-              styles.placeholderBanner,
-              { backgroundColor: themeColors.surfaceMuted, borderColor: themeColors.border },
-            ]}
-          >
-            <View style={styles.placeholderBannerIcon}>
-              <MaterialCommunityIcons name="information" size={18} color={themeColors.text} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.placeholderBannerTitle, { color: themeColors.text }]}>
-                {t('home.placeholders.previewBadge')}
-              </Text>
-              <Text style={[styles.placeholderBannerText, { color: themeColors.textSecondary }]}>
-                {placeholderMessages[healthStatus as keyof typeof placeholderMessages]}
-              </Text>
-            </View>
-            {healthStatus === 'waiting-permission' && (
-              <TouchableOpacity
-                style={[
-                  styles.placeholderActionButton,
-                  { borderColor: themeColors.primary, backgroundColor: themeColors.primary + '15' },
-                ]}
-                onPress={() => setHealthPermissionsModal(true)}
-              >
-                <Text style={[styles.placeholderActionText, { color: themeColors.primary }]}>
-                  {t('home.permissions.required')}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+        {/* 🔥 FIX: ANTEPRIMA banner removed - permission popup shown only when tapping health-dependent widgets */}
         <CopilotStep text="I tuoi Widget" order={3} name="widgets">
           <WalkthroughableView style={styles.widgetGrid}>
             {/* Protezione per evitare crash se widgetData è vuoto */}
@@ -2977,21 +2940,6 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             </View>
           </View>
         </View>
-
-        {/* ✅ FIX: Banner informativo per dati di esempio - mostrato SOLO se non ci sono dati reali */}
-        {!isHealthDataReady && enabledCharts.length > 0 && (
-          <View style={[styles.sampleDataBanner, { backgroundColor: themeColors.surfaceMuted, borderColor: themeColors.border }]}>
-            <MaterialCommunityIcons name="information-outline" size={18} color={themeColors.primary} />
-            <View style={styles.sampleDataBannerContent}>
-              <Text style={[styles.sampleDataBannerTitle, { color: themeColors.text }]}>
-                {t('home.placeholders.sampleDataBadge')}
-              </Text>
-              <Text style={[styles.sampleDataBannerText, { color: themeColors.textSecondary }]}>
-                {t('home.placeholders.sampleChartDescription')}
-              </Text>
-            </View>
-          </View>
-        )}
 
         <View style={styles.weeklyProgressContainer}>
           {enabledCharts.length === 0 && !chartEditMode ? (
@@ -3565,17 +3513,13 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               valueToSave = Math.round(ml / 250); // Salva sempre in bicchieri internamente
             }
 
-            // salva
+            // salva il nuovo goal
             await widgetGoalsService.setGoal(goalModal.widgetId!, valueToSave);
-            // ricarica widget data con i nuovi goal
-            const goals = await widgetGoalsService.getGoals();
-            const data = WidgetDataService.generateWidgetData(goals);
-            // 🔥 FIX: Usiamo la funzione helper per tradurre i widget (evita duplicazione)
-            const translatedData = data.map(w => ({
-              ...w,
-              title: translateWidgetTitle(w.id),
-            }));
-            setWidgetData(translatedData);
+
+            // 🔥 FIX: Usa buildWidgetDataFromHealth per ricaricare correttamente i widget 
+            // con l'unità di idratazione preferita e tutti i dati reali
+            const updatedWidgetData = await buildWidgetDataFromHealth();
+            setWidgetData(updatedWidgetData);
             setGoalModal({ visible: false, widgetId: null });
           }}
         />
@@ -3761,18 +3705,14 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           const currentUser = await AuthService.getCurrentUser();
           if (!currentUser?.id) return;
 
-          // Aggiungi più bicchieri in sequenza
-          let lastResult: { success: boolean; newHydration?: number; error?: string } = { success: false, newHydration: 0, error: '' };
-          for (let i = 0; i < quantity; i++) {
-            lastResult = await TodayGlanceService.addWaterGlass(currentUser.id);
-            if (!lastResult.success) break;
-          }
+          // 🔥 FIX: Usa funzione batch per aggiungere tutti i bicchieri in una volta
+          const result = await TodayGlanceService.addWaterGlasses(currentUser.id, quantity);
 
-          if (lastResult.success) {
+          if (result.success) {
             const { hydrationUnitService } = await import('../services/hydration-unit.service');
             const unit = await hydrationUnitService.getPreferredUnit();
             const config = hydrationUnitService.getUnitConfig(unit);
-            const units = hydrationUnitService.mlToUnit(lastResult.newHydration || 0, unit);
+            const units = hydrationUnitService.mlToUnit(result.newHydration || 0, unit);
 
             UserFeedbackService.showSuccess(
               `${quantity > 1 ? `Aggiunti ${quantity} bicchieri!` : 'Aggiunto!'} Totale: ${Math.round(units * 10) / 10} ${config.label}`,
@@ -3780,11 +3720,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             );
 
             // 🔥 FIX: Ricarica i dati dal database invece di Health Connect
-            // perché i dati di idratazione sono salvati direttamente nel database
             await reloadWidgetDataFromDatabase();
           } else {
             UserFeedbackService.showError(
-              lastResult.error || t('home.hydrationActions.addError') || 'Errore durante l\'aggiunta dell\'acqua',
+              result.error || t('home.hydrationActions.addError') || 'Errore durante l\'aggiunta dell\'acqua',
               t('common.error') || 'Errore'
             );
           }
@@ -3793,29 +3732,25 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           const currentUser = await AuthService.getCurrentUser();
           if (!currentUser?.id) return;
 
-          // Rimuovi più bicchieri in sequenza
-          let lastResult: { success: boolean; newHydration?: number; error?: string } = { success: false, newHydration: 0, error: '' };
-          for (let i = 0; i < quantity; i++) {
-            lastResult = await TodayGlanceService.removeWaterGlass(currentUser.id);
-            if (!lastResult.success) break;
-          }
+          // 🔥 FIX: Usa funzione batch per rimuovere tutti i bicchieri in una volta
+          const result = await TodayGlanceService.removeWaterGlasses(currentUser.id, quantity);
 
-          if (lastResult.success) {
+          if (result.success) {
             const { hydrationUnitService } = await import('../services/hydration-unit.service');
             const unit = await hydrationUnitService.getPreferredUnit();
             const config = hydrationUnitService.getUnitConfig(unit);
-            const units = hydrationUnitService.mlToUnit(lastResult.newHydration || 0, unit);
+            const units = hydrationUnitService.mlToUnit(result.newHydration || 0, unit);
 
             UserFeedbackService.showSuccess(
               `${quantity > 1 ? `Rimossi ${quantity} bicchieri!` : 'Rimosso!'} Totale: ${Math.round(units * 10) / 10} ${config.label}`,
               t('home.hydrationActions.removedTitle') || 'Acqua rimossa'
             );
 
-            // 🔥 FIX: Ricarica i dati dal database invece di Health Connect
+            // 🔥 FIX: Ricarica i dati dal database
             await reloadWidgetDataFromDatabase();
           } else {
             UserFeedbackService.showError(
-              lastResult.error || t('home.hydrationActions.removeError') || 'Errore durante la rimozione dell\'acqua',
+              result.error || t('home.hydrationActions.removeError') || 'Errore durante la rimozione dell\'acqua',
               t('common.error') || 'Errore'
             );
           }

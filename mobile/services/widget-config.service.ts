@@ -215,46 +215,22 @@ class WidgetConfigService {
 
     const oldSize = widget.size;
     const row = Math.floor(widget.position / 3);
-
-    // 🔥 FIX: Simula la configurazione finale dopo il cambio e la gestione dei conflitti
-    const testCfg = cfg.map(w => ({ ...w }));
-    const testWidget = testCfg.find(w => w.id === widgetId)!;
-    testWidget.size = size;
-
-    // Simula handleSizeConflict per vedere quali widget verrebbero disabilitati
-    const newWidth = this.getSizeWidth(size);
     const col = widget.position % 3;
-    const widgetsInRow = testCfg.filter(w =>
-      w.enabled &&
-      Math.floor(w.position / 3) === row &&
-      w.id !== widgetId
-    );
+    const newWidth = this.getSizeWidth(size);
 
-    if (newWidth === 3) {
-      // Il large copre tutta la riga, disabilita tutti gli altri widget nella riga
-      widgetsInRow.forEach(w => { w.enabled = false; });
-    } else if (newWidth === 2) {
-      const startCol = col;
-      const endCol = startCol + 1;
-      widgetsInRow.forEach(w => {
-        const wCol = w.position % 3;
-        if (wCol >= startCol && wCol <= endCol) {
-          w.enabled = false;
-        }
-      });
+    // 🔥 FIX: Verifica che il widget possa stare nella posizione corrente con la nuova size
+    // Se la nuova larghezza farebbe uscire il widget dalla riga corrente, spostiamolo all'inizio della riga
+    if (col + newWidth > 3) {
+      // Il widget non può stare nella posizione corrente, spostiamolo all'inizio della riga
+      widget.position = row * 3;
     }
 
-    // 🔥 FIX: Valida che la configurazione finale sia valida
-    if (!this.isValidRowLayout(testCfg, widgetId, size, row)) {
-      console.warn('⚠️ Invalid widget layout: cannot have 2 medium widgets or other invalid combinations');
-      return; // Non applicare il cambio se la combinazione finale non è valida
-    }
-
-    // Applica il cambio
+    // Applica il cambio di size
     widget.size = size;
 
+    // 🔥 FIX: Se la size è aumentata, gestisci i conflitti (sposta i widget in conflitto)
     if (this.getSizeWidth(size) > this.getSizeWidth(oldSize)) {
-      console.log('🔄 Widget enlarged, checking for conflicts...');
+      console.log('🔄 Widget enlarged, shifting conflicting widgets...');
       await this.handleSizeConflict(cfg, widget);
     }
 
@@ -305,6 +281,7 @@ class WidgetConfigService {
   }
 
   // Gestisce i conflitti quando un widget viene allargato
+  // 🔥 FIX: Sposta i widget in conflitto invece di disabilitarli
   private async handleSizeConflict(cfg: WidgetConfig[], enlargedWidget: WidgetConfig) {
     const row = Math.floor(enlargedWidget.position / 3);
     const col = enlargedWidget.position % 3;
@@ -316,24 +293,91 @@ class WidgetConfigService {
       w.id !== enlargedWidget.id
     );
 
-    const widgetsToDisable: string[] = [];
+    const widgetsToMove: WidgetConfig[] = [];
     if (newWidth === 3) {
-      // il large copre tutta la riga
-      widgetsToDisable.push(...widgetsInRow.map(w => w.id));
+      // il large copre tutta la riga - sposta tutti gli altri widget
+      widgetsToMove.push(...widgetsInRow);
     } else if (newWidth === 2) {
       const startCol = col;
       const endCol = startCol + 1;
       widgetsInRow.forEach(w => {
         const wCol = w.position % 3;
-        if (wCol >= startCol && wCol <= endCol) widgetsToDisable.push(w.id);
+        if (wCol >= startCol && wCol <= endCol) {
+          widgetsToMove.push(w);
+        }
       });
     }
 
-    if (widgetsToDisable.length) {
-      widgetsToDisable.forEach(id => {
-        const w = cfg.find(x => x.id === id);
-        if (w) w.enabled = false;
-      });
+    if (widgetsToMove.length > 0) {
+      // 🔥 FIX: Trova le posizioni disponibili nelle righe successive e sposta i widget lì
+      // Ordina i widget da spostare per posizione per mantenere l'ordine relativo
+      widgetsToMove.sort((a, b) => a.position - b.position);
+
+      // Trova tutte le posizioni occupate
+      const occupiedPositions = new Set(
+        cfg.filter(w => w.enabled && !widgetsToMove.includes(w))
+          .flatMap(w => {
+            const positions = [];
+            const startPos = w.position;
+            const width = this.getSizeWidth(w.size);
+            for (let i = 0; i < width; i++) {
+              positions.push(startPos + i);
+            }
+            return positions;
+          })
+      );
+
+      // Aggiungi le posizioni occupate dal widget ingrandito
+      for (let i = 0; i < newWidth; i++) {
+        occupiedPositions.add(enlargedWidget.position + i);
+      }
+
+      // Sposta ogni widget alla prima posizione disponibile
+      let nextAvailablePos = (row + 1) * 3; // Inizia dalla prossima riga
+
+      for (const widgetToMove of widgetsToMove) {
+        const widgetWidth = this.getSizeWidth(widgetToMove.size);
+
+        // Trova una posizione valida che:
+        // 1. Non sia occupata
+        // 2. Abbia spazio sufficiente per la larghezza del widget
+        // 3. Non tagli una riga (widget medium/large devono stare nella stessa riga)
+        while (true) {
+          const rowOfPos = Math.floor(nextAvailablePos / 3);
+          const colOfPos = nextAvailablePos % 3;
+
+          // Verifica se il widget può stare in questa posizione senza tagliare la riga
+          if (colOfPos + widgetWidth > 3) {
+            // Non c'è spazio in questa riga, passa alla prossima
+            nextAvailablePos = (rowOfPos + 1) * 3;
+            continue;
+          }
+
+          // Verifica se le posizioni necessarie sono libere
+          let allPositionsFree = true;
+          for (let i = 0; i < widgetWidth; i++) {
+            if (occupiedPositions.has(nextAvailablePos + i)) {
+              allPositionsFree = false;
+              break;
+            }
+          }
+
+          if (allPositionsFree) {
+            // Assegna la nuova posizione
+            widgetToMove.position = nextAvailablePos;
+
+            // Marca le nuove posizioni come occupate
+            for (let i = 0; i < widgetWidth; i++) {
+              occupiedPositions.add(nextAvailablePos + i);
+            }
+
+            nextAvailablePos += widgetWidth;
+            break;
+          } else {
+            nextAvailablePos++;
+          }
+        }
+      }
     }
   }
 
@@ -508,9 +552,9 @@ export class WidgetDataService {
   }): WidgetData[] {
     // mock dei valori correnti (solo per la demo)
     const mock = {
-      steps: 6777, hydration: 3, mindfulness: 7,
-      sleepHours: 7.5, sleepQuality: 82, hrv: 35, restingHR: 66, analysesCompleted: 2,
-      calories: 1450, carbs: 180, protein: 110, fat: 45
+      steps: 0, hydration: 0, mindfulness: 0,
+      sleepHours: 0, sleepQuality: 0, hrv: 0, restingHR: 0, analysesCompleted: 0,
+      calories: 0, carbs: 0, protein: 0, fat: 0
     };
 
     const stepsGoal = goals?.steps ?? 10000;

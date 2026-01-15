@@ -1400,10 +1400,10 @@ export const EmotionDetectionScreen: React.FC = () => {
             <>
               {/* 🆕 FIX: Restored section header without refresh button */}
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.recent.title')}</Text>
+                <Text style={[styles.sectionTitle, { color: themeColors.text }, { marginTop: 24 }]}>{t('analysis.emotion.recent.title')}</Text>
               </View>
 
-              <View style={{ paddingHorizontal: 0, marginTop: 0 }}>
+              <View style={{ paddingHorizontal: 0 }}>
                 {(() => {
                   try {
                     // Always show the card, with fallback data if no session exists
@@ -1489,13 +1489,13 @@ export const EmotionDetectionScreen: React.FC = () => {
 
           {/* Weekly Recap Section */}
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
-              {language === 'it' ? 'Recap Settimanale' : 'Weekly Recap'}
+            <Text style={[styles.sectionTitle, { color: themeColors.text }, { marginTop: 24 }]}>
+              {language === 'it' ? 'Analisi Settimanale' : 'Weekly Analysis'}
             </Text>
           </View>
 
           {/* 1. Weekly Emotion Recap Summary - First */}
-          <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+          <View style={{ paddingHorizontal: 4, marginBottom: 0 }}>
             <WeeklyEmotionRecap />
           </View>
 
@@ -1530,7 +1530,7 @@ export const EmotionDetectionScreen: React.FC = () => {
                       value={normalizedValence || 50}
                       maxValue={100}
                       label={t('analysis.emotion.metrics.valence')}
-                      color="#10b981"
+                      color="#f97316"
                       subtitle={t('analysis.emotion.metrics.positivity')}
                       trend={2}
                       description={t('analysis.emotion.metrics.valenceDescription')}
@@ -1546,32 +1546,19 @@ export const EmotionDetectionScreen: React.FC = () => {
                       value={normalizedArousal || 50}
                       maxValue={100}
                       label={t('analysis.emotion.metrics.arousal')}
-                      color="#ef4444"
+                      color="#3b82f6"
                       subtitle={t('analysis.emotion.metrics.intensity')}
                       trend={-1}
                       description={t('analysis.emotion.metrics.arousalDescription')}
                       historicalData={emotionHistory.map((session) => ({
                         date: formatDate(session.timestamp),
-                        // 🆕 FIX: Normalize arousal from -1..1 to 0..100 (same as valence)
                         value: Math.round(((session.avg_arousal || 0) + 1) / 2 * 100),
                       }))}
                       metric="arousal"
                       icon="trending-up"
                     />
 
-                    <GaugeChart
-                      value={emotionHistory.length}
-                      maxValue={30}
-                      label={t('analysis.emotion.metrics.sessions')}
-                      color="#6366f1"
-                      subtitle={t('analysis.emotion.metrics.thisMonth')}
-                      trend={1}
-                      description={t('analysis.emotion.metrics.sessionsDescription')}
-                      historicalData={emotionHistory.map((session, index) => ({
-                        date: formatDate(session.timestamp),
-                        value: index + 1,
-                      }))}
-                    />
+
                   </>
                 );
               } catch (error) {
@@ -1583,7 +1570,7 @@ export const EmotionDetectionScreen: React.FC = () => {
                       value={50}
                       maxValue={100}
                       label={t('analysis.emotion.metrics.valence')}
-                      color="#10b981"
+                      color="#f97316"
                       subtitle={t('analysis.emotion.metrics.positivity')}
                       trend={0}
                       description={t('analysis.emotion.metrics.valenceDescription')}
@@ -1595,7 +1582,7 @@ export const EmotionDetectionScreen: React.FC = () => {
                       value={50}
                       maxValue={100}
                       label={t('analysis.emotion.metrics.arousal')}
-                      color="#ef4444"
+                      color="#3b82f6"
                       subtitle={t('analysis.emotion.metrics.intensity')}
                       trend={0}
                       description={t('analysis.emotion.metrics.arousalDescription')}
@@ -1603,7 +1590,6 @@ export const EmotionDetectionScreen: React.FC = () => {
                       metric="arousal"
                       icon="trending-up"
                     />
-                    <GaugeChart value={0} maxValue={30} label={t('analysis.emotion.metrics.sessions')} color="#6366f1" subtitle={t('analysis.emotion.metrics.thisMonth')} trend={0} description={t('analysis.emotion.metrics.sessionsDescription')} historicalData={[]} />
                   </>
                 );
               }
@@ -1690,11 +1676,13 @@ export const EmotionDetectionScreen: React.FC = () => {
                   confidence: 0.5,
                 };
               }
+              // 🔥 FIX: Use correct field names from EmotionSession store
+              // Store uses: dominant, avg_valence, avg_arousal
               return {
-                dominant_emotion: session.dominantEmotion || 'neutral',
-                emotions: session.emotions || {},
-                valence: session.valence || 0,
-                arousal: session.arousal || 0,
+                dominant_emotion: session.dominant || 'neutral',
+                emotions: {},
+                valence: session.avg_valence || 0,
+                arousal: session.avg_arousal || 0,
                 confidence: session.confidence || 0.5,
               };
             } catch (error) {
@@ -1806,7 +1794,7 @@ const styles = StyleSheet.create({
   },
 
   sectionHeader: { gap: 6 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 0 },
   sectionSubtitle: { fontSize: 14, marginBottom: 16, lineHeight: 20 },
   emotionIconRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
@@ -2262,7 +2250,7 @@ const styles = StyleSheet.create({
   // Explore Deeper Section
   exploreDeeperSection: {
     paddingHorizontal: 16,
-    paddingVertical: 24,
+    paddingVertical: 8,
     marginTop: 16,
   },
   exploreDeeperHeader: {
@@ -2270,7 +2258,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
-    marginBottom: 8,
   },
   exploreDeeperLine: {
     flex: 1,
@@ -2389,7 +2376,7 @@ const styles = StyleSheet.create({
   stepText: { flex: 1, fontSize: 13, lineHeight: 18 },
 
   // Gauge row
-  gaugeRow: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 20, gap: 4 },
+  gaugeRow: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 20, gap: 12 },
 
   // Enhanced Loading Styles
   loadingContainer: {

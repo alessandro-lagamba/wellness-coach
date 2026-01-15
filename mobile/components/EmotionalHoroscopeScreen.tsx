@@ -21,6 +21,7 @@ import {
     StatusBar,
     ImageBackground,
     ScrollView,
+    Platform,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -439,11 +440,11 @@ const styles = StyleSheet.create({
         marginBottom: 28,
     },
     roleTitle: {
-        fontSize: 34,
-        fontWeight: '300',
+        fontSize: 36,
+        fontWeight: '600',
         color: '#ffffff',
         textAlign: 'center',
-        fontStyle: 'italic',
+        fontFamily: Platform.select({ ios: 'Georgia', android: 'PlayfairDisplay_400Regular' }),
         marginBottom: 10,
         textShadowColor: 'rgba(0, 0, 0, 0.5)',
         textShadowOffset: { width: 0, height: 2 },
@@ -510,9 +511,9 @@ const styles = StyleSheet.create({
     },
     horoscopeText: {
         fontSize: 18,
-        lineHeight: 30,
+        fontWeight: '300',
+        lineHeight: 35,
         color: 'rgba(255,255,255,0.92)',
-        fontStyle: 'italic',
         textAlign: 'center',
         textShadowColor: 'rgba(0,0,0,0.35)',
         textShadowOffset: { width: 0, height: 1 },

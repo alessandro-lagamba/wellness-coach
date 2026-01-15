@@ -102,7 +102,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = memo(({
   // 🔧 Scaling for font/offset based on chartSize (pixels)
   const scale = chartSize / REFERENCE_SIZE;
   // 🔥 FIX: Scaled font sizes for balanced readability
-  const valueFontSize = Math.max(18, 24 * scale); // Minimum 18, scales with chart
+  const valueFontSize = Math.max(20, 26 * scale); // Minimum 18, scales with chart
   const valueStr = String(safeValue);
   const centerX = VB_SIZE / 2; // 50 in viewBox units
   // Offset for unit text - convert px to viewBox units

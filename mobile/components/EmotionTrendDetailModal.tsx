@@ -78,8 +78,8 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
   };
 
   const metricFilters = useMemo(() => ([
-    { key: 'valence' as const, color: '#10b981', label: t('analysis.emotion.metrics.valence') },
-    { key: 'arousal' as const, color: '#ef4444', label: t('analysis.emotion.metrics.arousal') },
+    { key: 'valence' as const, color: '#f97316', label: t('analysis.emotion.metrics.valence') },
+    { key: 'arousal' as const, color: '#3b82f6', label: t('analysis.emotion.metrics.arousal') },
   ]), [t]);
 
   const toggleMetric = (metric: 'valence' | 'arousal') => {
@@ -306,7 +306,7 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
                 {selectedMetrics.includes('valence') && (
                   <View style={styles.metricSection}>
                     <View style={styles.metricHeader}>
-                      <View style={[styles.metricDot, { backgroundColor: '#10b981' }]} />
+                      <View style={[styles.metricDot, { backgroundColor: '#f97316' }]} />
                       <Text style={[styles.metricTitle, { color: themeColors.text }]} numberOfLines={1} ellipsizeMode="tail">
                         {t('analysis.emotion.metrics.valence') || 'Valence'}
                       </Text>
@@ -341,7 +341,7 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
                       <MaterialCommunityIcons
                         name={stats.valenceTrend === 'up' ? 'trending-up' : stats.valenceTrend === 'down' ? 'trending-down' : 'trending-neutral'}
                         size={16}
-                        color={stats.valenceTrend === 'up' ? '#10b981' : stats.valenceTrend === 'down' ? '#ef4444' : themeColors.textSecondary}
+                        color={stats.valenceTrend === 'up' ? '#f97316' : stats.valenceTrend === 'down' ? '#ef4444' : themeColors.textSecondary}
                       />
                       <Text style={[styles.trendText, { color: themeColors.textSecondary }]}>
                         {stats.valenceTrend === 'up' ? t('analysis.emotion.trends.improving') || 'In miglioramento' :
@@ -356,7 +356,7 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
                 {selectedMetrics.includes('arousal') && (
                   <View style={styles.metricSection}>
                     <View style={styles.metricHeader}>
-                      <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
+                      <View style={[styles.metricDot, { backgroundColor: '#3b82f6' }]} />
                       <Text style={[styles.metricTitle, { color: themeColors.text }]}>
                         {t('analysis.emotion.metrics.arousal') || 'Arousal'}
                       </Text>
@@ -391,7 +391,7 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
                       <MaterialCommunityIcons
                         name={stats.arousalTrend === 'up' ? 'trending-up' : stats.arousalTrend === 'down' ? 'trending-down' : 'trending-neutral'}
                         size={16}
-                        color={stats.arousalTrend === 'up' ? '#10b981' : stats.arousalTrend === 'down' ? '#ef4444' : themeColors.textSecondary}
+                        color={stats.arousalTrend === 'up' ? '#3b82f6' : stats.arousalTrend === 'down' ? '#ef4444' : themeColors.textSecondary}
                       />
                       <Text style={[styles.trendText, { color: themeColors.textSecondary }]}>
                         {stats.arousalTrend === 'up' ? t('analysis.emotion.trends.increasing') || 'In aumento' :

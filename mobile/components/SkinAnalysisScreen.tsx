@@ -1915,7 +1915,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
                     };
                   })}
                   metric="oiliness"
-                  icon="oil-can"
+                  icon="water-opacity"
                 />
               </View>
             </View>
