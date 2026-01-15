@@ -7,9 +7,11 @@ import {
   StyleSheet,
   Dimensions,
   Image,
+  ImageBackground,
   ScrollView,
   Platform,
   ActivityIndicator,
+  Alert,
   BackHandler, // Added BackHandler
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,6 +46,7 @@ import { GaugeChart } from './charts/GaugeChart';
 import { EmotionTrendDetailModal } from './EmotionTrendDetailModal';
 import { AnalysisLoader } from './shared/AnalysisLoader';
 import { EmotionResultsScreen } from './EmotionResultsScreen';
+import { EmotionTimeMachineScreen } from './EmotionTimeMachineScreen'; // 🆕 Import Time Machine Screen
 import { EnhancedMetricTile } from './EnhancedMetricTile';
 import { QualityBadge } from './QualityBadge';
 import { InsightCorrelation } from './InsightCorrelation';
@@ -62,6 +65,8 @@ import { FirstAnalysisCelebration } from './FirstAnalysisCelebration';
 import { WeeklyEmotionRecap } from './WeeklyEmotionRecap';
 // 🔥 FIX: ContextualPermissionModal rimosso - non serve più
 import { OnboardingService } from '../services/onboarding.service';
+// 🆕 Emotional Horoscope
+import { EmotionalHoroscopeScreen } from './EmotionalHoroscopeScreen';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
@@ -111,7 +116,7 @@ const withAlpha = (color: string | undefined, alpha: string) => {
 };
 
 export const EmotionDetectionScreen: React.FC = () => {
-  const { t, i18n } = useTranslation(); // 🆕 i18n hook
+  const { t, language, i18n } = useTranslation(); // 🆕 i18n hook
   const { colors: themeColors } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
   const router = useRouter();
@@ -125,6 +130,7 @@ export const EmotionDetectionScreen: React.FC = () => {
   const [cameraSwitching, setCameraSwitching] = useState(false);
   const [confidence, setConfidence] = useState<number>(0);
   const [fullAnalysisResult, setFullAnalysisResult] = useState<any>(null);
+  const [showingTimeMachine, setShowingTimeMachine] = useState(false); // 🆕 State for Time Machine
   const [emotionHistory, setEmotionHistory] = useState<EmotionData[]>([]);
   const [emotionScores, setEmotionScores] = useState<Record<Emotion, number>>(() => ({
     ...INITIAL_EMOTION_SCORES,
@@ -145,13 +151,28 @@ export const EmotionDetectionScreen: React.FC = () => {
   const [dataLoaded, setDataLoaded] = useState(false);
 
   // Loading state to prevent empty state flash
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  // Initialize to false if store already has data
+  const [isLoadingData, setIsLoadingData] = useState(() => {
+    const store = useAnalysisStore.getState();
+    return !(store.latestEmotionSession || store.emotionHistory.length > 0);
+  });
+
+  // 🆕 FIX: Flag to track if initial data load has completed successfully
+  // Empty state will only show AFTER this is true to prevent flickering
+  // Initialize to true if store already has data to prevent flash
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(() => {
+    const store = useAnalysisStore.getState();
+    return !!(store.latestEmotionSession || store.emotionHistory.length > 0);
+  });
 
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
 
   // First analysis celebration
   const [showFirstAnalysisCelebration, setShowFirstAnalysisCelebration] = useState(false);
+
+  // 🆕 Emotional Horoscope
+  const [showEmotionalHoroscope, setShowEmotionalHoroscope] = useState(false);
 
   // Contextual permission modal
   // 🔥 FIX: Modal rimosso - non serve più
@@ -259,22 +280,35 @@ export const EmotionDetectionScreen: React.FC = () => {
     ensureAnalysisReady();
   }, [ensureAnalysisReady]);
 
-  // Reload data when screen comes into focus
+  // Reload data when screen comes into focus - background refresh only
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
 
       const reloadData = async () => {
         try {
+          // 🔥 OPTIMIZATION: Don't set loading state if we already have data
+          // This prevents the flash of 'no data' state
+          const store = useAnalysisStore.getState();
+          const hasExistingData = !!(store.latestEmotionSession || store.emotionHistory.length > 0);
+
+          if (!hasExistingData && isMounted) {
+            setIsLoadingData(true);
+          }
+
+          // Load fresh data in background
           await ChartDataService.loadEmotionDataForCharts();
+
           if (isMounted) {
-            setDataLoaded(prev => !prev); // Toggle to force re-render
+            setDataLoaded(prev => !prev);
             setIsLoadingData(false);
+            setHasInitiallyLoaded(true);
           }
         } catch (error) {
           console.error('❌ Failed to reload emotion data on focus:', error);
           if (isMounted) {
             setIsLoadingData(false);
+            setHasInitiallyLoaded(true);
           }
         }
       };
@@ -302,14 +336,16 @@ export const EmotionDetectionScreen: React.FC = () => {
         // Force re-render after data is loaded
         if (isMounted) {
           setDataLoaded(true);
-          setIsLoadingData(false); // Data loading complete
+          setIsLoadingData(false);
+          setHasInitiallyLoaded(true); // 🆕 Mark initial load complete
         }
       } catch (error) {
         // 🔥 FIX: Solo errori critici in console
         console.error('❌ Failed to load emotion chart data:', error);
         // 🔥 FIX: Memory leak - salviamo il retry timer per cleanup
         if (isMounted) {
-          setIsLoadingData(false); // Stop loading even on error
+          setIsLoadingData(false);
+          setHasInitiallyLoaded(true); // 🆕 Still mark as loaded even on error
           retryTimer = setTimeout(() => {
             if (isMounted) {
               loadChartData();
@@ -826,6 +862,12 @@ export const EmotionDetectionScreen: React.FC = () => {
                 emotions: analysisResult.data.emotions || {},
                 timestamp: analysisResult.data.timestamp || new Date().toISOString(),
               },
+              // 🆕 Construct AI text from analysis_description + observations for Time Machine feature
+              // analysis_description contains the comparison text ("Rispetto alle tue sessioni precedenti...")
+              aiAnalysisText: [
+                analysisResult.data.analysis_description || '',
+                ...(analysisResult.data.observations || [])
+              ].filter(Boolean).join('\n'),
               sessionDuration: Date.now() - (analysisResult.timestamp?.getTime() || Date.now()),
             });
 
@@ -884,6 +926,11 @@ export const EmotionDetectionScreen: React.FC = () => {
                         emotions: analysisResult.data.emotions || {},
                         timestamp: analysisResult.data.timestamp || new Date().toISOString(),
                       },
+                      // 🆕 Construct AI text from analysis_description + observations
+                      aiAnalysisText: [
+                        analysisResult.data.analysis_description || '',
+                        ...(analysisResult.data.observations || [])
+                      ].filter(Boolean).join('\n'),
                       sessionDuration: Date.now() - (analysisResult.timestamp?.getTime() || Date.now()),
                     });
                     if (retryAnalysis) {
@@ -912,6 +959,11 @@ export const EmotionDetectionScreen: React.FC = () => {
                       emotions: analysisResult.data.emotions || {},
                       timestamp: analysisResult.data.timestamp || new Date().toISOString(),
                     },
+                    // 🆕 Construct AI text from analysis_description + observations
+                    aiAnalysisText: [
+                      analysisResult.data.analysis_description || '',
+                      ...(analysisResult.data.observations || [])
+                    ].filter(Boolean).join('\n'),
                     sessionDuration: Date.now() - (analysisResult.timestamp?.getTime() || Date.now()),
                   });
                   if (retryAnalysis) {
@@ -1135,6 +1187,23 @@ export const EmotionDetectionScreen: React.FC = () => {
     );
   }
 
+
+  // 🆕 Priority 2.5: Show Time Machine Screen
+  if (showingTimeMachine) {
+    return (
+      <EmotionTimeMachineScreen
+        onGoBack={() => {
+          setShowingTimeMachine(false);
+          // Resume camera if needed or just return to overview
+          if (cameraController && !cameraController.active) {
+            // Optional: restart camera/preview
+          }
+          showTabBar();
+        }}
+      />
+    );
+  }
+
   // Priority 3: Camera capture (active when camera is on)
   if (cameraController.active && !showingResults) {
     const CameraFrame = () => (
@@ -1245,28 +1314,93 @@ export const EmotionDetectionScreen: React.FC = () => {
 
           </LinearGradient>
 
-          {/* Empty State - Show only when data is loaded and no sessions exist */}
-          {!isLoadingData && !latestEmotionSession && (
+          {/* Empty State - Show only when initial load is complete and no sessions exist */}
+          {hasInitiallyLoaded && !isLoadingData && !latestEmotionSession && (
             <EmptyStateCard
               type="emotion"
               onAction={handleStartDetection}
             />
           )}
 
-          {/* 🆕 Weekly Emotion Recap - Show if there are any sessions */}
-          {latestEmotionSession && (
-            <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
-              <WeeklyEmotionRecap />
+          {/* 🆕 EXPLORE DEEPER Section Header */}
+          <View style={styles.exploreDeeperSection}>
+            <View style={styles.exploreDeeperHeader}>
+              <View style={styles.exploreDeeperLine} />
+              <Text style={styles.exploreDeeperTitle}>
+                {language === 'it' ? 'ESPLORA DI PIÙ' : 'EXPLORE DEEPER'}
+              </Text>
+              <View style={styles.exploreDeeperLine} />
             </View>
-          )}
+          </View>
 
-          {/* Recent Session Section - Only show if there are sessions */}
+          {/* 🆕 Immersive Feature Cards Container */}
+          <View style={{ paddingHorizontal: 16, gap: 20 }}>
+
+            {/* Emotional Horoscope Card - Immersive Design */}
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => {
+                if (hasTodayEmotionAnalysis) {
+                  setShowEmotionalHoroscope(true);
+                } else {
+                  // Show notification that analysis is required
+                  Alert.alert(
+                    language === 'it' ? 'Analisi Richiesta' : 'Analysis Required',
+                    language === 'it'
+                      ? 'Per scoprire il tuo Oroscopo (non richiesto) di oggi, effettua l\'analisi emotiva!'
+                      : 'To discover your Horoscope (you didn\'t ask for) today, complete an emotion analysis!',
+                    [{ text: 'OK' }]
+                  );
+                }
+              }}
+              style={styles.immersiveCard}
+            >
+              <ImageBackground
+                source={require('../assets/images/galaxy-background.jpg')}
+                style={styles.immersiveCardBackground}
+                imageStyle={styles.immersiveCardImage}
+              >
+                {/* Gradient Overlay */}
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.85)']}
+                  style={styles.immersiveCardOverlay}
+                >
+                  <View style={styles.immersiveCardContent}>
+                    {/* Title */}
+                    <Text style={styles.immersiveCardTitle}>
+                      {language === 'it' ? 'Le Tue Stelle Oggi' : 'Your Stars Today'}
+                    </Text>
+
+                    {/* Description */}
+                    <Text style={styles.immersiveCardDescription}>
+                      {language === 'it'
+                        ? 'Sblocca insight cosmici su misura per il tuo stato emotivo attuale.'
+                        : 'Unlock cosmic insights tailored to your current emotional state.'}
+                    </Text>
+
+                    {/* Call to Action */}
+                    <View style={styles.immersiveCardCTA}>
+                      <Text style={[styles.immersiveCardCTAText, !hasTodayEmotionAnalysis && { opacity: 0.6 }]}>
+                        {hasTodayEmotionAnalysis
+                          ? (language === 'it' ? 'Leggi oroscopo' : 'Read horoscope')
+                          : (language === 'it' ? 'Effettua analisi prima' : 'Complete analysis first')}
+                      </Text>
+                      <MaterialCommunityIcons
+                        name={hasTodayEmotionAnalysis ? "arrow-right" : "lock-outline"}
+                        size={16}
+                        color={hasTodayEmotionAnalysis ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.5)"}
+                      />
+                    </View>
+                  </View>
+                </LinearGradient>
+              </ImageBackground>
+            </TouchableOpacity>
+          </View>
           {latestEmotionSession && (
             <>
               {/* 🆕 FIX: Restored section header without refresh button */}
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.recent.title')}</Text>
-                <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.recent.subtitle')}</Text>
               </View>
 
               <View style={{ paddingHorizontal: 0, marginTop: 0 }}>
@@ -1305,36 +1439,67 @@ export const EmotionDetectionScreen: React.FC = () => {
                   }
                 })()}
               </View>
-
-              {/* Detailed Analysis Button */}
-              <TouchableOpacity
-                style={styles.detailedAnalysisButton}
-                onPress={() => setShowDetailedAnalysis(true)}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#8b5cf6', '#a855f7']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.detailedAnalysisButtonGradient}
-                >
-                  <MaterialCommunityIcons name="brain" size={20} color="#ffffff" />
-                  <Text style={styles.detailedAnalysisButtonText}>
-                    {t('analysis.emotion.detailedAnalysis.buttonText')}
-                  </Text>
-                  <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
-                </LinearGradient>
-              </TouchableOpacity>
             </>
           )}
 
-          {/* Quick Stats Section */}
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('analysis.emotion.quickStats.title')}</Text>
-            <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.quickStats.subtitle')}</Text>
+          {/* 🆕 Time Machine Card - Coming Soon */}
+          <View style={{ paddingHorizontal: 16, marginTop: 20, marginBottom: 8 }}>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => {
+                setShowingTimeMachine(true);
+              }}
+              style={styles.immersiveCard}
+            >
+              <ImageBackground
+                source={require('../assets/images/timemachine-background.jpg')}
+                style={styles.immersiveCardBackground}
+                imageStyle={styles.immersiveCardImage}
+              >
+                {/* Gradient Overlay for text readability */}
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.75)']}
+                  style={styles.immersiveCardOverlay}
+                >
+                  <View style={styles.immersiveCardContent}>
+                    {/* Title */}
+                    <Text style={styles.immersiveCardTitle}>
+                      {language === 'it' ? 'Il Te Stesso del Passato' : 'Your Past Self'}
+                    </Text>
+
+                    {/* Description */}
+                    <Text style={styles.immersiveCardDescription}>
+                      {language === 'it'
+                        ? 'Riavvolgi il tuo viaggio emotivo e guarda quanta strada hai fatto.'
+                        : 'Rewind your emotional journey and see how far you\'ve come.'}
+                    </Text>
+
+                    {/* Call to Action */}
+                    <View style={styles.immersiveCardCTA}>
+                      <Text style={styles.immersiveCardCTAText}>
+                        {language === 'it' ? 'Entra nella Macchina del Tempo' : 'Enter Time Machine'}
+                      </Text>
+                      <MaterialCommunityIcons name="arrow-right" size={16} color="rgba(255,255,255,0.8)" />
+                    </View>
+                  </View>
+                </LinearGradient>
+              </ImageBackground>
+            </TouchableOpacity>
           </View>
 
-          {/* Gauge Charts Row */}
+          {/* Weekly Recap Section */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+              {language === 'it' ? 'Recap Settimanale' : 'Weekly Recap'}
+            </Text>
+          </View>
+
+          {/* 1. Weekly Emotion Recap Summary - First */}
+          <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+            <WeeklyEmotionRecap />
+          </View>
+
+          {/* 2. Gauge Charts - Second */}
           <View style={styles.gaugeRow}>
             {(() => {
               try {
@@ -1445,21 +1610,14 @@ export const EmotionDetectionScreen: React.FC = () => {
             })()}
           </View>
 
-          {/* Quality Badge - Removed per richiesta utente */}
-
-
-          {/* Emotion Trend Chart */}
+          {/* 3. Emotion Trend Chart - Third (Last) */}
           {(() => {
             try {
-              // 🆕 FIX: Use storeEmotionHistory from hook (reactive) instead of getState() (non-reactive)
               const emotionHistory = storeEmotionHistory || [];
-
-              // Format date helper function
               const formatDate = (timestamp: Date) => {
                 const date = new Date(timestamp);
                 return `${date.getDate()}/${date.getMonth() + 1}`;
               };
-
               return (
                 <EmotionTrendChart
                   data={emotionHistory.map((session) => ({
@@ -1474,7 +1632,6 @@ export const EmotionDetectionScreen: React.FC = () => {
                 />
               );
             } catch (error) {
-              // 🔥 FIX: Solo errori critici in console
               console.error('❌ Failed to load emotion history for trend chart:', error);
               return (
                 <EmotionTrendChart
@@ -1487,50 +1644,7 @@ export const EmotionDetectionScreen: React.FC = () => {
             }
           })()}
 
-          {/* Intelligent Insights Section - Emotion Only */}
-          {hasTodayEmotionAnalysis ? (
-            <IntelligentInsightsSection
-              category="emotion"
-              data={(() => {
-                try {
-                  const store = useAnalysisStore.getState();
-                  return {
-                    latestSession: store.latestEmotionSession,
-                    emotionHistory: store.emotionHistory || [],
-                    trend: store.emotionTrend,
-                    insights: store.insights || []
-                  };
-                } catch (error) {
-                  return null;
-                }
-              })()}
-              maxInsights={3}
-              showTitle={true}
-              compact={false}
-              sourceDate={latestEmotionAnalysisDate}
-              onInsightPress={(insight) => {
-                // 🔥 FIX: Rimuoviamo console.log eccessivi
-                // Handle insight press - could navigate to detailed view
-              }}
-              onActionPress={(insight, action) => {
-                // 🔥 FIX: Rimuoviamo console.log eccessivi
-                // Handle action press - could start activity, set reminder, etc.
-              }}
-            />
-          ) : (
-            <View style={[styles.insightLockedCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-              <MaterialCommunityIcons name="lock-clock" size={28} color="#8b5cf6" />
-              <Text style={[styles.insightLockedTitle, { color: themeColors.text }]}>{t('analysis.emotion.insights.lockedTitle')}</Text>
-              <Text style={[styles.insightLockedSubtitle, { color: themeColors.textSecondary }]}>{t('analysis.emotion.insights.lockedDescription')}</Text>
-              <TouchableOpacity
-                style={[styles.insightLockedButton, { backgroundColor: '#8b5cf6' }]}
-                onPress={handleStartDetection}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.insightLockedButtonText}>{t('analysis.emotion.insights.lockedCta')}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          {/* End of Recap Settimanale Section */}
 
         </ScrollView>
 
@@ -1559,6 +1673,42 @@ export const EmotionDetectionScreen: React.FC = () => {
 
         {/* Contextual Permission Modal */}
         {/* 🔥 FIX: Modal rimosso - non serve più */}
+
+        {/* 🆕 Emotional Horoscope Modal */}
+        <EmotionalHoroscopeScreen
+          visible={showEmotionalHoroscope}
+          onClose={() => setShowEmotionalHoroscope(false)}
+          emotionResult={(() => {
+            try {
+              const session = latestEmotionSession;
+              if (!session) {
+                return {
+                  dominant_emotion: 'neutral',
+                  emotions: {},
+                  valence: 0,
+                  arousal: 0,
+                  confidence: 0.5,
+                };
+              }
+              return {
+                dominant_emotion: session.dominantEmotion || 'neutral',
+                emotions: session.emotions || {},
+                valence: session.valence || 0,
+                arousal: session.arousal || 0,
+                confidence: session.confidence || 0.5,
+              };
+            } catch (error) {
+              return {
+                dominant_emotion: 'neutral',
+                emotions: {},
+                valence: 0,
+                arousal: 0,
+                confidence: 0.5,
+              };
+            }
+          })()}
+          analysisTimestamp={latestEmotionSession?.timestamp ? new Date(latestEmotionSession.timestamp) : new Date()}
+        />
       </SafeAreaView>
     </View>
   );
@@ -1949,6 +2099,255 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '700',
     fontSize: 14,
+  },
+
+  // 🆕 Horoscope Card
+  horoscopeCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  horoscopeCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  horoscopeCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  horoscopeCardSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
+    opacity: 0.8,
+  },
+  // Horoscope Premium Card - RecipeHub Style
+  horoscopeCardWrapper: {
+    marginBottom: 24,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#a855f7',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  horoscopeCardGradient: {
+    padding: 20,
+    position: 'relative',
+  },
+  horoscopeTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 12,
+  },
+  horoscopeTagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+  horoscopeCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  horoscopeTextContainer: {
+    flex: 1,
+    marginRight: 16,
+  },
+  horoscopeTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 2,
+  },
+  horoscopeTitleSecondary: {
+    fontSize: 18,
+    fontWeight: '500',
+    fontStyle: 'italic',
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginBottom: 8,
+  },
+  horoscopeSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: 20,
+    marginTop: 8
+  },
+  horoscopeIconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  horoscopeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 16,
+  },
+  horoscopeButtonWrapper: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  horoscopeButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  horoscopeButtonText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  horoscopeLockedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    backgroundColor: 'rgba(168, 85, 247, 0.05)',
+    borderRadius: 12,
+  },
+  horoscopeLockedText: {
+    flex: 1,
+    fontSize: 13,
+    fontStyle: 'italic',
+  },
+  horoscopeIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(168, 85, 247, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  horoscopeButtonPremium: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: '#a855f7',
+    shadowColor: '#a855f7',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+
+  // Explore Deeper Section
+  exploreDeeperSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    marginTop: 16,
+  },
+  exploreDeeperHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 8,
+  },
+  exploreDeeperLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(238, 43, 238, 0.2)',
+  },
+  exploreDeeperTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ee2bee',
+    letterSpacing: 2,
+    textAlign: 'center',
+  },
+  exploreDeeperSubtitle: {
+    fontSize: 12,
+    textAlign: 'center',
+    opacity: 0.7,
+  },
+
+  // Immersive Feature Cards
+  immersiveCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  immersiveCardBackground: {
+    width: '100%',
+    aspectRatio: 5 / 3,
+    justifyContent: 'flex-end',
+  },
+  immersiveCardImage: {
+    borderRadius: 16,
+  },
+  immersiveCardOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: 20,
+  },
+  timeMachineOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  immersiveCardContent: {
+    gap: 8,
+  },
+  immersiveCardTitle: {
+    fontSize: 25,
+    fontFamily: 'PlayfairDisplay_400Regular_Italic',
+    color: '#ffffff',
+    lineHeight: 40,
+    marginTop: 4,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.55)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 10,
+  },
+  immersiveCardDescription: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.85)',
+    lineHeight: 20,
+  },
+  immersiveCardCTA: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+  },
+  immersiveCardCTAText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(233, 172, 255, 0.9)',
   },
 
   secondaryButton: {

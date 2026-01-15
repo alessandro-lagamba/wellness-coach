@@ -125,7 +125,7 @@ function nextMetrics(previous: SkinMetrics): SkinMetrics {
   const redness = Math.round((regions.leftCheek.redness + regions.rightCheek.redness) / 2);
   const hydration = Math.round((regions.leftCheek.hydration + regions.rightCheek.hydration + regions.forehead.hydration) / 3);
   const oiliness = Math.round((regions.leftCheek.oiliness + regions.rightCheek.oiliness + regions.forehead.oiliness) / 3);
-  const overall = Math.round(texture * 0.35 + (100 - redness) * 0.25 + hydration * 0.25 + (100 - oiliness) * 0.15);
+  const overall = Math.round(texture * 0.25 + (100 - redness) * 0.30 + hydration * 0.25 + (100 - oiliness) * 0.20);
   const confidence = jitter(previous.confidence, 2);
 
   return {

@@ -4,6 +4,12 @@
 
 import '../i18n'; // 🆕 Inizializza i18n all'avvio
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import {
+  PlayfairDisplay_400Regular,
+  PlayfairDisplay_400Regular_Italic,
+  PlayfairDisplay_600SemiBold,
+  PlayfairDisplay_600SemiBold_Italic,
+} from '@expo-google-fonts/playfair-display';
 import { registerGlobals } from '@livekit/react-native';
 
 // Do required setup for LiveKit React-Native
@@ -110,6 +116,10 @@ if (__DEV__) {
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     ...FontAwesome.font,
+    PlayfairDisplay_400Regular,
+    PlayfairDisplay_400Regular_Italic,
+    PlayfairDisplay_600SemiBold,
+    PlayfairDisplay_600SemiBold_Italic,
   });
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree
@@ -236,6 +246,7 @@ function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => v
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="breathing-exercise" options={{ headerShown: false }} />
                 <Stack.Screen name="auth/confirm" options={{ headerShown: false }} />
+                <Stack.Screen name="reset-password" options={{ headerShown: false }} />
               </Stack>
             </NavThemeProvider>
           </TabBarVisibilityProvider>

@@ -387,7 +387,18 @@ const SkinAnalysisScreenContent: React.FC = () => {
   const [selectedGuide, setSelectedGuide] = useState<string | null>(null);
 
   // Loading state to prevent empty state flash
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  // Initialize to false if store already has data
+  const [isLoadingData, setIsLoadingData] = useState(() => {
+    const store = useAnalysisStore.getState();
+    return !(store.latestSkinCapture || store.skinHistory.length > 0);
+  });
+
+  // 🆕 FIX: Flag to track if initial data load has completed successfully
+  // Initialize to true if store already has data to prevent flash
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(() => {
+    const store = useAnalysisStore.getState();
+    return !!(store.latestSkinCapture || store.skinHistory.length > 0);
+  });
 
   // Detailed analysis modal
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
@@ -507,21 +518,31 @@ const SkinAnalysisScreenContent: React.FC = () => {
     }
   }, []);
 
-  // Reload data when screen comes into focus
+  // Reload data when screen comes into focus - background refresh only
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
 
       const reloadData = async () => {
         try {
+          // 🔥 OPTIMIZATION: Don't set loading state if we already have data
+          const store = useAnalysisStore.getState();
+          const hasExistingData = !!(store.latestSkinCapture || store.skinHistory.length > 0);
+
+          if (!hasExistingData && isMounted) {
+            setIsLoadingData(true);
+          }
+
           await ChartDataService.loadSkinDataForCharts();
           if (isMounted) {
             setIsLoadingData(false);
+            setHasInitiallyLoaded(true);
           }
         } catch (error) {
           console.error('❌ Failed to reload skin data on focus:', error);
           if (isMounted) {
             setIsLoadingData(false);
+            setHasInitiallyLoaded(true);
           }
         }
       };
@@ -546,13 +567,15 @@ const SkinAnalysisScreenContent: React.FC = () => {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
 
         if (isMounted) {
-          setIsLoadingData(false); // Data loading complete
+          setIsLoadingData(false);
+          setHasInitiallyLoaded(true); // 🆕 Mark initial load complete
         }
       } catch (error) {
         // 🔥 FIX: Solo errori critici in console
         console.error('❌ Failed to load skin chart data:', error);
         if (isMounted) {
-          setIsLoadingData(false); // Stop loading even on error
+          setIsLoadingData(false);
+          setHasInitiallyLoaded(true); // 🆕 Still mark as loaded even on error
         }
       }
     };
@@ -1716,8 +1739,8 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
           </LinearGradient>
 
-          {/* Empty State - Show only when data is loaded and no captures exist */}
-          {!isLoadingData && !latestSkinCapture && (
+          {/* Empty State - Show only when initial load is complete and no captures exist */}
+          {hasInitiallyLoaded && !isLoadingData && !latestSkinCapture && (
             <EmptyStateCard
               type="skin"
               onAction={handleStartAnalysis}
@@ -1729,7 +1752,6 @@ const SkinAnalysisScreenContent: React.FC = () => {
             <>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.recent.title')}</Text>
-                <Text style={styles.sectionSubtitle}>{t('analysis.skin.recent.subtitle')}</Text>
               </View>
 
               {(() => {
@@ -1788,33 +1810,12 @@ const SkinAnalysisScreenContent: React.FC = () => {
                   return <SkinCaptureCard capture={fallbackCapture} />;
                 }
               })()}
-
-              {/* Detailed Analysis Button */}
-              <TouchableOpacity
-                style={styles.detailedAnalysisButton}
-                onPress={() => setShowDetailedAnalysis(true)}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#22d3ee', '#6366f1']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.detailedAnalysisButtonGradient}
-                >
-                  <MaterialCommunityIcons name="face-woman-shimmer" size={20} color="#ffffff" />
-                  <Text style={styles.detailedAnalysisButtonText}>
-                    {t('analysis.skin.detailedAnalysis.buttonText')}
-                  </Text>
-                  <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
-                </LinearGradient>
-              </TouchableOpacity>
             </>
           )}
 
           {/* Quick Stats Section */}
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.quickStats.title')}</Text>
-            <Text style={styles.sectionSubtitle}>{t('analysis.skin.quickStats.subtitle')}</Text>
           </View>
 
           {/* Gauge Charts Grid 2x2 */}
@@ -1947,50 +1948,6 @@ const SkinAnalysisScreenContent: React.FC = () => {
             onPress={() => setShowSkinTrendModal(true)}
           />
 
-          {/* Intelligent Insights Section - Skin Only */}
-          {hasTodaySkinAnalysis ? (
-            <IntelligentInsightsSection
-              category="skin"
-              data={(() => {
-                try {
-                  const store = useAnalysisStore.getState();
-                  return {
-                    latestCapture: store.latestSkinCapture,
-                    skinHistory: store.skinHistory || [],
-                    trend: store.skinTrend,
-                    insights: store.insights || []
-                  };
-                } catch (error) {
-                  return null;
-                }
-              })()}
-              maxInsights={3}
-              showTitle={true}
-              compact={false}
-              sourceDate={latestSkinAnalysisDate}
-              onInsightPress={(insight) => {
-                // 🔥 FIX: Rimuoviamo console.log eccessivi
-                // Handle insight press - could navigate to detailed view
-              }}
-              onActionPress={(insight, action) => {
-                // 🔥 FIX: Rimuoviamo console.log eccessivi
-                // Handle action press - could start activity, set reminder, etc.
-              }}
-            />
-          ) : (
-            <View style={[styles.insightLockedCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <MaterialCommunityIcons name="lock-clock" size={28} color="#22d3ee" />
-              <Text style={[styles.insightLockedTitle, { color: colors.text }]}>{t('analysis.skin.insights.lockedTitle')}</Text>
-              <Text style={[styles.insightLockedSubtitle, { color: colors.textSecondary }]}>{t('analysis.skin.insights.lockedDescription')}</Text>
-              <TouchableOpacity
-                style={[styles.insightLockedButton, { backgroundColor: '#22d3ee' }]}
-                onPress={handleStartAnalysis}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.insightLockedButtonText}>{t('analysis.skin.insights.lockedCta')}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
 
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.advancedModules.title')}</Text>

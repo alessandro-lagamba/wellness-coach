@@ -141,7 +141,8 @@
       "expo-asset",
       "expo-audio",
       "expo-sqlite",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

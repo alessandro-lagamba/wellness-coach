@@ -14,6 +14,10 @@ import PushNotificationService from '../services/push-notification.service'; // 
 import { supabase } from '../lib/supabase';
 import { useTranslation } from '../hooks/useTranslation';
 
+// 🔥 FIX: Module-level flag for password recovery - persists across component remounts
+// This is necessary because refs are reset when component unmounts, but auth state changes can cause remounts
+let isPasswordRecoveryModeGlobal = false;
+
 interface AuthWrapperProps {
   children: React.ReactNode;
   onAuthSuccess: (user: any) => void;
@@ -30,6 +34,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   // 🔥 REMOVED: showOnboarding - non mostriamo più OnboardingScreen, solo InteractiveTutorial
   const { showTutorial, setShowTutorial } = useTutorial();
   const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false);
+  const [isPasswordRecoveryMode, setIsPasswordRecoveryMode] = useState(false); // 🆕 Track password recovery mode to bypass auth
   const router = useRouter();
   const { colors, mode } = useTheme(); // 🆕 Theme colors
 
@@ -64,6 +69,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   const isProcessingAuthRef = useRef(false);
   const processedUserIdRef = useRef<string | null>(null);
   const isAuthenticatedRef = useRef(false);
+  const isPasswordRecoveryRef = useRef(false); // 🆕 Flag to prevent SIGNED_IN processing during password recovery
 
   // 🔥 FIX: Aggiorna ref quando isAuthenticated cambia
   useEffect(() => {
@@ -289,12 +295,31 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
     const { data: { subscription } } = AuthService.onAuthStateChange(
       async (event, session) => {
         console.log('🔄 Auth state changed:', event, 'user:', session?.user?.id);
+
+        // 🆕 Handle PASSWORD_RECOVERY event - redirect to reset password page
+        if (event === 'PASSWORD_RECOVERY' && session?.user) {
+          console.log('🔑 Password recovery detected, redirecting to reset-password page...');
+          isPasswordRecoveryRef.current = true;
+          isPasswordRecoveryModeGlobal = true; // 🔥 Module-level flag persists across remounts
+          setIsPasswordRecoveryMode(true);
+          // Hide any modals
+          setShowEmailVerificationModal(false);
+          setShowEmailVerifiedSuccess(false);
+          router.replace('/reset-password');
+          return;
+        }
+
+        // 🆕 Skip SIGNED_IN processing if we're in password recovery mode
         if (event === 'SIGNED_IN' && session?.user) {
+          if (isPasswordRecoveryRef.current) {
+            console.log('🔑 SIGNED_IN detected during recovery - forcing navigation to reset-password');
+            // Ensure we are in the correct mode (redundant but safe)
+            setIsPasswordRecoveryMode(true);
+            router.replace('/reset-password');
+            return;
+          }
           if (processedUserIdRef.current !== session.user.id || !isAuthenticatedRef.current) {
-            // 🔥 PERF: Removed verbose logging
             proceedAfterAuthentication(session.user);
-          } else {
-            // 🔥 PERF: Removed verbose logging
           }
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);
@@ -302,6 +327,9 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           processedUserIdRef.current = null;
           isProcessingAuthRef.current = false;
           isAuthenticatedRef.current = false;
+          isPasswordRecoveryRef.current = false;
+          isPasswordRecoveryModeGlobal = false; // 🔥 Reset global flag on signout
+          setIsPasswordRecoveryMode(false);
         }
       }
     );
@@ -448,8 +476,36 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
     const handleInitialURL = async () => {
       try {
         const initialUrl = await Linking.getInitialURL();
-        if (initialUrl && initialUrl.includes('auth/confirm')) {
-          await handleEmailConfirmationDeepLink(initialUrl);
+        if (initialUrl) {
+          if (initialUrl.includes('auth/confirm')) {
+            await handleEmailConfirmationDeepLink(initialUrl);
+          } else if (initialUrl.includes('reset-password') || initialUrl.includes('type=recovery')) {
+            // 🔥 FIX: Don't navigate here - Supabase needs to process the URL tokens first
+            // Navigation will happen in PASSWORD_RECOVERY event handler after session is created
+            console.log('🔑 Password reset URL detected, waiting for Supabase to process tokens...');
+            isPasswordRecoveryRef.current = true;
+            isPasswordRecoveryModeGlobal = true;
+            setIsPasswordRecoveryMode(true);
+
+            // 🔥 FIX: Manually set session from URL if auto-detect fails
+            // This is critical to avoid "AuthSessionMissingError"
+            const fragment = initialUrl.split('#')[1];
+            if (fragment) {
+              const params = new URLSearchParams(fragment);
+              const access_token = params.get('access_token');
+              const refresh_token = params.get('refresh_token');
+
+              if (access_token && refresh_token) {
+                console.log('🔄 Manually setting Supabase session from URL tokens...');
+                const { error } = await supabase.auth.setSession({
+                  access_token,
+                  refresh_token,
+                });
+                if (error) console.error('❌ Error setting session manually:', error);
+                else console.log('✅ Session manually set from tokens');
+              }
+            }
+          }
         }
       } catch (error) {
         console.error('❌ Error handling initial URL:', error);
@@ -457,10 +513,37 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
     };
 
     // Handle deep link when app is already open
-    const handleURL = (event: { url: string }) => {
+    const handleURL = async (event: { url: string }) => {
       const { url } = event;
       if (url.includes('auth/confirm')) {
         handleEmailConfirmationDeepLink(url);
+      } else if (url.includes('reset-password') || url.includes('type=recovery')) {
+        // 🔥 FIX: Don't navigate here - Supabase needs to process the URL tokens first
+        // Navigation will happen in PASSWORD_RECOVERY event handler after session is created
+        console.log('🔑 Password reset deep link detected, waiting for Supabase to process tokens...');
+        isPasswordRecoveryRef.current = true;
+        isPasswordRecoveryModeGlobal = true;
+        setIsPasswordRecoveryMode(true);
+        setShowEmailVerificationModal(false);
+        setShowEmailVerifiedSuccess(false);
+
+        // 🔥 FIX: Manually set session from URL if auto-detect fails
+        const fragment = url.split('#')[1];
+        if (fragment) {
+          const params = new URLSearchParams(fragment);
+          const access_token = params.get('access_token');
+          const refresh_token = params.get('refresh_token');
+
+          if (access_token && refresh_token) {
+            console.log('🔄 Manually setting Supabase session from URL tokens...');
+            const { error } = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+            if (error) console.error('❌ Error setting session manually:', error);
+            else console.log('✅ Session manually set from tokens');
+          }
+        }
       }
     };
 
@@ -589,7 +672,9 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
     );
   }
 
-  if (!isAuthenticated) {
+  // 🆕 Allow password recovery mode to bypass auth
+  // 🔥 FIX: Use GLOBAL module-level flag - persists across component remounts caused by auth state changes
+  if (!isAuthenticated && !isPasswordRecoveryModeGlobal) {
     return <AuthScreen onAuthSuccess={handleAuthSuccess} />;
   }
 
@@ -604,8 +689,9 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       {children}
 
       {/* Global Tutorial - sempre renderizzato, visibilità controllata da showTutorial */}
+      {/* 🆕 Hide tutorial during password recovery - use GLOBAL flag for persistence */}
       <InteractiveTutorial
-        visible={showTutorial}
+        visible={showTutorial && !isPasswordRecoveryModeGlobal}
         onClose={async () => {
           // 🔥 PERF: Removed verbose logging
           setShowTutorial(false);

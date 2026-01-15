@@ -21,6 +21,7 @@ export class EmotionAnalysisService {
       confidence: number;
       analysisData?: Record<string, any>;
       sessionDuration?: number;
+      aiAnalysisText?: string; // 🆕 Nuovo campo per salvare il testo generato dall'AI
     }
   ): Promise<EmotionAnalysis | null> {
     // 🆕 Validazione dati prima del salvataggio
@@ -69,6 +70,7 @@ export class EmotionAnalysisService {
                       confidence: analysis.confidence,
                       analysis_data: analysis.analysisData || {},
                       session_duration: analysis.sessionDuration,
+                      ai_analysis_text: analysis.aiAnalysisText, // 🆕 Aggiorna testo AI
                     })
                     .eq('id', recentAnalysis.id)
                     .select()
@@ -109,6 +111,7 @@ export class EmotionAnalysisService {
                   confidence: analysis.confidence,
                   analysis_data: analysis.analysisData || {},
                   session_duration: analysis.sessionDuration,
+                  ai_analysis_text: analysis.aiAnalysisText, // 🆕 Salva testo AI
                 })
                 .select()
                 .single();
@@ -200,6 +203,38 @@ export class EmotionAnalysisService {
   }
 
   /**
+   * 🆕 Ottiene l'analisi emotiva per una data specifica (prende l'ultima di quel giorno)
+   */
+  static async getEmotionAnalysisByDate(userId: string, date: Date): Promise<EmotionAnalysis | null> {
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const { data, error } = await supabase
+        .from(Tables.EMOTION_ANALYSES)
+        .select('*')
+        .eq('user_id', userId)
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error getting emotion analysis by date:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getEmotionAnalysisByDate:', error);
+      return null;
+    }
+  }
+
+  /**
    * Ottiene le ultime N analisi emotive di un utente
    */
   static async getEmotionHistory(userId: string, limit: number = 5): Promise<EmotionAnalysis[]> {
@@ -219,6 +254,65 @@ export class EmotionAnalysisService {
       return data || [];
     } catch (error) {
       console.error('Error in getEmotionHistory:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 🆕 Ottiene tutte le date in cui l'utente ha analisi emotive (per calendario Time Machine)
+   */
+  static async getAllAnalysisDates(userId: string): Promise<string[]> {
+    try {
+      const { data, error } = await supabase
+        .from(Tables.EMOTION_ANALYSES)
+        .select('created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting analysis dates:', error);
+        return [];
+      }
+
+      // Estrai solo le date (senza orario) e rimuovi duplicati
+      const dates = data?.map(item => {
+        const d = new Date(item.created_at);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }) || [];
+
+      return [...new Set(dates)];
+    } catch (error) {
+      console.error('Error in getAllAnalysisDates:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 🆕 Ottiene TUTTE le analisi emotive per una data specifica (per multi-select)
+   */
+  static async getAnalysesByDate(userId: string, date: Date): Promise<EmotionAnalysis[]> {
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const { data, error } = await supabase
+        .from(Tables.EMOTION_ANALYSES)
+        .select('*')
+        .eq('user_id', userId)
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting analyses by date:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getAnalysesByDate:', error);
       return [];
     }
   }

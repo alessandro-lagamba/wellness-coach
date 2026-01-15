@@ -64,6 +64,11 @@
     "resetAppConfirm": "Sei sicuro di voler resettare completamente l'app? Tutti i dati locali verranno eliminati. Questa azione non può essere annullata.",
     "resetAppSuccess": "App resettata con successo. Verrai disconnesso.",
     "resetAppError": "Errore durante il reset: {{error}}",
+    "deleteAccount": "Elimina Account",
+    "deleteAccountConfirm": "Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione è irreversibile e tutti i tuoi dati verranno cancellati.",
+    "deleteAccountAction": "Elimina",
+    "deleteAccountSuccess": "Account eliminato con successo.",
+    "deleteAccountError": "Impossibile eliminare l'account. Riprova più tardi.",
     "version": "Versione App",
     "versionValue": "1.0.0",
     "profile": {
@@ -524,7 +529,8 @@
         "valenceHowItWorks": "Stima basata su segnali facciali (bocca/occhi/sopracciglia).",
         "arousalWhyItMatters": "Indica quanta attivazione/energia emotiva c'è in questo momento.",
         "arousalHowItWorks": "Valutazione dell'intensità dei segnali espressivi.",
-        "tapToExpand": "Tocca per espandere"
+        "tapToExpand": "Tocca per espandere",
+        "expand": "Espandi"
       },
       "hero": {
         "title": "Rilevamento Emotivo in tempo reale",
@@ -617,6 +623,49 @@
         "lockedTitle": "Analizza oggi per sbloccare i consigli",
         "lockedDescription": "Gli insight intelligenti vengono generati solo dopo una nuova analisi emotiva del giorno in corso.",
         "lockedCta": "Analizza ora"
+      },
+      "horoscope": {
+        "title": "Oroscopo (non richiesto)",
+        "signOfTheMoment": "SEGNO DEL MOMENTO",
+        "loading": "Leggo la tua aura emotiva...",
+        "retry": "Riprova",
+        "disclaimer": "Questo non è una diagnosi. È un gioco di introspezione.",
+        "generatedAt": "Analisi generata dall'aura facciale delle {{time}}",
+        "buttonLabel": "Oroscopo",
+        "roles": {
+          "il_regista_con_il_budget": {
+            "title": "Il Regista con il Budget",
+            "subtitle": "Visione e azione in sintonia"
+          },
+          "l_equilibrista": {
+            "title": "L'Equilibrista",
+            "subtitle": "Armonia tra sentire e fare"
+          },
+          "in_modalita_risparmio": {
+            "title": "In Modalità Risparmio",
+            "subtitle": "Energie con cautela"
+          },
+          "il_silente": {
+            "title": "Il Silente",
+            "subtitle": "Le cose parlano poco"
+          },
+          "un_concerto_metal": {
+            "title": "Un Concerto Metal",
+            "subtitle": "Tanti pensieri, sottofondo costante"
+          },
+          "segnale_infrasuono": {
+            "title": "Segnale Infrasuono",
+            "subtitle": "Sistema molto reattivo"
+          },
+          "motore_a_propulsione": {
+            "title": "Motore a Propulsione",
+            "subtitle": "Energia alta e concentrata"
+          },
+          "l_attore_senza_oscar": {
+            "title": "L'Attore Senza Oscar",
+            "subtitle": "Il massimo, anche senza applausi"
+          }
+        }
       },
       "results": {
         "title": "Analisi Emotiva Completata",
@@ -1967,6 +2016,7 @@
     "loginSubtitle": "Accedi al tuo account WellnessCoach",
     "signupSubtitle": "Inizia il tuo percorso di benessere",
     "login": "Accedi",
+    "wrongCredentials": "Le credenziali inserite non sono corrette.",
     "signup": "Registrati",
     "email": "Email",
     "emailPlaceholder": "Inserisci la tua email",
@@ -1988,7 +2038,7 @@
     "invalidEmail": "Inserisci un indirizzo email valido",
     "loginError": "Errore Login",
     "loginSuccess": "Login effettuato con successo!",
-    "invalidCredentials": "Credenziali non valide",
+    "invalidCredentials": "Email o password non corretti. Verifica le tue credenziali e riprova.",
     "signupError": "Errore Registrazione",
     "signupFailed": "Errore durante la registrazione",
     "signupCompleted": "Registrazione Completata",
@@ -1999,6 +2049,15 @@
     "resetPasswordError": "Errore durante il reset password",
     "operationError": "Si è verificato un errore durante l'operazione",
     "genericError": "Si è verificato un errore",
+    "resetPasswordTitle": "Reimposta Password",
+    "resetPasswordSubtitle": "Inserisci la tua nuova password per accedere al tuo account",
+    "newPassword": "Nuova Password",
+    "newPasswordPlaceholder": "Inserisci la nuova password",
+    "confirmNewPassword": "Conferma Nuova Password",
+    "confirmNewPasswordPlaceholder": "Ripeti la nuova password",
+    "updatePassword": "Aggiorna Password",
+    "passwordUpdated": "Password Aggiornata",
+    "passwordUpdatedMessage": "La tua password è stata aggiornata con successo. Ora puoi accedere con la nuova password.",
     "gender": {
       "label": "Genere",
       "select": "Seleziona genere",
@@ -2029,6 +2088,8 @@
     "emailResendErrorMessage": "Impossibile inviare l'email di conferma. Riprova più tardi.",
     "emailNotVerified": "Email non ancora verificata",
     "emailNotVerifiedMessage": "L'email non è ancora stata verificata. Controlla la tua casella di posta e clicca sul link di conferma.",
+    "emailNotYetVerifiedTitle": "Email non ancora verificata",
+    "emailNotYetVerifiedMessage": "Per completare la verifica, clicca sul link nell'email dal tuo telefono. Se hai già cliccato dal PC, l'app rileverà automaticamente la conferma entro pochi secondi.",
     "emailCheckError": "Impossibile verificare lo stato dell'email. Riprova più tardi.",
     "emailCheckErrorRetry": "Si è verificato un errore. Prova a chiudere e riaprire l'app, poi clicca di nuovo su \"Ho verificato\".",
     "emailVerifiedMessage": "La tua email è stata verificata con successo. Ora puoi accedere a tutte le funzionalità dell'app.",

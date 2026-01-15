@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { AuthService } from '../services/auth.service';
+import { supabase } from '../lib/supabase';
 
 interface EmailVerificationModalProps {
   visible: boolean;
@@ -31,12 +32,82 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
   const { t } = useTranslation();
   const [isResending, setIsResending] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // 🆕 Polling: Auto-check email verification every 5 seconds when modal is visible
+  useEffect(() => {
+    if (!visible) {
+      // Clear polling when modal is hidden
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Start polling
+    console.log('📧 Starting email verification polling...');
+
+    const checkEmailVerification = async () => {
+      try {
+        // 🔥 FIX: Don't call refreshSession() - it can break unconfirmed user sessions
+        // Instead, just check current session and try to get user
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          // No session - this is expected, user needs to click email link
+          console.log('📧 No session found in polling (expected)');
+          return;
+        }
+
+        // Check user data - getUser() fetches from server using current token
+        const { data: { user }, error } = await supabase.auth.getUser();
+
+        if (error) {
+          console.log('📧 Polling getUser failed:', error.message);
+          return;
+        }
+
+        if (user?.email_confirmed_at) {
+          console.log('✅ Email verified (detected by polling)!');
+          // Stop polling
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          // Trigger success callback
+          onEmailVerified?.();
+          onClose();
+        } else {
+          console.log('📧 Email not yet verified, polling continues...');
+        }
+      } catch (error) {
+        console.log('📧 Polling error (non-critical):', error);
+      }
+    };
+
+    // 🔥 FIX: Wait 2 seconds before first check to let session stabilize
+    const initialTimeout = setTimeout(() => {
+      checkEmailVerification();
+    }, 2000);
+
+    // Then poll every 5 seconds
+    pollingIntervalRef.current = setInterval(checkEmailVerification, 5000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [visible, onEmailVerified, onClose]);
 
   const handleResendEmail = async () => {
     try {
       setIsResending(true);
       const { error } = await AuthService.resendConfirmationEmail(userEmail);
-      
+
       if (error) {
         Alert.alert(
           t('auth.emailResendError') || 'Errore',
@@ -62,40 +133,33 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
   const handleCheckVerification = async () => {
     try {
       setIsChecking(true);
-      
+
       console.log('🔄 Checking email verification status...');
-      
-      const { supabase } = await import('../lib/supabase');
-      
+
       // 🔥 FIX: First check if we have a session at all
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
+
       if (sessionError) {
         console.error('❌ Session error:', sessionError.message);
       }
-      
+
       if (!session) {
-        console.log('⚠️ No session found, user needs to re-authenticate');
+        // 🔥 FIX: Show a more helpful message instead of "Sessione scaduta"
+        // This is the EXPECTED state before email confirmation
+        console.log('📧 No session - waiting for email confirmation link to be clicked');
         Alert.alert(
-          t('auth.sessionExpired') || 'Sessione scaduta',
-          t('auth.sessionExpiredMessage') || 'La sessione è scaduta. Per favore clicca sul link di conferma nella tua email per riautenticarti automaticamente.',
+          t('auth.emailNotYetVerifiedTitle') || 'Email non ancora verificata',
+          t('auth.emailNotYetVerifiedMessage') || 'Per completare la verifica, clicca sul link nell\'email dal tuo telefono. Se hai già cliccato dal PC, l\'app rileverà automaticamente la conferma entro pochi secondi.',
           [{ text: t('common.ok') || 'OK' }]
         );
         return;
       }
-      
-      // Try to refresh the session to get updated user data
-      console.log('🔄 Refreshing session...');
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError) {
-        console.warn('⚠️ Session refresh failed:', refreshError.message);
-        // Don't return, try to get user anyway
-      }
-      
-      // Get user with fresh data
+
+      // 🔥 FIX: Don't call refreshSession() - it breaks unconfirmed user sessions!
+      // Just get user data directly - getUser() will fetch from server
+      console.log('🔄 Getting user data...');
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
+
       if (userError) {
         console.error('❌ Failed to get user:', userError.message);
         Alert.alert(
@@ -104,7 +168,7 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
         );
         return;
       }
-      
+
       if (!user) {
         console.error('❌ No user returned');
         Alert.alert(
@@ -113,9 +177,9 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
         );
         return;
       }
-      
+
       console.log('✅ User retrieved, email_confirmed_at:', user.email_confirmed_at);
-      
+
       if (user.email_confirmed_at) {
         // Email verified! Close modal silently
         console.log('✅ Email verified, closing modal');
@@ -205,7 +269,7 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
                 <>
-                  <MaterialCommunityIcons name="email-send" size={18} color={colors.primary} />
+                  <MaterialCommunityIcons name="email-fast" size={18} color={colors.primary} />
                   <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
                     {t('auth.resendEmail') || 'Reinvia email'}
                   </Text>
@@ -371,4 +435,3 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 });
-

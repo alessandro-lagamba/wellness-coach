@@ -62,6 +62,11 @@
     "resetAppConfirm": "Are you sure you want to completely reset the app? All local data will be deleted. This action cannot be undone.",
     "resetAppSuccess": "App reset successfully. You will be signed out.",
     "resetAppError": "Error during reset: {{error}}",
+    "deleteAccount": "Delete Account",
+    "deleteAccountConfirm": "Are you sure you want to permanently delete your account? This action is irreversible and all your data will be deleted.",
+    "deleteAccountAction": "Delete",
+    "deleteAccountSuccess": "Account deleted successfully.",
+    "deleteAccountError": "Unable to delete account. Please try again later.",
     "version": "App Version",
     "versionValue": "1.0.0",
     "profile": {
@@ -514,7 +519,8 @@
         "valenceHowItWorks": "Estimate based on facial signals (mouth/eyes/eyebrows).",
         "arousalWhyItMatters": "Indicates how much activation/emotional energy there is at this moment.",
         "arousalHowItWorks": "Assessment of the intensity of expressive signals.",
-        "tapToExpand": "Tap to expand"
+        "tapToExpand": "Tap to expand",
+        "expand": "Expand"
       },
       "hero": {
         "title": "Real-time Emotion Detection",
@@ -594,6 +600,49 @@
         "lockedTitle": "Analyze today to unlock insights",
         "lockedDescription": "Smart insights are generated only after you complete a new emotion analysis on the current day.",
         "lockedCta": "Analyze now"
+      },
+      "horoscope": {
+        "title": "The Horoscope You Didn't Ask For",
+        "signOfTheMoment": "SIGN OF THE MOMENT",
+        "loading": "Reading your emotional aura...",
+        "retry": "Try Again",
+        "disclaimer": "This is not a diagnosis. It's a game of introspection.",
+        "generatedAt": "Generated from facial aura at {{time}}",
+        "buttonLabel": "Horoscope",
+        "roles": {
+          "il_regista_con_il_budget": {
+            "title": "The Director",
+            "subtitle": "Vision meets action"
+          },
+          "l_equilibrista": {
+            "title": "The Balancer",
+            "subtitle": "Harmony between feeling and doing"
+          },
+          "in_modalita_risparmio": {
+            "title": "Power Saving Mode",
+            "subtitle": "Careful with energy"
+          },
+          "il_silente": {
+            "title": "The Silent One",
+            "subtitle": "Things speak little"
+          },
+          "un_concerto_metal": {
+            "title": "A Metal Concert",
+            "subtitle": "Many thoughts, constant background"
+          },
+          "segnale_infrasuono": {
+            "title": "Infrasound Signal",
+            "subtitle": "Highly reactive system"
+          },
+          "motore_a_propulsione": {
+            "title": "Propulsion Engine",
+            "subtitle": "High and focused energy"
+          },
+          "l_attore_senza_oscar": {
+            "title": "The Actor Without Oscar",
+            "subtitle": "Your best, even without applause"
+          }
+        }
       },
       "results": {
         "title": "Emotion Analysis Complete",
@@ -1914,6 +1963,7 @@
     "loginSubtitle": "Sign in to your WellnessCoach account",
     "signupSubtitle": "Start your wellness journey",
     "login": "Sign In",
+    "wrongCredentials": "The credentials you entered are incorrect.",
     "signup": "Sign Up",
     "email": "Email",
     "emailPlaceholder": "Enter your email",
@@ -1935,7 +1985,7 @@
     "invalidEmail": "Enter a valid email address",
     "loginError": "Login Error",
     "loginSuccess": "Login successful!",
-    "invalidCredentials": "Invalid credentials",
+    "invalidCredentials": "Email or password is incorrect. Please check your credentials and try again.",
     "signupError": "Signup Error",
     "signupFailed": "Error during registration",
     "signupCompleted": "Registration Completed",
@@ -1946,6 +1996,15 @@
     "resetPasswordError": "Error during password reset",
     "operationError": "An error occurred during the operation",
     "genericError": "An error occurred",
+    "resetPasswordTitle": "Reset Password",
+    "resetPasswordSubtitle": "Enter your new password to access your account",
+    "newPassword": "New Password",
+    "newPasswordPlaceholder": "Enter new password",
+    "confirmNewPassword": "Confirm New Password",
+    "confirmNewPasswordPlaceholder": "Repeat new password",
+    "updatePassword": "Update Password",
+    "passwordUpdated": "Password Updated",
+    "passwordUpdatedMessage": "Your password has been updated successfully. You can now sign in with your new password.",
     "gender": {
       "label": "Gender",
       "select": "Select gender",
@@ -1976,6 +2035,8 @@
     "emailResendErrorMessage": "Unable to send confirmation email. Please try again later.",
     "emailNotVerified": "Email not yet verified",
     "emailNotVerifiedMessage": "The email has not been verified yet. Check your inbox and click the confirmation link.",
+    "emailNotYetVerifiedTitle": "Email not yet verified",
+    "emailNotYetVerifiedMessage": "To complete verification, click the link in the email from your phone. If you already clicked from PC, the app will automatically detect the confirmation within a few seconds.",
     "emailCheckError": "Unable to check email status. Please try again later.",
     "emailCheckErrorRetry": "An error occurred. Try closing and reopening the app, then click \"I verified\" again.",
     "emailVerifiedMessage": "Your email has been verified successfully. You can now access all app features.",

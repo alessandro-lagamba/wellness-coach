@@ -751,16 +751,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
             darkModeValue={mode === 'dark'} // 🆕 Pass dark mode value
           />
 
-          {/* Re-Embed Diary Button */}
-          <TouchableOpacity
-            style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: '#10b981' + '40' }]}
-            onPress={handleReEmbedDiary}
-            disabled={isLoading}
-          >
-            <MaterialCommunityIcons name="database-refresh" size={16} color="#10b981" />
-            <Text style={[styles.logoutText, { color: '#10b981' }]}>Rigenera Embeddings Diario</Text>
-          </TouchableOpacity>
-
           {/* Reset App Button */}
           <TouchableOpacity
             style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: '#f59e0b' + '40' }]}
@@ -777,6 +767,54 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
           >
             <FontAwesome name="sign-out" size={16} color={colors.error} />
             <Text style={[styles.logoutText, { color: colors.error }]}>{t('settings.logout')}</Text>
+          </TouchableOpacity>
+
+          {/* Account Deletion Button - Solid Red with Extra Spacing */}
+          <TouchableOpacity
+            style={[
+              styles.logoutButton,
+              {
+                backgroundColor: '#ef4444',
+                borderColor: '#ef4444',
+                marginTop: 24,
+              }
+            ]}
+            onPress={() => {
+              Alert.alert(
+                t('settings.deleteAccount'),
+                t('settings.deleteAccountConfirm'),
+                [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  {
+                    text: t('settings.deleteAccountAction'),
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        setIsLoading(true);
+                        const { supabase } = await import('../lib/supabase');
+                        if (resolvedUser?.id) {
+                          await supabase.from('emotion_analyses').delete().eq('user_id', resolvedUser.id);
+                          await supabase.from('skin_analyses').delete().eq('user_id', resolvedUser.id);
+                          await supabase.from('daily_journal_entries').delete().eq('user_id', resolvedUser.id);
+                          await supabase.from('user_profiles').delete().eq('id', resolvedUser.id);
+                          await AuthService.signOut();
+                          Alert.alert(t('common.success'), t('settings.deleteAccountSuccess'), [{ text: t('common.ok'), onPress: onLogout }]);
+                        }
+                      } catch (error) {
+                        console.error('Error deleting account:', error);
+                        Alert.alert(t('common.error'), t('settings.deleteAccountError'));
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }
+                  }
+                ]
+              );
+            }}
+            disabled={isLoading}
+          >
+            <MaterialCommunityIcons name="account-remove" size={16} color="#fff" />
+            <Text style={[styles.logoutText, { color: '#fff' }]}>{t('settings.deleteAccount')}</Text>
           </TouchableOpacity>
 
           <View style={[styles.versionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>

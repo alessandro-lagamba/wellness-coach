@@ -33,7 +33,7 @@ export interface InsightAnalysisResponse {
   focus?: string;
 }
 
-class IntelligentInsightService {
+export class IntelligentInsightService {
   private static instance: IntelligentInsightService;
   private cache: Map<string, InsightAnalysisResponse> = new Map();
   private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
@@ -149,6 +149,69 @@ class IntelligentInsightService {
       }
       return this.getFallbackInsights(request.category);
     }
+  }
+
+  /**
+   * 🆕 Generates a comparison insight for the Time Machine feature
+   */
+  async generateTimeMachineInsight(pastAnalysis: any, currentAnalysis: any, language: string = 'it'): Promise<string> {
+    try {
+      const prompt = this.buildTimeMachinePrompt(pastAnalysis, currentAnalysis, language);
+      const sessionId = `time-machine-${Date.now()}`;
+
+      const response = await fetch(`${BACKEND_URL}/api/chat/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: prompt,
+          sessionId: sessionId,
+          userId: 'time-machine-user', // Anonymous context is fine for this specific feature
+        }),
+      });
+
+      if (!response.ok) throw new Error('Backend request failed');
+      const data = await response.json();
+      const text = data.response || data.message || data.text;
+
+      // Clean up quotes if present
+      return text.replace(/^["']|["']$/g, '').trim();
+    } catch (error) {
+      console.error('Error generating Time Machine insight:', error);
+      return language === 'it'
+        ? "Impossibile generare l'insight temporale al momento. Osserva i tuoi dati per notare i cambiamenti."
+        : "Unable to generate time insight at the moment. Observe your data to notice changes.";
+    }
+  }
+
+  /**
+   * 🆕 Build prompt for Time Machine comparison
+   */
+  private buildTimeMachinePrompt(past: any, current: any, language: string): string {
+    const pastDate = past.created_at ? new Date(past.created_at).toLocaleDateString() : 'Passato';
+    const currentDate = current.created_at ? new Date(current.created_at).toLocaleDateString() : 'Oggi';
+
+    return `Sei un esperto di benessere emotivo. Confronta questi due stati emotivi dello stesso utente a distanza di tempo.
+    
+    STATO PASSATO (${pastDate}):
+    - Emozione dominante: ${past.dominant_emotion}
+    - Valence: ${past.valence?.toFixed(2)}
+    - Arousal: ${past.arousal?.toFixed(2)}
+    - Note AI: ${past.ai_analysis_text || past.analysis_data?.observations?.join(', ') || 'Nessuna nota'}
+
+    STATO ATTUALE (${currentDate}):
+    - Emozione dominante: ${current.dominant_emotion}
+    - Valence: ${current.valence?.toFixed(2)}
+    - Arousal: ${current.arousal?.toFixed(2)}
+    - Note AI: ${current.ai_analysis_text || current.analysis_data?.observations?.join(', ') || 'Nessuna nota'}
+
+    OBIETTIVO:
+    Scrivi un BREVE paragrafo (max 3-4 frasi) che descriva l'evoluzione emotiva.
+    - Usa un tono descrittivo, empatico e NON giudicante.
+    - Evidenzia il CAMBIAMENTO (es. "Sei passato da uno stato di... a...").
+    - Se migliorato: celebra la stabilità o la positività.
+    - Se peggiorato/difficile: normalizza il flusso emotivo ("È naturale avere fasi diverse...").
+    - Rispondi in ${language === 'it' ? 'ITALIANO' : 'INGLESE'}.
+    - NON usare elenchi puntati. Solo testo discorsivo.`;
   }
 
   /**

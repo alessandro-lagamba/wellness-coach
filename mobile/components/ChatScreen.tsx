@@ -67,6 +67,7 @@ import { ChatSettingsService, ChatTone, ResponseLength } from '../services/chat-
 import { JournalSettingsService, JournalTemplate, JOURNAL_TEMPLATES } from '../services/journal-settings.service';
 import { ExportService } from '../services/export.service';
 import { EmptyStateCard } from './EmptyStateCard';
+import { TimeMachineCalendar } from './TimeMachineCalendar';
 
 const { width, height } = Dimensions.get('window');
 
@@ -2624,138 +2625,87 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   );
                 })}
               </ScrollView>
-              {/* Month Picker Modal (calendar view) */}
-              <Modal visible={showMonthPicker} transparent animationType="fade" onRequestClose={() => setShowMonthPicker(false)}>
-                <View style={styles.modalBackdrop}>
-                  <View style={[styles.monthPickerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    {/* Modal header with month navigation */}
-                    <View style={styles.monthHeaderModal}>
-                      <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} style={styles.monthNavBtn}>
-                        <Text style={styles.monthNavTxt}>{'<'}</Text>
-                      </TouchableOpacity>
-                      <Text style={[styles.modalTitle, { color: colors.text }]}>{currentMonth.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', { month: 'long', year: 'numeric' })}</Text>
-                      <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} style={styles.monthNavBtn}>
-                        <Text style={styles.monthNavTxt}>{'>'}</Text>
-                      </TouchableOpacity>
-                    </View>
+              {/* Month Picker Modal - Using TimeMachineCalendar component */}
+              <TimeMachineCalendar
+                visible={showMonthPicker}
+                onClose={() => setShowMonthPicker(false)}
+                onSelectDate={(date) => {
+                  const iso = toISODateSafe(date.getFullYear(), date.getMonth(), date.getDate());
+                  setSelectedDayKey(iso);
+                }}
+                onMonthChange={async (year, month) => {
+                  // 🆕 Dynamically load journal entries for the selected month
+                  if (!currentUser?.id) return;
 
-                    {/* Year selector */}
-                    <View style={styles.yearRow}>
-                      {Array.from({ length: 5 }).map((_, idx) => {
-                        const baseYear = new Date().getFullYear();
-                        const year = baseYear - 2 + idx;
-                        const active = year === currentMonth.getFullYear();
-                        return (
-                          <TouchableOpacity
-                            key={year}
-                            style={[
-                              styles.yearBtn,
-                              { backgroundColor: colors.surfaceMuted, borderColor: colors.border },
-                              active && { backgroundColor: colors.primaryMuted, borderColor: colors.primary }
-                            ]}
-                            onPress={() => setCurrentMonth(new Date(year, currentMonth.getMonth(), 1))}
-                          >
-                            <Text style={[styles.yearTxt, { color: colors.textSecondary }, active && { color: colors.primary }]}>{year}</Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
+                  try {
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                    const firstDay = toISODateSafe(year, month, 1);
+                    const lastDay = toISODateSafe(year, month, daysInMonth);
 
-                    {/* Weekday headers */}
-                    <View style={styles.weekHeaderRow}>
-                      {[
-                        t('journal.weekdays.mon'),
-                        t('journal.weekdays.tue'),
-                        t('journal.weekdays.wed'),
-                        t('journal.weekdays.thu'),
-                        t('journal.weekdays.fri'),
-                        t('journal.weekdays.sat'),
-                        t('journal.weekdays.sun')
-                      ].map((wd) => (
-                        <Text key={wd} style={styles.weekHeaderTxt}>{wd}</Text>
-                      ))}
-                    </View>
+                    // Load journal entries from DB
+                    const journalEntries = await DailyJournalDBService.listByDateRange(currentUser.id, firstDay, lastDay);
+                    const journalMap: Record<string, { hasEntry: boolean; aiScore?: number }> = {};
+                    journalEntries.forEach(entry => {
+                      journalMap[entry.entry_date] = {
+                        hasEntry: true,
+                        aiScore: (entry as any).ai_score || undefined
+                      };
+                    });
 
-                    {/* Calendar grid */}
-                    <View style={styles.calendarGrid}>
-                      {(() => {
-                        const y = currentMonth.getFullYear();
-                        const m = currentMonth.getMonth();
-                        const first = new Date(y, m, 1);
-                        const daysInMonth = new Date(y, m + 1, 0).getDate();
-                        // JS getDay(): 0=Sun..6=Sat, convert to 0=Mon..6=Sun
-                        const jsFirst = first.getDay();
-                        const startOffset = (jsFirst + 6) % 7; // how many blanks before day 1
-                        const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
-                        const cells: React.ReactNode[] = [];
-                        for (let i = 0; i < totalCells; i++) {
-                          const dayNum = i - startOffset + 1;
-                          if (dayNum < 1 || dayNum > daysInMonth) {
-                            cells.push(<View key={`e-${i}`} style={[styles.calCellEmpty, { backgroundColor: colors.surfaceMuted, borderColor: colors.borderLight }]} />);
-                          } else {
-                            // 🆕 Usa helper per evitare problemi timezone
-                            const iso = toISODateSafe(y, m, dayNum);
-                            const mood = monthMoodMap[iso];
-                            const rest = monthRestMap[iso];
-                            const journal = monthJournalMap[iso]; // 🆕 Journal entry dal DB
+                    // Merge with existing map to keep data from other months
+                    setMonthJournalMap(prev => ({ ...prev, ...journalMap }));
 
-                            // 🆕 Priorità: journal entry (ai_score) > mood > rest > grigio
-                            let color = '#e2e8f0'; // Default grigio
-                            if (journal?.hasEntry && journal.aiScore) {
-                              color = DailyJournalService.colorForScore(journal.aiScore);
-                            } else if (mood) {
-                              color = mood <= 2 ? '#ef4444' : mood === 3 ? '#f59e0b' : '#10b981';
-                            } else if (rest) {
-                              color = rest <= 2 ? '#f87171' : rest === 3 ? '#f59e0b' : '#34d399';
-                            } else if (journal?.hasEntry) {
-                              // 🆕 Giorno con entry ma senza ai_score
-                              color = '#6366f1'; // Blu per indicare presenza entry
-                            }
+                    // Also load mood and rest for this month
+                    const days: string[] = [];
+                    for (let d = 1; d <= daysInMonth; d++) {
+                      days.push(toISODateSafe(year, month, d));
+                    }
+                    const moodPairs = await Promise.all(days.map(async (iso) => [iso, await AsyncStorage.getItem(`checkin:mood:${iso}`)] as const));
+                    const restPairs = await Promise.all(days.map(async (iso) => [iso, await AsyncStorage.getItem(`checkin:rest_level:${iso}`)] as const));
+                    const moodMap: Record<string, number> = {};
+                    const restMap: Record<string, number> = {};
+                    moodPairs.forEach(([k, v]) => { if (v) moodMap[k] = parseInt(v, 10); });
+                    restPairs.forEach(([k, v]) => { if (v) restMap[k] = parseInt(v, 10); });
+                    setMonthMoodMap(prev => ({ ...prev, ...moodMap }));
+                    setMonthRestMap(prev => ({ ...prev, ...restMap }));
+                  } catch (e) {
+                    console.error('❌ Error loading calendar data:', e);
+                  }
+                }}
+                getDayMarker={(dateStr) => {
+                  const mood = monthMoodMap[dateStr];
+                  const rest = monthRestMap[dateStr];
+                  const journal = monthJournalMap[dateStr];
 
-                            const active = iso === selectedDayKey;
-                            const hasEntry = journal?.hasEntry || false; // 🆕 Mostra pallino solo se c'è entry
-                            const isFuture = isFutureDate(iso); // 🆕 Verifica se è una data futura
-                            const isPast = isPastDate(iso); // 🆕 Verifica se è una data passata
+                  // Priority: journal entry (ai_score) > mood > rest > default
+                  let color = '#e2e8f0';
+                  let hasMarker = false;
 
-                            cells.push(
-                              <TouchableOpacity
-                                key={`d-${i}`}
-                                style={[
-                                  styles.calCell,
-                                  { backgroundColor: colors.surface, borderColor: colors.border },
-                                  active && { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-                                  isFuture && { opacity: 0.4 } // 🆕 Stile visivo per giorni futuri
-                                ]}
-                                onPress={() => {
-                                  if (!isFuture) {
-                                    // Permetti la selezione di giorni passati senza alert - l'alert apparirà solo quando si prova a salvare/modificare
-                                    setSelectedDayKey(iso);
-                                    setShowMonthPicker(false);
-                                  }
-                                }}
-                                disabled={isFuture} // 🆕 Disabilita solo i giorni futuri
-                              >
-                                <Text style={[
-                                  styles.calDayTxt,
-                                  { color: colors.text },
-                                  active && { color: colors.primary, fontWeight: '800' },
-                                  isFuture && { color: colors.textTertiary } // 🆕 Testo più chiaro per giorni futuri
-                                ]}>
-                                  {String(dayNum)}
-                                </Text>
-                                {hasEntry && <View style={[styles.calDot, { backgroundColor: color }]} />}
-                              </TouchableOpacity>
-                            );
-                          }
-                        }
-                        return <>{cells}</>;
-                      })()}
-                    </View>
+                  if (journal?.hasEntry && journal.aiScore) {
+                    color = DailyJournalService.colorForScore(journal.aiScore);
+                    hasMarker = true;
+                  } else if (mood) {
+                    color = mood <= 2 ? '#ef4444' : mood === 3 ? '#f59e0b' : '#10b981';
+                    hasMarker = true;
+                  } else if (rest) {
+                    color = rest <= 2 ? '#f87171' : rest === 3 ? '#f59e0b' : '#34d399';
+                    hasMarker = true;
+                  } else if (journal?.hasEntry) {
+                    color = '#6366f1'; // Blue for entry without ai_score
+                    hasMarker = true;
+                  }
 
-                    <TouchableOpacity onPress={() => setShowMonthPicker(false)} style={styles.modalCloseBtn}><Text style={styles.modalCloseTxt}>{t('common.close')}</Text></TouchableOpacity>
-                  </View>
-                </View>
-              </Modal>
+                  return { hasMarker, color };
+                }}
+                language={language}
+                isDark={themeMode === 'dark'}
+                showYearSelector={true}
+                headerLabel={t('journal.title').toUpperCase()}
+                headerIcon="book-open-page-variant"
+                title={language === 'it' ? 'Seleziona Data' : 'Select Date'}
+                subtitle={language === 'it' ? 'Sfoglia il tuo diario' : 'Browse your journal'}
+                confirmText={language === 'it' ? 'VAI ALLA DATA' : 'GO TO DATE'}
+              />
 
               {/* Journal Prompt */}
               {journalPrompt ? (
@@ -3611,7 +3561,7 @@ const styles = StyleSheet.create({
   monthNavTxt: { fontSize: 14, fontWeight: '800', color: '#334155' },
   monthTitleWrap: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, backgroundColor: '#eef2ff', borderWidth: 1, borderColor: '#c7d2fe' },
   monthTitle: { fontSize: 14, fontWeight: '800', textTransform: 'capitalize' }, // Colore gestito dinamicamente con colors.text
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'center', justifyContent: 'center' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center' },
   monthPickerCard: { width: '86%', borderRadius: 16, padding: 16, borderWidth: 1 },
   modalTitle: { fontSize: 16, fontWeight: '800', marginBottom: 0, textTransform: 'capitalize' }, // Colore gestito dinamicamente con colors.text
   yearRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, marginBottom: 8 },

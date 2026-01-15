@@ -122,7 +122,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       if (mode === 'login') {
         const { user, error } = await AuthService.signIn(email, password, rememberMe);
         if (error) {
-          Alert.alert(t('auth.loginError'), error.message || t('auth.invalidCredentials'));
+          console.log('Login error:', error.message);
+          let errorMessage = error.message;
+          // 🔥 FIX: Map 'Invalid login credentials' to friendly localized message
+          if (error.message.includes('Invalid login credentials')) {
+            errorMessage = t('auth.wrongCredentials');
+          }
+          Alert.alert(t('auth.loginError'), errorMessage);
           return;
         }
         if (user) {
@@ -140,8 +146,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
         // 🔥 FIX: Passa TUTTI i metadata direttamente nella chiamata signUp
         // Questo è più affidabile che chiamare updateUser dopo
         const { user, error } = await AuthService.signUpWithMetadata(
-          email, 
-          password, 
+          email,
+          password,
           {
             full_name: `${firstName} ${lastName}`,
             first_name: firstName,
@@ -331,10 +337,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar 
-        translucent 
-        backgroundColor="transparent" 
-        barStyle={themeMode === 'dark' ? 'light-content' : 'dark-content'} 
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle={themeMode === 'dark' ? 'light-content' : 'dark-content'}
       />
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <ScrollView
@@ -385,13 +391,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                 />
                 <TouchableOpacity style={styles.toggleButton} onPress={() => switchMode('login')}>
                   <Text style={[
-                    styles.toggleText, 
+                    styles.toggleText,
                     { color: mode === 'login' ? colors.primary : colors.textSecondary }
                   ]}>{t('auth.login')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.toggleButton} onPress={() => switchMode('signup')}>
                   <Text style={[
-                    styles.toggleText, 
+                    styles.toggleText,
                     { color: mode === 'signup' ? colors.primary : colors.textSecondary }
                   ]}>{t('auth.signup')}</Text>
                 </TouchableOpacity>
@@ -620,8 +626,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
 // Styles dinamici basati sul tema
 const createStyles = (colors: any, themeMode: 'light' | 'dark') => StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: colors.background,
   },
   safeArea: { flex: 1, backgroundColor: 'transparent' },
