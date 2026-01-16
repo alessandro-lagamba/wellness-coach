@@ -352,9 +352,9 @@ export class TodayGlanceService {
         mindfulnessMinutes: existingData?.mindfulness_minutes ?? currentHealthData.data?.mindfulnessMinutes ?? 0,
       };
 
-      // Sincronizza i dati aggiornati nel database (source: 'manual' perché modificato manualmente dall'utente)
+      // Sincronizza i dati aggiornati nel database
       const syncService = HealthDataSyncService.getInstance();
-      const syncResult = await syncService.syncHealthData(userId, healthDataToSync, 'manual');
+      const syncResult = await syncService.syncHealthData(userId, healthDataToSync);
 
       if (syncResult.success) {
         return {
@@ -433,9 +433,9 @@ export class TodayGlanceService {
         mindfulnessMinutes: existingData?.mindfulness_minutes ?? currentHealthData.data?.mindfulnessMinutes ?? 0,
       };
 
-      // Sincronizza i dati aggiornati nel database (source: 'manual' perché aggiunto manualmente dall'utente)
+      // Sincronizza i dati aggiornati nel database
       const syncService = HealthDataSyncService.getInstance();
-      const syncResult = await syncService.syncHealthData(userId, healthDataToSync, 'manual');
+      const syncResult = await syncService.syncHealthData(userId, healthDataToSync);
 
       if (syncResult.success) {
         return {
@@ -507,9 +507,9 @@ export class TodayGlanceService {
         mindfulnessMinutes: newMinutes, // 🔥 Aggiorna con il nuovo valore
       };
 
-      // Sincronizza i dati aggiornati nel database (source: 'manual' perché aggiunto manualmente dall'utente)
+      // Sincronizza i dati aggiornati nel database
       const syncService = HealthDataSyncService.getInstance();
-      const syncResult = await syncService.syncHealthData(userId, healthDataToSync, 'manual');
+      const syncResult = await syncService.syncHealthData(userId, healthDataToSync);
 
       if (syncResult.success) {
         return {
@@ -588,9 +588,9 @@ export class TodayGlanceService {
         mindfulnessMinutes: newMinutes, // 🔥 Aggiorna con il nuovo valore
       };
 
-      // Sincronizza i dati aggiornati nel database (source: 'manual' perché modificato manualmente dall'utente)
+      // Sincronizza i dati aggiornati nel database
       const syncService = HealthDataSyncService.getInstance();
-      const syncResult = await syncService.syncHealthData(userId, healthDataToSync, 'manual');
+      const syncResult = await syncService.syncHealthData(userId, healthDataToSync);
 
       if (syncResult.success) {
         return {

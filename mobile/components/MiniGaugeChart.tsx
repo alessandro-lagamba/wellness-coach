@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
 
   /* SMALL */
   smallHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, paddingTop: 2 },
-  smallLabel: { fontSize: 14, fontWeight: "700", color: "#111827", letterSpacing: -0.1, flex: 1 },
+  smallLabel: { fontSize: 14, fontWeight: "800", color: "#111827", letterSpacing: -0.1, flex: 1 },
   smallContent: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   smallNumberSection: { flex: 1, justifyContent: "center" },
   smallSubtitle: { fontSize: 10, color: "#475569", fontWeight: "600", lineHeight: 14 },

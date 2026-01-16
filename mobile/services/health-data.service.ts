@@ -423,18 +423,16 @@ export class HealthDataService {
           (Platform.OS === 'android' && HealthConnect));
 
       let healthData: HealthData;
-      let source: 'healthkit' | 'health_connect' | 'manual' | 'mock' = 'mock';
+      let isMock = false; // 🔥 FIX: Simplified - just track if it's mock data
 
       if (Platform.OS === 'ios' && AppleHealthKit && this.permissions.steps) {
         const result = await this.syncHealthKitData();
         if (result.success && result.data) {
           healthData = result.data;
-          source = 'healthkit';
         } else {
           // 🔥 Se i permessi sono concessi ma la sync fallisce, usa l'ultimo dato reale
           if (this.lastHealthData && this.lastHealthData.steps && this.lastHealthData.steps > 0) {
             healthData = this.lastHealthData;
-            source = 'healthkit'; // Mantieni la source originale
           } else {
             throw new Error(result.error || 'HealthKit sync failed');
           }
@@ -445,7 +443,6 @@ export class HealthDataService {
         const result = await this.syncHealthConnectData();
         if (result.success && result.data) {
           healthData = result.data;
-          source = 'health_connect';
         } else {
           // 🔥 CRITICO: Se i permessi sono concessi ma la sync fallisce, usa l'ultimo dato reale
           // NON cadere mai nel fallback ai mock se i permessi sono concessi
@@ -457,7 +454,6 @@ export class HealthDataService {
 
             if (hasRealData) {
               healthData = this.lastHealthData;
-              source = 'health_connect'; // Mantieni la source originale
             } else {
               throw new Error(result.error || 'Health Connect sync failed');
             }
@@ -467,9 +463,8 @@ export class HealthDataService {
         }
       } else if (this.config.fallbackToMock && !shouldUseRealData) {
         // 🔥 SOLO se NON abbiamo permessi concessi, usa i mock
-        // Se abbiamo permessi concessi, NON usare mai i mock
         healthData = this.generateMockHealthData();
-        source = 'mock';
+        isMock = true;
       } else {
         // Nessuna sorgente disponibile (es. permessi non concessi): non lanciare errore
         // Ritorna l'ultimo dato valido, così la UI non va in errore
@@ -482,9 +477,9 @@ export class HealthDataService {
 
       // Sync to Supabase
       const currentUser = await AuthService.getCurrentUser();
-      if (currentUser && source !== 'mock') {
+      if (currentUser && !isMock) {
         const syncService = HealthDataSyncService.getInstance();
-        const syncResult = await syncService.syncHealthData(currentUser.id, healthData, source);
+        const syncResult = await syncService.syncHealthData(currentUser.id, healthData);
 
         if (!syncResult.success) {
           console.error('❌ Failed to sync to Supabase:', syncResult.error);
@@ -492,15 +487,9 @@ export class HealthDataService {
       }
 
       // 🔥 Memorizza l'ultimo dato sincronizzato SOLO se è reale (non mock)
-      // Questo previene che i dati mock sovrascrivano i dati reali
-      if (source !== 'mock') {
+      if (!isMock) {
         this.lastHealthData = healthData;
-        this.lastHealthDataSource = source;
-      } else if (this.lastHealthDataSource === null) {
-        // 🔥 Se non abbiamo mai avuto dati reali, possiamo salvare i mock temporaneamente
-        // Ma solo se non abbiamo mai avuto dati reali prima
-        this.lastHealthData = healthData;
-        this.lastHealthDataSource = 'mock';
+        this.lastHealthDataSource = 'health_connect'; // 🔥 Track that this is real data
       }
 
       const result: HealthDataSyncResult = {
@@ -701,16 +690,9 @@ export class HealthDataService {
       };
 
       // Leggi Steps se il permesso è stato concesso
+      // 🔥 FIX: Usa SOLO aggregateRecord per evitare duplicazione passi
       if (this.permissions.steps) {
         try {
-          // 🔥 FIX: Rimuoviamo console.log eccessivi
-          const PREFERRED_ORIGINS = [
-            'com.huami.watch.hmwatchmanager', // Zepp (Amazfit)
-            'com.xiaomi.hm.health', // Zepp Life (ex Mi Fit)
-            'com.zepp', // Possibile package Zepp
-            'com.google.android.apps.fitness', // Google Fit
-          ];
-
           const extractAggregateSteps = (result: any): number => {
             if (!result) return 0;
             const candidates = [
@@ -729,225 +711,43 @@ export class HealthDataService {
             return 0;
           };
 
-          const aggregateSteps = async (origin?: string) => {
-            if (!HealthConnect.aggregateRecord || typeof HealthConnect.aggregateRecord !== 'function') {
-              return null;
-            }
+          let stepsTotal = 0;
 
-            const request: any = {
-              recordType: 'Steps',
-              timeRangeFilter,
-            };
-
-            if (origin) {
-              request.dataOriginFilter = [origin];
-            }
-
-            try {
-              const aggregateResult = await HealthConnect.aggregateRecord(request);
-              const total = extractAggregateSteps(aggregateResult);
-              return {
-                origin,
-                total,
-                dataOrigins:
-                  Array.isArray(aggregateResult?.dataOrigins) && aggregateResult.dataOrigins.length > 0
-                    ? aggregateResult.dataOrigins
-                    : origin
-                      ? [origin]
-                      : [],
-                raw: aggregateResult,
-              };
-            } catch (error) {
-              // 🔥 FIX: Solo errori critici in console
-              console.error(`❌ Steps aggregate failed${origin ? ` (${origin})` : ''}:`, error);
-              return null;
-            }
-          };
-
-          let aggregatedTotal = 0;
-          let aggregateSelectedOrigin: string | undefined;
-          let aggregateOrigins: string[] = [];
-
+          // 🔥 USA SOLO aggregateRecord - evita duplicazione
           if (HealthConnect.aggregateRecord && typeof HealthConnect.aggregateRecord === 'function') {
-            const aggregateCandidates: Array<{
-              origin?: string;
-              total: number;
-              dataOrigins: string[];
-              raw: any;
-            }> = [];
-
-            const aggregateAll = await aggregateSteps();
-            if (aggregateAll && aggregateAll.total > 0) {
-              aggregateCandidates.push(aggregateAll);
-            }
-
-            for (const origin of PREFERRED_ORIGINS) {
-              const aggregateResult = await aggregateSteps(origin);
-              if (aggregateResult && aggregateResult.total > 0) {
-                aggregateCandidates.push(aggregateResult);
-              }
-            }
-
-            if (aggregateCandidates.length > 0) {
-              const bestCandidate = aggregateCandidates.reduce((best, current) =>
-                current.total > best.total ? current : best
-              );
-
-              aggregatedTotal = Math.round(bestCandidate.total);
-              aggregateSelectedOrigin = bestCandidate.origin;
-              aggregateOrigins = bestCandidate.dataOrigins;
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
-            }
-          }
-
-          let selectedOrigin = aggregateSelectedOrigin || aggregateOrigins[0];
-          let stepsFromRecords = aggregatedTotal;
-
-          if (HealthConnect.readRecords && typeof HealthConnect.readRecords === 'function') {
-            const recordsAll = await readAllRecords('Steps', { timeRangeFilter });
-            // 🔥 FIX: Rimuoviamo console.log eccessivi
-
-            const seenKeysByOrigin = new Set<string>();
-            const seenKeysGlobal = new Set<string>();
-            const totalsByOrigin = new Map<string, number>();
-            let unionTotal = 0;
-
-            for (const record of recordsAll) {
-              const startMs = new Date(record.startTime || record.start || record.time || 0).getTime();
-              const endMs = new Date(record.endTime || record.end || record.time || 0).getTime();
-              const origin =
-                (record.dataOrigin?.packageName || record.dataOrigin || 'unknown') as string;
-              const metadataId =
-                record.metadata?.id || record.metadata?.uid || record.metadata?.uuid || record.metadata?.clientRecordId || '';
-              const value = (record.count ?? record.steps ?? record.total ?? 0) as number;
-
-              if (!Number.isFinite(value) || value <= 0 || Number.isNaN(startMs) || Number.isNaN(endMs)) {
-                continue;
-              }
-
-              const originKey = `${origin}:${startMs}:${endMs}:${metadataId}:${value}`;
-              if (!seenKeysByOrigin.has(originKey)) {
-                totalsByOrigin.set(origin, (totalsByOrigin.get(origin) || 0) + value);
-                seenKeysByOrigin.add(originKey);
-              }
-
-              const globalKey = `${startMs}:${endMs}:${value}`;
-              if (!seenKeysGlobal.has(globalKey)) {
-                unionTotal += value;
-                seenKeysGlobal.add(globalKey);
-              }
-            }
-
-            // 🔥 FIX: Rimuoviamo console.log eccessivi
-
-            if (totalsByOrigin.size > 0) {
-              let maxOrigin = '';
-              let maxValue = 0;
-              for (const [origin, total] of totalsByOrigin.entries()) {
-                if (total > maxValue) {
-                  maxValue = total;
-                  maxOrigin = origin;
-                }
-              }
-
-              if (
-                maxValue > 0 &&
-                (!selectedOrigin || (totalsByOrigin.get(selectedOrigin) || 0) < maxValue)
-              ) {
-                selectedOrigin = maxOrigin;
-              }
-
-              if (unionTotal > stepsFromRecords) {
-                stepsFromRecords = unionTotal;
-              } else if (
-                stepsFromRecords === 0 &&
-                maxValue > 0
-              ) {
-                stepsFromRecords = maxValue;
-              }
-            }
-          }
-
-          if (stepsFromRecords > 0 && !Number.isInteger(stepsFromRecords)) {
-            stepsFromRecords = Math.round(stepsFromRecords);
-          }
-
-          healthData.steps = stepsFromRecords;
-
-          // 🔥 FIX: Rimuoviamo console.log eccessivi
-
-          if (healthData.steps === 0 && HealthConnect.readRecords && typeof HealthConnect.readRecords === 'function') {
-            const end = new Date();
-            const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
-            const range24h = { operator: 'BETWEEN' as const, startTime: start.toISOString(), endTime: end.toISOString() };
             try {
-              const records24h = await readAllRecords('Steps', { timeRangeFilter: range24h });
-              const seen24h = new Set<string>();
-              let total24 = 0;
-              for (const record of records24h) {
-                const startMs = new Date(record.startTime || record.start || record.time || 0).getTime();
-                const endMs = new Date(record.endTime || record.end || record.time || 0).getTime();
-                const value = (record.count ?? record.steps ?? record.total ?? 0) as number;
-                if (!Number.isFinite(value) || value <= 0) continue;
-                const origin =
-                  (record.dataOrigin?.packageName || record.dataOrigin || 'unknown') as string;
-                const metadataId =
-                  record.metadata?.id || record.metadata?.uid || record.metadata?.uuid || record.metadata?.clientRecordId || '';
-                const key = `${origin}:${startMs}:${endMs}:${metadataId}:${value}`;
-                if (seen24h.has(key)) continue;
-                seen24h.add(key);
-                total24 += value;
-              }
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
-              if (total24 > 0) {
-                healthData.steps = total24;
-              }
-            } catch (error) {
-              // 🔥 FIX: Solo errori critici in console
-              console.error('❌ Error reading Steps fallback 24h:', error);
+              const aggregateResult = await HealthConnect.aggregateRecord({
+                recordType: 'Steps',
+                timeRangeFilter,
+              });
+              stepsTotal = Math.round(extractAggregateSteps(aggregateResult));
+            } catch (aggError) {
+              console.error('❌ Steps aggregate failed:', aggError);
             }
           }
 
-          if (healthData.steps === 0 && HealthConnect.readRecords && typeof HealthConnect.readRecords === 'function') {
-            const end7 = new Date();
-            const start7 = new Date(end7.getTime() - 7 * 24 * 60 * 60 * 1000);
-            const range7d = { operator: 'BETWEEN' as const, startTime: start7.toISOString(), endTime: end7.toISOString() };
+          // Fallback: se 0, prova con finestra 24h
+          if (stepsTotal === 0 && HealthConnect.aggregateRecord) {
             try {
-              const records7d = await readAllRecords('Steps', { timeRangeFilter: range7d });
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
-              const startOfDayLocal = new Date(now);
-              startOfDayLocal.setHours(0, 0, 0, 0);
-              const endOfDayLocal = new Date(now);
-              endOfDayLocal.setHours(23, 59, 59, 999);
-
-              const seen7d = new Set<string>();
-              const todayTotal = records7d.reduce((total: number, record: any) => {
-                const startMs = new Date(record.startTime || record.start || record.time || 0).getTime();
-                const endMs = new Date(record.endTime || record.end || record.time || 0).getTime();
-                const value = (record.count ?? record.steps ?? record.total ?? 0) as number;
-                if (!Number.isFinite(value) || value <= 0) return total;
-                const origin =
-                  (record.dataOrigin?.packageName || record.dataOrigin || 'unknown') as string;
-                const metadataId =
-                  record.metadata?.id || record.metadata?.uid || record.metadata?.uuid || record.metadata?.clientRecordId || '';
-                const key = `${origin}:${startMs}:${endMs}:${metadataId}:${value}`;
-                if (seen7d.has(key)) return total;
-                seen7d.add(key);
-                const overlapsToday = endMs >= startOfDayLocal.getTime() && startMs <= endOfDayLocal.getTime();
-                if (!overlapsToday) return total;
-                return total + value;
-              }, 0);
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
-              if (todayTotal > 0) {
-                healthData.steps = todayTotal;
-              }
-            } catch (error) {
-              // 🔥 FIX: Solo errori critici in console
-              console.error('❌ Error reading Steps fallback 7d:', error);
+              const end = new Date();
+              const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
+              const range24h = {
+                operator: 'BETWEEN' as const,
+                startTime: start.toISOString(),
+                endTime: end.toISOString(),
+              };
+              const result24h = await HealthConnect.aggregateRecord({
+                recordType: 'Steps',
+                timeRangeFilter: range24h,
+              });
+              stepsTotal = Math.round(extractAggregateSteps(result24h));
+            } catch (fallbackError) {
+              console.error('❌ Steps 24h fallback failed:', fallbackError);
             }
           }
+
+          healthData.steps = stepsTotal;
         } catch (error) {
-          // 🔥 FIX: Solo errori critici in console
           console.error('❌ Error reading Steps:', error);
         }
       }
@@ -997,27 +797,7 @@ export class HealthDataService {
             if (latestBpm > 0) {
               healthData.heartRate = latestBpm;
             }
-
-            const morningRecords = sortedRecords.filter((record: any) => {
-              const timestamp = getRecordTimestamp(record);
-              if (!timestamp) {
-                return false;
-              }
-              const hours = new Date(timestamp).getHours();
-              return hours >= 6 && hours <= 9;
-            });
-
-            if (morningRecords.length > 0) {
-              const totalResting = morningRecords.reduce((sum: number, record: any) => {
-                return sum + extractBpm(record);
-              }, 0);
-              const avgResting = totalResting / morningRecords.length;
-              if (avgResting > 0) {
-                healthData.restingHeartRate = Math.round(avgResting);
-              }
-            }
-
-            // 🔥 FIX: Rimuoviamo console.log eccessivi
+            // 🔥 FIX: Rimosso restingHeartRate - non esiste in HealthConnect
           }
 
           // Fallback: se 0 record o bpm nullo, estendi finestra a 24h
@@ -1156,39 +936,23 @@ export class HealthDataService {
       }
 
       // Leggi SleepSession se il permesso è stato concesso
+      // 🔥 FIX: Semplificato - legge ore totali + bedtime/waketime
       if (this.permissions.sleep && HealthConnect.readRecords) {
         try {
-          // 🔥 FIX: Rimuoviamo console.log eccessivi
           // Per il sonno, considera le ultime 36 ore per includere la notte scorsa
           const sleepEnd = new Date();
           const sleepStart = new Date(sleepEnd.getTime() - 36 * 60 * 60 * 1000);
           const sleepRange = { operator: 'BETWEEN' as const, startTime: sleepStart.toISOString(), endTime: sleepEnd.toISOString() };
           const sleepRecords = await readAllRecords('SleepSession', { timeRangeFilter: sleepRange });
-          // 🔥 FIX: Rimuoviamo console.log eccessivi
 
           if (sleepRecords.length > 0) {
             let totalSleepMinutes = 0;
-            let deepSleepMinutes = 0;
-            let remSleepMinutes = 0;
-            let lightSleepMinutes = 0;
+            let earliestBedtime: Date | null = null;
+            let latestWaketime: Date | null = null;
             const seenSleepSessions = new Set<string>();
-
-            const getStageType = (stage: any): string => {
-              const stageValue = stage?.stage || stage?.stageType || stage?.type;
-              return typeof stageValue === 'string' ? stageValue.toLowerCase() : '';
-            };
-
-            const sortedSleep = sleepRecords
-              .slice()
-              .sort((a, b) => {
-                const startA = new Date(a.startTime || a.start || 0).getTime();
-                const startB = new Date(b.startTime || b.start || 0).getTime();
-                return startA - startB;
-              });
-
             const cutoff = now.getTime() - 24 * 60 * 60 * 1000;
 
-            sortedSleep.forEach((record: any) => {
+            sleepRecords.forEach((record: any) => {
               const startDate = new Date(record.startTime || record.start);
               const endDate = new Date(record.endTime || record.end);
               const startMs = startDate.getTime();
@@ -1209,53 +973,32 @@ export class HealthDataService {
               seenSleepSessions.add(sessionKey);
 
               const durationMinutes = Math.max(0, (endMs - startMs) / (1000 * 60));
-              if (durationMinutes === 0) {
-                return;
-              }
+              if (durationMinutes > 0) {
+                totalSleepMinutes += durationMinutes;
 
-              totalSleepMinutes += durationMinutes;
-
-              if (Array.isArray(record.stages)) {
-                record.stages.forEach((stage: any) => {
-                  const stageStart = new Date(stage.startTime || stage.start);
-                  const stageEnd = new Date(stage.endTime || stage.end);
-                  const stageStartMs = stageStart.getTime();
-                  const stageEndMs = stageEnd.getTime();
-                  if (Number.isNaN(stageStartMs) || Number.isNaN(stageEndMs) || stageEndMs <= stageStartMs) {
-                    return;
-                  }
-                  const stageMinutes = (stageEndMs - stageStartMs) / (1000 * 60);
-                  const stageType = getStageType(stage);
-                  if (stageType.includes('deep')) {
-                    deepSleepMinutes += stageMinutes;
-                  } else if (stageType.includes('rem')) {
-                    remSleepMinutes += stageMinutes;
-                  } else if (stageType.includes('light') || stageType.includes('awake')) {
-                    lightSleepMinutes += stageMinutes;
-                  }
-                });
+                // 🔥 NEW: Track earliest bedtime and latest waketime
+                if (!earliestBedtime || startDate < earliestBedtime) {
+                  earliestBedtime = startDate;
+                }
+                if (!latestWaketime || endDate > latestWaketime) {
+                  latestWaketime = endDate;
+                }
               }
             });
 
             if (totalSleepMinutes > 0) {
-              const sleepHours = totalSleepMinutes / 60;
-              healthData.sleepHours = Math.round(sleepHours * 10) / 10;
-              healthData.deepSleepMinutes = Math.round(deepSleepMinutes);
-              healthData.remSleepMinutes = Math.round(remSleepMinutes);
-              healthData.lightSleepMinutes = Math.round(lightSleepMinutes);
+              healthData.sleepHours = Math.round((totalSleepMinutes / 60) * 10) / 10;
 
-              const idealSleepHours = 8;
-              const sleepRatio = Math.min(healthData.sleepHours / idealSleepHours, 1);
-              const stageRatio = totalSleepMinutes > 0 ? (deepSleepMinutes + remSleepMinutes) / totalSleepMinutes : 0;
-              const stageContribution = Math.min(Math.max(stageRatio, 0), 1);
-              const qualityScore = (sleepRatio * 0.6 + stageContribution * 0.4) * 100;
-              healthData.sleepQuality = Math.round(Math.min(Math.max(qualityScore, 0), 100));
-
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
+              // 🔥 Format bedtime and waketime as locale time strings
+              if (earliestBedtime) {
+                (healthData as any).bedtime = earliestBedtime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+              }
+              if (latestWaketime) {
+                (healthData as any).waketime = latestWaketime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+              }
             }
           }
         } catch (error) {
-          // 🔥 FIX: Solo errori critici in console
           console.error('❌ Error reading SleepSession:', error);
         }
       }

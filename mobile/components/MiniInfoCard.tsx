@@ -120,7 +120,7 @@ const MiniInfoCard: React.FC<Props> = ({
       </View>
 
       <View style={styles.miBodyRow}>
-        <View style={{ flex: 1, minWidth: 0, paddingRight: 80 }}>
+        <View style={{ flex: 1, minWidth: 0, paddingRight: 145 }}>
           {!!subtitle && (
             <Text numberOfLines={3} style={[styles.miSubtitle, { color: colors.textSecondary }]}>
               {subtitle}
@@ -184,7 +184,8 @@ const MiniInfoCard: React.FC<Props> = ({
       {
         !!detailChips?.length && (
           <View style={styles.largeChipsRow}>
-            {detailChips.map((chip) => (
+            {/* 🔥 FIX: Mostra solo max 2 chips per migliorare leggibilità */}
+            {detailChips.slice(0, 2).map((chip) => (
               <View key={`${chip.label}-${chip.value}`} style={[styles.largeDetailChip, { borderColor: `${color}20`, backgroundColor: `${color}08` }]}>
                 <Text style={styles.largeChipIcon}>{chip.icon}</Text>
                 <View style={styles.largeChipTextContainer}>
@@ -224,13 +225,13 @@ const styles = StyleSheet.create({
 
   /* ========== SMALL (immutato) ========== */
   smallHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, paddingTop: 2 },
-  smallLabel: { fontSize: 14, fontWeight: "700", color: "#111827", letterSpacing: -0.1, flex: 1 },
+  smallLabel: { fontSize: 14, fontWeight: "800", color: "#111827", letterSpacing: -0.1, flex: 1 },
   smallContent: { flex: 1, justifyContent: "center" },
   smallValueRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 },
   smallPrimaryValue: { fontSize: 26, lineHeight: 28, fontWeight: "800", letterSpacing: -0.2 },
   smallPrimaryValueComplete: { fontSize: 13, lineHeight: 20, fontWeight: "700", letterSpacing: -0.2 },
   smallValueEmoji: { fontSize: 18, fontWeight: "400", marginLeft: 8 },
-  smallUnitText: { marginLeft: 3, marginBottom: 3, fontSize: 13, fontWeight: "600", color: "#64748b" },
+  smallUnitText: { marginLeft: 3, marginBottom: 3, fontSize: 12, fontWeight: "600", color: "#64748b" },
   smallSubtitle: { marginTop: 4, fontSize: 10, color: "#475569", fontWeight: "600", lineHeight: 14 },
 
   /* ========== MEDIUM (immutato) ========== */
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
 
   miBodyRow: { flexDirection: "row", alignItems: "flex-start", flex: 1, marginTop: 4 },
   miValueTopRight: { fontSize: 26, lineHeight: 30, fontWeight: "900", letterSpacing: -0.5 },
-  miSubtitle: { fontSize: 14, color: "#475569", fontWeight: "600", lineHeight: 18 },
+  miSubtitle: { fontSize: 12, color: "#475569", fontWeight: "600", lineHeight: 18 },
 
   // chip flottante in basso a destra
   miDetailChipFloat: {
@@ -256,10 +257,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    minWidth: 110,
+    minWidth: 125,
     maxWidth: "55%",
   },
-  miChipEmoji: { fontSize: 14 },
+  miChipEmoji: { fontSize: 12 },
   miChipLabel: { fontSize: 10, color: "#64748b", fontWeight: "700" },
   miChipValue: { fontSize: 12, color: "#0f172a", fontWeight: "900" },
 

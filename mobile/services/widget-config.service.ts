@@ -32,7 +32,8 @@ export interface WidgetData {
     unitLabel?: string; // 🆕 Etichetta unità (es. "bicchiere", "bottiglia", "litro")
   };
   meditation?: { minutes: number; goal: number; sessions: number; streak: number; favoriteType: string };
-  sleep?: { hours: number; quality: number; goal: number; deepSleep: string; remSleep: string; bedtime: string; wakeTime: string };
+  // 🔥 FIX: quality, deepSleep, remSleep ora opzionali (rimossi da HealthConnect)
+  sleep?: { hours: number; goal: number; bedtime?: string; wakeTime?: string; quality?: number; deepSleep?: string; remSleep?: string };
   hrv?: { value: number; restingHR: number; currentHR?: number; avgHRV: number; recovery: string };
   analyses?: { completed: boolean; emotionAnalysis: boolean; skinAnalysis: boolean; lastCheckIn: string; streak: number };
   cycle?: CycleData;

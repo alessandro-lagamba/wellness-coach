@@ -331,8 +331,8 @@
       "hours": "{{hours}}h"
     },
     "hrv": {
-      "currentHR": "Frequenza attuale",
-      "restingHR": "Frequenza a riposo",
+      "currentHR": "Attuale",
+      "restingHR": "A riposo",
       "recovery": "Recupero",
       "value": "{{value}}ms"
     },

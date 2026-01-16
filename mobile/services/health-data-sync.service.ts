@@ -23,7 +23,7 @@ export interface HealthDataRecord {
   body_fat?: number; // percentage
   hydration?: number; // ml
   mindfulness_minutes?: number;
-  source: 'healthkit' | 'health_connect' | 'manual' | 'mock';
+  // 🔥 REMOVED: source column dropped from database
   created_at: string;
   updated_at: string;
 }
@@ -47,11 +47,11 @@ export class HealthDataSyncService {
 
   /**
    * Sync health data to Supabase
+   * 🔥 Simplified: removed source parameter since column was dropped
    */
   async syncHealthData(
     userId: string,
-    healthData: HealthData,
-    source: 'healthkit' | 'health_connect' | 'manual' | 'mock' = 'mock'
+    healthData: HealthData
   ): Promise<HealthDataSyncResult> {
     try {
       const roundInt = (value?: number | null) => {
@@ -104,17 +104,11 @@ export class HealthDataSyncService {
         weight: (typeof healthData.weight === 'number' ? parseFloat(healthData.weight.toFixed(2)) : null) || existingRecord?.weight,
         body_fat: (typeof healthData.bodyFat === 'number' ? parseFloat(healthData.bodyFat.toFixed(2)) : null) || existingRecord?.body_fat,
 
-        // 🔥 PROTEZIONE IDRATAZIONE E MEDITAZIONE
-        // Se manuale salva il nuovo valore, se automatico non sovrascrivere con 0
-        hydration: (source === 'manual')
-          ? roundInt(healthData.hydration)
-          : Math.max(roundInt(healthData.hydration), existingRecord?.hydration || 0),
+        // 🔥 Hydration and meditation: always take max value to preserve manual entries
+        hydration: Math.max(roundInt(healthData.hydration), existingRecord?.hydration || 0),
+        mindfulness_minutes: Math.max(roundInt(healthData.mindfulnessMinutes), existingRecord?.mindfulness_minutes || 0),
 
-        mindfulness_minutes: (source === 'manual')
-          ? roundInt(healthData.mindfulnessMinutes)
-          : Math.max(roundInt(healthData.mindfulnessMinutes), existingRecord?.mindfulness_minutes || 0),
-
-        source,
+        // 🔥 REMOVED: source column dropped from database
         updated_at: new Date().toISOString(),
       };
 
@@ -313,7 +307,10 @@ export class HealthDataSyncService {
   }> {
     try {
       const endDate = new Date();
-      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      endDate.setHours(23, 59, 59, 999); // Fine della giornata di oggi
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - (days - 1)); // -6 giorni per avere 7 giorni totali
+      startDate.setHours(0, 0, 0, 0); // Inizio della giornata
       const startDateStr = startDate.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
@@ -355,6 +352,7 @@ export class HealthDataSyncService {
       for (let i = 0; i < days; i++) {
         const date = new Date(startDate);
         date.setDate(date.getDate() + i);
+        date.setHours(12, 0, 0, 0); // Usa mezzogiorno per evitare problemi di timezone
         const dateStr = date.toISOString().split('T')[0];
         daysMap[dateStr] = { steps: 0, sleepHours: 0, hrv: 0, heartRate: 0, hydration: 0, meditation: 0 };
       }

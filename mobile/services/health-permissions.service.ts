@@ -63,6 +63,15 @@ export class HealthPermissionsService {
       icon: '❤️',
     },
     {
+      id: 'hrv',
+      name: 'Variabilità Frequenza Cardiaca (HRV)',
+      description: 'Monitora i livelli di stress e recupero',
+      category: 'vitals',
+      required: false,
+      granted: false,
+      icon: '💓',
+    },
+    {
       id: 'sleep',
       name: 'Sonno',
       description: 'Analizza la qualità e la durata del sonno',
@@ -117,7 +126,7 @@ export class HealthPermissionsService {
             isGoogleFitAvailable: false,
           };
         }
-        
+
         return new Promise((resolve) => {
           try {
             AppleHealthKit.isAvailable((error: Object, results: boolean) => {
@@ -172,21 +181,21 @@ export class HealthPermissionsService {
    */
   private static async checkHealthConnectAvailability(): Promise<boolean> {
     if (Platform.OS !== 'android' || !hasHC) return false;
-    
+
     try {
       if (!HealthConnect || typeof HealthConnect.getSdkStatus !== 'function') {
         return false;
       }
-      
+
       // Usa getSdkStatus() invece di isAvailable() che non esiste
       const status = await HealthConnect.getSdkStatus();
-      
+
       // Verifica se SDK_AVAILABLE è disponibile come costante
       // Altrimenti verifica che lo status sia un valore positivo
       if (HealthConnect.SdkAvailabilityStatus) {
         return status === HealthConnect.SdkAvailabilityStatus.SDK_AVAILABLE;
       }
-      
+
       // Fallback: se getSdkStatus restituisce un numero, SDK_AVAILABLE è tipicamente 1 o 2
       // Status 1 = SDK_AVAILABLE, Status 2 = SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED, etc.
       return status === 1 || status === 'SDK_AVAILABLE' || status === true;
@@ -220,14 +229,14 @@ export class HealthPermissionsService {
         HealthConnect: !!HealthConnect,
         HealthConnectKeys: HealthConnect ? Object.keys(HealthConnect).slice(0, 10) : [],
       });
-      
+
       if (Platform.OS !== 'android' || !hasHC || !HealthConnect) {
         console.error('❌ HealthConnect not available:', {
           PlatformOS: Platform.OS,
           hasHC,
           HealthConnect: !!HealthConnect,
         });
-        
+
         Alert.alert(
           'Health Connect non disponibile',
           'Health Connect non è disponibile su questo dispositivo.\n\n' +
@@ -310,7 +319,7 @@ export class HealthPermissionsService {
           startTime: yesterday.toISOString(),
           endTime: now.toISOString(),
         };
-        
+
         if (HealthConnect.readRecords && typeof HealthConnect.readRecords === 'function') {
           try {
             // Tenta di leggere Steps - questo DOVREBBE registrare l'app
@@ -321,12 +330,12 @@ export class HealthPermissionsService {
             // SecurityException è ATTESO e NECESSARIO - questo registra l'app
             const errorMessage = readError?.message || '';
             const errorString = JSON.stringify(readError);
-            
-            if (errorMessage.includes('SecurityException') || 
-                errorMessage.includes('permission') ||
-                errorMessage.includes('not granted') ||
-                errorString.includes('SecurityException') ||
-                errorString.includes('permission')) {
+
+            if (errorMessage.includes('SecurityException') ||
+              errorMessage.includes('permission') ||
+              errorMessage.includes('not granted') ||
+              errorString.includes('SecurityException') ||
+              errorString.includes('permission')) {
               console.log('✅ SecurityException caught - app registration triggered!');
               console.log('✅ Error details:', errorMessage);
               appRegistered = true;
@@ -344,7 +353,7 @@ export class HealthPermissionsService {
       if (appRegistered) {
         console.log('⏳ Waiting for Health Connect to process registration...');
         await new Promise(resolve => setTimeout(resolve, 1500));
-        
+
         // PROVA: Apri Health Connect alle impostazioni dell'app PRIMA di chiamare requestPermission
         // Alcuni dispositivi richiedono che Health Connect sia "sveglio" per mostrare il dialog
         console.log('🔧 Attempting to open Health Connect to app settings before requesting permissions...');
@@ -365,7 +374,7 @@ export class HealthPermissionsService {
       // 7) ORA chiedi i permessi - l'app DOVREBBE essere registrata
       let result: any = [];
       let dialogShown = false;
-      
+
       if (!HealthConnect.requestPermission || typeof HealthConnect.requestPermission !== 'function') {
         Alert.alert('Errore', 'requestPermission non disponibile');
         return { success: false, granted: [], denied: permissionIds };
@@ -377,13 +386,13 @@ export class HealthPermissionsService {
       try {
         console.log('📋 STEP 2: Calling requestPermission (app should be registered now)...');
         console.log('📋 Permissions being requested:', JSON.stringify(permissions, null, 2));
-        
+
         result = await HealthConnect.requestPermission(permissions);
-        
+
         console.log('📋 Request result:', JSON.stringify(result, null, 2));
         console.log('📋 Is array?', Array.isArray(result));
         console.log('📋 Length:', Array.isArray(result) ? result.length : 'N/A');
-        
+
         if (Array.isArray(result) && result.length > 0) {
           dialogShown = true;
           console.log('✅ Dialog shown! Permissions granted:', result);
@@ -392,7 +401,7 @@ export class HealthPermissionsService {
           console.log('❌ This is a known issue with Health Connect on some devices/versions');
           console.log('❌ The dialog will NOT appear automatically');
           console.log('❌ User must manually grant permissions in Health Connect settings');
-          
+
           // Il dialog NON apparirà automaticamente - dobbiamo aprire Health Connect manualmente
           // Questo è un limite di Health Connect su alcuni dispositivi/versioni
         } else {
@@ -408,7 +417,7 @@ export class HealthPermissionsService {
       // Ora l'app DOVREBBE essere registrata dopo il test read
       if (!dialogShown) {
         console.log('📋 Dialog still not shown. Opening Health Connect - app should appear in list now.');
-        
+
         Alert.alert(
           'Apri Health Connect',
           'L\'app è stata registrata in Health Connect.\n\n' +
@@ -431,12 +440,12 @@ export class HealthPermissionsService {
             { text: 'OK', style: 'cancel' },
           ]
         );
-        
+
         // Apri Health Connect automaticamente
         setTimeout(async () => {
           await this.openHealthSettings();
         }, 500);
-        
+
         return {
           success: false,
           granted: [],
@@ -476,7 +485,7 @@ export class HealthPermissionsService {
       if (grantedIds.length > 0) {
         await this.saveGrantedPermissions(grantedIds);
         console.log('✅ Permessi concessi:', grantedIds.join(', '));
-        
+
         // 11) Fai una lettura di test DOPO aver ottenuto i permessi (per far apparire l'app in Health Connect)
         await this.performTestRead(grantedIds);
       } else {
@@ -494,7 +503,7 @@ export class HealthPermissionsService {
         'Errore',
         'Si è verificato un errore durante la richiesta dei permessi: ' + (error instanceof Error ? error.message : 'Unknown error')
       );
-      
+
       return {
         success: false,
         granted: [],
@@ -577,9 +586,9 @@ export class HealthPermissionsService {
           denied: permissionIds,
         };
       }
-      
+
       const permissions: any = {};
-      
+
       // Mappa i permessi richiesti
       permissionIds.forEach(id => {
         const permissionType = this.getHealthKitPermissionType(id);
@@ -660,11 +669,11 @@ export class HealthPermissionsService {
       // Leggi almeno un tipo di dato per ogni permesso concesso
       for (const permissionId of grantedPermissionIds) {
         const recordType = this.getHealthConnectPermissionType(permissionId);
-        
+
         try {
           console.log(`📖 Performing test read for ${recordType}...`);
           const testRead = await HealthConnect.readRecords(recordType, { timeRangeFilter });
-          
+
           if (testRead !== undefined) {
             readCount++;
             console.log(`✅ Test read successful for ${recordType}`);
@@ -744,7 +753,7 @@ export class HealthPermissionsService {
           await AsyncStorage.removeItem(this.STORAGE_KEYS.PERMISSIONS_GRANTED);
           return [];
         }
-        
+
         // Verifica disponibilità HealthKit
         const isAvailable = await new Promise<boolean>((resolve) => {
           try {
@@ -755,18 +764,18 @@ export class HealthPermissionsService {
             resolve(false);
           }
         });
-        
+
         if (!isAvailable) {
           // HealthKit non disponibile - cancella eventuali permessi salvati incorrettamente
           await AsyncStorage.removeItem(this.STORAGE_KEYS.PERMISSIONS_GRANTED);
           return [];
         }
-        
+
         // HealthKit disponibile - leggi da AsyncStorage
         const permissions = await AsyncStorage.getItem(this.STORAGE_KEYS.PERMISSIONS_GRANTED);
         return permissions ? JSON.parse(permissions) : [];
       }
-      
+
       if (Platform.OS === 'android' && hasHC && HealthConnect) {
         try {
           if (HealthConnect.initialize && typeof HealthConnect.initialize === 'function') {
@@ -776,18 +785,18 @@ export class HealthPermissionsService {
               // Già inizializzato o errore - continua comunque
             }
           }
-          
+
           if (HealthConnect.getGrantedPermissions && typeof HealthConnect.getGrantedPermissions === 'function') {
             const healthConnectGranted = await HealthConnect.getGrantedPermissions();
-            
+
             if (Array.isArray(healthConnectGranted) && healthConnectGranted.length > 0) {
               const grantedIds: string[] = [];
-              
+
               healthConnectGranted.forEach((item: any) => {
-                const recordType = typeof item === 'string' 
-                  ? item 
+                const recordType = typeof item === 'string'
+                  ? item
                   : (item.recordType || item.type || '');
-                
+
                 const idMapping: { [key: string]: string } = {
                   'Steps': 'steps',
                   'HeartRate': 'heart_rate',
@@ -798,18 +807,18 @@ export class HealthPermissionsService {
                   'Weight': 'weight',
                   'BodyFat': 'body_fat',
                 };
-                
+
                 const permissionId = idMapping[recordType] || recordType.toLowerCase();
                 if (permissionId && !grantedIds.includes(permissionId)) {
                   grantedIds.push(permissionId);
                 }
               });
-              
+
               await AsyncStorage.setItem(
                 this.STORAGE_KEYS.PERMISSIONS_GRANTED,
                 JSON.stringify(grantedIds)
               );
-              
+
               return grantedIds;
             } else {
               // Array vuoto - cancella AsyncStorage
@@ -821,7 +830,7 @@ export class HealthPermissionsService {
           console.warn('⚠️ Could not check Health Connect permissions:', healthConnectError);
         }
       }
-      
+
       // Fallback: leggi da AsyncStorage
       const permissions = await AsyncStorage.getItem(this.STORAGE_KEYS.PERMISSIONS_GRANTED);
       return permissions ? JSON.parse(permissions) : [];
@@ -880,7 +889,7 @@ export class HealthPermissionsService {
       }
 
       const packageName = 'com.wellnesscoach.app';
-      
+
       // Ordine di priorità: prima la pagina delle app, poi quella generica
       const intents = [
         // 1. Prova ad aprire direttamente la pagina dell'app (anche se non registrata)
@@ -896,7 +905,7 @@ export class HealthPermissionsService {
       ];
 
       console.log('🔧 Trying to open Health Connect with intents...');
-      
+
       for (let i = 0; i < intents.length; i++) {
         const intent = intents[i];
         try {

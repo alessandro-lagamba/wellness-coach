@@ -9,9 +9,9 @@ export interface HydrationUnitConfig {
 }
 
 const UNIT_CONFIGS: Record<HydrationUnit, HydrationUnitConfig> = {
-  glass: { unit: 'glass', mlPerUnit: 250, label: 'bicchiere' },
-  bottle: { unit: 'bottle', mlPerUnit: 500, label: 'bottiglia' },
-  liter: { unit: 'liter', mlPerUnit: 1000, label: 'litro' },
+  glass: { unit: 'glass', mlPerUnit: 250, label: 'Bicchiere' },
+  bottle: { unit: 'bottle', mlPerUnit: 500, label: 'Bottiglia' },
+  liter: { unit: 'liter', mlPerUnit: 1000, label: 'Litro' },
 };
 
 const STORAGE_KEY = 'hydrationUnitPreference';
