@@ -143,10 +143,6 @@ const MiniGaugeChart: React.FC<Props> = memo(({
       </View>
 
       <View style={styles.smallContent}>
-        <View style={styles.smallNumberSection}>
-          {subtitle && <Text style={[styles.smallSubtitle, { color: colors.textSecondary }]} numberOfLines={2}>{subtitle}</Text>}
-        </View>
-
         <View style={styles.smallGaugeWrapper}>
           <Svg width={gaugeSize} height={gaugeSize} viewBox={`0 0 ${VB_SIZE} ${VB_SIZE}`}>
             <Defs>
@@ -161,6 +157,10 @@ const MiniGaugeChart: React.FC<Props> = memo(({
           <View style={styles.gaugeCenterSmall} pointerEvents="none">
             <Text style={styles.gaugeEmojiSmall}>{icon ?? "📊"}</Text>
           </View>
+        </View>
+
+        <View style={styles.smallNumberSection}>
+          {subtitle && <Text style={[styles.smallSubtitle, { color: colors.textSecondary }]} numberOfLines={2}>{subtitle}</Text>}
         </View>
       </View>
     </View>
@@ -297,14 +297,14 @@ const styles = StyleSheet.create({
   innerContainer: { flex: 1, borderRadius: 18, padding: 13 },
 
   /* SMALL */
-  smallHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, paddingTop: 2 },
-  smallLabel: { fontSize: 14, fontWeight: "800", color: "#111827", letterSpacing: -0.1, flex: 1 },
-  smallContent: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  smallHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 2 },
+  smallLabel: { fontSize: 14, fontWeight: "700", color: "#111827", letterSpacing: -0.1, flex: 1 },
+  smallContent: { flex: 1, flexDirection: "column", alignItems: "center", justifyContent: "space-between" },
   smallNumberSection: { flex: 1, justifyContent: "center" },
-  smallSubtitle: { fontSize: 10, color: "#475569", fontWeight: "600", lineHeight: 14 },
+  smallSubtitle: { fontSize: 10, color: "#475569", fontWeight: "600", lineHeight: 12 },
   smallGaugeWrapper: { position: "relative", alignItems: "center", justifyContent: "center" },
   gaugeCenterSmall: { position: "absolute", alignItems: "center", justifyContent: "center" },
-  gaugeEmojiSmall: { fontSize: 16, fontWeight: "400" },
+  gaugeEmojiSmall: { fontSize: 14, fontWeight: "400" },
 
   /* MEDIUM */
   mHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },

@@ -72,6 +72,7 @@ const MiniInfoCard: React.FC<Props> = ({
     <View style={[styles.innerContainer, { backgroundColor: colors.surface }]}>
       <View style={styles.smallHeader}>
         <Text style={[styles.smallLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
+        <Text style={styles.smallValueEmoji}>{icon}</Text>
       </View>
 
       <View style={styles.smallContent}>
@@ -88,7 +89,6 @@ const MiniInfoCard: React.FC<Props> = ({
             </Text>
             {!!unit && <Text style={[styles.smallUnitText, { color: colors.textSecondary }]}>{unit}</Text>}
           </View>
-          <Text style={styles.smallValueEmoji}>{icon}</Text>
         </View>
 
         {!!subtitle && (
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   relative: { position: "relative" },
 
   /* ========== SMALL (immutato) ========== */
-  smallHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, paddingTop: 2 },
+  smallHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 },
   smallLabel: { fontSize: 14, fontWeight: "800", color: "#111827", letterSpacing: -0.1, flex: 1 },
   smallContent: { flex: 1, justifyContent: "center" },
   smallValueRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 },
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   largeValue: { fontSize: 24, fontWeight: "800", letterSpacing: -0.5, marginLeft: 8 },
 
   largeChipsRow: { marginTop: "auto", flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  largeDetailChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, gap: 8, flex: 1, minWidth: 90, maxWidth: "32%" },
+  largeDetailChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, gap: 8, flex: 1, minWidth: 120, maxWidth: "50%" },
   largeChipIcon: { fontSize: 15, flexShrink: 0 },
   largeChipTextContainer: { flex: 1, minWidth: 0 },
   largeChipLabel: { fontSize: 10, color: "#64748b", fontWeight: "600" },

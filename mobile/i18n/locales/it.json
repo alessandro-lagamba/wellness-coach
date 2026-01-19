@@ -326,7 +326,8 @@
     "sleep": {
       "deepSleep": "Sonno profondo",
       "rem": "REM",
-      "wakeTime": "Orario risveglio",
+      "bedtime": "Addormentato",
+      "wakeTime": "Sveglia",
       "quality": "Qualità",
       "hours": "{{hours}}h"
     },
@@ -425,7 +426,7 @@
       "subtitle": "Un riepilogo dei tuoi miglioramenti",
       "today": "Oggi",
       "quality": "qualità",
-      "current": "Valore attuale",
+      "current": "Attuale",
       "heartRate": "Battito cardiaco",
       "disabledCharts": "Grafici disabilitati",
       "noCharts": "Nessun grafico abilitato. Usa il pulsante \"Modifica\" per abilitare i grafici.",

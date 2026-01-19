@@ -324,6 +324,7 @@
     "sleep": {
       "deepSleep": "Deep sleep",
       "rem": "REM",
+      "bedtime": "Bedtime",
       "wakeTime": "Wake time",
       "quality": "Quality",
       "hours": "{{hours}}h"

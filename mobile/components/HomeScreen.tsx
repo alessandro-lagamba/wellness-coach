@@ -1671,12 +1671,14 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   // 🔥 Lista di tutti i widget disponibili (filtra 'cycle' se l'utente non è di genere femminile)
   const ALL_AVAILABLE_WIDGETS = useMemo(() => {
     const baseWidgets = ['steps', 'meditation', 'hydration', 'sleep', 'hrv', 'calories'];
-    // Aggiungi 'cycle' solo se l'utente è di genere femminile
-    if (userGender === 'female') {
+
+    // 🔥 FIX: Mantieni 'cycle' se è già configurato e abilitato, oppure se l'utente è donna
+    const cycleInConfig = widgetConfig.find(w => w.id === 'cycle' && w.enabled);
+    if (userGender === 'female' || cycleInConfig) {
       baseWidgets.push('cycle');
     }
     return baseWidgets;
-  }, [userGender]);
+  }, [userGender, widgetConfig]);
 
   // 🔥 Filtra i widget NON ancora mostrati (non presenti nella config o disabilitati)
   const getAvailableWidgets = (): string[] => {
