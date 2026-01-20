@@ -10,13 +10,24 @@ export const useDailyCopilot = () => {
   const copilotService = DailyCopilotService.getInstance();
 
   const loadCopilotData = useCallback(async () => {
+    let timeoutId: any;
+
     try {
       setLoading(true);
       setError(null);
-      
+
+      timeoutId = setTimeout(() => {
+        console.warn('⚠️ Daily Copilot: forced timeout after 15s');
+        // Force stop loading regardless of current state capture
+        setLoading(false);
+      }, 15000);
+
       // 🔥 Il servizio controlla automaticamente se esiste già un'analisi per oggi nel database
       // Se esiste, la ritorna senza rigenerarla. Se non esiste, genera una nuova analisi.
       const data = await copilotService.generateDailyCopilotAnalysis();
+
+      clearTimeout(timeoutId);
+
       if (data) {
         setCopilotData(data);
         setLastUpdated(new Date());
@@ -25,9 +36,11 @@ export const useDailyCopilot = () => {
         setError(null); // Non impostare errore, mostra empty state
       }
     } catch (err) {
+      clearTimeout(timeoutId!);
       setError('Errore nel caricamento dei dati');
       console.error('Error loading copilot data:', err);
     } finally {
+      // Assicura che loading sia false alla fine
       setLoading(false);
     }
   }, [copilotService]);

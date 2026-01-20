@@ -6,14 +6,15 @@ import { HealthData as RealHealthData } from '../types/health.types';
 export interface WidgetData {
   id: string;
   title: string;
-  icon: string;
+  icon: string; // Fallback emoji if no iconImage
+  iconImage?: number; // require() result for custom PNG icon
   value: string;
   subtitle: string;
   progress?: number; // 0-100
   trend?: 'up' | 'down' | 'stable';
   trendValue?: string;
   color: string;
-  backgroundColor: string;
+  backgroundColor: string; // Light background color for widget
   size: 'small' | 'medium' | 'large'; // 1/3, 2/3, 3/3
   category: 'health' | 'wellness' | 'analysis';
   details?: any; // Additional data for each widget
@@ -142,13 +143,14 @@ export class TodayGlanceService {
           id: 'steps',
           title: 'Steps',
           icon: '🪜',
+          iconImage: require('../assets/images/widgets_logos/steps.png'),
           value: healthData.steps.toLocaleString(),
           subtitle: `Goal: ${10000}`,
           progress: Math.min((healthData.steps / 10000) * 100, 100),
           trend: healthData.steps > 8000 ? 'up' : 'stable',
           trendValue: '+12%',
           color: '#10b981',
-          backgroundColor: '#ecfdf5',
+          backgroundColor: 'rgba(16, 185, 129, 0.08)', // Light green
           size: 'small',
           category: 'health',
           details: {
@@ -162,13 +164,14 @@ export class TodayGlanceService {
           id: 'mindfulness',
           title: 'Meditation',
           icon: '🧘',
+          iconImage: require('../assets/images/widgets_logos/meditation.png'),
           value: `${healthData.mindfulnessMinutes}m`,
           subtitle: `Goal: ${30}m`,
           progress: Math.min((healthData.mindfulnessMinutes / 30) * 100, 100),
           trend: healthData.mindfulnessMinutes > 15 ? 'up' : 'stable',
           trendValue: '+5m',
           color: '#8b5cf6',
-          backgroundColor: '#f3f4f6',
+          backgroundColor: 'rgba(139, 92, 246, 0.08)', // Light purple
           size: 'medium',
           category: 'wellness',
           details: {
@@ -182,13 +185,14 @@ export class TodayGlanceService {
           id: 'hydration',
           title: 'Hydration',
           icon: '💧',
+          iconImage: require('../assets/images/widgets_logos/hydration.png'),
           value: `${healthData.hydration}`,
           subtitle: 'glasses',
           progress: (healthData.hydration / 8) * 100,
           trend: healthData.hydration >= 6 ? 'up' : 'stable',
           trendValue: '+1',
           color: '#0ea5e9',
-          backgroundColor: '#f0f9ff',
+          backgroundColor: 'rgba(14, 165, 233, 0.08)', // Light blue
           size: 'small',
           category: 'health',
           details: {
@@ -202,13 +206,14 @@ export class TodayGlanceService {
           id: 'sleep',
           title: 'Sleep',
           icon: '🌙',
+          iconImage: require('../assets/images/widgets_logos/sleep.png'),
           value: `${healthData.sleepHours}h`,
           subtitle: `${healthData.sleepQuality}% quality`,
           progress: healthData.sleepQuality,
           trend: healthData.sleepHours >= 7 ? 'up' : 'down',
           trendValue: healthData.sleepHours >= 7 ? '+0.5h' : '-0.5h',
           color: '#6366f1',
-          backgroundColor: '#eef2ff',
+          backgroundColor: 'rgba(99, 102, 241, 0.08)', // Light indigo
           size: 'large',
           category: 'health',
           details: {
@@ -224,13 +229,14 @@ export class TodayGlanceService {
           id: 'hrv',
           title: 'HRV',
           icon: '🫀',
+          iconImage: require('../assets/images/widgets_logos/hrv.png'),
           value: `${healthData.hrv}ms`,
           subtitle: `HR: ${healthData.restingHR}bpm`,
           progress: Math.min((healthData.hrv / 50) * 100, 100),
           trend: healthData.hrv > 30 ? 'up' : 'stable',
           trendValue: '+2ms',
           color: '#ef4444',
-          backgroundColor: '#fef2f2',
+          backgroundColor: 'rgba(239, 68, 68, 0.08)', // Light red
           size: 'small',
           category: 'health',
           details: {
@@ -250,7 +256,7 @@ export class TodayGlanceService {
           trend: healthData.analysesCompleted > 0 ? 'up' : 'stable',
           trendValue: healthData.analysesCompleted > 0 ? '✓' : '!',
           color: healthData.analysesCompleted > 0 ? '#10b981' : '#f59e0b',
-          backgroundColor: healthData.analysesCompleted > 0 ? '#ecfdf5' : '#fffbeb',
+          backgroundColor: healthData.analysesCompleted > 0 ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.08)',
           size: 'small',
           category: 'analysis',
           details: {

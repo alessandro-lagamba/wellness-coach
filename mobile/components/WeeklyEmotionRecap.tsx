@@ -89,7 +89,7 @@ const WeeklyEmotionRecapComponent: React.FC = () => {
 
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<WeeklyRecapData | null>(null);
-
+    const [dateRange, setDateRange] = useState<string>('');
     const emotionHistoryLength = useAnalysisStore((state) => state.emotionHistory?.length ?? 0);
     const latestEmotionSession = useAnalysisStore((state) => state.latestEmotionSession);
 
@@ -97,6 +97,15 @@ const WeeklyEmotionRecapComponent: React.FC = () => {
         setLoading(true);
 
         try {
+            const now = new Date();
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(now.getDate() - 7); // Ultimi 8 giorni (o 7 giorni fa a oggi) per matchare l'esempio del cliente
+
+            const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+            const startStr = sevenDaysAgo.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', options);
+            const endStr = now.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', options);
+
+            setDateRange(`${startStr} - ${endStr}`);
             const user = await AuthService.getCurrentUser();
             if (!user) {
                 setData(null);
@@ -204,17 +213,17 @@ const WeeklyEmotionRecapComponent: React.FC = () => {
                 {/* Circular Score */}
                 <View style={styles.scoreSection}>
                     <View style={styles.circleWrapper}>
-                        <CircularProgress value={balanceScore} size={100} strokeWidth={6} isDark={isDark} />
+                        <CircularProgress value={balanceScore} size={100} strokeWidth={10} isDark={isDark} />
                         <View style={styles.scoreInner}>
                             <Text style={[styles.scoreNumber, { color: colors.text }]}>{balanceScore}</Text>
                             <Text style={[styles.scoreLabel, { color: colors.textSecondary }]}>SCORE</Text>
                         </View>
                     </View>
 
-                    <Text style={[styles.checkInText, { color: colors.textSecondary }]}>
+                    <Text style={[styles.checkInText, { color: colors.textSecondary, textAlign: 'center', fontSize: 10 }]}>
                         {language === 'it'
-                            ? `Basato su ${data.totalAnalyses} check-in`
-                            : `Based on ${data.totalAnalyses} check-ins`}
+                            ? `Basato su ${data.totalAnalyses} check-in\nPeriodo: ${dateRange}`
+                            : `Based on ${data.totalAnalyses} check-ins\nPeriod: ${dateRange}`}
                     </Text>
                 </View>
 
@@ -243,7 +252,7 @@ const WeeklyEmotionRecapComponent: React.FC = () => {
                                 style={[
                                     styles.balanceSegment,
                                     styles.balanceSegmentFirst,
-                                    { width: `${positivePercent}%`, backgroundColor: '#2ab934ff' },
+                                    { width: `${positivePercent}%`, backgroundColor: '#389c3fff' },
                                 ]}
                             />
                         )}
@@ -253,7 +262,7 @@ const WeeklyEmotionRecapComponent: React.FC = () => {
                                     styles.balanceSegment,
                                     positivePercent === 0 && styles.balanceSegmentFirst,
                                     negativePercent === 0 && styles.balanceSegmentLast,
-                                    { width: `${neutralPercent}%`, backgroundColor: '#f8e554ff' },
+                                    { width: `${neutralPercent}%`, backgroundColor: '#ffd12bff' },
                                 ]}
                             />
                         )}
@@ -298,7 +307,7 @@ const styles = StyleSheet.create({
     // Card interna: clipping e border coerenti
     innerCard: {
         borderRadius: 24,
-        padding: 28,
+        padding: 20,
         borderWidth: 1,
         overflow: 'hidden',
     },

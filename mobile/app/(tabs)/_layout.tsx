@@ -317,6 +317,7 @@ function TabNavigator() {
         name="coach"
         options={{
           title: t('tabs.chat'),
+          href: null, // Hidden - Chat is accessed from HeroSection
           tabBarIcon: ({ color, focused }) => (
             renderTab(
               t('tabs.chat'),

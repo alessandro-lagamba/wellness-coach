@@ -427,6 +427,27 @@ const SkinAnalysisScreenContent: React.FC = () => {
   }, [latestSkinCapture]);
   const hasTodaySkinAnalysis = latestSkinAnalysisDate === getTodayISODate();
 
+  const sortedHistory = useMemo(() => {
+    return [...skinHistory].sort((a, b) =>
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  }, [skinHistory]);
+
+  // 2. Prendiamo l'ultima e la penultima
+  const latest = sortedHistory[0];
+  const previous = sortedHistory[1];
+
+  // 3. Funzione di supporto per calcolare la differenza
+  const getTrend = (metric: keyof typeof latest.scores) => {
+    if (!latest || !previous || !latest.scores || !previous.scores) return 0;
+    return (latest.scores[metric] || 0) - (previous.scores[metric] || 0);
+  };
+
+  // 4. Calcoliamo i trend reali
+  const textureTrend = getTrend('texture');
+  const rednessTrend = getTrend('redness');
+  const hydrationTrend = getTrend('hydration');
+  const oilinessTrend = getTrend('oiliness');
   const startDisabled = permissionChecking || analyzing || !analysisReady || !!analysisError;
   const captureDisabled = !cameraController.ready || cameraController.detecting || permissionChecking || analyzing || cameraSwitching;
   const handleExitCapture = useCallback(() => {
@@ -1747,72 +1768,6 @@ const SkinAnalysisScreenContent: React.FC = () => {
             />
           )}
 
-          {/* Recent Analysis Section - Only show if there are captures */}
-          {latestSkinCapture && (
-            <>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.recent.title')}</Text>
-              </View>
-
-              {(() => {
-                try {
-                  const store = useAnalysisStore.getState();
-                  const latestCapture = store.latestSkinCapture;
-                  const skinHistory = store.skinHistory;
-
-                  // 🔥 FIX: Rimuoviamo console.log eccessivi
-
-                  // Always show the card, with fallback data if no capture exists
-                  const fallbackCapture = {
-                    id: 'fallback',
-                    timestamp: new Date().toISOString(),
-                    scores: {
-                      texture: 65,
-                      redness: 25,
-                      hydration: 70,
-                      oiliness: 45,
-                      overall: 60,
-                    },
-                    confidence: 0.5,
-                    quality: {
-                      lighting: 0.7,
-                      focus: 0.6,
-                      roi_coverage: 0.8,
-                    },
-                  };
-
-                  return (
-                    <SkinCaptureCard
-                      capture={latestCapture || fallbackCapture}
-                    />
-                  );
-                } catch (error) {
-                  // 🔥 FIX: Solo errori critici in console
-                  console.error('❌ Failed to load latest skin capture:', error);
-                  // Fallback capture in case of error
-                  const fallbackCapture = {
-                    id: 'error-fallback',
-                    timestamp: new Date().toISOString(),
-                    scores: {
-                      texture: 65,
-                      redness: 25,
-                      hydration: 70,
-                      oiliness: 45,
-                      overall: 60,
-                    },
-                    confidence: 0.5,
-                    quality: {
-                      lighting: 0.7,
-                      focus: 0.6,
-                      roi_coverage: 0.8,
-                    },
-                  };
-                  return <SkinCaptureCard capture={fallbackCapture} />;
-                }
-              })()}
-            </>
-          )}
-
           {/* Quick Stats Section */}
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.skin.quickStats.title')}</Text>
@@ -1823,15 +1778,12 @@ const SkinAnalysisScreenContent: React.FC = () => {
             <View style={styles.gaugeRow}>
               <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
                 <GaugeChart
-                  value={skinHistory.length > 0
-                    ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.texture || 0), 0) / skinHistory.length)
-                    : 65
-                  }
+                  value={latestSkinCapture?.scores?.texture || 0}
                   maxValue={100}
                   label={t('analysis.skin.metrics.texture')}
                   color="#8b5cf6"
                   subtitle={t('analysis.skin.metrics.textureSubtitle')}
-                  trend={2}
+                  trend={textureTrend}
                   description={t('analysis.skin.metrics.textureDescription')}
                   historicalData={skinHistory.map((capture) => {
                     const date = new Date(capture.timestamp);
@@ -1847,15 +1799,12 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
               <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
                 <GaugeChart
-                  value={skinHistory.length > 0
-                    ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.redness || 0), 0) / skinHistory.length)
-                    : 25
-                  }
+                  value={latestSkinCapture?.scores?.redness || 0}
                   maxValue={100}
                   label={t('analysis.skin.metrics.redness')}
                   color="#ef4444"
                   subtitle={t('analysis.skin.metrics.rednessSubtitle')}
-                  trend={-3}
+                  trend={rednessTrend}
                   description={t('analysis.skin.metrics.rednessDescription')}
                   historicalData={skinHistory.map((capture) => {
                     const date = new Date(capture.timestamp);
@@ -1873,15 +1822,12 @@ const SkinAnalysisScreenContent: React.FC = () => {
             <View style={styles.gaugeRow}>
               <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
                 <GaugeChart
-                  value={skinHistory.length > 0
-                    ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.hydration || 0), 0) / skinHistory.length)
-                    : 45
-                  }
+                  value={latestSkinCapture?.scores?.hydration || 0}
                   maxValue={100}
                   label={t('analysis.skin.metrics.hydration')}
-                  color="#f59e0b"
+                  color="#22d3ee"
                   subtitle={t('analysis.skin.metrics.hydrationSubtitle')}
-                  trend={1}
+                  trend={hydrationTrend}
                   description={t('analysis.skin.metrics.hydrationDescription')}
                   historicalData={skinHistory.map((capture) => {
                     const date = new Date(capture.timestamp);
@@ -1897,15 +1843,12 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
               <View style={[styles.gaugeCard, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
                 <GaugeChart
-                  value={skinHistory.length > 0
-                    ? Math.round(skinHistory.reduce((sum, capture) => sum + (capture.scores?.oiliness || 0), 0) / skinHistory.length)
-                    : 50
-                  }
+                  value={latestSkinCapture?.scores?.oiliness || 0}
                   maxValue={100}
                   label={t('analysis.skin.metrics.oiliness')}
-                  color="#8b5cf6"
+                  color="#f59e0b"
                   subtitle={t('analysis.skin.metrics.oilinessSubtitle')}
-                  trend={0}
+                  trend={oilinessTrend}
                   description={t('analysis.skin.metrics.oilinessDescription')}
                   historicalData={skinHistory.map((capture) => {
                     const date = new Date(capture.timestamp);
@@ -1935,14 +1878,19 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
           {/* Skin Health Trend Chart */}
           <SkinHealthChart
-            data={skinHistory.map((capture, index) => ({
-              date: `${index + 1}`,
-              texture: capture.scores?.texture || 0,
-              redness: capture.scores?.redness || 0,
-              hydration: capture.scores?.hydration || 0,
-              oiliness: capture.scores?.oiliness || 0,  // 🆕 FIX: Added missing oiliness field
-              overall: capture.scores?.overall || 0,
-            }))}
+            data={[...skinHistory]
+              .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Ordina dal più vecchio al più nuovo
+              .map((capture) => {
+                const d = new Date(capture.timestamp);
+                return {
+                  date: `${d.getDate()}/${d.getMonth() + 1}`,
+                  texture: capture.scores?.texture || 0,
+                  redness: capture.scores?.redness || 0,
+                  hydration: capture.scores?.hydration || 0,
+                  oiliness: capture.scores?.oiliness || 0,
+                  overall: capture.scores?.overall || 0,
+                };
+              })}
             title={t('analysis.skin.trends.title')}
             subtitle={t('analysis.skin.trends.subtitle')}
             onPress={() => setShowSkinTrendModal(true)}

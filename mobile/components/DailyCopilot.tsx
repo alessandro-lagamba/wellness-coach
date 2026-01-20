@@ -303,71 +303,20 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
         end={{ x: 1, y: 1 }}
         style={[styles.card, { borderColor: themeColors.border }]}
       >
-        {/* Header - Riorganizzato */}
+        {/* Header - Redesigned Split Layout */}
         <View style={styles.header}>
-          {/* Left: Focus con emoticon - NOW DYNAMIC */}
-          <View style={styles.focusContainer}>
-            <Text style={[styles.focusText, { color: themeColors.text }]}>
-              {language === 'it' ? 'Oggi focus su: ' : 'Today focus on: '}
-              <Text style={[styles.focusBold, { color: themeColors.text }]}>
-                {language === 'it' ? summary.focus : (summary.focusEn || summary.focus)}
-              </Text>
+          {/* Left Column: Typography & Status */}
+          <View style={styles.headerLeft}>
+            <Text style={[styles.headerTitleMain, { color: themeColors.text }]}>
+              Il Punteggio
+            </Text>
+            <Text style={[styles.headerSubtitleHighlight, { color: scoreColors[0] }]}>
+              di Oggi
             </Text>
 
-            {/* DYNAMIC THEME INDICATORS - based on actual recommendations */}
-            <View style={styles.statusRow}>
-              {copilotData.themeIndicators && copilotData.themeIndicators.length > 0 ? (
-                copilotData.themeIndicators.map((indicator, index) => (
-                  <View key={index} style={styles.statusItem}>
-                    <MaterialCommunityIcons
-                      name={indicator.icon as any}
-                      size={18}
-                      color={indicator.color}
-                    />
-                    <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
-                      {language === 'it' ? indicator.label : indicator.labelEn}
-                    </Text>
-                  </View>
-                ))
-              ) : (
-                // Fallback to original static icons if no theme indicators
-                <>
-                  <View style={styles.statusItem}>
-                    <MaterialCommunityIcons
-                      name="lightning-bolt"
-                      size={18}
-                      color={summary.energy === 'high' ? '#10b981' : summary.energy === 'medium' ? '#f59e0b' : '#ef4444'}
-                    />
-                    <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
-                      {language === 'it' ? 'Energia' : 'Energy'}
-                    </Text>
-                  </View>
-                  <View style={styles.statusItem}>
-                    <MaterialCommunityIcons
-                      name="bed"
-                      size={18}
-                      color={summary.recovery === 'excellent' ? '#10b981' : summary.recovery === 'good' ? '#f59e0b' : '#ef4444'}
-                    />
-                    <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
-                      {language === 'it' ? 'Recupero' : 'Recovery'}
-                    </Text>
-                  </View>
-                  <View style={styles.statusItem}>
-                    <MaterialCommunityIcons
-                      name="emoticon-happy"
-                      size={18}
-                      color={summary.mood === 'positive' ? '#10b981' : summary.mood === 'neutral' ? '#f59e0b' : '#ef4444'}
-                    />
-                    <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
-                      {language === 'it' ? 'Umore' : 'Mood'}
-                    </Text>
-                  </View>
-                </>
-              )}
-            </View>
           </View>
 
-          {/* Right: Score Circle - Più visibile e cliccabile */}
+          {/* Right Column: Enhanced Gauge */}
           <TouchableOpacity
             onPress={() => {
               console.log('Score circle pressed');
@@ -375,42 +324,62 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
             }}
             activeOpacity={0.7}
             style={styles.scoreTouchable}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <View style={styles.scoreContainer} pointerEvents="box-none">
-              <Svg width={95} height={95} pointerEvents="none">
-                <Defs>
-                  <SvgLinearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <Stop offset="0%" stopColor={scoreColors[0]} />
-                    <Stop offset="100%" stopColor={scoreColors[1]} />
-                  </SvgLinearGradient>
-                </Defs>
-                <Circle
-                  cx="47.5"
-                  cy="47.5"
-                  r="42"
-                  stroke={themeColors.borderLight}
-                  strokeWidth="5"
-                  fill="none"
-                />
-                <Circle
-                  cx="47.5"
-                  cy="47.5"
-                  r="42"
-                  stroke="url(#scoreGradient)"
-                  strokeWidth="5"
-                  fill="none"
-                  strokeDasharray={`${2 * Math.PI * 42}`}
-                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - copilotData.overallScore / 100)}`}
-                  strokeLinecap="round"
-                  transform="rotate(-90 47.5 47.5)"
-                />
-              </Svg>
-              <View style={styles.scoreTextContainer} pointerEvents="none">
-                <Text style={[styles.scoreValue, { color: scoreColors[0] }]}>
-                  {copilotData.overallScore}
+            <View style={styles.scoreContainer}>
+              {/* Svg Circle Layer */}
+              <View style={StyleSheet.absoluteFill}>
+                <Svg width={80} height={80} viewBox="0 0 80 80">
+                  <Defs>
+                    <SvgLinearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <Stop offset="0%" stopColor={scoreColors[0]} />
+                      <Stop offset="100%" stopColor={scoreColors[1]} />
+                    </SvgLinearGradient>
+                  </Defs>
+
+                  {/* Background Fill (Light) */}
+                  <Circle
+                    cx="40"
+                    cy="40"
+                    r="36"
+                    fill={scoreColors[0]}
+                    fillOpacity="0.15"
+                  />
+
+                  {/* Background Track */}
+                  <Circle
+                    cx="40"
+                    cy="40"
+                    r="36"
+                    stroke={themeColors.border}
+                    strokeWidth="6"
+                    fill="none"
+                    opacity={0.3}
+                  />
+
+                  {/* Progress Arc */}
+                  <Circle
+                    cx="40"
+                    cy="40"
+                    r="36"
+                    stroke="url(#scoreGradient)"
+                    strokeWidth="6"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 36}`}
+                    strokeDashoffset={`${2 * Math.PI * 36 * (1 - copilotData.overallScore / 100)}`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 40 40)"
+                  />
+                </Svg>
+              </View>
+
+              {/* Text Layer */}
+              <View style={styles.scoreContentCentered}>
+                <Text style={[styles.scoreValue, { color: themeColors.text }]}>
+                  {Math.round(copilotData.overallScore)}
                 </Text>
-                <Text style={[styles.scoreLabel, { color: themeColors.textSecondary }]}>/100</Text>
+                <Text style={[styles.scoreLabelSmall, { color: themeColors.textSecondary }]}>
+                  PUNTI
+                </Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -419,7 +388,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
         {/* Recommendations - Simplified */}
         <View style={styles.recommendationsContainer}>
           <Text style={[styles.recommendationsTitle, { color: themeColors.text }]}>
-            {language === 'it' ? 'Raccomandazioni per oggi' : 'Today\'s Recommendations'}
+            {language === 'it' ? 'Raccomandazioni per oggi:' : 'Today\'s Recommendations:'}
           </Text>
 
           <View style={styles.recommendationsList}>
@@ -519,9 +488,6 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
             >
               <View style={[styles.modalHeader, { borderBottomColor: themeColors.border }]}>
                 <View style={styles.modalTitleContainer}>
-                  <View style={[styles.modalTitleIcon, { backgroundColor: scoreColors[0] + '20' }]}>
-                    <MaterialCommunityIcons name="information" size={24} color={scoreColors[0]} />
-                  </View>
                   <Text style={[styles.modalTitle, { color: themeColors.text }]}>
                     {t('home.dailyCopilot.scoreModal.title')}
                   </Text>
@@ -553,9 +519,6 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                       <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
                         {t('home.dailyCopilot.scoreModal.mood')}
                       </Text>
-                      <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#8b5cf6' + '15' }]}>
-                        <Text style={[styles.scoreBreakdownPercentage, { color: '#8b5cf6' }]}>20%</Text>
-                      </View>
                     </View>
                     <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
                       {t('home.dailyCopilot.scoreModal.moodDesc')}
@@ -570,9 +533,6 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                       <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
                         {t('home.dailyCopilot.scoreModal.sleep')}
                       </Text>
-                      <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#3b82f6' + '15' }]}>
-                        <Text style={[styles.scoreBreakdownPercentage, { color: '#3b82f6' }]}>30%</Text>
-                      </View>
                     </View>
                     <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
                       {t('home.dailyCopilot.scoreModal.sleepDesc')}
@@ -587,9 +547,6 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                       <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
                         {t('home.dailyCopilot.scoreModal.steps')}
                       </Text>
-                      <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#10b981' + '15' }]}>
-                        <Text style={[styles.scoreBreakdownPercentage, { color: '#10b981' }]}>20%</Text>
-                      </View>
                     </View>
                     <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
                       {t('home.dailyCopilot.scoreModal.stepsDesc')}
@@ -604,9 +561,6 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                       <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
                         {t('home.dailyCopilot.scoreModal.hrv')}
                       </Text>
-                      <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#ef4444' + '15' }]}>
-                        <Text style={[styles.scoreBreakdownPercentage, { color: '#ef4444' }]}>15%</Text>
-                      </View>
                     </View>
                     <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
                       {t('home.dailyCopilot.scoreModal.hrvDesc')}
@@ -621,9 +575,6 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                       <Text style={[styles.scoreBreakdownLabel, { color: themeColors.text }]}>
                         {t('home.dailyCopilot.scoreModal.hydration')}
                       </Text>
-                      <View style={[styles.scoreBreakdownBadge, { backgroundColor: '#06b6d4' + '15' }]}>
-                        <Text style={[styles.scoreBreakdownPercentage, { color: '#06b6d4' }]}>15%</Text>
-                      </View>
                     </View>
                     <Text style={[styles.scoreBreakdownDescription, { color: themeColors.textSecondary }]}>
                       {t('home.dailyCopilot.scoreModal.hydrationDesc')}
@@ -758,37 +709,63 @@ const styles = StyleSheet.create({
   },
   scoreTouchable: {
     flexShrink: 0,
-    width: 95,
-    height: 95,
+    width: 80,
+    height: 80,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 42,
   },
   scoreContainer: {
-    position: 'relative',
-    alignItems: 'center',
+    width: 80,
+    height: 80,
     justifyContent: 'center',
-    width: 95,
-    height: 95,
-    flexShrink: 0,
+    alignItems: 'center',
   },
-  scoreTextContainer: {
-    position: 'absolute',
-    alignItems: 'center',
+  scoreContentCentered: {
     justifyContent: 'center',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    alignItems: 'center',
+    marginTop: 2,
   },
   scoreValue: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '800',
+    includeFontPadding: false,
+    textAlign: 'center',
+    lineHeight: 28,
+  },
+  scoreLabelSmall: {
+    fontSize: 9,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  headerLeft: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingRight: 16,
+  },
+  headerTitleMain: {
+    fontSize: 26,
+    fontWeight: '800', // Extra bold
     lineHeight: 30,
   },
-  scoreLabel: {
-    fontSize: 11,
-    color: '#6b7280',
+  headerSubtitleHighlight: {
+    fontSize: 26,
+    fontWeight: '800', // Extra bold
+    lineHeight: 30,
+    marginBottom: 8,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 14,
     fontWeight: '600',
   },
   modalOverlay: {
@@ -856,7 +833,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   modalDescription: {
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 22,
     paddingHorizontal: 24,
     paddingTop: 8,
@@ -926,22 +903,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0f172a',
   },
-  statusRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    gap: 16,
-    marginTop: 8,
-  },
-  statusItem: {
-    alignItems: 'center',
-    gap: 6, // Aumentato da 4
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontWeight: '600',
-    marginTop: 2,
-  },
+
   emptyRecommendations: {
     padding: 20,
     borderRadius: 16,
@@ -959,7 +921,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   recommendationsTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     color: '#0f172a',
     marginBottom: 16,
@@ -1249,6 +1211,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#8b5cf6',
     fontWeight: '600',
+  },
+  headerScoreLabel: {
+    fontSize: 18,
+    fontWeight: '700',
+    flex: 1,
   },
 });
 

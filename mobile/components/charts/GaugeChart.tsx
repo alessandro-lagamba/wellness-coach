@@ -165,48 +165,24 @@ export const GaugeChart: React.FC<GaugeChartProps> = memo(({
                 transform={`rotate(-90 ${centerX} ${centerX})`}
               />
 
-              {/* Center text - numero centrato + unit spostata a dx */}
+              {/* Center text - numero + unit centrati insieme */}
               <SvgText
                 x={centerX}
-                y="48"
+                y="52"
                 textAnchor="middle"
-                fontSize={valueFontSize}
-                fontWeight="700"
                 fill={getScoreColor(percentageForLabel)}
               >
-                {valueStr}
-              </SvgText>
-
-              {unit && (
-                <SvgText
-                  x={centerX + unitOffset}
-                  y="48"
-                  textAnchor="start"
-                  fontSize={valueFontSize * 0.8}
-                  fontWeight="600"
-                  fill={getScoreColor(percentageForLabel)}
-                >
-                  {unit}
-                </SvgText>
-              )}
-
-              {/* Max value sotto */}
-              <SvgText
-                x={centerX}
-                y="62"
-                textAnchor="middle"
-                fontSize={maxFontSize}
-                fill={colors.textSecondary}
-              >
-                /
-                <TSpan dx="7">
-                  {maxValue}
-                  {unit ? ` ${unit}` : ''}
+                <TSpan fontSize={valueFontSize} fontWeight="700">
+                  {valueStr}
                 </TSpan>
+                {unit && (
+                  <TSpan fontSize={valueFontSize * 0.55} fontWeight="600" dx="2" dy="-1">
+                    {unit}
+                  </TSpan>
+                )}
               </SvgText>
             </Svg>
           </View>
-
           <View style={styles.footer}>
             <View style={styles.scoreContainer}>
               <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(percentageForLabel) }]}>

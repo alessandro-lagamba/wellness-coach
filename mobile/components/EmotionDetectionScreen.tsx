@@ -1499,103 +1499,6 @@ export const EmotionDetectionScreen: React.FC = () => {
             <WeeklyEmotionRecap />
           </View>
 
-          {/* 2. Gauge Charts - Second */}
-          <View style={styles.gaugeRow}>
-            {(() => {
-              try {
-                const store = useAnalysisStore.getState();
-                const emotionHistory = store.getSafeEmotionHistory();
-
-                // Calculate average valence (normalize from -1..1 to 0..100)
-                const avgValence = emotionHistory.length > 0
-                  ? emotionHistory.reduce((sum, session) => sum + (session.avg_valence || 0), 0) / emotionHistory.length
-                  : 0;
-                const normalizedValence = Math.round(((avgValence + 1) / 2) * 100);
-
-                // 🆕 FIX: Calculate average arousal (normalize from -1..1 to 0..100, SAME as valence!)
-                const avgArousal = emotionHistory.length > 0
-                  ? emotionHistory.reduce((sum, session) => sum + (session.avg_arousal || 0), 0) / emotionHistory.length
-                  : 0; // Default to 0 which normalizes to 50
-                const normalizedArousal = Math.round(((avgArousal + 1) / 2) * 100);
-
-                // Format dates for historical data (use actual timestamps)
-                const formatDate = (timestamp: Date) => {
-                  const date = new Date(timestamp);
-                  return `${date.getDate()}/${date.getMonth() + 1}`;
-                };
-
-                return (
-                  <>
-                    <GaugeChart
-                      value={normalizedValence || 50}
-                      maxValue={100}
-                      label={t('analysis.emotion.metrics.valence')}
-                      color="#f97316"
-                      subtitle={t('analysis.emotion.metrics.positivity')}
-                      trend={2}
-                      description={t('analysis.emotion.metrics.valenceDescription')}
-                      historicalData={emotionHistory.map((session) => ({
-                        date: formatDate(session.timestamp),
-                        value: Math.round(((session.avg_valence || 0) + 1) / 2 * 100),
-                      }))}
-                      metric="valence"
-                      icon="emoticon-happy"
-                    />
-
-                    <GaugeChart
-                      value={normalizedArousal || 50}
-                      maxValue={100}
-                      label={t('analysis.emotion.metrics.arousal')}
-                      color="#3b82f6"
-                      subtitle={t('analysis.emotion.metrics.intensity')}
-                      trend={-1}
-                      description={t('analysis.emotion.metrics.arousalDescription')}
-                      historicalData={emotionHistory.map((session) => ({
-                        date: formatDate(session.timestamp),
-                        value: Math.round(((session.avg_arousal || 0) + 1) / 2 * 100),
-                      }))}
-                      metric="arousal"
-                      icon="trending-up"
-                    />
-
-
-                  </>
-                );
-              } catch (error) {
-                // 🔥 FIX: Solo errori critici in console
-                console.error('❌ Failed to load emotion history for charts:', error);
-                return (
-                  <>
-                    <GaugeChart
-                      value={50}
-                      maxValue={100}
-                      label={t('analysis.emotion.metrics.valence')}
-                      color="#f97316"
-                      subtitle={t('analysis.emotion.metrics.positivity')}
-                      trend={0}
-                      description={t('analysis.emotion.metrics.valenceDescription')}
-                      historicalData={[]}
-                      metric="valence"
-                      icon="emoticon-happy"
-                    />
-                    <GaugeChart
-                      value={50}
-                      maxValue={100}
-                      label={t('analysis.emotion.metrics.arousal')}
-                      color="#3b82f6"
-                      subtitle={t('analysis.emotion.metrics.intensity')}
-                      trend={0}
-                      description={t('analysis.emotion.metrics.arousalDescription')}
-                      historicalData={[]}
-                      metric="arousal"
-                      icon="trending-up"
-                    />
-                  </>
-                );
-              }
-            })()}
-          </View>
-
           {/* 3. Emotion Trend Chart - Third (Last) */}
           {(() => {
             try {
@@ -1606,14 +1509,15 @@ export const EmotionDetectionScreen: React.FC = () => {
               };
               return (
                 <EmotionTrendChart
-                  data={emotionHistory.map((session) => ({
-                    date: formatDate(session.timestamp),
-                    valence: session.avg_valence || 0,
-                    arousal: session.avg_arousal || 0,
-                    emotion: session.dominant || 'neutral',
-                  }))}
+                  data={[...emotionHistory]
+                    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Ordina dal più vecchio al più nuovo
+                    .map((session) => ({
+                      date: formatDate(session.timestamp),
+                      valence: session.avg_valence || 0,
+                      arousal: session.avg_arousal || 0,
+                      emotion: session.dominant || 'neutral',
+                    }))}
                   title={t('analysis.emotion.trends.title')}
-                  subtitle={t('analysis.emotion.trends.subtitle')}
                   onPress={() => setShowTrendDetailModal(true)}
                 />
               );
@@ -1623,7 +1527,6 @@ export const EmotionDetectionScreen: React.FC = () => {
                 <EmotionTrendChart
                   data={[]}
                   title={t('analysis.emotion.trends.title')}
-                  subtitle={t('analysis.emotion.trends.subtitle')}
                   onPress={() => setShowTrendDetailModal(true)}
                 />
               );

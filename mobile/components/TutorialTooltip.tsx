@@ -32,6 +32,7 @@ export const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
     labels,
 }) => {
     const { colors, mode } = useTheme();
+    if (!currentStep) return null;
 
     return (
         <View style={styles.container}>

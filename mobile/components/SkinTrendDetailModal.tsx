@@ -9,7 +9,7 @@ import {
   View,
   Dimensions,
 } from 'react-native';
-import Svg, { Path, Rect, Circle } from 'react-native-svg';
+import Svg, { Path, Rect, Circle, Text as SvgText } from 'react-native-svg';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from '../hooks/useTranslation';
@@ -39,7 +39,7 @@ const metricOrder: SkinMetric[] = ['overall', 'texture', 'redness', 'hydration',
 export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visible, onClose }) => {
   const { t } = useTranslation();
   const { colors: themeColors } = useTheme();
-  const [days, setDays] = useState<7 | 30 | 90>(7);
+  const [days, setDays] = useState<7 | 30>(7);
   const [selectedMetrics, setSelectedMetrics] = useState<SkinMetric[]>(['overall', 'texture', 'redness', 'hydration', 'oiliness']);
   const [data, setData] = useState<SkinTrendPoint[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,8 +48,8 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
     overall: { color: '#6366f1', label: t('analysis.skin.metrics.overall') || 'Punteggio' },
     texture: { color: '#8b5cf6', label: t('analysis.skin.metrics.texture') || 'Texture' },
     redness: { color: '#ef4444', label: t('analysis.skin.metrics.redness') || 'Rossore' },
-    hydration: { color: '#f59e0b', label: t('analysis.skin.metrics.hydration') || 'Idratazione' },
-    oiliness: { color: '#22d3ee', label: t('analysis.skin.metrics.oiliness') || 'Oleosità' },
+    hydration: { color: '#22d3ee', label: t('analysis.skin.metrics.hydration') || 'Idratazione' },
+    oiliness: { color: '#f59e0b', label: t('analysis.skin.metrics.oiliness') || 'Oleosità' },
   }), [t]);
 
   useEffect(() => {
@@ -62,17 +62,19 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
     try {
       setLoading(true);
       const sessions = await ChartDataService.loadSkinDataForPeriod(days);
-      const formatted: SkinTrendPoint[] = sessions.map((session) => {
-        const date = new Date(session.timestamp);
-        return {
-          date: `${date.getDate()}/${date.getMonth() + 1}`,
-          overall: session.overall || 0,
-          texture: session.texture || 0,
-          redness: session.redness || 0,
-          hydration: session.hydration || 0,
-          oiliness: session.oiliness || 0,
-        };
-      });
+      const formatted: SkinTrendPoint[] = [...sessions]
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .map((session) => {
+          const date = new Date(session.timestamp);
+          return {
+            date: `${date.getDate()}/${date.getMonth() + 1}`,
+            overall: session.overall || 0,
+            texture: session.texture || 0,
+            redness: session.redness || 0,
+            hydration: session.hydration || 0,
+            oiliness: session.oiliness || 0,
+          };
+        });
       setData(formatted);
     } catch (error) {
       console.error('Error loading skin trend data:', error);
@@ -94,9 +96,9 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
     });
   };
 
-  const chartWidth = width - 120;
+  const chartWidth = width - 80;
   const chartHeight = 160;
-  const padding = 24;
+  const padding = 28;
 
   const mapValueToY = (value: number) =>
     padding + ((100 - value) * (chartHeight - 2 * padding)) / 100;
@@ -176,7 +178,7 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
           <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
             {/* Period selector */}
             <View style={styles.periodSelector}>
-              {[7, 30, 90].map((period) => (
+              {[7, 30].map((period) => (
                 <TouchableOpacity
                   key={period}
                   style={[
@@ -186,7 +188,7 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
                       borderColor: days === period ? '#22d3ee' : themeColors.border,
                     },
                   ]}
-                  onPress={() => setDays(period as 7 | 30 | 90)}
+                  onPress={() => setDays(period as 7 | 30)}
                 >
                   <Text
                     style={[
@@ -196,9 +198,7 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
                   >
                     {period === 7
                       ? t('home.weeklyProgress.week', { count: 1 }) || '7 giorni'
-                      : period === 30
-                        ? t('home.weeklyProgress.month', { count: 1 }) || '30 giorni'
-                        : t('analysis.emotion.trends.threeMonths') || '90 giorni'}
+                      : t('home.weeklyProgress.month', { count: 1 }) || '30 giorni'}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -250,15 +250,25 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
                   {[0, 25, 50, 75, 100].map((value, index) => {
                     const y = padding + ((100 - value) * (chartHeight - 2 * padding)) / 100;
                     return (
-                      <Rect
-                        key={`grid-${index}`}
-                        x={padding}
-                        y={y}
-                        width={chartWidth - 2 * padding}
-                        height={1}
-                        fill={themeColors.borderLight}
-                        opacity={0.5}
-                      />
+                      <React.Fragment key={`grid-group-${index}`}>
+                        <Rect
+                          x={padding}
+                          y={y}
+                          width={chartWidth - 2 * padding}
+                          height={1}
+                          fill={themeColors.borderLight}
+                          opacity={0.5}
+                        />
+                        <SvgText
+                          x={padding - 8} // Posiziona il testo a sinistra della griglia
+                          y={y + 4}
+                          textAnchor="end"
+                          fontSize="10"
+                          fill={themeColors.textSecondary}
+                        >
+                          {value}
+                        </SvgText>
+                      </React.Fragment>
                     );
                   })}
 
@@ -296,6 +306,26 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
                       );
                     })
                   ))}
+                  {/* X-axis labels */}
+                  {data.map((point, index) => {
+                    const total = data.length;
+                    const x = total <= 1
+                      ? padding + (chartWidth - 2 * padding) / 2
+                      : padding + (index * (chartWidth - 2 * padding)) / (total - 1);
+                    const y = chartHeight - 5;
+                    return (
+                      <SvgText
+                        key={`x-label-${index}`}
+                        x={x}
+                        y={y}
+                        textAnchor="middle"
+                        fontSize="10"
+                        fill={themeColors.textSecondary}
+                      >
+                        {point.date}
+                      </SvgText>
+                    );
+                  })}
                 </Svg>
               </View>
             )}
@@ -356,40 +386,6 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
                 </View>
               );
             })}
-
-            {/* Summary */}
-            <View style={[styles.summaryCard, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
-              <Text style={[styles.summaryTitle, { color: themeColors.text }]}>{t('analysis.skin.trends.summary') || 'Riepilogo'}</Text>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: themeColors.textSecondary }]}>{t('analysis.skin.trends.totalSessions') || 'Analisi totali'}</Text>
-                <Text style={[styles.summaryValue, { color: themeColors.text }]}>{totalSessions}</Text>
-              </View>
-              <View style={styles.summaryMetricsContainer}>
-                <Text style={[styles.summaryLabel, { color: themeColors.textSecondary, marginBottom: 8 }]}>{t('analysis.skin.trends.metricsShown') || 'Metriche visualizzate'}</Text>
-                <View style={styles.summaryMetricsRow}>
-                  {selectedMetrics.map((metric) => {
-                    const config = metricConfig[metric];
-                    return (
-                      <View
-                        key={metric}
-                        style={[
-                          styles.summaryMetricChip,
-                          {
-                            backgroundColor: `${config.color}20`,
-                            borderColor: config.color,
-                          },
-                        ]}
-                      >
-                        <View style={[styles.summaryMetricDot, { backgroundColor: config.color }]} />
-                        <Text style={[styles.summaryMetricText, { color: themeColors.text }]} numberOfLines={1}>
-                          {config.label}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-            </View>
           </ScrollView>
         </View>
       </View>

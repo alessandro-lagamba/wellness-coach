@@ -53,12 +53,12 @@ export const DailyCopilotPopup: React.FC<DailyCopilotPopupProps> = ({
       onRequestClose={onClose}
     >
       <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <TouchableOpacity 
-          style={styles.backdropTouchable} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.backdropTouchable}
+          activeOpacity={1}
           onPress={onClose}
         />
-        
+
         <Animated.View style={[styles.popupContainer, popupStyle]}>
           {/* Header */}
           <LinearGradient

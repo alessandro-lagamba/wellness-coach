@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useMemo } from "react"
-import { View, Text, StyleSheet, Platform } from "react-native"
+import { View, Text, StyleSheet, Platform, Image, ImageSourcePropType } from "react-native"
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons"
 import { useTheme } from "../contexts/ThemeContext"
 
@@ -11,9 +11,12 @@ interface Props {
   label: string
   value: string
   subtitle?: string
-  icon?: string                 // emoji o singolo carattere
+  icon?: string                 // Deprecated: emoji fallback
+  iconImage?: ImageSourcePropType // PNG icon from assets
   color: string                 // es. "#6366f1"
-  backgroundColor?: string      // es. "#ffffff"
+  backgroundColor?: string      // Light bg color (rgba format)
+  borderColor?: string          // Border color (rgba format)
+  textColor?: string            // Darker text color
   trendValue?: string           // es. "+5%", "Good", "!"
   size?: WidgetSize
   showStatus?: boolean
@@ -43,8 +46,11 @@ const MiniInfoCard: React.FC<Props> = ({
   value,
   subtitle,
   icon = "📊",
+  iconImage,
   color,
-  backgroundColor = "#ffffff",
+  textColor,
+  backgroundColor,
+  borderColor,
   trendValue,
   size = "small",
   showStatus,
@@ -53,7 +59,18 @@ const MiniInfoCard: React.FC<Props> = ({
   // onPress e onLongPress gestiti da EditableWidget
 }) => {
   const st = statusStyles[status]
-  const { colors } = useTheme()
+  const { colors, mode } = useTheme()
+  const isDark = mode === 'dark'
+
+  // Compute effective background color: use provided backgroundColor or fallback to surface
+  const effectiveBgColor = useMemo(() => {
+    if (!backgroundColor) return colors.surface
+    // In dark mode, increase opacity slightly for better visibility
+    if (isDark && backgroundColor.includes('rgba')) {
+      return backgroundColor.replace(/[\d.]+\)$/, '0.15)')
+    }
+    return backgroundColor
+  }, [backgroundColor, colors.surface, isDark])
 
   const getTrendColor = () => {
     if (!trendValue) return "#6b7280"
@@ -67,12 +84,14 @@ const MiniInfoCard: React.FC<Props> = ({
 
   const { primary, unit } = splitValue(value)
 
-  /* ==================== RENDER SMALL (immutato) ==================== */
+  /* ==================== RENDER SMALL ==================== */
   const renderSmall = () => (
-    <View style={[styles.innerContainer, { backgroundColor: colors.surface }]}>
+    <View style={[styles.innerContainer, { backgroundColor: effectiveBgColor }]}>
       <View style={styles.smallHeader}>
         <Text style={[styles.smallLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
-        <Text style={styles.smallValueEmoji}>{icon}</Text>
+        {iconImage && (
+          <Image source={iconImage} style={styles.smallIconImage} resizeMode="contain" />
+        )}
       </View>
 
       <View style={styles.smallContent}>
@@ -81,7 +100,7 @@ const MiniInfoCard: React.FC<Props> = ({
             <Text
               style={[
                 primary.toLowerCase() === "complete" ? styles.smallPrimaryValueComplete : styles.smallPrimaryValue,
-                { color },
+                { color: textColor || color },
               ]}
               numberOfLines={1}
             >
@@ -100,13 +119,15 @@ const MiniInfoCard: React.FC<Props> = ({
     </View>
   )
 
-  /* ==================== RENDER MEDIUM (immutato) ==================== */
+  /* ==================== RENDER MEDIUM ==================== */
   const renderMedium = () => (
-    <View style={[styles.innerContainer, styles.relative, { backgroundColor: colors.surface }]}>
+    <View style={[styles.innerContainer, styles.relative, { backgroundColor: effectiveBgColor }]}>
       <View style={styles.miHeaderRow}>
         <View style={styles.miTitleWrap}>
           <View style={[styles.miIconChip, { backgroundColor: `${color}15`, borderColor: `${color}32` }]}>
-            <Text style={styles.miIcon}>{icon}</Text>
+            {iconImage && (
+              <Image source={iconImage} style={styles.miIconImage} resizeMode="contain" />
+            )}
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={[styles.miTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
@@ -114,7 +135,7 @@ const MiniInfoCard: React.FC<Props> = ({
             </Text>
           </View>
         </View>
-        <Text numberOfLines={1} style={[styles.miValueTopRight, { color }]}>
+        <Text numberOfLines={1} style={[styles.miValueTopRight, { color: textColor || color }]}>
           {value}
         </Text>
       </View>
@@ -131,7 +152,7 @@ const MiniInfoCard: React.FC<Props> = ({
 
       {detailChips?.length ? (
         <View style={[styles.miDetailChipFloat, { borderColor: `${color}20`, backgroundColor: `${color}08` }]}>
-          <Text style={styles.miChipEmoji}>{detailChips[0].icon}</Text>
+          <MaterialCommunityIcons name={detailChips[0].icon as any} size={14} color={color} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={[styles.miChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>
               {detailChips[0].label}
@@ -145,14 +166,14 @@ const MiniInfoCard: React.FC<Props> = ({
     </View>
   )
 
-  /* ==================== RENDER LARGE (fix: blocchi più in alto) ==================== */
+  /* ==================== RENDER LARGE ==================== */
   const renderLarge = () => (
     <View
       style={
         [
           styles.innerContainer,
           {
-            backgroundColor: colors.surface,
+            backgroundColor: effectiveBgColor,
             borderColor: `${color}1F`,
             borderWidth: 1,
           },
@@ -161,7 +182,9 @@ const MiniInfoCard: React.FC<Props> = ({
       <View style={styles.largeHeader}>
         <View style={styles.largeHeaderLeft}>
           <View style={[styles.largeIconChip, { backgroundColor: `${color}18`, borderColor: `${color}35` }]}>
-            <Text style={styles.largeIcon}>{icon}</Text>
+            {iconImage && (
+              <Image source={iconImage} style={styles.largeIconImage} resizeMode="contain" />
+            )}
           </View>
           <View style={styles.largeHeaderText}>
             <Text style={[styles.largeLabel, { color: colors.text }]} numberOfLines={1}>
@@ -174,7 +197,7 @@ const MiniInfoCard: React.FC<Props> = ({
             )}
           </View>
         </View>
-        <Text style={[styles.largeValue, { color }]} numberOfLines={1}>
+        <Text style={[styles.largeValue, { color: textColor || color }]} numberOfLines={1}>
           {value}
         </Text>
       </View>
@@ -187,7 +210,7 @@ const MiniInfoCard: React.FC<Props> = ({
             {/* 🔥 FIX: Mostra solo max 2 chips per migliorare leggibilità */}
             {detailChips.slice(0, 2).map((chip) => (
               <View key={`${chip.label}-${chip.value}`} style={[styles.largeDetailChip, { borderColor: `${color}20`, backgroundColor: `${color}08` }]}>
-                <Text style={styles.largeChipIcon}>{chip.icon}</Text>
+                <MaterialCommunityIcons name={chip.icon as any} size={18} color={color} />
                 <View style={styles.largeChipTextContainer}>
                   <Text style={[styles.largeChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>
                     {chip.label}
@@ -206,7 +229,7 @@ const MiniInfoCard: React.FC<Props> = ({
 
   // TouchableOpacity rimosso - gestito da EditableWidget
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[styles.card, { backgroundColor: effectiveBgColor, borderColor: borderColor || (isDark ? 'rgba(255,255,255,0.08)' : colors.border) }]}>
       {size === "small" ? renderSmall() : size === "medium" ? renderMedium() : renderLarge()}
     </View>
   )
@@ -231,14 +254,16 @@ const styles = StyleSheet.create({
   smallPrimaryValue: { fontSize: 26, lineHeight: 28, fontWeight: "800", letterSpacing: -0.2 },
   smallPrimaryValueComplete: { fontSize: 13, lineHeight: 20, fontWeight: "700", letterSpacing: -0.2 },
   smallValueEmoji: { fontSize: 18, fontWeight: "400", marginLeft: 8 },
-  smallUnitText: { marginLeft: 3, marginBottom: 3, fontSize: 12, fontWeight: "600", color: "#64748b" },
+  smallIconImage: { width: 38, height: 38 },
+  smallUnitText: { marginLeft: 3, marginBottom: 3, fontSize: 13, letterSpacing: -0.2, lineHeight: 13, fontWeight: "600", color: "#64748b" },
   smallSubtitle: { marginTop: 4, fontSize: 10, color: "#475569", fontWeight: "600", lineHeight: 14 },
 
   /* ========== MEDIUM (immutato) ========== */
   miHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
   miTitleWrap: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1, minWidth: 0 },
-  miIconChip: { height: 28, width: 28, borderRadius: 14, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  miIcon: { fontSize: 16, fontWeight: "800" },
+  miIconChip: { height: 36, width: 36, borderRadius: 18, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
+  miIcon: { fontSize: 18, fontWeight: "800" },
+  miIconImage: { width: 40, height: 40 },
   miTitle: { flexShrink: 1, fontSize: 15, fontWeight: "800", color: "#0f172a" },
 
   miBodyRow: { flexDirection: "row", alignItems: "flex-start", flex: 1, marginTop: 4 },
@@ -268,8 +293,9 @@ const styles = StyleSheet.create({
   largeHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   largeHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 },
   largeHeaderText: { flex: 1, minWidth: 0, justifyContent: "center" },
-  largeIconChip: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.2, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  largeIcon: { fontSize: 18 },
+  largeIconChip: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  largeIcon: { fontSize: 22 },
+  largeIconImage: { width: 54, height: 54 },
   largeLabel: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
   largeSubtitle: { marginTop: 2, fontSize: 12, color: "#6b7280", fontWeight: "600" },
 

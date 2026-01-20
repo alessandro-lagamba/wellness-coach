@@ -358,30 +358,11 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
   const updatePercentage = (field: 'carbs_percentage' | 'proteins_percentage' | 'fats_percentage', value: number) => {
     const newValue = Math.max(0, Math.min(100, value));
 
-    // Calculate current total without the field being changed
-    const otherFields = ['carbs_percentage', 'proteins_percentage', 'fats_percentage'].filter(f => f !== field) as Array<'carbs_percentage' | 'proteins_percentage' | 'fats_percentage'>;
-    const defaultValue1 = otherFields[0] === 'carbs_percentage' ? 50 : otherFields[0] === 'proteins_percentage' ? 30 : 20;
-    const defaultValue2 = otherFields[1] === 'carbs_percentage' ? 50 : otherFields[1] === 'proteins_percentage' ? 30 : 20;
-    const currentOtherTotal = (goals[otherFields[0]] ?? defaultValue1) + (goals[otherFields[1]] ?? defaultValue2);
-    const remainingTotal = 100 - newValue;
-
-    // Distribute remaining percentage proportionally
-    const ratio = currentOtherTotal > 0 ? remainingTotal / currentOtherTotal : 0.5;
-
-    setGoals(prev => {
-      const updated = { ...prev, [field]: newValue };
-      updated[otherFields[0]] = Math.max(0, Math.min(100, Math.round(prev[otherFields[0]] * ratio)));
-      updated[otherFields[1]] = Math.max(0, Math.min(100, Math.round(prev[otherFields[1]] * ratio)));
-
-      // Ensure total is exactly 100
-      const total = updated[field] + updated[otherFields[0]] + updated[otherFields[1]];
-      if (total !== 100) {
-        const diff = 100 - total;
-        updated[otherFields[0]] = Math.max(0, Math.min(100, updated[otherFields[0]] + diff));
-      }
-
-      return updated;
-    });
+    // Aggiorna solo il campo modificato, senza toccare gli altri
+    setGoals(prev => ({
+      ...prev,
+      [field]: newValue
+    }));
   };
 
   return (
@@ -411,107 +392,6 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
               >
-                {/* Diet Goal Selector */}
-                <View style={styles.dietGoalSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                    {t('analysis.food.goals.dietGoal')}
-                  </Text>
-                  <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-                    {t('analysis.food.goals.dietGoalDesc')}
-                  </Text>
-                  <View style={styles.dietGoalGrid}>
-                    {(['maintenance', 'weight_loss', 'bulk', 'custom'] as DietGoal[]).map((goal) => (
-                      <TouchableOpacity
-                        key={goal}
-                        style={[
-                          styles.dietGoalCard,
-                          dietGoal === goal && { backgroundColor: colors.primary + '20', borderColor: colors.primary },
-                          { borderColor: colors.border, backgroundColor: colors.surfaceElevated }
-                        ]}
-                        onPress={() => applyDietGoal(goal)}
-                      >
-                        <MaterialCommunityIcons
-                          name={
-                            goal === 'maintenance' ? 'scale-balance' :
-                              goal === 'weight_loss' ? 'trending-down' :
-                                goal === 'bulk' ? 'trending-up' :
-                                  'tune'
-                          }
-                          size={24}
-                          color={dietGoal === goal ? colors.primary : colors.textSecondary}
-                        />
-                        <Text style={[
-                          styles.dietGoalText,
-                          { color: dietGoal === goal ? colors.primary : colors.text }
-                        ]}>
-                          {t(`analysis.food.goals.dietGoals.${goal}`)}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-
-
-                {/* Mode Selector */}
-                <View style={styles.modeSelector}>
-                  <TouchableOpacity
-                    style={[
-                      styles.modeButton,
-                      mode === 'input' && { backgroundColor: colors.primary + '20' },
-                      { borderColor: colors.border }
-                    ]}
-                    onPress={() => setMode('input')}
-                  >
-                    <FontAwesome name="edit" size={16} color={mode === 'input' ? colors.primary : colors.textSecondary} />
-                    <Text style={[styles.modeButtonText, { color: mode === 'input' ? colors.primary : colors.textSecondary }]}>
-                      {t('analysis.food.goals.manual')}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.modeButton,
-                      mode === 'ai' && { backgroundColor: colors.accent + '20' },
-                      { borderColor: colors.border }
-                    ]}
-                    onPress={() => setMode('ai')}
-                    disabled={aiLoading}
-                  >
-                    {aiLoading ? (
-                      <ActivityIndicator size="small" color={colors.accent} />
-                    ) : (
-                      <FontAwesome name="magic" size={16} color={mode === 'ai' ? colors.accent : colors.textSecondary} />
-                    )}
-                    <Text style={[styles.modeButtonText, { color: mode === 'ai' ? colors.accent : colors.textSecondary }]}>
-                      {t('analysis.food.goals.aiSuggestion')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {mode === 'ai' && (
-                  <View style={[styles.aiSection, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                    <MaterialCommunityIcons name="robot" size={32} color={colors.accent} />
-                    <Text style={[styles.aiSectionTitle, { color: colors.text }]}>{t('analysis.food.goals.aiTitle')}</Text>
-                    <Text style={[styles.aiSectionDesc, { color: colors.textSecondary }]}>{t('analysis.food.goals.aiDesc')}</Text>
-                    <TouchableOpacity
-                      style={[styles.aiButton, { backgroundColor: colors.accent }]}
-                      onPress={handleAISuggestion}
-                      disabled={aiLoading}
-                    >
-                      {aiLoading ? (
-                        <ActivityIndicator size="small" color={colors.textInverse} />
-                      ) : (
-                        <>
-                          <FontAwesome name="magic" size={16} color={colors.textInverse} />
-                          <Text style={[styles.aiButtonText, { color: colors.textInverse }]}>
-                            {t('analysis.food.goals.getAISuggestion')}
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                )}
 
                 {/* Daily Calories */}
                 <View style={styles.inputGroup}>
@@ -681,22 +561,36 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
 
               {/* Save Button */}
               <View style={[styles.buttonContainer, { borderTopColor: colors.border }]}>
-                <TouchableOpacity
-                  style={[styles.saveButton, { backgroundColor: colors.primary }]}
-                  onPress={handleSave}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator size="small" color={colors.textInverse} />
-                  ) : (
-                    <>
-                      <FontAwesome name="save" size={16} color={colors.textInverse} />
-                      <Text style={[styles.saveButtonText, { color: colors.textInverse }]}>
-                        {t('common.save')}
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+                {/* Calcolo la validità direttamente qui */}
+                {(() => {
+                  const currentTotal = (goals.carbs_percentage ?? 0) + (goals.proteins_percentage ?? 0) + (goals.fats_percentage ?? 0);
+                  const isValid = Math.abs(currentTotal - 100) < 1;
+
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.saveButton,
+                        {
+                          backgroundColor: colors.primary,
+                          opacity: isValid ? 1 : 0.5 // Sbiadisce il pulsante se non valido
+                        }
+                      ]}
+                      onPress={handleSave}
+                      disabled={loading || !isValid} // Blocca il click se non valido
+                    >
+                      {loading ? (
+                        <ActivityIndicator size="small" color={colors.textInverse} />
+                      ) : (
+                        <>
+                          <FontAwesome name="save" size={16} color={colors.textInverse} />
+                          <Text style={[styles.saveButtonText, { color: colors.textInverse }]}>
+                            {isValid ? t('common.save') : `Totale: ${currentTotal}%`}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })()}
               </View>
             </View>
           </SafeAreaView>

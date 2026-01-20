@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Dimensions,
   Alert,
+  Image,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -34,7 +35,8 @@ const TodayGlanceWidget: React.FC<TodayGlanceWidgetProps> = ({
   onLongPress
 }) => {
   const [isPressed, setIsPressed] = useState(false);
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
+  const isDark = mode === 'dark';
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
 
@@ -67,7 +69,7 @@ const TodayGlanceWidget: React.FC<TodayGlanceWidgetProps> = ({
   };
 
   // Responsive sizes for narrow screens
-  const iconSize = isNarrowScreen ? 14 : 18;
+  const iconSize = isNarrowScreen ? 20 : 28;
   const progressSize = isNarrowScreen ? 50 : 70;
   const containerPadding = isNarrowScreen ? 10 : 20;
 
@@ -119,6 +121,11 @@ const TodayGlanceWidget: React.FC<TodayGlanceWidgetProps> = ({
 
   const widgetSize = getWidgetSize();
 
+  // Compute background color with theme support
+  const widgetBackgroundColor = isDark
+    ? widget.backgroundColor.replace('0.08', '0.15') // Slightly more visible in dark mode
+    : widget.backgroundColor;
+
   return (
     <Animated.View style={[animatedStyle]}>
       <TouchableOpacity
@@ -127,8 +134,8 @@ const TodayGlanceWidget: React.FC<TodayGlanceWidgetProps> = ({
           {
             width: widgetSize.width,
             height: widgetSize.height,
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
+            backgroundColor: widgetBackgroundColor,
+            borderColor: isDark ? 'rgba(255,255,255,0.1)' : colors.border,
           }
         ]}
         onPress={() => onPress(widget.id)}
@@ -140,7 +147,16 @@ const TodayGlanceWidget: React.FC<TodayGlanceWidgetProps> = ({
         <View style={styles.widgetContainer}>
           {/* Header with icon and trend */}
           <View style={styles.widgetHeader}>
-            <Text style={[styles.widgetIcon, isNarrowScreen && { fontSize: iconSize }]}>{widget.icon}</Text>
+            {/* Icon - use Image if iconImage exists, otherwise emoji */}
+            {widget.iconImage ? (
+              <Image
+                source={widget.iconImage}
+                style={[styles.widgetIconImage, { width: iconSize, height: iconSize }]}
+                resizeMode="contain"
+              />
+            ) : (
+              <Text style={[styles.widgetIcon, isNarrowScreen && { fontSize: iconSize }]}>{widget.icon}</Text>
+            )}
             {widget.trend && (
               <View style={[
                 styles.trendBadge,
@@ -224,6 +240,9 @@ const styles = StyleSheet.create({
   },
   widgetIcon: {
     fontSize: 18,
+  },
+  widgetIconImage: {
+    // Size is set inline based on screen width
   },
   trendBadge: {
     paddingHorizontal: 8,

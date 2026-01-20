@@ -54,8 +54,7 @@ import Slider from '@react-native-community/slider';
 import { HydrationActionModal } from './HydrationActionModal';
 import { MeditationActionModal } from './MeditationActionModal';
 import { MenstrualCycleModal } from './MenstrualCycleModal';
-import MoodCheckinCard from './MoodCheckinCard';
-import SleepCheckinCard from './SleepCheckinCard';
+import DailyCheckinCard from './DailyCheckinCard';
 import PrimaryCTA from './PrimaryCTA';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { HealthDataStatus } from '../types/health.types';
@@ -72,6 +71,7 @@ import AvatarCommunityModal from './AvatarCommunityModal';
 import { ChartDetailModal } from './ChartDetailModal';
 import { WeeklyProgressSection } from './WeeklyProgressSection';
 import { CycleData } from '../services/menstrual-cycle.service';
+import { HeroSection } from './HeroSection';
 
 const { width } = Dimensions.get('window');
 // 🔥 FIX: Calcola larghezza dinamica per il grafico.
@@ -471,7 +471,9 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
     return [
       {
-        id: 'steps', title: t('widgets.steps'), icon: '🚶', color: '#10b981', backgroundColor: '#f0fdf4', category: 'health',
+        id: 'steps', title: t('widgets.steps'), icon: '🚶',
+        iconImage: require('../assets/images/widgets_logos/steps.png'),
+        color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.08)', borderColor: 'rgba(16, 185, 129, 0.25)', textColor: '#059669', category: 'health',
         steps: {
           current: Math.max(0, hd.steps || 0),
           goal: stepsGoal,
@@ -480,11 +482,15 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         }
       },
       {
-        id: 'meditation', title: t('widgets.meditation'), icon: '🧘', color: '#8b5cf6', backgroundColor: '#f3f4f6', category: 'wellness',
+        id: 'meditation', title: t('widgets.meditation'), icon: '🧘',
+        iconImage: require('../assets/images/widgets_logos/meditation.png'),
+        color: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.08)', borderColor: 'rgba(139, 92, 246, 0.25)', category: 'wellness',
         meditation: { minutes: Math.max(0, hd.mindfulnessMinutes || 0), goal: meditationGoal, sessions: 0, streak: 0, favoriteType: 'Breathing' }
       },
       {
-        id: 'hydration', title: t('widgets.hydration'), icon: '💧', color: '#3b82f6', backgroundColor: '#eff6ff', category: 'health',
+        id: 'hydration', title: t('widgets.hydration'), icon: '💧',
+        iconImage: require('../assets/images/widgets_logos/hydration.png'),
+        color: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.08)', borderColor: 'rgba(59, 130, 246, 0.25)', category: 'health',
         hydration: {
           glasses: Math.round(hydrationInPreferredUnit * 10) / 10, // 🔥 FIX: Usa unità preferita (anche se si chiama "glasses" per retrocompatibilità)
           goal: Math.round(hydrationGoalInPreferredUnit * 10) / 10, // 🔥 FIX: Goal in unità preferita
@@ -495,7 +501,9 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         }
       },
       {
-        id: 'sleep', title: t('widgets.sleep'), icon: '🌙', color: '#6366f1', backgroundColor: '#eef2ff', category: 'health',
+        id: 'sleep', title: t('widgets.sleep'), icon: '🌙',
+        iconImage: require('../assets/images/widgets_logos/sleep.png'),
+        color: '#F59E0B', backgroundColor: 'rgba(245, 158, 11, 0.08)', borderColor: 'rgba(245, 158, 11, 0.25)', textColor: '#B45309', category: 'health',
         sleep: {
           hours: Math.round((hd.sleepHours || 0) * 10) / 10,
           goal: sleepGoal,
@@ -505,7 +513,9 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         }
       },
       {
-        id: 'hrv', title: t('widgets.hrv'), icon: '🫀', color: '#ef4444', backgroundColor: '#fef2f2', category: 'health',
+        id: 'hrv', title: t('widgets.hrv'), icon: '🫀',
+        iconImage: require('../assets/images/widgets_logos/hrv.png'),
+        color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.08)', borderColor: 'rgba(239, 68, 68, 0.25)', category: 'health',
         hrv: {
           value: normalizedHrv,
           avgHRV: normalizedHrv,
@@ -520,8 +530,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         id: 'cycle',
         title: t('widgets.cycle'),
         icon: '🌸',
+        iconImage: require('../assets/images/widgets_logos/cycle.png'),
         color: '#ec4899',
-        backgroundColor: '#fdf2f8',
+        backgroundColor: 'rgba(236, 72, 153, 0.08)',
+        borderColor: 'rgba(236, 72, 153, 0.25)',
         category: 'health' as const,
         cycle: cycle ? {
           day: cycle.day,
@@ -536,8 +548,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         id: 'calories',
         title: t('widgets.calories'),
         icon: '🔥',
+        iconImage: require('../assets/images/widgets_logos/calories.png'),
         color: '#f97316',
-        backgroundColor: '#fff7ed',
+        backgroundColor: 'rgba(249, 115, 22, 0.08)',
+        borderColor: 'rgba(249, 115, 22, 0.25)',
         category: 'health',
         calories: {
           current: dailyIntake?.calories || 0,
@@ -942,13 +956,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
   // --- Self check (Mood & Sleep)
   const [moodValue, setMoodValue] = useState<number>(3);        // 1..5
-  const [sleepQuality, setSleepQuality] = useState<number>(80); // 0..100
-  // NEW
-  const [moodNote, setMoodNote] = useState('');
-  const [sleepNote, setSleepNote] = useState('');
+  const [sleepHours, setSleepHours] = useState<number>(7.5);    // 0..12 (ore di sonno)
   const [restLevel, setRestLevel] = useState<1 | 2 | 3 | 4 | 5>(3);
-  const [hasExistingMoodCheckin, setHasExistingMoodCheckin] = useState(false); // 🆕 Traccia se esiste già un check-in mood
-  const [hasExistingSleepCheckin, setHasExistingSleepCheckin] = useState(false); // 🆕 Traccia se esiste già un check-in sleep
+  const [hasExistingMoodCheckin, setHasExistingMoodCheckin] = useState(false);
+  const [hasExistingSleepCheckin, setHasExistingSleepCheckin] = useState(false);
 
   // 🆕 moodDescriptors con traduzioni
   const moodDescriptors = [
@@ -968,15 +979,39 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   };
 
   const computeGaugeSubtitle = (info: any) => {
-    if (info?.steps) return `${t('home.goal')} • ${info.steps.goal.toLocaleString()} steps`;
-    if (info?.hydration) {
-      // 🔥 FIX: Usa unità preferita se disponibile, altrimenti "glasses" come default
-      const unitLabel = info.hydration.unitLabel || t('home.glasses') || 'glasses';
-      return `${t('home.goal')} • ${info.hydration.goal} ${unitLabel}`;
+    const currentStyle = { color: info.textColor || info.color, fontWeight: '800' } as const;
+
+    if (info?.steps) {
+      const current = Math.max(0, info.steps.current || 0).toLocaleString();
+      const goal = info.steps.goal.toLocaleString();
+      return (
+        <Text>
+          <Text style={currentStyle}>{current}</Text> <Text style={{ color: '#94a3b8' }}>/</Text> {goal}
+        </Text>
+      );
     }
-    if (info?.meditation) return `${t('home.goal')} • ${info.meditation.goal} mins`;
+    if (info?.hydration) {
+      return (
+        <Text>
+          <Text style={currentStyle}>{info.hydration.glasses}</Text> <Text style={{ color: '#94a3b8' }}>/</Text> {info.hydration.goal}
+        </Text>
+      );
+    }
+    if (info?.meditation) {
+      return (
+        <Text>
+          <Text style={currentStyle}>{info.meditation.minutes}</Text> <Text style={{ color: '#94a3b8' }}>/</Text> {info.meditation.goal}
+        </Text>
+      );
+    }
     // 🔥 FIX: Mostra obiettivo kcal invece del valore attuale
-    if (info?.calories) return `${t('home.goal')} • ${info.calories.goal} kcal`;
+    if (info?.calories) {
+      return (
+        <Text>
+          <Text style={currentStyle}>{info.calories.current}</Text> <Text style={{ color: '#94a3b8' }}>/</Text> {info.calories.goal}
+        </Text>
+      );
+    }
     return '';
   };
 
@@ -1027,9 +1062,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   const getInfoCardSubtitle = (id: string, info: any) => {
     switch (id) {
       case 'sleep': {
-        // 🔥 FIX: Mostra obiettivo sonno invece di qualità (rimossa)
-        const goal = info.sleep?.goal ?? 8;
-        return `${t('home.goal')} • ${goal}h`;
+        // 🔥 FIX: Rimosso obiettivo sonno come richiesto
+        return '';
       }
       case 'hrv': {
         // 🔥 FIX: Mostra "RMSSD" o stato HRV invece di duplicare frequenza attuale
@@ -1081,14 +1115,14 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       case 'sleep':
         // 🔥 FIX: Mostra bedtime e waketime invece di deepSleep/REM (rimossi)
         return [
-          { icon: '😴', label: t('home.sleep.bedtime') || 'Addormentato', value: info.sleep?.bedtime ?? '—' },
-          { icon: '⏰', label: t('home.sleep.wakeTime') || 'Sveglia', value: info.sleep?.wakeTime ?? '—' },
+          { icon: 'weather-night', label: t('home.sleep.bedtime') || 'Addormentato', value: info.sleep?.bedtime ?? '—' },
+          { icon: 'alarm', label: t('home.sleep.wakeTime') || 'Sveglia', value: info.sleep?.wakeTime ?? '—' },
         ];
       case 'hrv':
         // 🔥 FIX: Mostra solo frequenza attuale (rimosso restingHR)
         return [
           {
-            icon: '❤️',
+            icon: 'heart-pulse',
             label: t('home.hrv.currentHR'),
             value:
               info.hrv?.currentHR && info.hrv.currentHR > 0
@@ -1101,12 +1135,12 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         // 🆕 Mostra informazioni più utili: giorni al prossimo ciclo e durata ciclo
         return [
           {
-            icon: '📅',
+            icon: 'calendar-month',
             label: t('home.cycle.nextPeriod'),
             value: `${info.cycle.nextPeriodDays} ${info.cycle.nextPeriodDays === 1 ? (language === 'it' ? 'giorno' : 'day') : (language === 'it' ? 'giorni' : 'days')}`
           },
           {
-            icon: '🔄',
+            icon: 'autorenew',
             label: t('home.cycle.cycleLength'),
             value: `${info.cycle.cycleLength} ${language === 'it' ? 'giorni' : 'days'}`
           },
@@ -1121,8 +1155,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
   const sleepWidget = widgetData.find(w => w.id === 'sleep');
   const sleepStats = sleepWidget?.sleep;
-  const displayedSleepHours = sleepStats?.hours ?? 7.5;
-  const displayedSleepQuality = sleepStats?.quality ?? sleepQuality;
+  const displayedSleepHours = sleepStats?.hours ?? sleepHours;
 
   // chiavi giornaliere
   const dayKey = () => {
@@ -1135,8 +1168,6 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   const STORAGE_KEYS = {
     mood: (d: string) => `checkin:mood:${d}`,
     sleep: (d: string) => `checkin:sleep:${d}`,
-    moodNote: (d: string) => `checkin:mood_note:${d}`,
-    sleepNote: (d: string) => `checkin:sleep_note:${d}`,
     restLevel: (d: string) => `checkin:rest_level:${d}`,
   };
 
@@ -1205,7 +1236,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           const { supabase } = await import('../lib/supabase');
           const { data: existingCheckin } = await supabase
             .from('daily_copilot_analyses')
-            .select('mood, sleep_quality, mood_note, sleep_note')
+            .select('mood, sleep_hours, sleep_quality')
             .eq('user_id', currentUser.id)
             .eq('date', dk)
             .maybeSingle();
@@ -1219,80 +1250,40 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               setHasExistingMoodCheckin(false);
             }
 
-            if (existingCheckin.mood_note) {
-              // Decifra mood_note prima di mostrarlo
-              try {
-                const { decryptText } = await import('../services/encryption.service');
-                const decrypted = await decryptText(existingCheckin.mood_note, currentUser.id);
-                if (decrypted !== null) {
-                  setMoodNote(decrypted);
-                } else {
-                  setMoodNote(existingCheckin.mood_note); // Fallback per dati vecchi non cifrati
-                }
-              } catch (err) {
-                setMoodNote(existingCheckin.mood_note); // Fallback
-              }
-            }
-
-            if (existingCheckin.sleep_quality !== null && existingCheckin.sleep_quality !== undefined && existingCheckin.sleep_quality > 0) {
-              setSleepQuality(existingCheckin.sleep_quality);
+            // Carica ore di sonno dal database
+            if (existingCheckin.sleep_hours !== null && existingCheckin.sleep_hours !== undefined && existingCheckin.sleep_hours > 0) {
+              setSleepHours(existingCheckin.sleep_hours);
               setHasExistingSleepCheckin(true);
 
-              // 🔥 FIX: Calcola restLevel da sleep_quality (0-100 -> 1-5)
-              // sleep_quality: 0-20 -> 1, 21-40 -> 2, 41-60 -> 3, 61-80 -> 4, 81-100 -> 5
-              const calculatedRestLevel = Math.min(5, Math.max(1, Math.ceil((existingCheckin.sleep_quality / 100) * 5))) as 1 | 2 | 3 | 4 | 5;
+              // Calcola restLevel da sleep_hours (0-12 -> 1-5)
+              const calculatedRestLevel = Math.min(5, Math.max(1, Math.ceil((existingCheckin.sleep_hours / 12) * 5))) as 1 | 2 | 3 | 4 | 5;
               setRestLevel(calculatedRestLevel);
             } else {
               setHasExistingSleepCheckin(false);
             }
-
-            if (existingCheckin.sleep_note) {
-              // Decifra sleep_note prima di mostrarlo
-              try {
-                const { decryptText } = await import('../services/encryption.service');
-                const decrypted = await decryptText(existingCheckin.sleep_note, currentUser.id);
-                if (decrypted !== null) {
-                  setSleepNote(decrypted);
-                } else {
-                  setSleepNote(existingCheckin.sleep_note); // Fallback per dati vecchi non cifrati
-                }
-              } catch (err) {
-                setSleepNote(existingCheckin.sleep_note); // Fallback
-              }
-            }
           } else {
-            // 🔥 FIX: Se non esiste un check-in nel database, usa AsyncStorage come fallback
+            // Fallback: Se non esiste un check-in nel database, usa AsyncStorage
             const savedMood = await AsyncStorage.getItem(STORAGE_KEYS.mood(dk));
             const savedSleep = await AsyncStorage.getItem(STORAGE_KEYS.sleep(dk));
-            const savedMoodNote = await AsyncStorage.getItem(STORAGE_KEYS.moodNote(dk));
-            const savedSleepNote = await AsyncStorage.getItem(STORAGE_KEYS.sleepNote(dk));
             const savedRestLevel = await AsyncStorage.getItem(STORAGE_KEYS.restLevel(dk));
 
             if (savedMood) setMoodValue(parseInt(savedMood, 10));
-            if (savedSleep) setSleepQuality(parseInt(savedSleep, 10));
-            if (savedMoodNote) setMoodNote(savedMoodNote);
-            if (savedSleepNote) setSleepNote(savedSleepNote);
+            if (savedSleep) setSleepHours(parseFloat(savedSleep));
             if (savedRestLevel) setRestLevel(parseInt(savedRestLevel, 10) as 1 | 2 | 3 | 4 | 5);
 
-            // 🔥 FIX: Se non esiste un check-in nel database, imposta esplicitamente a false
             setHasExistingMoodCheckin(false);
             setHasExistingSleepCheckin(false);
           }
         } else {
-          // 🔥 FIX: Se non c'è un utente, usa AsyncStorage come fallback
+          // Fallback: Se non c'è un utente, usa AsyncStorage
           const savedMood = await AsyncStorage.getItem(STORAGE_KEYS.mood(dk));
           const savedSleep = await AsyncStorage.getItem(STORAGE_KEYS.sleep(dk));
-          const savedMoodNote = await AsyncStorage.getItem(STORAGE_KEYS.moodNote(dk));
-          const savedSleepNote = await AsyncStorage.getItem(STORAGE_KEYS.sleepNote(dk));
           const savedRestLevel = await AsyncStorage.getItem(STORAGE_KEYS.restLevel(dk));
 
           if (savedMood) setMoodValue(parseInt(savedMood, 10));
-          if (savedSleep) setSleepQuality(parseInt(savedSleep, 10));
-          if (savedMoodNote) setMoodNote(savedMoodNote);
-          if (savedSleepNote) setSleepNote(savedSleepNote);
+          if (savedSleep) setSleepHours(parseFloat(savedSleep));
           if (savedRestLevel) setRestLevel(parseInt(savedRestLevel, 10) as 1 | 2 | 3 | 4 | 5);
 
-          // 🔥 FIX: Se non c'è un utente, imposta esplicitamente a false
           setHasExistingMoodCheckin(false);
           setHasExistingSleepCheckin(false);
         }
@@ -1307,106 +1298,51 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   };
 
   const saveSleep = async (val: number) => {
-    setSleepQuality(val);
+    setSleepHours(val);
     try { await AsyncStorage.setItem(STORAGE_KEYS.sleep(dayKey()), String(val)); } catch { }
   };
 
-  // nuove funzioni di salvataggio con note
-  async function saveMoodCheckin(value: number, note: string) {
+  // Funzione di salvataggio mood (senza note)
+  async function saveMoodCheckin(value: number) {
     const dk = dayKey();
-    const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-    // 🔥 FIX: Verifica che la data sia quella di oggi (non permettere salvataggi per giorni passati/futuri)
-    if (dk !== today) {
-      UserFeedbackService.showError('Puoi salvare il check-in solo per oggi. La data non corrisponde.');
-      return;
-    }
-
-    // 🆕 Validazione dati prima del salvataggio
-    const validation = DataValidationService.validateMoodCheckin({ value, note });
-    if (!validation.valid) {
-      UserFeedbackService.showError(`Dati non validi: ${validation.errors.join(', ')}`);
-      return;
-    }
 
     // Salva in AsyncStorage locale
-    await AsyncStorage.multiSet([
-      [STORAGE_KEYS.mood(dk), String(value)],
-      [STORAGE_KEYS.moodNote(dk), note],
-    ]);
+    await AsyncStorage.setItem(STORAGE_KEYS.mood(dk), String(value));
 
-    // 🆕 Salva nel database Supabase con enhanced error handling
+    // Salva nel database Supabase
     try {
       const currentUser = await AuthService.getCurrentUser();
-      if (!currentUser?.id) {
-        UserFeedbackService.showWarning('Devi essere loggato per salvare i check-in.');
-        return;
-      }
+      if (!currentUser?.id) return;
 
-      // 🆕 Usa locking per prevenire race conditions
       await OperationLockService.withLock(
         'save',
         `mood_checkin_${currentUser.id}_${dk}`,
         async () => {
-          // 🆕 Usa retry logic per operazioni database
           await RetryService.withRetry(
             async () => {
               const { supabase } = await import('../lib/supabase');
 
-              // 🔥 FIX: Usa UPSERT invece di check-then-insert/update per evitare race conditions
-              // Il constraint UNIQUE(user_id, date) gestisce automaticamente i duplicati
-
-              // Controlla se esiste già un record per preservare i valori esistenti e mostrare warning
+              // Controlla se esiste già un record per preservare i valori esistenti
               const { data: existing } = await supabase
                 .from('daily_copilot_analyses')
-                .select('id, mood, mood_note, sleep_hours, sleep_quality, sleep_note, overall_score, health_metrics, recommendations, summary, created_at')
+                .select('id, sleep_hours, sleep_quality, overall_score, health_metrics, recommendations, summary')
                 .eq('user_id', currentUser.id)
                 .eq('date', dk)
                 .maybeSingle();
-
-              // 🔥 FIX: Warning se si sta aggiornando un check-in già esistente
-              if (existing && existing.mood !== null && existing.mood !== undefined) {
-                // Calcola il tempo trascorso dal primo salvataggio
-                const createdAt = new Date(existing.created_at);
-                const now = new Date();
-                const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-
-                // Mostra warning se è passato più di 1 ora (permette correzioni immediate)
-                if (hoursSinceCreation > 1) {
-                  UserFeedbackService.showWarning(`Stai aggiornando un check-in salvato ${Math.round(hoursSinceCreation)} ore fa.`);
-                }
-              }
-
-              // Cifra mood_note prima di salvare
-              let encryptedMoodNote: string | null = null;
-              if (note) {
-                try {
-                  const { encryptText } = await import('../services/encryption.service');
-                  encryptedMoodNote = await encryptText(note, currentUser.id);
-                } catch (encError) {
-                  console.warn('[HomeScreen] ⚠️ Encryption failed for mood_note, saving as plaintext (fallback):', encError);
-                  encryptedMoodNote = note; // Fallback
-                }
-              }
 
               const upsertData = {
                 user_id: currentUser.id,
                 date: dk,
                 mood: value,
-                mood_note: encryptedMoodNote || null, // Salva la nota cifrata (o null se vuota)
                 updated_at: new Date().toISOString(),
-                // Preserva i valori esistenti per sleep e altri campi se esistono
                 ...(existing ? {
                   sleep_hours: existing.sleep_hours,
                   sleep_quality: existing.sleep_quality,
-                  sleep_note: existing.sleep_note,
                   overall_score: existing.overall_score,
                   health_metrics: existing.health_metrics,
                   recommendations: existing.recommendations,
                   summary: existing.summary,
                 } : {
-                  // Valori di default per nuovo record
                   overall_score: 50,
                   sleep_hours: 0,
                   sleep_quality: 0,
@@ -1423,142 +1359,65 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                   ignoreDuplicates: false
                 });
 
-              if (upsertError) {
-                throw new Error(`Error upserting mood check-in: ${upsertError.message}`);
-              }
+              if (upsertError) throw upsertError;
 
-              // 🆕 Verifica post-salvataggio che i dati siano nel database
-              const verification = await DatabaseVerificationService.verifyMoodCheckin(currentUser.id, dk);
-              if (!verification.found) {
-                UserFeedbackService.showWarning('Il check-in è stato salvato ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
-              } else {
-                UserFeedbackService.showSaveSuccess('check-in');
-                // 🆕 Aggiorna lo stato per cambiare il testo del pulsante
-                setHasExistingMoodCheckin(true);
-              }
+              setHasExistingMoodCheckin(true);
             },
             'save_mood_checkin',
-            {
-              maxAttempts: 3,
-              delay: 1000,
-              backoff: 'exponential',
-              shouldRetry: RetryService.isRetryableError,
-            }
+            { maxAttempts: 3, delay: 1000, backoff: 'exponential', shouldRetry: RetryService.isRetryableError }
           );
         }
       );
-    } catch (e) {
-      // 🆕 Errore durante il salvataggio - mostra feedback all'utente
-      const error = e instanceof Error ? e : new Error('Unknown error');
-      UserFeedbackService.showSaveError('check-in', async () => {
-        // Retry logic
-        try {
-          await saveMoodCheckin(value, note);
-        } catch (retryError) {
-          UserFeedbackService.showError('Impossibile salvare il check-in. Riprova più tardi.');
-        }
-      });
-    }
+    } catch { }
   }
 
-  async function saveSleepCheckin(quality: number, note: string, restLevel: number) {
+  // Funzione di salvataggio sleep (senza note)
+  async function saveSleepCheckin(hours: number, restLevel: number) {
     const dk = dayKey();
-    const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-    // 🔥 FIX: Verifica che la data sia quella di oggi (non permettere salvataggi per giorni passati/futuri)
-    if (dk !== today) {
-      UserFeedbackService.showError('Puoi salvare il check-in solo per oggi. La data non corrisponde.');
-      return;
-    }
-
-    // 🆕 Validazione dati prima del salvataggio
-    const sleepWidget = widgetData.find(w => w.id === 'sleep');
-    const sleepHours = sleepWidget?.sleep?.hours ?? 0;
-    const validation = DataValidationService.validateSleepCheckin({ quality, hours: sleepHours, note });
-    if (!validation.valid) {
-      UserFeedbackService.showError(`Dati non validi: ${validation.errors.join(', ')}`);
-      return;
-    }
 
     // Salva in AsyncStorage locale
     await AsyncStorage.multiSet([
-      [STORAGE_KEYS.sleep(dk), String(quality)],
-      [STORAGE_KEYS.sleepNote(dk), note],
+      [STORAGE_KEYS.sleep(dk), String(hours)],
       [STORAGE_KEYS.restLevel(dk), String(restLevel)],
     ]);
 
-    // 🆕 Salva nel database Supabase con enhanced error handling
+    // Salva nel database Supabase
     try {
       const currentUser = await AuthService.getCurrentUser();
-      if (!currentUser?.id) {
-        UserFeedbackService.showWarning('Devi essere loggato per salvare i check-in.');
-        return;
-      }
+      if (!currentUser?.id) return;
 
-      // 🆕 Usa locking per prevenire race conditions
       await OperationLockService.withLock(
         'save',
         `sleep_checkin_${currentUser.id}_${dk}`,
         async () => {
-          // 🆕 Usa retry logic per operazioni database
           await RetryService.withRetry(
             async () => {
               const { supabase } = await import('../lib/supabase');
 
-              // 🔥 FIX: Usa UPSERT invece di check-then-insert/update per evitare race conditions
-              // Il constraint UNIQUE(user_id, date) gestisce automaticamente i duplicati
-
-              // Controlla se esiste già un record per preservare i valori esistenti e mostrare warning
+              // Controlla se esiste già un record per preservare i valori esistenti
               const { data: existing } = await supabase
                 .from('daily_copilot_analyses')
-                .select('id, mood, mood_note, sleep_quality, sleep_hours, sleep_note, overall_score, health_metrics, recommendations, summary, created_at')
+                .select('id, mood, overall_score, health_metrics, recommendations, summary')
                 .eq('user_id', currentUser.id)
                 .eq('date', dk)
                 .maybeSingle();
 
-              // 🔥 FIX: Warning se si sta aggiornando un check-in già esistente
-              if (existing && existing.sleep_quality !== null && existing.sleep_quality !== undefined && existing.sleep_quality > 0) {
-                // Calcola il tempo trascorso dal primo salvataggio
-                const createdAt = new Date(existing.created_at);
-                const now = new Date();
-                const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-
-                // Mostra warning se è passato più di 1 ora (permette correzioni immediate)
-                if (hoursSinceCreation > 1) {
-                  UserFeedbackService.showWarning(`Stai aggiornando un check-in salvato ${Math.round(hoursSinceCreation)} ore fa.`);
-                }
-              }
-
-              // Cifra sleep_note prima di salvare
-              let encryptedSleepNote: string | null = null;
-              if (note) {
-                try {
-                  const { encryptText } = await import('../services/encryption.service');
-                  encryptedSleepNote = await encryptText(note, currentUser.id);
-                } catch (encError) {
-                  console.warn('[HomeScreen] ⚠️ Encryption failed for sleep_note, saving as plaintext (fallback):', encError);
-                  encryptedSleepNote = note; // Fallback
-                }
-              }
+              // Calcola sleep_quality da restLevel (1-5 -> 0-100)
+              const sleepQuality = restLevel * 20;
 
               const upsertData = {
                 user_id: currentUser.id,
                 date: dk,
-                sleep_quality: quality,
-                sleep_hours: sleepHours,
-                sleep_note: encryptedSleepNote || null, // Salva la nota cifrata (o null se vuota)
+                sleep_hours: hours,
+                sleep_quality: sleepQuality,
                 updated_at: new Date().toISOString(),
-                // Preserva i valori esistenti per mood e altri campi se esistono
                 ...(existing ? {
                   mood: existing.mood,
-                  mood_note: existing.mood_note,
                   overall_score: existing.overall_score,
                   health_metrics: existing.health_metrics,
                   recommendations: existing.recommendations,
                   summary: existing.summary,
                 } : {
-                  // Valori di default per nuovo record
                   mood: 3,
                   overall_score: 50,
                   health_metrics: {},
@@ -1574,42 +1433,16 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                   ignoreDuplicates: false
                 });
 
-              if (upsertError) {
-                throw new Error(`Error upserting sleep check-in: ${upsertError.message}`);
-              }
+              if (upsertError) throw upsertError;
 
-              // 🆕 Verifica post-salvataggio che i dati siano nel database
-              const verification = await DatabaseVerificationService.verifySleepCheckin(currentUser.id, dk);
-              if (!verification.found) {
-                UserFeedbackService.showWarning('Il check-in è stato salvato ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
-              } else {
-                UserFeedbackService.showSaveSuccess('check-in');
-                // 🆕 Aggiorna lo stato per cambiare il testo del pulsante
-                setHasExistingSleepCheckin(true);
-              }
+              setHasExistingSleepCheckin(true);
             },
             'save_sleep_checkin',
-            {
-              maxAttempts: 3,
-              delay: 1000,
-              backoff: 'exponential',
-              shouldRetry: RetryService.isRetryableError,
-            }
+            { maxAttempts: 3, delay: 1000, backoff: 'exponential', shouldRetry: RetryService.isRetryableError }
           );
         }
       );
-    } catch (e) {
-      // 🆕 Errore durante il salvataggio - mostra feedback all'utente
-      const error = e instanceof Error ? e : new Error('Unknown error');
-      UserFeedbackService.showSaveError('check-in', async () => {
-        // Retry logic
-        try {
-          await saveSleepCheckin(quality, note, restLevel);
-        } catch (retryError) {
-          UserFeedbackService.showError('Impossibile salvare il check-in. Riprova più tardi.');
-        }
-      });
-    }
+    } catch { }
   }
 
   // Handle pill press
@@ -1841,33 +1674,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     return incompleteActivities[0];
   }, [todaysActivities]);
 
-  // Generate stats dynamically based on momentum data
-  const getStats = () => {
-    const momentumValue = momentumData
-      ? MomentumService.formatMomentumValue(momentumData)
-      : t('home.stats.loading');
-
-    // 🆕 Calcola il valore per "Prossima Sessione" in base alle attività reali
-    let nextSessionValue: string;
-    if (isLoadingActivities) {
-      nextSessionValue = t('common.loading') || 'Caricamento...';
-    } else if (getNextActivity) {
-      // Mostra il titolo dell'attività (troncato se troppo lungo)
-      const title = getNextActivity.title;
-      const time = getNextActivity.time || '';
-      nextSessionValue = time ? `${time}` : (title.length > 15 ? title.substring(0, 12) + '...' : title);
-    } else if (todaysActivities.length > 0 && todaysActivities.every(a => a.completed)) {
-      nextSessionValue = t('home.stats.allCompleted') || '✓ Completate';
-    } else {
-      nextSessionValue = t('home.stats.noActivities') || 'Nessuna';
-    }
-
-    return [
-      { id: 'streak', icon: 'fire', label: t('home.stats.streak'), value: t('home.stats.days', { count: streakDays }) },
-      { id: 'momentum', icon: 'line-chart', label: t('home.stats.momentum'), value: momentumValue },
-      { id: 'next-session', icon: 'calendar', label: t('home.stats.nextSession'), value: nextSessionValue },
-    ];
-  };
+  // getStats function removed - stats now managed in HeroSection component
 
   // 🔥 FIX: Usiamo useRef per tracciare se i dati utente sono già stati caricati per evitare loop infiniti
   const userDataLoadedRef = useRef(false);
@@ -2029,12 +1836,46 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   }, []);
 
   // 🆕 Carica le attività wellness dal database
+  // 🆕 Carica le attività wellness dal database e attiva subscription realtime
   useEffect(() => {
-    loadWellnessActivities();
+    let channel: any;
 
-    // Ricarica ogni minuto per aggiornare le attività
-    const interval = setInterval(loadWellnessActivities, 60000);
-    return () => clearInterval(interval);
+    const setupRealtime = async () => {
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) return;
+
+      // Carica inizialmente
+      loadWellnessActivities();
+
+      // Configura subscription
+      const { supabase } = await import('../lib/supabase');
+      channel = supabase
+        .channel('wellness_activities_realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'wellness_activities',
+            filter: `user_id=eq.${currentUser.id}`,
+          },
+          () => {
+            // Ricarica quando ci sono modifiche
+            loadWellnessActivities();
+          }
+        )
+        .subscribe();
+    };
+
+    setupRealtime();
+
+    return () => {
+      if (channel) {
+        import('../lib/supabase').then(({ supabase }) => {
+          supabase.removeChannel(channel);
+        });
+      }
+    };
   }, [loadWellnessActivities]);
 
   // WelcomeOverlay rimosso - usiamo solo InteractiveTutorial gestito da AuthWrapper
@@ -2386,116 +2227,49 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       )}
 
       <ScrollView style={{ backgroundColor: themeColors.background }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} ref={scrollViewRef}>
-        <LinearGradient colors={[themeColors.primaryDark, themeColors.primary]} style={styles.heroCard}>
-          {/* Header with buttons inside the purple box */}
-          <CopilotStep text="Benvenuto" order={1} name="header">
-            <WalkthroughableView style={styles.heroTopRow}>
-              <View style={styles.heroGreeting}>
-                <Text style={styles.greeting}>{t('home.hello', { name: userFirstName })}</Text>
-                <Text style={styles.tagline}>{t('home.tagline')}</Text>
-              </View>
-              <View style={styles.heroActions}>
-                <TouchableOpacity
-                  style={styles.heroHealthButton}
-                  onPress={async () => {
-                    // Mostra un alert per confermare il reset del tutorial
-                    Alert.alert(
-                      t('home.onboarding.resetTitle') || 'Rivisualizza Tutorial',
-                      t('home.onboarding.resetMessage') || 'Vuoi rivisualizzare il tutorial?',
-                      [
-                        {
-                          text: t('common.cancel') || 'Annulla',
-                          style: 'cancel',
-                        },
-                        {
-                          text: t('common.confirm') || 'Conferma',
-                          style: 'default',
-                          onPress: async () => {
-                            try {
-                              // Usa il metodo globale per forzare la visualizzazione del tutorial
-                              if ((global as any).forceShowTutorial) {
-                                await (global as any).forceShowTutorial();
-                              } else {
-                                // Fallback: reset tutorial e mostra messaggio
-                                await OnboardingService.resetOnboarding();
-                                setShowTutorial(true);
-                              }
-                            } catch (error) {
-                              console.error('Error resetting tutorial:', error);
-                              Alert.alert(
-                                t('common.error') || 'Errore',
-                                t('home.onboarding.resetError') || 'Impossibile resettare il tutorial. Riprova più tardi.'
-                              );
-                            }
-                          },
-                        },
-                      ]
-                    );
-                  }}
-                >
-                  <FontAwesome name="question-circle" size={16} color="#ffffff" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.heroSettings}
-                  onPress={() => router.push('/(tabs)/settings')}
-                >
-                  <FontAwesome name="cog" size={18} color="#ffffff" />
-                </TouchableOpacity>
-              </View>
-            </WalkthroughableView>
-          </CopilotStep>
-
-          <View style={styles.heroAvatarRow}>
-            <CopilotStep text="Il tuo Coach AI" order={2} name="dailyCopilot">
-              <WalkthroughableView>
-                <Avatar
-                  avatarUri={avatarUri}
-                  isGenerating={avatarGenerating}
-                  isLoadingUser={isUserDataLoading}
-                  onCreateAvatar={handleCreateAvatar}
-                  onOpenCommunity={() => setCommunityModalVisible(true)}
-                  onMicPress={() => {
-                    // 🆕 Rimosso log per performance
-                    // Force navigation by using a unique timestamp parameter
-                    const timestamp = Date.now();
-                    router.push(`/(tabs)/coach?voiceMode=true&t=${timestamp}`);
-                  }}
-                />
-              </WalkthroughableView>
-            </CopilotStep>
-            <View style={styles.heroStats}>
-              {getStats().map((item: any) => {
-                const isMomentum = item.id === 'momentum';
-                const isStreak = item.id === 'streak';
-                const isNextSession = item.id === 'next-session';
-
-                // Determine pill type for popup
-                let pillType: 'streak' | 'momentum' | 'next-session' | null = null;
-                if (item.id === 'streak') pillType = 'streak';
-                else if (item.id === 'momentum') pillType = 'momentum';
-                else if (item.id === 'next-session') pillType = 'next-session';
-
-                return (
-                  <TouchableOpacity
-                    key={item.label}
-                    style={styles.heroChip}
-                    onPress={() => pillType && handlePillPress(pillType)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.heroChipIcon, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
-                      <FontAwesome name={item.icon as any} size={12} color="#ffffff" />
-                    </View>
-                    <View style={styles.heroChipTextContainer}>
-                      <Text style={styles.heroChipLabel} numberOfLines={1} ellipsizeMode="tail">{item.label}</Text>
-                      {/* Forza bianco perché è su gradiente viola */}
-                      <Text style={[styles.heroChipValue, { color: '#ffffff' }]} numberOfLines={2} ellipsizeMode="tail">{item.value}</Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        </LinearGradient>
+        {/* New HeroSection Component */}
+        <HeroSection
+          userName={userFirstName}
+          avatarUri={avatarUri}
+          streakDays={streakDays}
+          onMicPress={() => {
+            const timestamp = Date.now();
+            router.push(`/chat?voiceMode=true&t=${timestamp}`);
+          }}
+          onChatPress={() => router.push('/chat')}
+          onJournalPress={() => router.push('/journal')}
+          onTutorialPress={async () => {
+            Alert.alert(
+              t('home.onboarding.resetTitle') || 'Rivisualizza Tutorial',
+              t('home.onboarding.resetMessage') || 'Vuoi rivisualizzare il tutorial?',
+              [
+                { text: t('common.cancel') || 'Annulla', style: 'cancel' },
+                {
+                  text: t('common.confirm') || 'Conferma',
+                  style: 'default',
+                  onPress: async () => {
+                    try {
+                      if ((global as any).forceShowTutorial) {
+                        await (global as any).forceShowTutorial();
+                      } else {
+                        await OnboardingService.resetOnboarding();
+                        setShowTutorial(true);
+                      }
+                    } catch (error) {
+                      console.error('Error resetting tutorial:', error);
+                      Alert.alert(
+                        t('common.error') || 'Errore',
+                        t('home.onboarding.resetError') || 'Impossibile resettare il tutorial. Riprova più tardi.'
+                      );
+                    }
+                  },
+                },
+              ]
+            );
+          }}
+          onSettingsPress={() => router.push('/(tabs)/settings')}
+          onAvatarPress={() => setCommunityModalVisible(true)}
+        />
 
         {shouldShowWellnessPermissionCard && (
           <TouchableOpacity
@@ -2638,8 +2412,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                               color={widgetInfo.color}
                               subtitle={gaugeSubtitle}
                               backgroundColor={widgetInfo.backgroundColor}
+                              borderColor={widgetInfo.borderColor}
                               trendValue={gaugeTrend}
                               icon={widgetInfo.icon}
+                              iconImage={widgetInfo.iconImage}
                               size={getWidgetSize(widget.size)}
                               additionalData={
                                 widgetInfo.steps
@@ -2659,8 +2435,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                               value={infoValue}
                               subtitle={infoSubtitle}
                               icon={widgetInfo.icon}
+                              iconImage={widgetInfo.iconImage}
                               color={widgetInfo.color}
                               backgroundColor={widgetInfo.backgroundColor}
+                              borderColor={widgetInfo.borderColor}
                               trendValue={infoTrend}
                               size={getWidgetSize(widget.size)}
                               detailChips={infoDetails}
@@ -2732,8 +2510,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                               color={widgetInfo.color}
                               subtitle={gaugeSubtitle}
                               backgroundColor={widgetInfo.backgroundColor}
+                              borderColor={widgetInfo.borderColor}
                               trendValue={gaugeTrend}
                               icon={widgetInfo.icon}
+                              iconImage={widgetInfo.iconImage}
                               size={getWidgetSize(widget.size)}
                               additionalData={
                                 widgetInfo.steps
@@ -2753,8 +2533,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                               value={infoValue}
                               subtitle={infoSubtitle}
                               icon={widgetInfo.icon}
+                              iconImage={widgetInfo.iconImage}
                               color={widgetInfo.color}
                               backgroundColor={widgetInfo.backgroundColor}
+                              borderColor={widgetInfo.borderColor}
                               trendValue={infoTrend}
                               size={getWidgetSize(widget.size)}
                               detailChips={infoDetails}
@@ -2772,37 +2554,26 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         </CopilotStep>
 
 
+        {/* Check-In Giornaliero Section */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCheckIn.title')}</Text>
           <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCheckIn.subtitle')}</Text>
         </View>
 
-        {/* Self-check: Mood & Sleep */}
         <CopilotStep text="Check-in Giornalieri" order={4} name="dailyCheckin">
-          <WalkthroughableView style={styles.focusGrid}>
-            <View style={{ flex: 1 }}>
-              <MoodCheckinCard
-                value={moodValue as 1 | 2 | 3 | 4 | 5}
-                note={moodNote}
-                hasExistingCheckin={hasExistingMoodCheckin}
-                onChange={(v) => { setMoodValue(v); }}
-                onSave={async ({ value, note }) => { setMoodValue(value); setMoodNote(note); await saveMoodCheckin(value, note); }}
-              />
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <SleepCheckinCard
-                hours={displayedSleepHours}
-                quality={displayedSleepQuality}
-                bedtime={sleepStats?.bedtime ?? '11:30 PM'}
-                waketime={sleepStats?.wakeTime ?? '7:30 AM'}
-                note={sleepNote}
-                restLevel={restLevel}
-                hasExistingCheckin={hasExistingSleepCheckin}
-                onChangeRestLevel={(level) => { setRestLevel(level); }}
-                onSave={async ({ quality, note }) => { setSleepQuality(quality); setSleepNote(note); await saveSleepCheckin(quality, note, restLevel); }}
-              />
-            </View>
+          <WalkthroughableView style={{ marginHorizontal: 16, marginBottom: 16 }}>
+            <DailyCheckinCard
+              moodValue={moodValue as 1 | 2 | 3 | 4 | 5}
+              restLevel={restLevel}
+              onMoodChange={(v) => {
+                setMoodValue(v);
+                saveMoodCheckin(v);
+              }}
+              onRestLevelChange={(v) => {
+                setRestLevel(v);
+                saveSleepCheckin(displayedSleepHours, v);
+              }}
+            />
           </WalkthroughableView>
         </CopilotStep>
 
@@ -2831,8 +2602,9 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           ) : todaysActivities.length === 0 ? (
             // 🆕 Stato vuoto con messaggio informativo
             <View style={[styles.emptyActivitiesCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-              <View style={[styles.emptyActivitiesIconContainer, { backgroundColor: `${themeColors.primary}15` }]}>
-                <MaterialCommunityIcons name="calendar-check-outline" size={36} color={themeColors.primary} />
+              {/* Icona migliorata senza bordo quadrato */}
+              <View style={{ marginBottom: 12, alignItems: 'center' }}>
+                <MaterialCommunityIcons name="calendar-month-outline" size={48} color={themeColors.primary} style={{ opacity: 0.8 }} />
               </View>
               <Text style={[styles.emptyActivitiesTitle, { color: themeColors.text }]}>
                 {t('home.activities.emptyTitle') || 'Nessuna attività pianificata'}
@@ -2874,15 +2646,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                   <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCopilot.title')}</Text>
                   <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCopilot.subtitle')}</Text>
                 </View>
-                {showHistory !== undefined && (
-                  <TouchableOpacity
-                    onPress={() => setShowHistory(true)}
-                    style={styles.historyButtonHeader}
-                    activeOpacity={0.7}
-                  >
-                    <MaterialCommunityIcons name="history" size={20} color={themeColors.primary} />
-                  </TouchableOpacity>
-                )}
+                {/* History button rimosso su richiesta utente */}
               </View>
             </View>
 
@@ -3569,117 +3333,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
-  heroCard: {
-    borderRadius: 32,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 28,
-    marginHorizontal: 20,
-    marginTop: 8,
-    marginBottom: 24,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 12,
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  heroGreeting: {
-    flex: 1,
-    paddingRight: 16,
-  },
-  heroActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  heroHealthButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.24)',
-  },
-  heroSettings: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.24)',
-  },
-  greeting: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#ffffff', // Sempre bianco sul gradient viola
-  },
-  tagline: {
-    marginTop: 6,
-    color: 'rgba(255,255,255,0.9)', // Più leggibile
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  heroAvatarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  heroStats: {
-    flex: 1,
-    marginLeft: 12,
-    maxWidth: '65%',
-    minWidth: 100,
-  },
-  heroChip: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 48,
-    minWidth: 100,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    overflow: 'hidden',
-  },
-  heroChipIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  heroChipTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    minWidth: 0,
-    flexShrink: 1,
-  },
-  heroChipLabel: {
-    color: 'rgba(255,255,255,0.75)', // Più leggibile
-    fontSize: 11,
-    marginBottom: 2,
-    fontWeight: '500',
-  },
-  heroChipValue: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 16,
-  },
+  // Hero section styles removed - now in HeroSection.tsx component
   sectionHeader: {
     paddingHorizontal: 20,
     marginBottom: 12,

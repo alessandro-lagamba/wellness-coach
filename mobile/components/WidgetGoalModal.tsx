@@ -21,6 +21,7 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
   const { colors } = useTheme();
   const [selectedUnit, setSelectedUnit] = useState<HydrationUnit>('glass');
   const [unitLoaded, setUnitLoaded] = useState(false);
+  const [showUnitPicker, setShowUnitPicker] = useState(false);
 
   // 🆕 Carica unità preferita per hydration e converti initialValue
   useEffect(() => {
@@ -28,7 +29,7 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
       hydrationUnitService.getPreferredUnit().then((unit) => {
         setSelectedUnit(unit);
         setUnitLoaded(true);
-        
+
         // 🔥 FIX: Converti initialValue da bicchieri all'unità preferita
         if (initialValue != null) {
           const glasses = initialValue;
@@ -47,17 +48,17 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
 
   // 🆕 Costruisci labels dinamicamente con traduzioni
   const labels: Record<WidgetKey, { title: string; unit: string; hint: string; min: number; max: number; step: number }> = {
-    steps:      { title: t('modals.widgetGoal.steps.title'),     unit: t('modals.widgetGoal.steps.unit'),   hint: t('modals.widgetGoal.steps.hint'), min: 1000,  max: 40000, step: 500 },
-    hydration:  { 
-      title: t('modals.widgetGoal.hydration.title'), 
-      unit: unitLoaded ? hydrationUnitService.getUnitConfig(selectedUnit).label : t('modals.widgetGoal.hydration.unit'), 
-      hint: t('modals.widgetGoal.hydration.hint'), 
-      min: 1,     
+    steps: { title: t('modals.widgetGoal.steps.title'), unit: t('modals.widgetGoal.steps.unit'), hint: t('modals.widgetGoal.steps.hint'), min: 1000, max: 40000, step: 500 },
+    hydration: {
+      title: t('modals.widgetGoal.hydration.title'),
+      unit: unitLoaded ? hydrationUnitService.getUnitConfig(selectedUnit).label : t('modals.widgetGoal.hydration.unit'),
+      hint: t('modals.widgetGoal.hydration.hint'),
+      min: 1,
       max: selectedUnit === 'liter' ? 5 : selectedUnit === 'bottle' ? 10 : 20,    // Max diverso per unità
       step: selectedUnit === 'liter' ? 0.5 : 1   // Step diverso per litri
     },
-    meditation: { title: t('modals.widgetGoal.meditation.title'), unit: t('modals.widgetGoal.meditation.unit'), hint: t('modals.widgetGoal.meditation.hint'), min: 1,     max: 180,   step: 5   },
-    sleep:      { title: t('modals.widgetGoal.sleep.title'),     unit: t('modals.widgetGoal.sleep.unit'),   hint: t('modals.widgetGoal.sleep.hint'), min: 4,     max: 12,    step: 0.5 },
+    meditation: { title: t('modals.widgetGoal.meditation.title'), unit: t('modals.widgetGoal.meditation.unit'), hint: t('modals.widgetGoal.meditation.hint'), min: 1, max: 180, step: 5 },
+    sleep: { title: t('modals.widgetGoal.sleep.title'), unit: t('modals.widgetGoal.sleep.unit'), hint: t('modals.widgetGoal.sleep.hint'), min: 4, max: 12, step: 0.5 },
   };
   const meta = labels[widgetId];
   const [value, setValue] = useState<string>('');
@@ -69,12 +70,12 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
   const handleSave = async () => {
     const n = Number(value);
     if (Number.isNaN(n)) return;
-    
+
     // 🔥 Per hydration, salva l'unità preferita prima di salvare il goal
     if (widgetId === 'hydration') {
       await hydrationUnitService.setPreferredUnit(selectedUnit);
     }
-    
+
     onSave(clamp(n));
   };
 
@@ -108,25 +109,13 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
             {widgetId === 'hydration' ? (
               <TouchableOpacity
                 style={[styles.unitPill, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
-                onPress={() => {
-                  // Mostra picker per unità
-                  const units = hydrationUnitService.getAllUnits();
-                  Alert.alert(
-                    t('modals.widgetGoal.hydration.selectUnit') || 'Seleziona unità',
-                    '',
-                    units.map((unitConfig) => ({
-                      text: t(`modals.widgetGoal.hydration.units.${unitConfig.unit}`) || unitConfig.label,
-                      onPress: () => handleUnitChange(unitConfig.unit),
-                      style: selectedUnit === unitConfig.unit ? 'default' : 'default',
-                    })).concat([{ text: t('common.cancel') || 'Annulla', style: 'cancel' }])
-                  );
-                }}
+                onPress={() => setShowUnitPicker(true)}
               >
                 <Text style={[styles.unitText, { color: colors.text }]}>{meta.unit}</Text>
                 <Text style={[styles.unitArrow, { color: colors.textSecondary }]}> ▼</Text>
               </TouchableOpacity>
             ) : (
-              <View style={[styles.unitPill, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}> 
+              <View style={[styles.unitPill, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
                 <Text style={[styles.unitText, { color: colors.text }]}>{meta.unit}</Text>
               </View>
             )}
@@ -134,16 +123,16 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
 
           {widgetId === 'hydration' && (
             <Text style={[styles.unitInfo, { color: colors.textTertiary }]}>
-              {t('modals.widgetGoal.hydration.unitInfo', { 
-                ml: hydrationUnitService.getUnitConfig(selectedUnit).mlPerUnit 
+              {t('modals.widgetGoal.hydration.unitInfo', {
+                ml: hydrationUnitService.getUnitConfig(selectedUnit).mlPerUnit
               }) || `${hydrationUnitService.getUnitConfig(selectedUnit).mlPerUnit}ml per ${meta.unit}`}
             </Text>
           )}
 
           <Text style={[styles.rangeHint, { color: colors.textSecondary }]}>
-            {t('modals.widgetGoal.rangeHint', { 
-              min: meta.min, 
-              max: meta.max, 
+            {t('modals.widgetGoal.rangeHint', {
+              min: meta.min,
+              max: meta.max,
               step: `${meta.step}${meta.unit === t('modals.widgetGoal.sleep.unit') ? 'h' : ''}`
             })}
           </Text>
@@ -158,7 +147,40 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
           </View>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+
+      {/* Custom Unit Picker Overlay */}
+      {
+        showUnitPicker && (
+          <View style={styles.pickerOverlay}>
+            <TouchableOpacity style={styles.pickerBackdrop} onPress={() => setShowUnitPicker(false)} activeOpacity={1} />
+            <View style={[styles.pickerContent, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.pickerTitle, { color: colors.text }]}>
+                {t('modals.widgetGoal.hydration.selectUnit') || 'Seleziona unità'}
+              </Text>
+              {hydrationUnitService.getAllUnits().map((u) => (
+                <TouchableOpacity
+                  key={u.unit}
+                  style={[styles.pickerItem, { borderBottomColor: colors.border }]}
+                  onPress={() => {
+                    handleUnitChange(u.unit);
+                    setShowUnitPicker(false);
+                  }}
+                >
+                  {/* Fix translation key: 'glass' -> 'glasses' per matchare it.json */}
+                  <Text style={[styles.pickerItemText, { color: colors.text }]}>
+                    {t(`modals.widgetGoal.hydration.units.${u.unit === 'glass' ? 'glasses' : u.unit}`) || u.label}
+                  </Text>
+                  {selectedUnit === u.unit && <Text style={{ color: colors.primary, fontWeight: 'bold' }}>✓</Text>}
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={styles.pickerCancelBtn} onPress={() => setShowUnitPicker(false)}>
+                <Text style={[styles.pickerCancelText, { color: colors.error || '#ef4444' }]}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )
+      }
+    </Modal >
   );
 };
 
@@ -210,6 +232,16 @@ const styles = StyleSheet.create({
   btnPrimary: { backgroundColor: '#3b82f6' },
   btnPrimaryText: { color: '#fff' },
   btnText: { fontSize: 15, fontWeight: '700' },
+
+  /* Picker Styles */
+  pickerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end', zIndex: 1000 },
+  pickerBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' },
+  pickerContent: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 40 },
+  pickerTitle: { fontSize: 16, fontWeight: '700', marginBottom: 15, textAlign: 'center' },
+  pickerItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  pickerItemText: { fontSize: 16, fontWeight: '600' },
+  pickerCancelBtn: { marginTop: 15, paddingVertical: 10, alignItems: 'center' },
+  pickerCancelText: { fontSize: 16, fontWeight: '700' },
 });
 
 export default WidgetGoalModal;

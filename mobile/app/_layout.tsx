@@ -241,9 +241,26 @@ function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => v
                   headerShown: false,
                   // 🔥 FIX: Usa backgroundColor con fallback per evitare flash bianco
                   contentStyle: { backgroundColor },
+                  gestureEnabled: true, // Enable swipe back by default
                 }}
               >
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="chat"
+                  options={{
+                    headerShown: false,
+                    gestureEnabled: true,
+                    animation: 'slide_from_right',
+                  }}
+                />
+                <Stack.Screen
+                  name="journal"
+                  options={{
+                    headerShown: false,
+                    gestureEnabled: true,
+                    animation: 'slide_from_right',
+                  }}
+                />
                 <Stack.Screen name="breathing-exercise" options={{ headerShown: false }} />
                 <Stack.Screen name="auth/confirm" options={{ headerShown: false }} />
                 <Stack.Screen name="reset-password" options={{ headerShown: false }} />

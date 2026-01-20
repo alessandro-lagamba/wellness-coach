@@ -480,19 +480,20 @@
     "dailyCopilot": {
       "title": "What to do today",
       "subtitle": "Your daily insight, tailored for you.",
+      "todayScore": "Today's Score:",
       "scoreModal": {
         "title": "How is the score calculated?",
         "description": "The overall score (0-100) is calculated by combining different factors of your daily well-being. Each factor contributes with a specific weight to the final score.",
         "mood": "Mood",
-        "moodDesc": "Based on your daily mood check-in (scale 1-5). Contributes 20% to the total score.",
+        "moodDesc": "Based on your daily mood check-in (scale 1-5).",
         "sleep": "Sleep",
-        "sleepDesc": "Combination of sleep hours (70%) and sleep quality (30%). Contributes 30% to the total score.",
+        "sleepDesc": "Combination of sleep hours and sleep quality.",
         "steps": "Steps",
-        "stepsDesc": "Based on the number of daily steps compared to the goal of 10,000 steps. Contributes 20% to the total score.",
+        "stepsDesc": "Based on the number of daily steps compared to the goal of 10,000 steps.",
         "hrv": "HRV (Heart Rate Variability)",
-        "hrvDesc": "Measures heart rate variability, an indicator of recovery and stress. Contributes 15% to the total score.",
+        "hrvDesc": "Measures heart rate variability, an indicator of recovery and stress.",
         "hydration": "Hydration",
-        "hydrationDesc": "Based on the number of glasses of water consumed compared to the goal of 8 glasses. Contributes 15% to the total score."
+        "hydrationDesc": "Based on the number of glasses of water consumed compared to the goal of 8 glasses."
       }
     }
   },
@@ -532,7 +533,7 @@
         "subtitle": "Your latest emotion analysis results"
       },
       "quickStats": {
-        "title": "Quick Stats",
+        "title": "Latest Analysis",
         "subtitle": "Your emotional wellness overview"
       },
       "trends": {
@@ -871,7 +872,7 @@
         "subtitle": "Your latest skin scan results"
       },
       "quickStats": {
-        "title": "Quick Stats",
+        "title": "Last Analysis",
         "subtitle": "Your skin health overview"
       },
       "trends": {
@@ -1449,8 +1450,6 @@
         "currentGoals": "Current Goals",
         "noGoalsSet": "No goals configured. Tap to set your nutritional goals.",
         "from": "Source",
-        "sourceManual": "Manual",
-        "sourceAI": "AI Suggested",
         "sourceNutritionist": "Nutritionist",
         "kcalPerDay": "kcal/day",
         "dietGoal": "Diet Goal",

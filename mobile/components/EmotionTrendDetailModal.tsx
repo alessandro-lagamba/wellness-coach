@@ -36,7 +36,7 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
     emotion: string;
   }>>([]);
   const [loading, setLoading] = useState(false);
-  const [days, setDays] = useState<7 | 30 | 90>(7);
+  const [days, setDays] = useState<7 | 30>(7);
   const [selectedMetrics, setSelectedMetrics] = useState<Array<'valence' | 'arousal'>>(['valence', 'arousal']);
 
   useEffect(() => {
@@ -55,18 +55,19 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
         return;
       }
 
-      // Formatta i dati per il grafico
-      const formattedData = sessions.map((session) => {
-        const date = new Date(session.timestamp);
-        const day = date.getDate();
-        const month = date.getMonth() + 1;
-        return {
-          date: `${day}/${month}`,
-          valence: session.avg_valence,
-          arousal: session.avg_arousal,
-          emotion: session.dominant,
-        };
-      });
+      const formattedData = [...sessions]
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .map((session) => {
+          const date = new Date(session.timestamp);
+          const day = date.getDate();
+          const month = date.getMonth() + 1;
+          return {
+            date: `${day}/${month}`,
+            valence: session.avg_valence,
+            arousal: session.avg_arousal,
+            emotion: session.dominant,
+          };
+        });
 
       setData(formattedData);
     } catch (error) {
@@ -223,21 +224,6 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
                   {t('home.weeklyProgress.month', { count: 1 }) || '30 giorni'}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.periodButton,
-                  days === 90 && styles.periodButtonActive,
-                  { backgroundColor: days === 90 ? color + '20' : themeColors.surfaceMuted }
-                ]}
-                onPress={() => setDays(90)}
-              >
-                <Text style={[
-                  styles.periodButtonText,
-                  { color: days === 90 ? color : themeColors.textSecondary }
-                ]}>
-                  {t('analysis.emotion.trends.threeMonths') || '90 giorni'}
-                </Text>
-              </TouchableOpacity>
             </View>
 
             {/* Metric filters */}
@@ -284,8 +270,8 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
               <View style={styles.chartContainer}>
                 <EmotionTrendChart
                   data={data}
+                  noCard={true}
                   title={t('analysis.emotion.trends.title')}
-                  subtitle={t('analysis.emotion.trends.subtitle')}
                   visibleMetrics={selectedMetrics}
                   metricLabels={{
                     valence: t('analysis.emotion.metrics.valence'),

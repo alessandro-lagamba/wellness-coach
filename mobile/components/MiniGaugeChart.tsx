@@ -1,7 +1,7 @@
 "use client"
 
 import React, { memo, useMemo, useState } from "react"
-import { View, Text, StyleSheet, Platform, useWindowDimensions, LayoutChangeEvent } from "react-native"
+import { View, Text, StyleSheet, Platform, useWindowDimensions, LayoutChangeEvent, Image, ImageSourcePropType } from "react-native"
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg"
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons"
 import { useTheme } from "../contexts/ThemeContext"
@@ -30,11 +30,14 @@ interface Props {
   value: number
   maxValue?: number
   label: string
-  subtitle?: string
+  subtitle?: React.ReactNode
   color: string
-  backgroundColor?: string
+  backgroundColor?: string  // Light bg color (rgba format)
+  borderColor?: string      // Border color (rgba format)
+  textColor?: string        // Darker text color
   trendValue?: string
   icon?: string
+  iconImage?: ImageSourcePropType  // PNG icon from assets
   size?: WidgetSize
   additionalData?: AdditionalData
   // onPress e onLongPress gestiti da EditableWidget
@@ -54,22 +57,35 @@ const MiniGaugeChart: React.FC<Props> = memo(({
   label,
   subtitle,
   color,
-  backgroundColor: _unusedBackgroundColor = "#ffffff",
+  backgroundColor,
+  borderColor,
+  textColor,
   trendValue,
   icon,
+  iconImage,
   size = "small",
   additionalData,
   // onPress e onLongPress gestiti da EditableWidget
 }) => {
-  const { colors } = useTheme()
+  const { colors, mode } = useTheme()
+  const isDark = mode === 'dark'
 
   // 🔥 FIX: Dynamic sizing using useWindowDimensions
   const { width: windowWidth } = useWindowDimensions();
 
+  // Compute effective background color with dark mode support
+  const effectiveBgColor = useMemo(() => {
+    if (!backgroundColor) return colors.surface
+    if (isDark && backgroundColor.includes('rgba')) {
+      return backgroundColor.replace(/[\d.]+\)$/, '0.15)')
+    }
+    return backgroundColor
+  }, [backgroundColor, colors.surface, isDark])
+
   // Calculate dynamic gauge size based on screen width
   const getGaugeSize = (): number => {
-    const baseSize = size === "medium" ? 60 : 48;
-    // Scale down for narrow screens (< 380px)
+    const baseSize = size === "medium" ? 70 : 54;
+    // Scale down for narrow screens (<380px)
     const scale = Math.min(1, windowWidth / 400);
     return Math.max(36, Math.floor(baseSize * scale));
   };
@@ -133,11 +149,17 @@ const MiniGaugeChart: React.FC<Props> = memo(({
     return []
   }, [additionalData, size])
 
-  const baseBackground = colors.surface
+  // Render icon - image or emoji
+  const renderIcon = (emojiSize: number, imageStyle: any) => {
+    if (iconImage) {
+      return <Image source={iconImage} style={imageStyle} resizeMode="contain" />
+    }
+    return null
+  }
 
-  /** ========== SMALL (immutata) ========== */
+  /** ========== SMALL ========== */
   const renderSmall = () => (
-    <View style={[styles.innerContainer, { backgroundColor: baseBackground }]}>
+    <View style={[styles.innerContainer, { backgroundColor: effectiveBgColor }]}>
       <View style={styles.smallHeader}>
         <Text style={[styles.smallLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
       </View>
@@ -155,7 +177,7 @@ const MiniGaugeChart: React.FC<Props> = memo(({
             <Circle cx={VB_CENTER} cy={VB_CENTER} r={VB_RADIUS} stroke={`url(#grad-${color}-s)`} strokeWidth={VB_STROKE} fill="none" strokeDasharray={`${progress}, ${circumference}`} strokeLinecap="round" transform={`rotate(-90 ${VB_CENTER} ${VB_CENTER})`} />
           </Svg>
           <View style={styles.gaugeCenterSmall} pointerEvents="none">
-            <Text style={styles.gaugeEmojiSmall}>{icon ?? "📊"}</Text>
+            {renderIcon(14, styles.gaugeIconSmall)}
           </View>
         </View>
 
@@ -166,13 +188,13 @@ const MiniGaugeChart: React.FC<Props> = memo(({
     </View>
   )
 
-  /** ========== MEDIUM (immutata) ========== */
+  /** ========== MEDIUM ========== */
   const renderMedium = () => (
-    <View style={[styles.innerContainer, { backgroundColor: baseBackground }]}>
+    <View style={[styles.innerContainer, { backgroundColor: effectiveBgColor }]}>
       <View style={styles.mHeaderRow}>
         <View style={styles.mTitleWrap}>
           <View style={[styles.mIconChip, { backgroundColor: `${color}15`, borderColor: `${color}32` }]}>
-            <Text style={styles.mIconEmoji}>{icon ?? "📊"}</Text>
+            {renderIcon(16, styles.mIconImage)}
           </View>
           <Text style={[styles.mTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
         </View>
@@ -191,12 +213,11 @@ const MiniGaugeChart: React.FC<Props> = memo(({
             <Circle cx={VB_CENTER} cy={VB_CENTER} r={VB_RADIUS} stroke={`url(#grad-${color}-m)`} strokeWidth={VB_STROKE} fill="none" strokeDasharray={`${progress}, ${circumference}`} strokeLinecap="round" transform={`rotate(-90 ${VB_CENTER} ${VB_CENTER})`} />
           </Svg>
           <View style={styles.mGaugeCenter} pointerEvents="none">
-            <Text style={styles.gaugeEmojiSmall}>{icon ?? "📊"}</Text>
+            {renderIcon(14, styles.mGaugeIconImage)}
           </View>
         </View>
 
         <View style={styles.mKpiCol}>
-          {subtitle ? (<><Text style={[styles.mKpiTitle, { color: colors.textSecondary }]} numberOfLines={1}>{subtitle}</Text><View style={styles.mSpacer4} /></>) : null}
           {detailChips.length > 0 && (
             <View style={[styles.mDetailChip, { borderColor: `${color}20`, backgroundColor: `${color}08` }]}>
               <MaterialCommunityIcons name={detailChips[0].icon as any} size={14} color={color} />
@@ -211,19 +232,19 @@ const MiniGaugeChart: React.FC<Props> = memo(({
     </View>
   )
 
-  /** ========== LARGE (toccata qui: gauge in alto a destra) ========== */
+  /** ========== LARGE ========== */
   const renderLarge = () => (
     <View
       style={[
         styles.innerContainer,
-        { backgroundColor: baseBackground, borderWidth: 1, borderColor: `${color}1F` },
+        { backgroundColor: effectiveBgColor, borderWidth: 1, borderColor: `${color}1F` },
       ]}
     >
       {/* Header con titolo */}
       <View style={[styles.largeHeader, styles.lPadRight]}>
         <View style={styles.largeHeaderLeft}>
           <View style={[styles.largeIconChip, { backgroundColor: `${color}18`, borderColor: `${color}35` }]}>
-            <Text style={styles.largeIconEmoji}>{icon ?? "📊"}</Text>
+            {renderIcon(19, styles.largeIconImage)}
           </View>
           <View style={styles.largeHeaderText}>
             <Text style={[styles.largeLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
@@ -247,7 +268,7 @@ const MiniGaugeChart: React.FC<Props> = memo(({
           <Circle cx={VB_CENTER} cy={VB_CENTER} r={VB_RADIUS} stroke={`url(#grad-${color}-l)`} strokeWidth={VB_STROKE} fill="none" strokeDasharray={`${progress}, ${circumference}`} strokeLinecap="round" transform={`rotate(-90 ${VB_CENTER} ${VB_CENTER})`} />
         </Svg>
         <View style={styles.gaugeCenterLarge} pointerEvents="none">
-          <Text style={styles.gaugeEmojiSmall}>{icon ?? "📊"}</Text>
+          {renderIcon(14, styles.gaugeIconSmall)}
         </View>
       </View>
 
@@ -281,7 +302,7 @@ const MiniGaugeChart: React.FC<Props> = memo(({
 
   // TouchableOpacity rimosso - gestito da EditableWidget
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[styles.card, { backgroundColor: effectiveBgColor, borderColor: borderColor || (isDark ? 'rgba(255,255,255,0.08)' : colors.border) }]}>
       {size === "small" ? renderSmall() : size === "medium" ? renderMedium() : renderLarge()}
     </View>
   )
@@ -297,24 +318,27 @@ const styles = StyleSheet.create({
   innerContainer: { flex: 1, borderRadius: 18, padding: 13 },
 
   /* SMALL */
-  smallHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 2 },
+  smallHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 5 },
   smallLabel: { fontSize: 14, fontWeight: "700", color: "#111827", letterSpacing: -0.1, flex: 1 },
   smallContent: { flex: 1, flexDirection: "column", alignItems: "center", justifyContent: "space-between" },
   smallNumberSection: { flex: 1, justifyContent: "center" },
   smallSubtitle: { fontSize: 10, color: "#475569", fontWeight: "600", lineHeight: 12 },
   smallGaugeWrapper: { position: "relative", alignItems: "center", justifyContent: "center" },
-  gaugeCenterSmall: { position: "absolute", alignItems: "center", justifyContent: "center" },
+  gaugeCenterSmall: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" },
   gaugeEmojiSmall: { fontSize: 14, fontWeight: "400" },
+  gaugeIconSmall: { width: 38, height: 38 },
 
   /* MEDIUM */
   mHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
   mTitleWrap: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1, minWidth: 0 },
-  mIconChip: { height: 28, width: 28, borderRadius: 14, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  mIconEmoji: { fontSize: 16 },
+  mIconChip: { height: 36, width: 36, borderRadius: 18, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
+  mIconEmoji: { fontSize: 18 },
+  mIconImage: { width: 40, height: 40 },
+  mGaugeIconImage: { width: 50, height: 50 },
   mTitle: { flexShrink: 1, fontSize: 15, fontWeight: "800", color: "#0f172a" },
   mContentRow: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
-  mGaugeBox: { width: 74, height: 74, justifyContent: "center", alignItems: "center" },
-  mGaugeCenter: { position: "absolute", alignItems: "center", justifyContent: "center" },
+  mGaugeBox: { width: 74, height: 74, justifyContent: "center", alignItems: "center", position: "relative" },
+  mGaugeCenter: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" },
   mKpiCol: { flex: 1, minWidth: 0, justifyContent: "center" },
   mKpiTitle: { fontSize: 12, fontWeight: "700", color: "#475569" },
   mDetailChip: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
@@ -329,8 +353,9 @@ const styles = StyleSheet.create({
   largeHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6, gap: 8 },
   largeHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 },
   largeHeaderText: { flex: 1, minWidth: 0 },
-  largeIconChip: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  largeIconEmoji: { fontSize: 19 },
+  largeIconChip: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  largeIconEmoji: { fontSize: 22 },
+  largeIconImage: { width: 54, height: 54 },
   largeLabel: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
   largeSubtitle: { marginTop: 2, fontSize: 12, color: "#6b7280", fontWeight: "600" },
 

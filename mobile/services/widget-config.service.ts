@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useMemo, useState } from 'react';
+import { ImageSourcePropType } from 'react-native';
 import { HealthDataStatus } from '../types/health.types';
 import { CycleData } from './menstrual-cycle.service';
 
@@ -17,9 +18,12 @@ export interface WidgetConfig {
 export interface WidgetData {
   id: string;
   title: string;
-  icon: string;
+  icon: string;  // Fallback emoji (deprecated, kept for compatibility)
+  iconImage?: ImageSourcePropType;  // PNG icon from assets/images/widgets_logos
   color: string;
-  backgroundColor: string;
+  backgroundColor: string;  // Light color in rgba format (e.g., "rgba(16, 185, 129, 0.08)")
+  borderColor?: string;  // Border color in rgba format
+  textColor?: string;    // Darker color for text readability
   category: 'health' | 'wellness' | 'analysis';
   // Dati opzionali per widget specifici
   steps?: { current: number; goal: number; km: number; calories: number };
@@ -566,31 +570,45 @@ export class WidgetDataService {
 
     return [
       {
-        id: 'steps', title: 'Steps', icon: '🚶', color: '#10b981', backgroundColor: '#f0fdf4', category: 'health',
+        id: 'steps', title: 'Steps', icon: '🚶',
+        iconImage: require('../assets/images/widgets_logos/steps.png'),
+        color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.08)', borderColor: 'rgba(16, 185, 129, 0.25)', category: 'health',
         steps: { current: mock.steps, goal: stepsGoal, km: Math.round(mock.steps * 0.0008 * 100) / 100, calories: Math.round(mock.steps * 0.04) }
       },
       {
-        id: 'meditation', title: 'Meditation', icon: '🧘', color: '#8b5cf6', backgroundColor: '#f3f4f6', category: 'wellness',
+        id: 'meditation', title: 'Meditation', icon: '🧘',
+        iconImage: require('../assets/images/widgets_logos/meditation.png'),
+        color: '#8b5cf6', backgroundColor: 'rgba(76, 0, 255, 0.08)', borderColor: 'rgba(139, 92, 246, 0.25)', category: 'wellness',
         meditation: { minutes: mock.mindfulness, goal: meditationGoal, sessions: 2, streak: 5, favoriteType: 'Breathing' }
       },
       {
-        id: 'hydration', title: 'Hydration', icon: '💧', color: '#3b82f6', backgroundColor: '#eff6ff', category: 'health',
+        id: 'hydration', title: 'Hydration', icon: '💧',
+        iconImage: require('../assets/images/widgets_logos/hydration.png'),
+        color: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.08)', borderColor: 'rgba(59, 130, 246, 0.25)', category: 'health',
         hydration: { glasses: mock.hydration, goal: hydrationGoal, ml: mock.hydration * 250, lastDrink: '2h ago' }
       },
       {
-        id: 'sleep', title: 'Sleep', icon: '🌙', color: '#6366f1', backgroundColor: '#eef2ff', category: 'health',
+        id: 'sleep', title: 'Sleep', icon: '🌙',
+        iconImage: require('../assets/images/widgets_logos/sleep.png'),
+        color: '#F59E0B', backgroundColor: 'rgba(245, 158, 11, 0.08)', borderColor: 'rgba(245, 158, 11, 0.25)', category: 'health',
         sleep: { hours: mock.sleepHours, quality: mock.sleepQuality, goal: sleepGoal, deepSleep: '2h 15m', remSleep: '1h 45m', bedtime: '11:30 PM', wakeTime: '7:30 AM' }
       },
       {
-        id: 'hrv', title: 'HRV', icon: '🫀', color: '#ef4444', backgroundColor: '#fef2f2', category: 'health',
+        id: 'hrv', title: 'HRV', icon: '🫀',
+        iconImage: require('../assets/images/widgets_logos/hrv.png'),
+        color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.08)', borderColor: 'rgba(239, 68, 68, 0.25)', category: 'health',
         hrv: { value: mock.hrv, restingHR: mock.restingHR, currentHR: 72, avgHRV: 35, recovery: 'Good' }
       },
       {
-        id: 'calories', title: 'Calories', icon: '🔥', color: '#f97316', backgroundColor: '#fff7ed', category: 'health',
+        id: 'calories', title: 'Calories', icon: '🔥',
+        iconImage: require('../assets/images/widgets_logos/calories.png'),
+        color: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.08)', borderColor: 'rgba(249, 115, 22, 0.25)', category: 'health',
         calories: { current: mock.calories, goal: caloriesGoal, carbs: mock.carbs, protein: mock.protein, fat: mock.fat }
       },
       {
-        id: 'cycle', title: 'Cycle', icon: '🌸', color: '#ec4899', backgroundColor: '#fdf2f8', category: 'health',
+        id: 'cycle', title: 'Cycle', icon: '🌸',
+        iconImage: require('../assets/images/widgets_logos/cycle.png'),
+        color: '#ec4899', backgroundColor: 'rgba(236, 72, 153, 0.08)', borderColor: 'rgba(236, 72, 153, 0.25)', category: 'health',
         cycle: { day: 5, phase: 'menstrual', phaseName: 'Menstrual', nextPeriodDays: 24, cycleLength: 28, lastPeriodDate: new Date().toISOString() }
       },
     ];

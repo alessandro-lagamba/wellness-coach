@@ -226,7 +226,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
               metric="hydration"
               value={metrics.hydration}
               label={language === 'it' ? 'Idratazione' : 'Hydration'}
-              color="#0ea5e9"
+              color="#22d3ee"
               icon="water-percent"
               bucket={MetricsService.getSkinBucket('hydration', metrics.hydration)}
               expanded={true}
@@ -257,7 +257,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
               metric="oiliness"
               value={metrics.oiliness}
               label={language === 'it' ? 'Oleosità' : 'Oiliness'}
-              color="#8b5cf6"
+              color="#f59e0b"
               icon="oil"
               bucket={MetricsService.getSkinBucket('oiliness', metrics.oiliness)}
             />

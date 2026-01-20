@@ -836,7 +836,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
       if (onboardingCompleted && !isCompleted) {
         // Small delay to ensure layout is ready
         setTimeout(() => {
-          startCopilot();
+          //startCopilot();
         }, 1000);
       }
     };
@@ -2600,15 +2600,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     {nutritionalGoals.daily_calories} {t('analysis.food.goals.kcalPerDay')} • {nutritionalGoals.carbs_percentage}% • {nutritionalGoals.proteins_percentage}% • {nutritionalGoals.fats_percentage}%
                   </Text>
                 )}
-                {nutritionalGoals?.source && (
-                  <Text style={[styles.goalsSource, { color: colors.textTertiary }]}>
-                    {t('analysis.food.goals.from')}: {
-                      nutritionalGoals.source === 'manual' ? t('analysis.food.goals.sourceManual') :
-                        nutritionalGoals.source === 'ai_suggested' ? t('analysis.food.goals.sourceAI') :
-                          t('analysis.food.goals.sourceNutritionist')
-                    }
-                  </Text>
-                )}
+                {nutritionalGoals?.source}
               </View>
             </View>
 
@@ -2674,7 +2666,6 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     maxValue={dailyGoals.carbohydrates}
                     label={t('analysis.food.metrics.carbohydrates')}
                     color={colors.success}
-                    subtitle={t('analysis.food.dailyIntake.ofGoal', { value: Math.round((todayTotals.carbohydrates / (dailyGoals.carbohydrates || 1)) * 100) })}
                     trend={todayHistory.length > 1 ? 1 : 0}
                     description={t('analysis.food.dailyIntake.carbsDesc')}
                     historicalData={foodHistory.map((session, index) => ({
@@ -2691,7 +2682,6 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     maxValue={dailyGoals.proteins}
                     label={t('analysis.food.metrics.proteins')}
                     color={colors.error}
-                    subtitle={t('analysis.food.dailyIntake.ofGoal', { value: Math.round((todayTotals.proteins / (dailyGoals.proteins || 1)) * 100) })}
                     trend={todayHistory.length > 1 ? 1 : 0}
                     description={t('analysis.food.dailyIntake.proteinsDesc')}
                     historicalData={foodHistory.map((session, index) => ({
@@ -2708,7 +2698,6 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     maxValue={dailyGoals.fats}
                     label={t('analysis.food.metrics.fats')}
                     color={colors.accent}
-                    subtitle={t('analysis.food.dailyIntake.ofGoal', { value: Math.round((todayTotals.fats / (dailyGoals.fats || 1)) * 100) })}
                     trend={todayHistory.length > 1 ? 1 : 0}
                     description={t('analysis.food.dailyIntake.fatsDesc')}
                     historicalData={foodHistory.map((session, index) => ({
@@ -4088,7 +4077,7 @@ const styles = StyleSheet.create({
   },
   gaugeRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 2,
     marginBottom: 12,
   },
   // Calorie horizontal progress styles

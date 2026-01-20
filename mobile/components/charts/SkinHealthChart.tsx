@@ -36,10 +36,10 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
 
   // Calculate SVG path for the line
   const chartWidth = width - 120;
-  const chartHeight = 100;
+  const chartHeight = 150;
   const padding = 20;
-  const leftPadding = 35; // 🔥 FIX: Extra padding for y-axis labels
-  const bottomPadding = 35; // 🔥 FIX: Extra padding for x-axis labels
+  const leftPadding = 40; // 🔥 FIX: Extra padding for y-axis labels
+  const bottomPadding = 20; // 🔥 FIX: Extra padding for x-axis labels
 
   const mapValueToY = (value: number) => (
     padding + ((100 - value) * (chartHeight - padding - bottomPadding)) / 100
@@ -126,7 +126,7 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
               ))}
 
               {/* 🔥 FIX: Y-axis labels */}
-              {[0, 50, 100].map((value, index) => {
+              {[0, 25, 50, 75, 100].map((value, index) => {
                 const y = padding + ((100 - value) * (chartHeight - padding - bottomPadding)) / 100;
                 return (
                   <React.Fragment key={`y-label-${index}`}>
@@ -146,14 +146,13 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
               {/* 🔥 FIX: X-axis labels */}
               {chartData.length > 0 && chartData.map((point, index) => {
                 // Show every other label to avoid crowding
-                if (chartData.length > 5 && index % 2 !== 0) return null;
+                if (chartData.length > 7 && index % 2 !== 0) return null;
                 const total = chartData.length;
                 const x = total <= 1
                   ? leftPadding + (chartWidth - leftPadding - padding) / 2
                   : leftPadding + (index * (chartWidth - leftPadding - padding)) / (total - 1);
                 const y = chartHeight - bottomPadding + 15;
-                // Extract day from date (e.g., "1/15" -> "15")
-                const dateLabel = point.date.split('/').pop() || point.date;
+                const dateLabel = point.date;
                 return (
                   <React.Fragment key={`x-label-${index}`}>
                     <SvgText
@@ -209,32 +208,6 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
                 );
               })}
             </Svg>
-          </View>
-
-          <View style={[styles.metricsRow, { borderTopColor: colors.border }]}>
-            <View style={styles.metricItem}>
-              <View style={[styles.metricDot, { backgroundColor: '#8b5cf6' }]} />
-              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{t('analysis.skin.metrics.texture')}</Text>
-              <Text style={[styles.metricValue, { color: colors.text }]}>{chartData[chartData.length - 1]?.texture || 0}</Text>
-            </View>
-
-            <View style={styles.metricItem}>
-              <View style={[styles.metricDot, { backgroundColor: '#ef4444' }]} />
-              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{t('analysis.skin.metrics.redness')}</Text>
-              <Text style={[styles.metricValue, { color: colors.text }]}>{chartData[chartData.length - 1]?.redness || 0}</Text>
-            </View>
-
-            <View style={styles.metricItem}>
-              <View style={[styles.metricDot, { backgroundColor: '#f59e0b' }]} />
-              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{t('analysis.skin.metrics.hydration')}</Text>
-              <Text style={[styles.metricValue, { color: colors.text }]}>{chartData[chartData.length - 1]?.hydration || 0}</Text>
-            </View>
-
-            <View style={styles.metricItem}>
-              <View style={[styles.metricDot, { backgroundColor: '#a855f7' }]} />
-              <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{t('analysis.skin.metrics.oiliness')}</Text>
-              <Text style={[styles.metricValue, { color: colors.text }]}>{chartData[chartData.length - 1]?.oiliness || 0}</Text>
-            </View>
           </View>
 
           {!hasData && (
