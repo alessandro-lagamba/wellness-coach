@@ -56,7 +56,7 @@ class MealPlanService {
     }
 
     const entries = (data || []).map((row) => this.mapRow(row));
-    
+
     // Decifra le note se presenti
     for (const entry of entries) {
       if (entry.notes) {
@@ -66,7 +66,7 @@ class MealPlanService {
         }
       }
     }
-    
+
     return entries;
   }
 
@@ -108,7 +108,7 @@ class MealPlanService {
     }
 
     const entry = this.mapRow(data);
-    
+
     // Decifra le note prima di restituire
     if (entry.notes) {
       const decrypted = await decryptText(entry.notes, user.id);
@@ -116,7 +116,114 @@ class MealPlanService {
         entry.notes = decrypted;
       }
     }
-    
+
+    return entry;
+  }
+
+  async addEntry(input: UpsertMealPlanInput): Promise<MealPlanEntry> {
+    const user = await AuthService.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // 1. Controlla se esiste già un'entrata per questo utente, data e tipo di pasto
+    const { data: existingEntry, error: fetchError } = await supabase
+      .from('meal_plan_entries')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('plan_date', input.plan_date)
+      .eq('meal_type', input.meal_type)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error('[MealPlan] Error fetching existing entry:', fetchError);
+    }
+
+    // Cifra le note prima di salvare
+    let encryptedNotes: string | null = null;
+    const newNote = input.notes || '';
+
+    if (existingEntry && existingEntry.notes) {
+      // Se esiste già un'entrata, decifra la vecchia nota e appendi la nuova
+      try {
+        const oldNote = await decryptText(existingEntry.notes, user.id);
+        const combinedNotes = oldNote ? `${oldNote}\n${newNote}` : newNote;
+        encryptedNotes = await encryptText(combinedNotes, user.id);
+      } catch (e) {
+        encryptedNotes = await encryptText(newNote, user.id);
+      }
+    } else if (newNote) {
+      encryptedNotes = await encryptText(newNote, user.id);
+    }
+
+    let payload: any = {
+      user_id: user.id,
+      plan_date: input.plan_date,
+      meal_type: input.meal_type,
+      recipe_id: input.recipe_id || (existingEntry?.recipe_id || null),
+      servings: input.servings ?? (existingEntry?.servings || 1),
+      notes: encryptedNotes,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Gestione custom_recipe (Merge se esiste già)
+    if (existingEntry && existingEntry.custom_recipe && input.custom_recipe) {
+      const oldRecipe = existingEntry.custom_recipe;
+      const newRecipe = input.custom_recipe;
+
+      payload.custom_recipe = {
+        ...oldRecipe,
+        title: `${oldRecipe.title}, ${newRecipe.title}`,
+        calories: (oldRecipe.calories || 0) + (newRecipe.calories || 0),
+        macros: {
+          protein: (oldRecipe.macros?.protein || 0) + (newRecipe.macros?.protein || 0),
+          carbs: (oldRecipe.macros?.carbs || 0) + (newRecipe.macros?.carbs || 0),
+          fat: (oldRecipe.macros?.fat || 0) + (newRecipe.macros?.fat || 0),
+          fiber: (oldRecipe.macros?.fiber || 0) + (newRecipe.macros?.fiber || 0),
+        },
+        identified_foods: [
+          ...(oldRecipe.identified_foods || []),
+          ...(newRecipe.identified_foods || [])
+        ],
+        health_score: Math.round(((oldRecipe.health_score || 70) + (newRecipe.health_score || 70)) / 2),
+        image_url: newRecipe.image_url || oldRecipe.image_url, // Usa l'ultima immagine
+      };
+    } else {
+      payload.custom_recipe = input.custom_recipe || (existingEntry?.custom_recipe || null);
+    }
+
+    let result;
+    if (existingEntry) {
+      // Update
+      const { data, error } = await supabase
+        .from('meal_plan_entries')
+        .update(payload)
+        .eq('id', existingEntry.id)
+        .select('*, user_recipes (*)')
+        .single();
+
+      if (error) throw error;
+      result = data;
+    } else {
+      // Insert
+      const { data, error } = await supabase
+        .from('meal_plan_entries')
+        .insert(payload)
+        .select('*, user_recipes (*)')
+        .single();
+
+      if (error) throw error;
+      result = data;
+    }
+
+    const entry = this.mapRow(result);
+
+    // Decifra le note prima di restituire
+    if (entry.notes) {
+      const decrypted = await decryptText(entry.notes, user.id);
+      if (decrypted !== null) {
+        entry.notes = decrypted;
+      }
+    }
+
     return entry;
   }
 
@@ -164,6 +271,3 @@ class MealPlanService {
 
 export const mealPlanService = MealPlanService.getInstance();
 export default mealPlanService;
-
-
-

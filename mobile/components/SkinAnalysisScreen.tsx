@@ -796,165 +796,12 @@ const SkinAnalysisScreenContent: React.FC = () => {
             setAnalyzing(false);
           }
 
-          // 🆕 Save to Supabase database with enhanced error handling and feedback
-          try {
-            const currentUser = await AuthService.getCurrentUser();
-            if (currentUser) {
-              try {
-                const savedAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
-                  overallScore: galleryScores.overall,
-                  hydrationScore: galleryScores.hydration,
-                  oilinessScore: galleryScores.oiliness,
-                  textureScore: galleryScores.texture,
-                  pigmentationScore: galleryScores.pigmentation || 0, // Default if not available
-                  rednessScore: galleryScores.redness,  // Added redness score
-                  strengths: [], // Not available in current structure
-                  improvements: analysisResult.data.issues || [], // Map issues to improvements
-                  recommendations: galleryRecommendations,
-                  analysisData: {
-                    ...analysisResult.data,
-                    // Include additional metadata
-                    version: analysisResult.data.version || '1.0.0',
-                    notes: analysisResult.data.notes || [],
-                    confidence: analysisResult.data.confidence || 0.8,
-                  },
-                  imageUrl: asset.uri,
-                });
-
-                if (savedAnalysis) {
-                  // 🆕 Verifica post-salvataggio che i dati siano nel database
-                  const verification = await DatabaseVerificationService.verifySkinAnalysis(currentUser.id, savedAnalysis.id);
-                  if (!verification.found) {
-                    UserFeedbackService.showWarning('L\'analisi è stata salvata ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
-                  } else {
-                    UserFeedbackService.showSaveSuccess('analisi');
-                  }
-
-                  // Sincronizza i dati con lo store locale per i grafici
-                  const skinCapture = {
-                    id: savedAnalysis.id,
-                    timestamp: new Date(savedAnalysis.created_at),
-                    scores: {
-                      texture: savedAnalysis.texture_score || 0,
-                      redness: savedAnalysis.redness_score || 0,
-                      hydration: savedAnalysis.hydration_score || 0,  // ✅ FIXED: Correctly map hydration_score
-                      oiliness: savedAnalysis.oiliness_score || 0,   // ✅ FIXED: Correctly map oiliness_score
-                      overall: savedAnalysis.overall_score || 0,
-                    },
-                    confidence: savedAnalysis.confidence || 0.8,  // Use actual confidence
-                    quality: {
-                      lighting: 0.8,
-                      focus: 0.8,
-                      roi_coverage: 0.9,
-                    },
-                    photoUri: savedAnalysis.image_url || '',
-                  };
-
-                  const store = useAnalysisStore.getState();
-                  store.addSkinCapture(skinCapture);
-
-                  // 🔥 FIX: Rimosso modal FirstAnalysisCelebration - utente lo trova brutto
-                  if (isMountedRef.current) {
-                    const isFirstTime = await OnboardingService.isFirstTime('skin');
-                    if (isFirstTime) {
-                      await OnboardingService.markFirstTimeCompleted('skin');
-                    }
-                  }
-                } else {
-                  // 🆕 Nessun errore lanciato ma savedAnalysis è null
-                  UserFeedbackService.showSaveError('analisi', async () => {
-                    // Retry logic
-                    try {
-                      const retryAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
-                        overallScore: galleryScores.overall,
-                        hydrationScore: galleryScores.hydration,
-                        oilinessScore: galleryScores.oiliness,
-                        textureScore: galleryScores.texture,
-                        pigmentationScore: galleryScores.pigmentation || 0,
-                        rednessScore: galleryScores.redness,
-                        strengths: [],
-                        improvements: analysisResult.data.issues || [],
-                        recommendations: galleryRecommendations,
-                        analysisData: {
-                          ...analysisResult.data,
-                          version: analysisResult.data.version || '1.0.0',
-                          notes: analysisResult.data.notes || [],
-                          confidence: analysisResult.data.confidence || 0.8,
-                        },
-                        imageUrl: asset.uri,
-                      });
-                      if (retryAnalysis) {
-                        UserFeedbackService.showSaveSuccess('analisi');
-                      }
-                    } catch (retryError) {
-                      UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
-                    }
-                  });
-                }
-              } catch (saveError) {
-                // 🆕 Errore durante il salvataggio - mostra feedback all'utente
-                if (isMountedRef.current) {
-                  UserFeedbackService.showSaveError('analisi', async () => {
-                    // Retry logic
-                    try {
-                      const retryAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
-                        overallScore: galleryScores.overall,
-                        hydrationScore: galleryScores.hydration,
-                        oilinessScore: galleryScores.oiliness,
-                        textureScore: galleryScores.texture,
-                        pigmentationScore: galleryScores.pigmentation || 0,
-                        rednessScore: galleryScores.redness,
-                        strengths: [],
-                        improvements: analysisResult.data.issues || [],
-                        recommendations: galleryRecommendations,
-                        analysisData: {
-                          ...analysisResult.data,
-                          version: analysisResult.data.version || '1.0.0',
-                          notes: analysisResult.data.notes || [],
-                          confidence: analysisResult.data.confidence || 0.8,
-                        },
-                        imageUrl: asset.uri,
-                      });
-                      if (retryAnalysis) {
-                        UserFeedbackService.showSaveSuccess('analisi');
-                      }
-                    } catch (retryError) {
-                      UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
-                    }
-                  });
-                }
-              }
-            }
-          } catch (dbError) {
-            // 🆕 Errore generale - mostra feedback all'utente
-            if (isMountedRef.current) {
-              UserFeedbackService.showError('Errore durante il salvataggio dell\'analisi. I dati potrebbero non essere stati salvati.');
-            }
-          }
+          // 🆕 Save to Supabase database is now handled in SkinResultsScreen via handleSave
 
           // 🔥 FIX: Memory leak - usiamo requestAnimationFrame invece di setTimeout quando possibile
           requestAnimationFrame(() => {
             if (isMountedRef.current) {
-              // Save to store
-              const capture: SkinCapture = {
-                id: Date.now().toString(),
-                timestamp: new Date(),
-                scores: {
-                  texture: galleryScores.texture,
-                  redness: galleryScores.redness,
-                  hydration: galleryScores.hydration,  // ✅ FIXED: Use hydration instead of shine
-                  oiliness: galleryScores.oiliness,   // ✅ FIXED: Use oiliness instead of shine
-                  overall: galleryScores.overall,
-                },
-                confidence: analysisResult.data.confidence ?? 0.8,
-                quality: {
-                  lighting: 0.8,
-                  focus: 0.8,
-                  roi_coverage: 0.9,
-                },
-                photoUri: asset.uri,
-              };
-              addSkinCapture(capture);
+              // We don't add to store here anymore, it's handled in SkinResultsScreen.handleSave
             }
           });
 
@@ -1267,135 +1114,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
         setFullAnalysisResult(result.data);
       }
 
-      // 🆕 Save to Supabase database with enhanced error handling and feedback
-      try {
-        const currentUser = await AuthService.getCurrentUser();
-        if (currentUser) {
-          try {
-            const savedAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
-              overallScore: result.data.scores.overall || Math.round((result.data.scores.texture + result.data.scores.redness + result.data.scores.oiliness + result.data.scores.hydration) / 4),
-              hydrationScore: result.data.scores.hydration,
-              oilinessScore: result.data.scores.oiliness,
-              textureScore: result.data.scores.texture,
-              pigmentationScore: result.data.scores.pigmentation || 0, // Default if not available
-              rednessScore: result.data.scores.redness,  // Added redness score
-              strengths: [], // Not available in current structure
-              improvements: result.data.issues || [], // Map issues to improvements
-              recommendations: result.data.recommendations || [],
-              analysisData: {
-                ...result.data,
-                // Include additional metadata
-                version: result.data.version || '1.0.0',
-                notes: result.data.notes || [],
-                confidence: result.data.confidence || 0.8,
-              },
-              imageUrl: photo.uri,
-            });
-
-            if (savedAnalysis) {
-              // 🆕 Verifica post-salvataggio che i dati siano nel database
-              const verification = await DatabaseVerificationService.verifySkinAnalysis(currentUser.id, savedAnalysis.id);
-              if (!verification.found) {
-                UserFeedbackService.showWarning('L\'analisi è stata salvata ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
-              } else {
-                UserFeedbackService.showSaveSuccess('analisi');
-              }
-
-              // Sincronizza i dati con lo store locale per i grafici
-              const skinCapture = {
-                id: savedAnalysis.id,
-                timestamp: new Date(savedAnalysis.created_at),
-                scores: {
-                  texture: savedAnalysis.texture_score || 0,
-                  redness: savedAnalysis.redness_score || 0,
-                  hydration: savedAnalysis.hydration_score || 0,  // ✅ FIXED: Correctly map hydration_score
-                  oiliness: savedAnalysis.oiliness_score || 0,   // ✅ FIXED: Correctly map oiliness_score
-                  overall: savedAnalysis.overall_score || 0,
-                },
-                confidence: savedAnalysis.confidence || 0.8,  // Use actual confidence
-                quality: {
-                  lighting: 0.8,
-                  focus: 0.8,
-                  roi_coverage: 0.9,
-                },
-                photoUri: savedAnalysis.image_url || '',
-              };
-
-              const store = useAnalysisStore.getState();
-              store.addSkinCapture(skinCapture);
-            } else {
-              // 🆕 Nessun errore lanciato ma savedAnalysis è null
-              if (isMountedRef.current) {
-                UserFeedbackService.showSaveError('analisi', async () => {
-                  // Retry logic
-                  try {
-                    const retryAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
-                      overallScore: result.data.scores.overall || Math.round((result.data.scores.texture + result.data.scores.redness + result.data.scores.oiliness + result.data.scores.hydration) / 4),
-                      hydrationScore: result.data.scores.hydration,
-                      oilinessScore: result.data.scores.oiliness,
-                      textureScore: result.data.scores.texture,
-                      pigmentationScore: result.data.scores.pigmentation || 0,
-                      rednessScore: result.data.scores.redness,
-                      strengths: [],
-                      improvements: result.data.issues || [],
-                      recommendations: result.data.recommendations || [],
-                      analysisData: {
-                        ...result.data,
-                        version: result.data.version || '1.0.0',
-                        notes: result.data.notes || [],
-                        confidence: result.data.confidence || 0.8,
-                      },
-                      imageUrl: photo.uri,
-                    });
-                    if (retryAnalysis) {
-                      UserFeedbackService.showSaveSuccess('analisi');
-                    }
-                  } catch (retryError) {
-                    UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
-                  }
-                });
-              }
-            }
-          } catch (saveError) {
-            // 🆕 Errore durante il salvataggio - mostra feedback all'utente
-            if (isMountedRef.current) {
-              UserFeedbackService.showSaveError('analisi', async () => {
-                // Retry logic
-                try {
-                  const retryAnalysis = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
-                    overallScore: result.data.scores.overall || Math.round((result.data.scores.texture + result.data.scores.redness + result.data.scores.oiliness + result.data.scores.hydration) / 4),
-                    hydrationScore: result.data.scores.hydration,
-                    oilinessScore: result.data.scores.oiliness,
-                    textureScore: result.data.scores.texture,
-                    pigmentationScore: result.data.scores.pigmentation || 0,
-                    rednessScore: result.data.scores.redness,
-                    strengths: [],
-                    improvements: result.data.issues || [],
-                    recommendations: result.data.recommendations || [],
-                    analysisData: {
-                      ...result.data,
-                      version: result.data.version || '1.0.0',
-                      notes: result.data.notes || [],
-                      confidence: result.data.confidence || 0.8,
-                    },
-                    imageUrl: photo.uri,
-                  });
-                  if (retryAnalysis) {
-                    UserFeedbackService.showSaveSuccess('analisi');
-                  }
-                } catch (retryError) {
-                  UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
-                }
-              });
-            }
-          }
-        }
-      } catch (dbError) {
-        // 🆕 Errore generale - mostra feedback all'utente
-        if (isMountedRef.current) {
-          UserFeedbackService.showError('Errore durante il salvataggio dell\'analisi. I dati potrebbero non essere stati salvati.');
-        }
-      }
+      // 🆕 Save to Supabase database is now handled in SkinResultsScreen via handleSave
 
       const skinResults: SkinAnalysisResults = {
         hydration: result.data.scores.hydration,
@@ -1424,7 +1143,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
         photoUri: photo.uri,
       };
 
-      addSkinCapture(capture);
+      // We don't add to store here anymore, it's handled in SkinResultsScreen.handleSave
 
       if (isMountedRef.current) {
         cameraController.stopCamera();
@@ -1673,7 +1392,6 @@ const SkinAnalysisScreenContent: React.FC = () => {
           // 🔥 FIX: Ferma la fotocamera e torna alla schermata principale (overview)
           cameraController.stopCamera();
         }}
-        onRetake={resetAnalysis}
       />
     );
   }

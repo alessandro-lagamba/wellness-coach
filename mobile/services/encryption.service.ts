@@ -60,7 +60,7 @@ async function deriveKeyFromPassword(
     keySize: AES_KEY_LENGTH / 4, // 32 bytes = 8 words (ogni word è 4 bytes)
     iterations: PBKDF2_ITERATIONS,
   });
-  
+
   // Converti WordArray in Uint8Array
   const keyBytes = new Uint8Array(AES_KEY_LENGTH);
   const words = key.words;
@@ -71,7 +71,7 @@ async function deriveKeyFromPassword(
     keyBytes[i * 4 + 2] = (word >>> 8) & 0xff;
     keyBytes[i * 4 + 3] = word & 0xff;
   }
-  
+
   return keyBytes;
 }
 
@@ -112,28 +112,28 @@ export async function initializeEncryptionKey(
   try {
     // Recupera il salt da Supabase (user_profiles.encryption_salt)
     let salt: string | null = null;
-    
+
     const { data: profile, error: fetchError } = await supabase
       .from('user_profiles')
       .select('encryption_salt')
       .eq('id', userId)
       .maybeSingle();
-    
+
     if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = not found
       console.warn('[Encryption] Error fetching salt from Supabase:', fetchError);
     }
-    
+
     salt = profile?.encryption_salt || null;
-    
+
     if (!salt) {
       // Primo login: genera un nuovo salt e salvalo su Supabase
       salt = await generateSalt();
-      
+
       const { error: updateError } = await supabase
         .from('user_profiles')
         .update({ encryption_salt: salt })
         .eq('id', userId);
-      
+
       if (updateError) {
         console.error('[Encryption] Failed to save salt to Supabase:', updateError);
         // Fallback: salva in SecureStore locale (ma non funzionerà su altri device)
@@ -144,29 +144,29 @@ export async function initializeEncryptionKey(
         console.log('[Encryption] ✅ Salt saved to Supabase for multi-device support');
       }
     }
-    
+
     // Deriva la chiave dalla password + salt
     const derivedKey = await deriveKeyFromPassword(password, salt);
-    
+
     // Salva la chiave derivata in SecureStore (solo per questa sessione)
     // La chiave viene cancellata al logout
     const keyHex = Array.from(derivedKey)
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
-    
+
     await SecureStore.setItemAsync(
       buildSecureStoreKey(ENCRYPTION_KEYS.USER_ENCRYPTION_KEY, userId),
       keyHex
     );
-    
+
     console.log('[Encryption] ✅ Encryption keys initialized successfully for user:', userId);
-    
+
     // Log audit per inizializzazione chiavi
     await logAuditEvent('access', 'encryption_key', userId, {
       action: 'key_initialized',
       timestamp: new Date().toISOString(),
     });
-    
+
     return true;
   } catch (error) {
     console.error('[Encryption] Failed to initialize encryption key:', error);
@@ -185,17 +185,17 @@ async function getEncryptionKey(userId: string): Promise<Uint8Array | null> {
     const keyHex = await SecureStore.getItemAsync(
       buildSecureStoreKey(ENCRYPTION_KEYS.USER_ENCRYPTION_KEY, userId)
     );
-    
+
     if (!keyHex) {
       return null;
     }
-    
+
     // Converti hex string in Uint8Array
     const keyBytes = new Uint8Array(AES_KEY_LENGTH);
     for (let i = 0; i < AES_KEY_LENGTH; i++) {
       keyBytes[i] = parseInt(keyHex.slice(i * 2, i * 2 + 2), 16);
     }
-    
+
     return keyBytes;
   } catch (error) {
     // Solo loggare errori critici, non warning per chiave non trovata (caso normale se utente non loggato)
@@ -218,39 +218,39 @@ export async function encryptText(
     if (!plaintext || plaintext.trim().length === 0) {
       return null; // Non cifrare stringhe vuote
     }
-    
+
     const key = await getEncryptionKey(userId);
     if (!key) {
       // Non loggare warning - è normale se l'utente non è ancora autenticato
       // Il chiamante gestirà il caso null
       return null;
     }
-    
+
     // Converti Uint8Array key in WordArray per crypto-js
     const keyWords = CryptoJS.lib.WordArray.create(key);
-    
+
     // 🔥 FIX: Genera IV casuale usando expo-crypto invece di CryptoJS.lib.WordArray.random
     // CryptoJS.lib.WordArray.random() usa il modulo crypto nativo di Node.js che non è disponibile in React Native
     const ivBytes = await Crypto.getRandomBytesAsync(16);
     const iv = CryptoJS.lib.WordArray.create(ivBytes);
-    
+
     // Cifra con AES-CBC
     const encrypted = CryptoJS.AES.encrypt(plaintext, keyWords, {
       iv: iv,
       mode: CryptoJS.mode.CBC,
       padding: CryptoJS.pad.Pkcs7,
     });
-    
+
     // Calcola HMAC per autenticazione (equivalente al tag GCM)
     const hmac = CryptoJS.HmacSHA256(encrypted.ciphertext, keyWords);
-    
+
     const encryptedData = {
       ciphertext: encrypted.ciphertext.toString(CryptoJS.enc.Base64),
       iv: iv.toString(CryptoJS.enc.Base64),
       hmac: hmac.toString(CryptoJS.enc.Base64),
       algorithm: 'AES-CBC-256-HMAC', // Marker per algoritmo
     };
-    
+
     return JSON.stringify(encryptedData);
   } catch (error) {
     console.error('[Encryption] Failed to encrypt text:', error);
@@ -273,31 +273,37 @@ export async function decryptText(
     if (!encryptedData) {
       return null;
     }
-    
+
     // Parse dei dati cifrati per verificare se sono effettivamente criptati
     let data: { ciphertext: string; iv: string; hmac?: string; tag?: string; algorithm?: string } | null = null;
     let isEncrypted = false;
-    
+
     try {
       data = JSON.parse(encryptedData);
-      // Se ha algoritmo, è sicuramente criptato
-      isEncrypted = !!(data.algorithm && (data.algorithm === 'AES-CBC-256-HMAC' || data.algorithm === 'AES-GCM-256'));
+      // 🔥 FIX: Se ha ciphertext E iv, è sicuramente criptato (anche senza algorithm)
+      isEncrypted = !!(data && data.ciphertext && data.iv);
     } catch {
       // Se non è JSON, è testo non cifrato (backward compatibility)
       return encryptedData;
     }
-    
-    // Se non ha algoritmo, assume formato vecchio (backward compatibility) - testo non cifrato
-    if (!data.algorithm) {
-      return encryptedData; // Testo non cifrato
+
+    // 🔥 FIX: Se è un oggetto con ciphertext ma senza algorithm, è comunque dati cifrati
+    // Non restituiamo mai il JSON grezzo - o lo decifriamo o restituiamo null
+    if (!data || !isEncrypted) {
+      return encryptedData; // Testo non cifrato (non è JSON con ciphertext)
     }
-    
+
+    // Se manca l'algoritmo ma ha ciphertext, assumiamo AES-CBC-256-HMAC (il nostro formato)
+    if (!data.algorithm) {
+      data.algorithm = 'AES-CBC-256-HMAC';
+    }
+
     // Verifica algoritmo (supporta sia vecchio che nuovo formato)
     if (data.algorithm && data.algorithm !== 'AES-CBC-256-HMAC' && data.algorithm !== 'AES-GCM-256') {
       console.warn('[Encryption] Unknown algorithm:', data.algorithm);
       return null;
     }
-    
+
     // Solo ora controlliamo la chiave - se i dati sono criptati ma la chiave non c'è, è un problema
     const key = await getEncryptionKey(userId);
     if (!key) {
@@ -310,25 +316,25 @@ export async function decryptText(
       // Se i dati non sono criptati, è normale (backward compatibility)
       return null;
     }
-    
+
     // Converti Uint8Array key in WordArray per crypto-js
     const keyWords = CryptoJS.lib.WordArray.create(key);
-    
+
     // Decodifica IV e ciphertext
     const iv = CryptoJS.enc.Base64.parse(data.iv);
     const ciphertext = CryptoJS.enc.Base64.parse(data.ciphertext);
-    
+
     // Verifica HMAC se presente (autenticazione)
     if (data.hmac) {
       const expectedHmac = CryptoJS.HmacSHA256(ciphertext, keyWords);
       const providedHmac = CryptoJS.enc.Base64.parse(data.hmac);
-      
+
       if (expectedHmac.toString() !== providedHmac.toString()) {
         console.error('[Encryption] HMAC verification failed - data may be corrupted or tampered');
         return null; // Autenticazione fallita
       }
     }
-    
+
     // Decifra con AES-CBC
     const decrypted = CryptoJS.AES.decrypt(
       { ciphertext: ciphertext } as any,
@@ -339,14 +345,14 @@ export async function decryptText(
         padding: CryptoJS.pad.Pkcs7,
       }
     );
-    
+
     const plaintext = decrypted.toString(CryptoJS.enc.Utf8);
-    
+
     if (!plaintext) {
       console.error('[Encryption] Decryption failed - invalid key or corrupted data');
       return null;
     }
-    
+
     return plaintext;
   } catch (error) {
     console.error('[Encryption] Failed to decrypt text:', error);
@@ -398,7 +404,7 @@ export async function encryptStringArray(
   if (!array || array.length === 0) {
     return null;
   }
-  
+
   // Serializza l'array come JSON e cifra
   const jsonString = JSON.stringify(array);
   return await encryptText(jsonString, userId);
@@ -418,12 +424,12 @@ export async function decryptStringArray(
   if (!encryptedData) {
     return null;
   }
-  
+
   const decrypted = await decryptText(encryptedData, userId);
   if (!decrypted) {
     return null;
   }
-  
+
   try {
     return JSON.parse(decrypted) as string[];
   } catch {

@@ -417,6 +417,32 @@ const FoodAnalysisScreenContent: React.FC = () => {
   const { start: startCopilot } = useCopilot();
   const { t, language } = useTranslation(); // 🆕 i18n hook
   const { colors } = useTheme();
+
+  // 🆕 Utility functions for meal planning
+  const toISODate = (date: Date) => {
+    const offset = date.getTimezoneOffset();
+    const adjustedDate = new Date(date.getTime() - offset * 60 * 1000);
+    return adjustedDate.toISOString().split('T')[0];
+  };
+
+  const inferMealTypeFromTime = (date: Date): MealPlanMealType => {
+    const hours = date.getHours();
+    if (hours >= 5 && hours < 11) return 'breakfast';
+    if (hours >= 11 && hours < 15) return 'lunch';
+    if (hours >= 18 && hours < 22) return 'dinner';
+    return 'snack';
+  };
+
+  const normalizeMealType = (type: string | undefined, fallback: MealPlanMealType): MealPlanMealType => {
+    if (!type) return fallback;
+    const t = type.toLowerCase();
+    if (t.includes('breakfast') || t.includes('colazione')) return 'breakfast';
+    if (t.includes('lunch') || t.includes('pranzo')) return 'lunch';
+    if (t.includes('dinner') || t.includes('cena')) return 'dinner';
+    if (t.includes('snack') || t.includes('spuntino') || t.includes('merenda')) return 'snack';
+    return fallback;
+  };
+
   const cameraController = useCameraController({ isScreenFocused: true });
   const { hideTabBar, showTabBar } = useTabBarVisibility();
   const [currentImageUri, setCurrentImageUri] = useState(heroImageUri);
@@ -425,6 +451,10 @@ const FoodAnalysisScreenContent: React.FC = () => {
   // Removed capturing state - no more capture overlay
   const [results, setResults] = useState<FoodAnalysisResults | null>(null);
   const [fullAnalysisResult, setFullAnalysisResult] = useState<FoodAnalysisResult | null>(null);
+  const [pendingAnalysisData, setPendingAnalysisData] = useState<{
+    imageUri: string;
+    analysisResult: any;
+  } | null>(null); // 🆕 Dati dell'analisi in attesa di essere salvati
   // Removed showResultsCard state - now using FoodResultsScreen for all results
   const [cameraType, setCameraType] = useState<'front' | 'back'>('front'); // Default to front camera for consistency
   const [cameraSwitching, setCameraSwitching] = useState(false);
@@ -616,9 +646,9 @@ const FoodAnalysisScreenContent: React.FC = () => {
       const originalProteins = normalized.proteins_percentage;
       const originalFats = normalized.fats_percentage;
 
-      normalized.carbs_percentage = clampMacroPercentage(originalCarbs, MACRO_PERCENT_LIMITS.carbs);
-      normalized.proteins_percentage = clampMacroPercentage(originalProteins, MACRO_PERCENT_LIMITS.proteins);
-      normalized.fats_percentage = clampMacroPercentage(originalFats, MACRO_PERCENT_LIMITS.fats);
+      normalized.carbs_percentage = originalCarbs;
+      normalized.proteins_percentage = originalProteins;
+      normalized.fats_percentage = originalFats;
 
       if (
         showAlerts &&
@@ -694,31 +724,45 @@ const FoodAnalysisScreenContent: React.FC = () => {
     ensureAnalysisReady();
   }, [ensureAnalysisReady]);
 
+  const loadDailyIntake = useCallback(async () => {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (currentUser && isMountedRef.current) {
+        const intake = await FoodAnalysisService.getDailyIntake(currentUser.id);
+        if (isMountedRef.current) {
+          setDailyIntake(intake);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error loading daily intake:', error);
+    }
+  }, []);
+
+  const reloadData = useCallback(async () => {
+    try {
+      if (isMountedRef.current) {
+        setIsLoadingData(true);
+      }
+      await ChartDataService.loadFoodDataForCharts();
+      await loadDailyIntake();
+      await loadMealPlan();
+      await loadRecipeLibrary();
+      if (isMountedRef.current) {
+        setIsLoadingData(false);
+      }
+    } catch (error) {
+      console.error('❌ Failed to reload food data:', error);
+      if (isMountedRef.current) {
+        setIsLoadingData(false);
+      }
+    }
+  }, [loadDailyIntake, loadMealPlan, loadRecipeLibrary]);
+
   // Reload data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      let isMounted = true;
-
-      const reloadData = async () => {
-        try {
-          await ChartDataService.loadFoodDataForCharts();
-          if (isMounted) {
-            setIsLoadingData(false);
-          }
-        } catch (error) {
-          console.error('❌ Failed to reload food data on focus:', error);
-          if (isMounted) {
-            setIsLoadingData(false);
-          }
-        }
-      };
-
       reloadData();
-
-      return () => {
-        isMounted = false;
-      };
-    }, [])
+    }, [reloadData])
   );
 
   // Carica i dati dei grafici dal database quando il componente si monta
@@ -1234,41 +1278,19 @@ const FoodAnalysisScreenContent: React.FC = () => {
   };
 
   useEffect(() => {
-    // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
-    let isMounted = true;
-
-    const loadDailyIntake = async () => {
-      try {
-        const currentUser = await AuthService.getCurrentUser();
-        if (currentUser && isMounted) {
-          const intake = await FoodAnalysisService.getDailyIntake(currentUser.id);
-          if (isMounted) {
-            setDailyIntake(intake);
-          }
-        }
-      } catch (error) {
-        // 🔥 FIX: Solo errori critici in console
-        console.error('❌ Error loading daily intake:', error);
-      }
-    };
-
     loadDailyIntake();
 
-    // Ricarica ogni volta che viene aggiunta una nuova analisi
-    // 🔥 FIX: Usiamo un flag per evitare subscription multiple
-    let subscribed = true;
+    // Ricarica ogni volta che viene aggiunta una nuova analisi nello store
     const unsubscribe = useAnalysisStore.subscribe((state) => {
-      if (subscribed && isMounted && state.foodHistory.length > 0) {
+      if (isMountedRef.current && state.foodHistory.length > 0) {
         loadDailyIntake();
       }
     });
 
     return () => {
-      isMounted = false;
-      subscribed = false;
       unsubscribe();
     };
-  }, [fullAnalysisResult]);
+  }, [loadDailyIntake]);
 
   // Start camera automatically when screen loads
   // Show/hide tab bar based on camera state
@@ -1438,227 +1460,13 @@ const FoodAnalysisScreenContent: React.FC = () => {
             setAnalyzing(false);
           }
 
-          // 🆕 Save to Supabase database with enhanced error handling and feedback
-          try {
-            const currentUser = await AuthService.getCurrentUser();
-            if (currentUser) {
-              try {
-                const savedAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
-                  mealType: analysisResult.data.meal_type || 'other',
-                  identifiedFoods: analysisResult.data.identified_foods || [],
-                  calories: analysisResult.data.macronutrients?.calories || 0,
-                  carbohydrates: analysisResult.data.macronutrients?.carbohydrates || 0,
-                  proteins: analysisResult.data.macronutrients?.proteins || 0,
-                  fats: analysisResult.data.macronutrients?.fats || 0,
-                  fiber: analysisResult.data.macronutrients?.fiber || 0,
-                  vitamins: analysisResult.data.vitamins || {},
-                  minerals: analysisResult.data.minerals || {},
-                  healthScore: analysisResult.data.health_score || 70,
-                  recommendations: analysisResult.data.recommendations || [],
-                  observations: analysisResult.data.observations || [],
-                  confidence: analysisResult.data.confidence || 0.8,
-                  analysisData: {
-                    ...analysisResult.data,
-                    version: analysisResult.data.version || '1.0.0',
-                    confidence: analysisResult.data.confidence || 0.8,
-                  },
-                  imageUrl: asset.uri,
-                });
-
-                if (savedAnalysis) {
-                  // 🆕 Verifica post-salvataggio che i dati siano nel database
-                  const verification = await DatabaseVerificationService.verifyFoodAnalysis(currentUser.id, savedAnalysis.id);
-                  if (!verification.found) {
-                    UserFeedbackService.showWarning('L\'analisi è stata salvata ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
-                  } else {
-                    UserFeedbackService.showSaveSuccess('analisi');
-                  }
-
-                  // 🔥 FIX: Rimosso modal FirstAnalysisCelebration - utente lo trova brutto
-                  if (isMountedRef.current) {
-                    const isFirstTime = await OnboardingService.isFirstTime('food');
-                    if (isFirstTime) {
-                      await OnboardingService.markFirstTimeCompleted('food');
-                    }
-                  }
-
-                  // Sincronizza i dati con lo store locale per i grafici
-                  // ✅ FIX: Assicurati che i valori numerici vengano preservati correttamente
-                  const foodSession = {
-                    id: savedAnalysis.id,
-                    timestamp: new Date(savedAnalysis.created_at),
-                    macronutrients: {
-                      carbohydrates: typeof analysisResult.data.macronutrients?.carbohydrates === 'number'
-                        ? analysisResult.data.macronutrients.carbohydrates
-                        : (typeof savedAnalysis.carbohydrates === 'number' ? savedAnalysis.carbohydrates : 0),
-                      proteins: typeof analysisResult.data.macronutrients?.proteins === 'number'
-                        ? analysisResult.data.macronutrients.proteins
-                        : (typeof savedAnalysis.proteins === 'number' ? savedAnalysis.proteins : 0),
-                      fats: typeof analysisResult.data.macronutrients?.fats === 'number'
-                        ? analysisResult.data.macronutrients.fats
-                        : (typeof savedAnalysis.fats === 'number' ? savedAnalysis.fats : 0),
-                      fiber: typeof analysisResult.data.macronutrients?.fiber === 'number'
-                        ? analysisResult.data.macronutrients.fiber
-                        : (typeof savedAnalysis.fiber === 'number' ? savedAnalysis.fiber : 0),
-                      calories: typeof analysisResult.data.macronutrients?.calories === 'number'
-                        ? analysisResult.data.macronutrients.calories
-                        : (typeof savedAnalysis.calories === 'number' ? savedAnalysis.calories : 0),
-                    },
-                    meal_type: analysisResult.data.meal_type || savedAnalysis.meal_type || 'other',
-                    health_score: typeof analysisResult.data.health_score === 'number'
-                      ? analysisResult.data.health_score
-                      : (typeof savedAnalysis.health_score === 'number' ? savedAnalysis.health_score : 70),
-                    confidence: typeof analysisResult.data.confidence === 'number'
-                      ? analysisResult.data.confidence
-                      : (typeof savedAnalysis.confidence === 'number' ? savedAnalysis.confidence : 0.8),
-                    identified_foods: analysisResult.data.identified_foods || savedAnalysis.identified_foods || [],
-                  };
-
-                  const store = useAnalysisStore.getState();
-                  store.addFoodSession(foodSession);
-
-                  try {
-                    const intake = await FoodAnalysisService.getDailyIntake(currentUser.id);
-                    if (isMountedRef.current) {
-                      setDailyIntake(intake);
-                    }
-                  } catch (error) {
-                    console.warn('Failed to refresh daily intake after gallery analysis:', error);
-                  }
-
-                  // 🆕 Aggiungi automaticamente al meal planner per tracciare i pasti del giorno
-                  try {
-                    const inferredMealType = inferMealTypeFromTime(new Date(savedAnalysis.created_at));
-                    const mealType = normalizeMealType(
-                      analysisResult.data.meal_type || savedAnalysis?.meal_type,
-                      inferredMealType
-                    );
-                    const todayISO = toISODate(new Date());
-
-                    // 🔥 FIX: Helper per capitalizzare il titolo (prima lettera maiuscola di ogni parola)
-                    const capitalizeTitle = (foods: string[]): string => {
-                      if (!foods || foods.length === 0) return 'Pasto analizzato';
-                      return foods
-                        .map(food => {
-                          if (!food) return '';
-                          return food.charAt(0).toUpperCase() + food.slice(1).toLowerCase();
-                        })
-                        .join(', ');
-                    };
-
-                    // 🔥 FIX: Usa SOLO l'image_url dall'analisi salvata (URL pubblico di Supabase Storage)
-                    // L'immagine è già stata caricata in Supabase Storage durante il salvataggio dell'analisi
-                    const imageUrl = savedAnalysis.image_url;
-
-                    // Crea un custom_recipe con tutte le informazioni dell'analisi
-                    const customRecipe = {
-                      title: capitalizeTitle(analysisResult.data.identified_foods || savedAnalysis.identified_foods || []),
-                      source: 'food_analysis',
-                      analysis_id: savedAnalysis.id,
-                      calories: analysisResult.data.macronutrients?.calories || savedAnalysis.calories || 0,
-                      macros: {
-                        protein: analysisResult.data.macronutrients?.proteins || savedAnalysis.proteins || 0,
-                        carbs: analysisResult.data.macronutrients?.carbohydrates || savedAnalysis.carbohydrates || 0,
-                        fat: analysisResult.data.macronutrients?.fats || savedAnalysis.fats || 0,
-                        fiber: analysisResult.data.macronutrients?.fiber || savedAnalysis.fiber || 0,
-                      },
-                      identified_foods: analysisResult.data.identified_foods || savedAnalysis.identified_foods || [],
-                      health_score: analysisResult.data.health_score || savedAnalysis.health_score || 70,
-                      image_url: imageUrl, // 🔥 FIX: Usa l'URL persistente da Supabase
-                    };
-
-                    await mealPlanService.upsertEntry({
-                      plan_date: todayISO,
-                      meal_type: mealType,
-                      custom_recipe: customRecipe,
-                      servings: 1,
-                      notes: `Analisi automatica - ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`,
-                    });
-
-                    // Ricarica il meal plan per mostrare il nuovo entry
-                    await loadMealPlan();
-                  } catch (mealPlanError) {
-                    // Non bloccare l'utente se l'aggiunta al meal planner fallisce
-                    console.warn('Failed to add analysis to meal plan:', mealPlanError);
-                  }
-                } else {
-                  // 🆕 Nessun errore lanciato ma savedAnalysis è null
-                  if (isMountedRef.current) {
-                    UserFeedbackService.showSaveError('analisi', async () => {
-                      // Retry logic
-                      try {
-                        const retryAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
-                          mealType: analysisResult.data.meal_type || 'other',
-                          identifiedFoods: analysisResult.data.identified_foods || [],
-                          calories: analysisResult.data.macronutrients?.calories || 0,
-                          carbohydrates: analysisResult.data.macronutrients?.carbohydrates || 0,
-                          proteins: analysisResult.data.macronutrients?.proteins || 0,
-                          fats: analysisResult.data.macronutrients?.fats || 0,
-                          fiber: analysisResult.data.macronutrients?.fiber || 0,
-                          vitamins: analysisResult.data.vitamins || {},
-                          minerals: analysisResult.data.minerals || {},
-                          healthScore: analysisResult.data.health_score || 70,
-                          recommendations: analysisResult.data.recommendations || [],
-                          observations: analysisResult.data.observations || [],
-                          confidence: analysisResult.data.confidence || 0.8,
-                          analysisData: {
-                            ...analysisResult.data,
-                            version: analysisResult.data.version || '1.0.0',
-                            confidence: analysisResult.data.confidence || 0.8,
-                          },
-                          imageUrl: asset.uri,
-                        });
-                        if (retryAnalysis) {
-                          UserFeedbackService.showSaveSuccess('analisi');
-                        }
-                      } catch (retryError) {
-                        UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
-                      }
-                    });
-                  }
-                }
-              } catch (saveError) {
-                // 🆕 Errore durante il salvataggio - mostra feedback all'utente
-                if (isMountedRef.current) {
-                  UserFeedbackService.showSaveError('analisi', async () => {
-                    // Retry logic
-                    try {
-                      const retryAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
-                        mealType: analysisResult.data.meal_type || 'other',
-                        identifiedFoods: analysisResult.data.identified_foods || [],
-                        calories: analysisResult.data.macronutrients?.calories || 0,
-                        carbohydrates: analysisResult.data.macronutrients?.carbohydrates || 0,
-                        proteins: analysisResult.data.macronutrients?.proteins || 0,
-                        fats: analysisResult.data.macronutrients?.fats || 0,
-                        fiber: analysisResult.data.macronutrients?.fiber || 0,
-                        vitamins: analysisResult.data.vitamins || {},
-                        minerals: analysisResult.data.minerals || {},
-                        healthScore: analysisResult.data.health_score || 70,
-                        recommendations: analysisResult.data.recommendations || [],
-                        observations: analysisResult.data.observations || [],
-                        confidence: analysisResult.data.confidence || 0.8,
-                        analysisData: {
-                          ...analysisResult.data,
-                          version: analysisResult.data.version || '1.0.0',
-                          confidence: analysisResult.data.confidence || 0.8,
-                        },
-                        imageUrl: asset.uri,
-                      });
-                      if (retryAnalysis) {
-                        UserFeedbackService.showSaveSuccess('analisi');
-                      }
-                    } catch (retryError) {
-                      UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
-                    }
-                  });
-                }
-              }
-            }
-          } catch (dbError) {
-            // 🆕 Errore generale - mostra feedback all'utente
-            if (isMountedRef.current) {
-              UserFeedbackService.showError('Errore durante il salvataggio dell\'analisi. I dati potrebbero non essere stati salvati.');
-            }
+          // 🆕 NON salvare l'analisi automaticamente - salva solo i dati temporanei
+          // Il salvataggio effettivo avverrà quando l'utente preme "Aggiungi ai pasti"
+          if (isMountedRef.current) {
+            setPendingAnalysisData({
+              imageUri: asset.uri,
+              analysisResult: analysisResult.data,
+            });
           }
 
         } else {
@@ -1964,231 +1772,13 @@ const FoodAnalysisScreenContent: React.FC = () => {
         setFullAnalysisResult(result.data);
       }
 
-      // 🆕 Save to Supabase database with enhanced error handling and feedback
-      try {
-        const currentUser = await AuthService.getCurrentUser();
-        if (currentUser) {
-          try {
-            const savedAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
-              mealType: result.data.meal_type || 'other',
-              identifiedFoods: result.data.identified_foods || [],
-              calories: result.data.macronutrients?.calories || 0,
-              carbohydrates: result.data.macronutrients?.carbohydrates || 0,
-              proteins: result.data.macronutrients?.proteins || 0,
-              fats: result.data.macronutrients?.fats || 0,
-              fiber: result.data.macronutrients?.fiber || 0,
-              vitamins: result.data.vitamins || {},
-              minerals: result.data.minerals || {},
-              healthScore: result.data.health_score || 70,
-              recommendations: result.data.recommendations || [],
-              observations: result.data.observations || [],
-              confidence: result.data.confidence || 0.8,
-              analysisData: {
-                ...result.data,
-                version: result.data.version || '1.0.0',
-                confidence: result.data.confidence || 0.8,
-              },
-              imageUrl: photo.uri,
-            });
-
-            if (savedAnalysis) {
-              // 🆕 Verifica post-salvataggio che i dati siano nel database
-              const verification = await DatabaseVerificationService.verifyFoodAnalysis(currentUser.id, savedAnalysis.id);
-              if (!verification.found) {
-                UserFeedbackService.showWarning('L\'analisi è stata salvata ma potrebbe non essere visibile immediatamente. Riprova più tardi.');
-              } else {
-                UserFeedbackService.showSaveSuccess('analisi');
-              }
-
-              // ✅ FIX: Sincronizza i dati con lo store locale per i grafici
-              // Usa i dati dall'analisi risultato (result.data) invece di savedAnalysis per garantire valori corretti
-              // ✅ FIX: Assicurati che i valori numerici vengano preservati correttamente
-              const inferredMealType = inferMealTypeFromTime(new Date(savedAnalysis.created_at));
-              const effectiveMealType =
-                (result.data.meal_type && result.data.meal_type !== 'other'
-                  ? result.data.meal_type
-                  : inferredMealType) as MealPlanMealType;
-
-              const foodSession = {
-                id: savedAnalysis.id,
-                timestamp: new Date(savedAnalysis.created_at),
-                macronutrients: {
-                  carbohydrates: typeof result.data.macronutrients?.carbohydrates === 'number'
-                    ? result.data.macronutrients.carbohydrates
-                    : (typeof savedAnalysis.carbohydrates === 'number' ? savedAnalysis.carbohydrates : 0),
-                  proteins: typeof result.data.macronutrients?.proteins === 'number'
-                    ? result.data.macronutrients.proteins
-                    : (typeof savedAnalysis.proteins === 'number' ? savedAnalysis.proteins : 0),
-                  fats: typeof result.data.macronutrients?.fats === 'number'
-                    ? result.data.macronutrients.fats
-                    : (typeof savedAnalysis.fats === 'number' ? savedAnalysis.fats : 0),
-                  fiber: typeof result.data.macronutrients?.fiber === 'number'
-                    ? result.data.macronutrients.fiber
-                    : (typeof savedAnalysis.fiber === 'number' ? savedAnalysis.fiber : 0),
-                  calories:
-                    typeof result.data.macronutrients?.calories === 'number'
-                      ? result.data.macronutrients.calories
-                      : typeof savedAnalysis.calories === 'number'
-                        ? savedAnalysis.calories
-                        : 0,
-                },
-                meal_type: effectiveMealType,
-                health_score: typeof result.data.health_score === 'number'
-                  ? result.data.health_score
-                  : (typeof savedAnalysis.health_score === 'number' ? savedAnalysis.health_score : 70),
-                confidence: typeof result.data.confidence === 'number'
-                  ? result.data.confidence
-                  : (typeof savedAnalysis.confidence === 'number' ? savedAnalysis.confidence : 0.8),
-                identified_foods: result.data.identified_foods || savedAnalysis.identified_foods || [],
-              };
-
-              const store = useAnalysisStore.getState();
-              store.addFoodSession(foodSession);
-
-              // ✅ FIX: Ricarica dailyIntake dal database per aggiornare i totali giornalieri
-              try {
-                const intake = await FoodAnalysisService.getDailyIntake(currentUser.id);
-                if (isMountedRef.current) {
-                  setDailyIntake(intake);
-                }
-              } catch (error) {
-                console.warn('Failed to refresh daily intake:', error);
-              }
-
-              // 🆕 Aggiungi automaticamente al meal planner per tracciare i pasti del giorno
-              try {
-                const inferredMealType = inferMealTypeFromTime(new Date(savedAnalysis.created_at));
-                const mealType = normalizeMealType(
-                  result.data.meal_type || savedAnalysis?.meal_type,
-                  inferredMealType
-                );
-
-                const todayISO = toISODate(new Date());
-
-                // 🔥 FIX: Helper per capitalizzare il titolo (prima lettera maiuscola di ogni parola)
-                const capitalizeTitle = (foods: string[]): string => {
-                  if (!foods || foods.length === 0) return 'Pasto analizzato';
-                  return foods
-                    .map(food => {
-                      if (!food) return '';
-                      return food.charAt(0).toUpperCase() + food.slice(1).toLowerCase();
-                    })
-                    .join(', ');
-                };
-
-                // 🔥 FIX: Usa SOLO l'image_url dall'analisi salvata (URL pubblico di Supabase Storage)
-                // L'immagine è già stata caricata in Supabase Storage durante il salvataggio dell'analisi
-                const imageUrl = savedAnalysis.image_url;
-
-                // Crea un custom_recipe con tutte le informazioni dell'analisi
-                const customRecipe = {
-                  title: capitalizeTitle(result.data.identified_foods || savedAnalysis.identified_foods || []),
-                  source: 'food_analysis',
-                  analysis_id: savedAnalysis.id,
-                  calories: result.data.macronutrients?.calories || savedAnalysis.calories || 0,
-                  macros: {
-                    protein: result.data.macronutrients?.proteins || savedAnalysis.proteins || 0,
-                    carbs: result.data.macronutrients?.carbohydrates || savedAnalysis.carbohydrates || 0,
-                    fat: result.data.macronutrients?.fats || savedAnalysis.fats || 0,
-                    fiber: result.data.macronutrients?.fiber || savedAnalysis.fiber || 0,
-                  },
-                  identified_foods: result.data.identified_foods || savedAnalysis.identified_foods || [],
-                  health_score: result.data.health_score || savedAnalysis.health_score || 70,
-                  image_url: imageUrl, // 🔥 FIX: Usa l'URL persistente da Supabase
-                };
-
-                await mealPlanService.upsertEntry({
-                  plan_date: todayISO,
-                  meal_type: mealType,
-                  custom_recipe: customRecipe,
-                  servings: 1,
-                  notes: `Analisi automatica - ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`,
-                });
-
-                // Ricarica il meal plan per mostrare il nuovo entry
-                await loadMealPlan();
-              } catch (mealPlanError) {
-                // Non bloccare l'utente se l'aggiunta al meal planner fallisce
-                console.warn('Failed to add analysis to meal plan:', mealPlanError);
-              }
-            } else {
-              // 🆕 Nessun errore lanciato ma savedAnalysis è null
-              if (isMountedRef.current) {
-                UserFeedbackService.showSaveError('analisi', async () => {
-                  // Retry logic
-                  try {
-                    const retryAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
-                      mealType: result.data.meal_type || 'other',
-                      identifiedFoods: result.data.identified_foods || [],
-                      calories: result.data.macronutrients?.calories || 0,
-                      carbohydrates: result.data.macronutrients?.carbohydrates || 0,
-                      proteins: result.data.macronutrients?.proteins || 0,
-                      fats: result.data.macronutrients?.fats || 0,
-                      fiber: result.data.macronutrients?.fiber || 0,
-                      vitamins: result.data.vitamins || {},
-                      minerals: result.data.minerals || {},
-                      healthScore: result.data.health_score || 70,
-                      recommendations: result.data.recommendations || [],
-                      observations: result.data.observations || [],
-                      confidence: result.data.confidence || 0.8,
-                      analysisData: {
-                        ...result.data,
-                        version: result.data.version || '1.0.0',
-                        confidence: result.data.confidence || 0.8,
-                      },
-                      imageUrl: photo.uri,
-                    });
-                    if (retryAnalysis) {
-                      UserFeedbackService.showSaveSuccess('analisi');
-                    }
-                  } catch (retryError) {
-                    UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
-                  }
-                });
-              }
-            }
-          } catch (saveError) {
-            // 🆕 Errore durante il salvataggio - mostra feedback all'utente
-            if (isMountedRef.current) {
-              UserFeedbackService.showSaveError('analisi', async () => {
-                // Retry logic
-                try {
-                  const retryAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
-                    mealType: result.data.meal_type || 'other',
-                    identifiedFoods: result.data.identified_foods || [],
-                    calories: result.data.macronutrients?.calories || 0,
-                    carbohydrates: result.data.macronutrients?.carbohydrates || 0,
-                    proteins: result.data.macronutrients?.proteins || 0,
-                    fats: result.data.macronutrients?.fats || 0,
-                    fiber: result.data.macronutrients?.fiber || 0,
-                    vitamins: result.data.vitamins || {},
-                    minerals: result.data.minerals || {},
-                    healthScore: result.data.health_score || 70,
-                    recommendations: result.data.recommendations || [],
-                    observations: result.data.observations || [],
-                    confidence: result.data.confidence || 0.8,
-                    analysisData: {
-                      ...result.data,
-                      version: result.data.version || '1.0.0',
-                      confidence: result.data.confidence || 0.8,
-                    },
-                    imageUrl: photo.uri,
-                  });
-                  if (retryAnalysis) {
-                    UserFeedbackService.showSaveSuccess('analisi');
-                  }
-                } catch (retryError) {
-                  UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
-                }
-              });
-            }
-          }
-        }
-      } catch (dbError) {
-        // 🆕 Errore generale - mostra feedback all'utente
-        if (isMountedRef.current) {
-          UserFeedbackService.showError('Errore durante il salvataggio dell\'analisi. I dati potrebbero non essere stati salvati.');
-        }
+      // 🆕 NON salvare l'analisi automaticamente - salva solo i dati temporanei
+      // Il salvataggio effettivo avverrà quando l'utente preme "Aggiungi ai pasti"
+      if (isMountedRef.current) {
+        setPendingAnalysisData({
+          imageUri: photo.uri,
+          analysisResult: result.data,
+        });
       }
 
       const foodResults: FoodAnalysisResults = {
@@ -2403,12 +1993,114 @@ const FoodAnalysisScreenContent: React.FC = () => {
       <FoodResultsScreen
         results={results}
         fullAnalysisResult={fullAnalysisResult}
-        onRetake={resetAnalysis}
-        onDone={() => {
-          setResults(null);
-          setAnalyzing(false);
-          setFullAnalysisResult(null);
-          // 🔥 FIX: Ferma la fotocamera e torna alla schermata principale (overview)
+        onRetake={async () => {
+          // 🆕 "Chiudi" - Scarta l'analisi senza salvare
+          console.log('[FoodAnalysis] ❌ Analisi scartata (utente ha premuto Chiudi)');
+          // Reset dello state
+          if (isMountedRef.current) {
+            setResults(null);
+            setAnalyzing(false);
+            setFullAnalysisResult(null);
+            setPendingAnalysisData(null);
+          }
+          // Ferma la fotocamera e torna alla schermata principale
+          cameraController.stopCamera();
+        }}
+        onDone={async () => {
+          // 🆕 "Aggiungi ai pasti" - Salva l'analisi nel database
+          if (pendingAnalysisData) {
+            try {
+              const currentUser = await AuthService.getCurrentUser();
+              if (currentUser) {
+                const savedAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
+                  mealType: pendingAnalysisData.analysisResult.meal_type || 'other',
+                  identifiedFoods: pendingAnalysisData.analysisResult.identified_foods || [],
+                  calories: pendingAnalysisData.analysisResult.macronutrients?.calories || 0,
+                  carbohydrates: pendingAnalysisData.analysisResult.macronutrients?.carbohydrates || 0,
+                  proteins: pendingAnalysisData.analysisResult.macronutrients?.proteins || 0,
+                  fats: pendingAnalysisData.analysisResult.macronutrients?.fats || 0,
+                  fiber: pendingAnalysisData.analysisResult.macronutrients?.fiber || 0,
+                  vitamins: pendingAnalysisData.analysisResult.vitamins || {},
+                  minerals: pendingAnalysisData.analysisResult.minerals || {},
+                  healthScore: pendingAnalysisData.analysisResult.health_score || 70,
+                  recommendations: pendingAnalysisData.analysisResult.recommendations || [],
+                  observations: pendingAnalysisData.analysisResult.observations || [],
+                  confidence: pendingAnalysisData.analysisResult.confidence || 0.8,
+                  analysisData: {
+                    ...pendingAnalysisData.analysisResult,
+                    version: pendingAnalysisData.analysisResult.version || '1.0.0',
+                    confidence: pendingAnalysisData.analysisResult.confidence || 0.8,
+                  },
+                  imageUrl: pendingAnalysisData.imageUri,
+                });
+
+                if (savedAnalysis) {
+                  console.log('[FoodAnalysis] ✅ Analisi salvata (utente ha premuto Aggiungi ai pasti)');
+
+                  // 🆕 Aggiungi al diario alimentare (Meal Planner)
+                  try {
+                    const inferredMealType = inferMealTypeFromTime(new Date());
+                    const mealType = normalizeMealType(
+                      pendingAnalysisData.analysisResult.meal_type,
+                      inferredMealType
+                    );
+
+                    const todayISO = toISODate(new Date());
+
+                    const capitalizeTitle = (foods: string[]): string => {
+                      if (!foods || foods.length === 0) return 'Pasto analizzato';
+                      return foods
+                        .map(food => food.charAt(0).toUpperCase() + food.slice(1).toLowerCase())
+                        .join(', ');
+                    };
+
+                    const customRecipe = {
+                      title: capitalizeTitle(pendingAnalysisData.analysisResult.identified_foods || []),
+                      source: 'food_analysis',
+                      analysis_id: savedAnalysis.id,
+                      calories: pendingAnalysisData.analysisResult.macronutrients?.calories || 0,
+                      macros: {
+                        protein: pendingAnalysisData.analysisResult.macronutrients?.proteins || 0,
+                        carbs: pendingAnalysisData.analysisResult.macronutrients?.carbohydrates || 0,
+                        fat: pendingAnalysisData.analysisResult.macronutrients?.fats || 0,
+                        fiber: pendingAnalysisData.analysisResult.macronutrients?.fiber || 0,
+                      },
+                      identified_foods: pendingAnalysisData.analysisResult.identified_foods || [],
+                      health_score: pendingAnalysisData.analysisResult.health_score || 70,
+                      image_url: savedAnalysis.image_url,
+                    };
+
+                    // 🔥 FIX: Usa addEntry invece di upsertEntry per permettere pasti multipli dello stesso tipo
+                    await mealPlanService.addEntry({
+                      plan_date: todayISO,
+                      meal_type: mealType,
+                      custom_recipe: customRecipe,
+                      servings: 1,
+                      notes: `Analisi automatica - ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`,
+                    });
+                  } catch (mealPlanError) {
+                    console.warn('[FoodAnalysis] Failed to add to meal plan:', mealPlanError);
+                  }
+
+                  UserFeedbackService.showSaveSuccess('analisi');
+
+                  // Ricarica tutti i dati per aggiornare grafici e diario
+                  await reloadData();
+                }
+              }
+            } catch (error) {
+              console.error('[FoodAnalysis] ❌ Errore durante il salvataggio dell\'analisi:', error);
+              UserFeedbackService.showError('Impossibile salvare l\'analisi. Riprova più tardi.');
+            }
+          }
+          // Reset dello state e chiudi la schermata
+          if (isMountedRef.current) {
+            setResults(null);
+            setAnalyzing(false);
+            setFullAnalysisResult(null);
+            setPendingAnalysisData(null);
+          }
+          // Ferma la fotocamera e torna alla schermata principale (overview)
           cameraController.stopCamera();
         }}
       />
@@ -2600,7 +2292,6 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     {nutritionalGoals.daily_calories} {t('analysis.food.goals.kcalPerDay')} • {nutritionalGoals.carbs_percentage}% • {nutritionalGoals.proteins_percentage}% • {nutritionalGoals.fats_percentage}%
                   </Text>
                 )}
-                {nutritionalGoals?.source}
               </View>
             </View>
 
@@ -2853,7 +2544,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                         padding: 12,
                         borderWidth: 1,
                         borderColor: colors.border,
-                        alignItems: 'center',
+                        alignItems: 'flex-start', // 🔥 Allineamento in alto per gestire più righe
                       }}
                     >
                       {/* Mostra immagine se disponibile (da recipe o custom_recipe) */}
@@ -2877,9 +2568,18 @@ const FoodAnalysisScreenContent: React.FC = () => {
                           </View>
                         );
                       })()}
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }} numberOfLines={1}>
-                          {entry.recipe?.title || (entry.custom_recipe as any)?.title || 'Custom Meal'}
+                      <View style={{ flex: 1, paddingTop: 2 }}>
+                        <Text style={{
+                          fontSize: 14,
+                          fontWeight: '600',
+                          color: colors.text,
+                          lineHeight: 18,
+                        }}>
+                          {(entry.recipe?.title || (entry.custom_recipe as any)?.title || 'Custom Meal')
+                            .split(',')
+                            .map(s => s.trim())
+                            .filter(s => s.length > 0)
+                            .join(',\n')}
                         </Text>
                         <Text style={{ fontSize: 12, color: colors.textSecondary }}>
                           {Math.round(

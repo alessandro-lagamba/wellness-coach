@@ -250,7 +250,7 @@ function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => v
                   options={{
                     headerShown: false,
                     gestureEnabled: true,
-                    animation: 'slide_from_right',
+                    animation: 'fade',
                   }}
                 />
                 <Stack.Screen
@@ -258,7 +258,7 @@ function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => v
                   options={{
                     headerShown: false,
                     gestureEnabled: true,
-                    animation: 'slide_from_right',
+                    animation: 'fade',
                   }}
                 />
                 <Stack.Screen name="breathing-exercise" options={{ headerShown: false }} />

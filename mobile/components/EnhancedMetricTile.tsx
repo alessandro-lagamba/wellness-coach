@@ -147,8 +147,16 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
 
           <View style={styles.metricInfo}>
             <Text style={[styles.label, { color: isDark ? colors.textSecondary : '#6b7280' }]}>{label}</Text>
-            <Text style={[styles.value, { color: isDark ? colors.text : '#1f2937' }]}>{formatValue(value)}</Text>
-          </View>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+              <Text style={[styles.value, { color: isDark ? colors.text : '#1f2937' }]}>
+                {formatValue(value)}
+              </Text>
+              {(unit || metric === 'valence' || metric === 'arousal') && (
+                <Text style={[styles.unit, { color: isDark ? colors.textSecondary : '#6b7280', marginLeft: 2 }]}>
+                  {unit || '%'}
+                </Text>
+              )}
+            </View></View>
         </View>
 
         <View style={styles.rightSection}>
@@ -288,6 +296,10 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     letterSpacing: -0.5,
+  },
+  unit: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   rightSection: {
     alignItems: 'flex-end',

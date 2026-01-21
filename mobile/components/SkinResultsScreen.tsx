@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,13 @@ import {
   Dimensions,
   Platform,
   BackHandler,
+  ActivityIndicator,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { SkinCapture } from '../stores/analysis.store';
+import { SkinCapture, useAnalysisStore } from '../stores/analysis.store';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
@@ -22,6 +23,11 @@ import { ResultHero } from './ResultHero';
 import { EnhancedScoreTile } from './EnhancedScoreTile';
 import { ActionCard } from './ActionCard';
 import { MetricsService } from '../services/metrics.service';
+import { AuthService } from '../services/auth.service';
+import { SkinAnalysisService } from '../services/skin-analysis.service';
+import { DatabaseVerificationService } from '../services/database-verification.service';
+import { UserFeedbackService } from '../services/user-feedback.service';
+import { OnboardingService } from '../services/onboarding.service';
 
 const { width } = Dimensions.get('window');
 
@@ -29,7 +35,8 @@ interface SkinResultsScreenProps {
   results: SkinCapture | null;
   fullAnalysisResult?: any;
   onGoBack: () => void;
-  onRetake: () => void;
+
+  onSave?: () => Promise<void>;
 }
 
 // Video URI per Skin Analysis
@@ -39,13 +46,98 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
   results,
   fullAnalysisResult,
   onGoBack,
-  onRetake,
+
+  onSave,
 }) => {
   const { colors, mode } = useTheme();
   const isDark = mode === 'dark';
   const { t, language } = useTranslation();
   const insets = useSafeAreaInsets(); // 🔥 FIX: Per gestire bottom insets nelle bottom bars
   const { hideTabBar, showTabBar } = useTabBarVisibility();
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      if (onSave) {
+        await onSave();
+      } else {
+        const currentUser = await AuthService.getCurrentUser();
+        if (currentUser && fullAnalysisResult) {
+          const scores = fullAnalysisResult.scores;
+          const saved = await SkinAnalysisService.saveSkinAnalysis(currentUser.id, {
+            overallScore: scores.overall || Math.round((scores.texture + scores.redness + scores.oiliness + scores.hydration) / 4),
+            hydrationScore: scores.hydration,
+            oilinessScore: scores.oiliness,
+            textureScore: scores.texture,
+            pigmentationScore: scores.pigmentation || 0,
+            rednessScore: scores.redness,
+            strengths: [],
+            improvements: fullAnalysisResult.issues || [],
+            recommendations: fullAnalysisResult.recommendations || [],
+            analysisData: {
+              ...fullAnalysisResult,
+              version: fullAnalysisResult.version || '1.0.0',
+              notes: fullAnalysisResult.notes || [],
+              confidence: fullAnalysisResult.confidence || 0.8,
+            },
+            imageUrl: results?.photoUri || '',
+          });
+
+          if (saved) {
+            const verification = await DatabaseVerificationService.verifySkinAnalysis(currentUser.id, saved.id);
+            if (!verification.found) {
+              UserFeedbackService.showWarning(
+                language === 'it'
+                  ? 'L\'analisi è stata salvata ma potrebbe non essere visibile immediatamente.'
+                  : 'Analysis saved but might not be visible immediately.'
+              );
+            } else {
+              UserFeedbackService.showSaveSuccess('analisi');
+            }
+
+            const skinCapture = {
+              id: saved.id,
+              timestamp: new Date(saved.created_at),
+              scores: {
+                texture: saved.texture_score || 0,
+                redness: saved.redness_score || 0,
+                hydration: saved.hydration_score || 0,
+                oiliness: saved.oiliness_score || 0,
+                overall: saved.overall_score || 0,
+              },
+              confidence: saved.confidence || 0.8,
+              quality: {
+                lighting: 0.8,
+                focus: 0.8,
+                roi_coverage: 0.9,
+              },
+              photoUri: saved.image_url || '',
+            };
+
+            const store = useAnalysisStore.getState();
+            store.addSkinCapture(skinCapture);
+
+            const isFirstTime = await OnboardingService.isFirstTime('skin');
+            if (isFirstTime) {
+              await OnboardingService.markFirstTimeCompleted('skin');
+            }
+          }
+        }
+        onGoBack();
+      }
+    } catch (error) {
+      console.error('Error saving skin analysis:', error);
+      try {
+        UserFeedbackService.showError(
+          language === 'it' ? 'Errore durante il salvataggio.' : 'Error saving analysis.'
+        );
+      } catch (e) { }
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   useEffect(() => {
     hideTabBar();
@@ -360,26 +452,37 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
         >
           <View style={styles.bottomBarContent}>
             <TouchableOpacity
-              style={[styles.secondaryButton, { borderColor: colors.border }]}
-              onPress={onRetake}
+              style={[styles.secondaryButton, { borderColor: colors.border }, isSaving && { opacity: 0.5 }]}
+              onPress={onGoBack}
+              disabled={isSaving}
             >
-              <MaterialCommunityIcons name="camera-retake" size={18} color={colors.text} />
+              <MaterialCommunityIcons name="close" size={18} color={colors.text} />
               <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-                {language === 'it' ? 'Ripeti' : 'Retake'}
+                {language === 'it' ? 'Chiudi' : 'Close'}
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.primaryButton} onPress={onGoBack}>
+            <TouchableOpacity
+              style={[styles.primaryButton, isSaving && { opacity: 0.7 }]}
+              onPress={handleSave}
+              disabled={isSaving}
+            >
               <LinearGradient
                 colors={['#3b82f6', '#2563eb']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.gradientButton}
               >
-                <Text style={styles.primaryButtonText}>
-                  {t('common.done') || 'Done'}
-                </Text>
-                <MaterialCommunityIcons name="check" size={20} color="#fff" />
+                {isSaving ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.primaryButtonText}>
+                      {language === 'it' ? 'Salva analisi' : 'Save analysis'}
+                    </Text>
+                    <MaterialCommunityIcons name="check" size={20} color="#fff" />
+                  </>
+                )}
               </LinearGradient>
             </TouchableOpacity>
           </View>

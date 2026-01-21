@@ -10,6 +10,7 @@ import {
   Alert,
   Pressable,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -54,7 +55,7 @@ import Slider from '@react-native-community/slider';
 import { HydrationActionModal } from './HydrationActionModal';
 import { MeditationActionModal } from './MeditationActionModal';
 import { MenstrualCycleModal } from './MenstrualCycleModal';
-import DailyCheckinCard from './DailyCheckinCard';
+import { DailyMoodCard } from './DailyMoodCard';
 import PrimaryCTA from './PrimaryCTA';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { HealthDataStatus } from '../types/health.types';
@@ -339,6 +340,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     addWidget,                // useremo questo al punto (B)
   } = useWidgetConfig();
   const [widgetData, setWidgetData] = useState<WidgetData[]>([]);
+  const [widgetsLoading, setWidgetsLoading] = useState<boolean>(true); // New: loading state for widgets
   const [dragTargetPosition, setDragTargetPosition] = useState<number | null>(null);
   const [editMode, setEditMode] = useState<boolean>(false);
   const [goalModal, setGoalModal] = useState<{ visible: boolean; widgetId: 'steps' | 'hydration' | 'meditation' | 'sleep' | null }>({ visible: false, widgetId: null });
@@ -854,6 +856,18 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
   // Aggiorna i widget quando i dati di salute cambiano
   // 🔥 FIX: Rimuoviamo dipendenze ridondanti - se healthData cambia, anche healthData?.steps cambia
+
+  // 🔥 FIX: Safety timeout to prevent loader from being stuck forever
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (widgetsLoading) {
+        console.warn('⚠️ Widget loading timeout - forcing load completion');
+        setWidgetsLoading(false);
+      }
+    }, 10000); // 10 second safety timeout
+    return () => clearTimeout(timeout);
+  }, [widgetsLoading]);
+
   useEffect(() => {
     // 🔥 FIX: Crea una chiave univoca per healthData per evitare processamenti duplicati
     const healthDataKey = healthData
@@ -866,19 +880,9 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     }
 
     (async () => {
+      // 🔥 FIX: Show loading state while fetching data
       if (healthStatus !== 'ready') {
-        try {
-          // Prima prova a caricare i dati reali dal database
-          await reloadWidgetDataFromDatabase();
-
-          // Nota: reloadWidgetDataFromDatabase aggiornerà i widget solo se trova dati.
-          // Se vuoi che i mockup appaiano solo in caso di errore totale:
-        } catch (error) {
-          console.error('❌ Errore durante il caricamento dal DB, uso i mockup:', error);
-          const placeholderData = await buildWidgetDataFromHealth();
-          lastProcessedHealthDataRef.current = `placeholder-${healthStatus}`;
-          setWidgetData(placeholderData);
-        }
+        // Don't show anything until health is ready - keep showing loader
         return;
       }
 
@@ -899,7 +903,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             // 🔥 FIX: Aggiorna il ref solo dopo aver costruito i dati con successo
             lastProcessedHealthDataRef.current = healthDataKey;
             setWidgetData(data);
-            // 🔥 FIX: Rimuoviamo console.log eccessivi - manteniamo solo errori critici
+            setWidgetsLoading(false); // 🔥 FIX: Mark widgets as loaded
             // Aggiorna anche la sezione Today At a Glance
             loadTodayGlanceData();
           } catch (error) {
@@ -929,6 +933,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           // 🔥 FIX: Aggiorna il ref anche per i mock
           lastProcessedHealthDataRef.current = healthDataKey;
           setWidgetData(translatedWidgetData);
+          setWidgetsLoading(false); // 🔥 FIX: Mark widgets as loaded for mock data
         } catch (error) {
           // 🔥 FIX: Solo errori critici in console + feedback utente per errori critici
           console.error('❌ Error generating mock widget data:', error);
@@ -2345,8 +2350,9 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         <CopilotStep text="I tuoi Widget" order={3} name="widgets">
           <WalkthroughableView style={styles.widgetGrid}>
             {/* Protezione per evitare crash se widgetData è vuoto */}
-            {widgetData.length === 0 || configLoading ? (
+            {widgetsLoading || widgetData.length === 0 || configLoading ? (
               <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={themeColors.primary} style={{ marginBottom: 8 }} />
                 <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>{t('home.loadingWidgets')}</Text>
               </View>
             ) : (
@@ -2562,9 +2568,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
         <CopilotStep text="Check-in Giornalieri" order={4} name="dailyCheckin">
           <WalkthroughableView style={{ marginHorizontal: 16, marginBottom: 16 }}>
-            <DailyCheckinCard
+            <DailyMoodCard
               moodValue={moodValue as 1 | 2 | 3 | 4 | 5}
               restLevel={restLevel}
+              disabled={hasExistingMoodCheckin && hasExistingSleepCheckin}
               onMoodChange={(v) => {
                 setMoodValue(v);
                 saveMoodCheckin(v);

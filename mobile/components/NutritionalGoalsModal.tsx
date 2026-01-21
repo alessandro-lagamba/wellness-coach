@@ -340,10 +340,28 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
   };
 
   const handleSave = () => {
+    const carbs = goals.carbs_percentage ?? 50;
+    const proteins = goals.proteins_percentage ?? 30;
+    const fats = goals.fats_percentage ?? 20;
+    const total = carbs + proteins + fats;
+
     // Validate percentages sum to 100
-    const total = (goals.carbs_percentage ?? 50) + (goals.proteins_percentage ?? 30) + (goals.fats_percentage ?? 20);
     if (Math.abs(total - 100) > 1) {
       Alert.alert(t('common.error'), t('analysis.food.goals.percentagesError'));
+      return;
+    }
+
+    // Validate individual ranges
+    if (carbs < 40 || carbs > 65) {
+      Alert.alert(t('common.error'), t('analysis.food.goals.carbsRangeError'));
+      return;
+    }
+    if (proteins < 15 || proteins > 30) {
+      Alert.alert(t('common.error'), t('analysis.food.goals.proteinsRangeError'));
+      return;
+    }
+    if (fats < 20 || fats > 35) {
+      Alert.alert(t('common.error'), t('analysis.food.goals.fatsRangeError'));
       return;
     }
 
@@ -353,16 +371,6 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
     }
 
     onSave({ ...goals, diet_goal: dietGoal });
-  };
-
-  const updatePercentage = (field: 'carbs_percentage' | 'proteins_percentage' | 'fats_percentage', value: number) => {
-    const newValue = Math.max(0, Math.min(100, value));
-
-    // Aggiorna solo il campo modificato, senza toccare gli altri
-    setGoals(prev => ({
-      ...prev,
-      [field]: newValue
-    }));
   };
 
   return (
@@ -425,10 +433,10 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                   <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                     <TextInput
                       style={[styles.input, { color: colors.text }]}
-                      defaultValue={(goals.carbs_percentage ?? 50).toString()}
-                      onEndEditing={(e) => {
-                        const num = parseFloat(e.nativeEvent.text) || 0;
-                        updatePercentage('carbs_percentage', num);
+                      value={(goals.carbs_percentage ?? 50).toString()}
+                      onChangeText={(text) => {
+                        const num = parseFloat(text) || 0;
+                        setGoals(prev => ({ ...prev, carbs_percentage: num }));
                       }}
                       keyboardType="decimal-pad"
                       placeholder="50"
@@ -451,10 +459,10 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                   <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                     <TextInput
                       style={[styles.input, { color: colors.text }]}
-                      defaultValue={(goals.proteins_percentage ?? 30).toString()}
-                      onEndEditing={(e) => {
-                        const num = parseFloat(e.nativeEvent.text) || 0;
-                        updatePercentage('proteins_percentage', num);
+                      value={(goals.proteins_percentage ?? 30).toString()}
+                      onChangeText={(text) => {
+                        const num = parseFloat(text) || 0;
+                        setGoals(prev => ({ ...prev, proteins_percentage: num }));
                       }}
                       keyboardType="decimal-pad"
                       placeholder="30"
@@ -477,10 +485,10 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                   <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                     <TextInput
                       style={[styles.input, { color: colors.text }]}
-                      defaultValue={(goals.fats_percentage ?? 20).toString()}
-                      onEndEditing={(e) => {
-                        const num = parseFloat(e.nativeEvent.text) || 0;
-                        updatePercentage('fats_percentage', num);
+                      value={(goals.fats_percentage ?? 20).toString()}
+                      onChangeText={(text) => {
+                        const num = parseFloat(text) || 0;
+                        setGoals(prev => ({ ...prev, fats_percentage: num }));
                       }}
                       keyboardType="decimal-pad"
                       placeholder="20"
@@ -563,8 +571,16 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
               <View style={[styles.buttonContainer, { borderTopColor: colors.border }]}>
                 {/* Calcolo la validità direttamente qui */}
                 {(() => {
-                  const currentTotal = (goals.carbs_percentage ?? 0) + (goals.proteins_percentage ?? 0) + (goals.fats_percentage ?? 0);
-                  const isValid = Math.abs(currentTotal - 100) < 1;
+                  const carbs = goals.carbs_percentage ?? 0;
+                  const proteins = goals.proteins_percentage ?? 0;
+                  const fats = goals.fats_percentage ?? 0;
+                  const currentTotal = carbs + proteins + fats;
+
+                  const isCarbsValid = carbs >= 40 && carbs <= 65;
+                  const isProteinsValid = proteins >= 15 && proteins <= 30;
+                  const isFatsValid = fats >= 20 && fats <= 35;
+                  const isTotalValid = Math.abs(currentTotal - 100) < 1;
+                  const isValid = isTotalValid && isCarbsValid && isProteinsValid && isFatsValid;
 
                   return (
                     <TouchableOpacity

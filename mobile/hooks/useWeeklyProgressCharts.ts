@@ -98,6 +98,12 @@ function calculateMaxValue(
 // Widget data type for getting today's values
 interface WidgetDataItem {
     id: string;
+    // Common fields - 🔥 Updated to match HomeScreen structure
+    steps?: { current: number };
+    sleep?: { hours: number };
+    hrv?: { value: number };
+    heartRate?: number;
+    // Specific fields
     hydration?: { ml: number; glasses: number };
     meditation?: { minutes: number };
 }
@@ -135,14 +141,20 @@ export function useWeeklyProgressCharts({
             // Build chart-specific data
             switch (id) {
                 case 'steps': {
-                    const shouldRender = isHealthDataReady ? healthData?.steps !== undefined : true;
-                    if (!shouldRender) return null;
+                    // Try to get data from HealthData first, then WidgetData
+                    const widgetInfo = widgetData.find(w => w.id === 'steps');
+                    const widgetValue = widgetInfo?.steps?.current || 0;
 
-                    const rawValue = isHealthDataReady ? (healthData?.steps || 0) : placeholderChartSamples.steps.value;
-                    const trendData = isHealthDataReady
+                    const healthValue = healthData?.steps || 0;
+                    const rawValue = isHealthDataReady && healthValue > 0 ? healthValue : (widgetValue > 0 ? widgetValue : placeholderChartSamples.steps.value);
+
+                    const shouldRender = rawValue > 0 || isHealthDataReady; // Render if we have data or if ready
+
+                    const trendData = isHealthDataReady || rawValue > 0
                         ? prepareTrendData(weeklyTrendData.steps, rawValue)
                         : placeholderChartSamples.steps.trend;
-                    const maxValue = isHealthDataReady
+
+                    const maxValue = (isHealthDataReady || rawValue > 0)
                         ? calculateMaxValue(weeklyTrendData.steps, rawValue, meta.defaultMax, meta.roundStep)
                         : placeholderChartSamples.steps.max;
 
@@ -164,14 +176,21 @@ export function useWeeklyProgressCharts({
                 }
 
                 case 'sleepHours': {
-                    const shouldRender = isHealthDataReady ? healthData?.sleepHours !== undefined : true;
+                    // Try to get data from HealthData first, then WidgetData
+                    const widgetInfo = widgetData.find(w => w.id === 'sleep');
+                    const widgetValue = widgetInfo?.sleep?.hours || 0; // 🔥 FIX: Access nested property
+
+                    const healthValue = healthData?.sleepHours || 0;
+                    // Priority: HealthData -> WidgetData -> Placeholder
+                    const rawValue = (isHealthDataReady && healthValue > 0) ? healthValue : (widgetValue > 0 ? widgetValue : placeholderChartSamples.sleepHours.value);
+
+                    const shouldRender = isHealthDataReady || rawValue > 0;
                     if (!shouldRender) return null;
 
-                    const rawValue = isHealthDataReady ? (healthData?.sleepHours || 0) : placeholderChartSamples.sleepHours.value;
-                    const trendData = isHealthDataReady
+                    const trendData = (isHealthDataReady || rawValue > 0)
                         ? prepareTrendData(weeklyTrendData.sleepHours, rawValue)
                         : placeholderChartSamples.sleepHours.trend;
-                    const maxValue = isHealthDataReady
+                    const maxValue = (isHealthDataReady || rawValue > 0)
                         ? calculateMaxValue(weeklyTrendData.sleepHours, rawValue, meta.defaultMax, meta.roundStep)
                         : placeholderChartSamples.sleepHours.max;
 
@@ -198,14 +217,18 @@ export function useWeeklyProgressCharts({
                 }
 
                 case 'hrv': {
-                    const shouldRender = isHealthDataReady ? (healthData?.hrv ?? 0) > 0 : true;
-                    if (!shouldRender) return null;
+                    const widgetInfo = widgetData.find(w => w.id === 'hrv');
+                    const widgetValue = widgetInfo?.hrv?.value || 0; // 🔥 FIX: Access nested property
 
-                    const rawValue = isHealthDataReady ? (healthData?.hrv || 0) : placeholderChartSamples.hrv.value;
-                    const trendData = isHealthDataReady
+                    const healthValue = healthData?.hrv || 0;
+                    const rawValue = isHealthDataReady && healthValue > 0 ? healthValue : (widgetValue > 0 ? widgetValue : placeholderChartSamples.hrv.value);
+
+                    const shouldRender = rawValue > 0 || isHealthDataReady; // Always try to render if possible
+
+                    const trendData = (isHealthDataReady || rawValue > 0)
                         ? prepareTrendData(weeklyTrendData.hrv, rawValue)
                         : placeholderChartSamples.hrv.trend;
-                    const maxValue = isHealthDataReady
+                    const maxValue = (isHealthDataReady || rawValue > 0)
                         ? calculateMaxValue(weeklyTrendData.hrv, rawValue, meta.defaultMax, meta.roundStep)
                         : placeholderChartSamples.hrv.max;
 

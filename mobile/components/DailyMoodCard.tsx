@@ -18,6 +18,8 @@ interface Props {
     restLevel: 1 | 2 | 3 | 4 | 5;
     onMoodChange: (v: 1 | 2 | 3 | 4 | 5) => void;
     onRestLevelChange: (v: 1 | 2 | 3 | 4 | 5) => void;
+    /** When true, the card is locked and user cannot modify values */
+    disabled?: boolean;
 }
 
 // Colori per i 5 livelli di umore (da negativo rosso a positivo verde)
@@ -47,11 +49,12 @@ const SLEEP_ICONS: Record<number, keyof typeof MaterialCommunityIcons.glyphMap> 
     5: 'battery-charging',
 };
 
-const DailyCheckinCard: React.FC<Props> = memo(({
+const DailyMoodCard: React.FC<Props> = memo(({
     moodValue,
     restLevel,
     onMoodChange,
     onRestLevelChange,
+    disabled = false,
 }) => {
     const { t } = useTranslation();
     const { colors: themeColors, mode } = useTheme();
@@ -64,15 +67,18 @@ const DailyCheckinCard: React.FC<Props> = memo(({
     }, [restLevel]);
 
     const handleMoodSelect = (value: 1 | 2 | 3 | 4 | 5) => {
+        if (disabled) return; // Locked
         Haptics.selectionAsync();
         onMoodChange(value);
     };
 
     const handleSliderChange = (value: number) => {
+        if (disabled) return; // Locked
         setSliderValue(value);
     };
 
     const handleSliderComplete = (value: number) => {
+        if (disabled) return; // Locked
         // Snappa al valore più vicino (1-5)
         const snappedValue = Math.min(5, Math.max(1, Math.round(value))) as 1 | 2 | 3 | 4 | 5;
         setSliderValue(snappedValue);
@@ -97,7 +103,16 @@ const DailyCheckinCard: React.FC<Props> = memo(({
     const fillPercentage = ((sliderValue - 1) / 4) * 100;
 
     return (
-        <View style={[styles.container, { backgroundColor: containerBg, borderColor: containerBorder }]}>
+        <View style={[styles.container, { backgroundColor: containerBg, borderColor: containerBorder, opacity: disabled ? 0.7 : 1 }]}>
+            {/* Lock overlay when disabled */}
+            {disabled && (
+                <View style={styles.lockedOverlay}>
+                    <MaterialCommunityIcons name="lock" size={16} color={isDark ? '#94a3b8' : '#6b7280'} />
+                    <Text style={[styles.lockedText, { color: isDark ? '#94a3b8' : '#6b7280' }]}>
+                        Compilato oggi
+                    </Text>
+                </View>
+            )}
             {/* Mood Row */}
             <View style={[styles.row, { backgroundColor: rowBg, borderColor: rowBorder }]}>
                 <View style={styles.rowLeft}>
@@ -195,6 +210,18 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 12,
         elevation: 3,
+    },
+    lockedOverlay: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 6,
+        marginBottom: 8,
+    },
+    lockedText: {
+        fontSize: 13,
+        fontWeight: '500',
     },
 
     // Rows
@@ -307,4 +334,6 @@ const styles = StyleSheet.create({
     },
 });
 
-export default DailyCheckinCard;
+// Export the component
+export { DailyMoodCard };
+export default DailyMoodCard;

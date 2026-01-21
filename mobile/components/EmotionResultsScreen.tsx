@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
+  ActivityIndicator,
   BackHandler,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +24,7 @@ import { MetricsService } from '../services/metrics.service';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 import { AuthService } from '../services/auth.service';
 import { EmotionAnalysisService } from '../services/emotion-analysis.service';
+import { useAnalysisStore } from '../stores/analysis.store';
 import { Feather } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -32,7 +34,7 @@ interface EmotionResultsScreenProps {
   confidence: number;
   fullAnalysisResult?: any;
   onGoBack: () => void;
-  onRetake: () => void;
+  onSave?: () => Promise<void>;
 }
 
 // Video URI per Emotion Analysis
@@ -43,13 +45,101 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
   confidence,
   fullAnalysisResult,
   onGoBack,
-  onRetake,
+  onSave,
 }) => {
   const { colors, mode } = useTheme();
   const isDark = mode === 'dark';
   const { t, language } = useTranslation();
   const insets = useSafeAreaInsets(); // 🔥 FIX: Per gestire bottom insets nelle bottom bars
   const { hideTabBar, showTabBar } = useTabBarVisibility();
+
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      if (onSave) {
+        await onSave();
+      } else {
+        // Logica di salvataggio robusta (migrata da EmotionDetectionScreen)
+        const currentUser = await AuthService.getCurrentUser();
+        if (currentUser && fullAnalysisResult) {
+          const saved = await EmotionAnalysisService.saveEmotionAnalysis(currentUser.id, {
+            dominantEmotion: currentEmotion,
+            valence: fullAnalysisResult.valence || 0,
+            arousal: fullAnalysisResult.arousal || 0,
+            confidence: confidence / 100,
+            analysisData: {
+              ...fullAnalysisResult,
+              analysis_description: fullAnalysisResult.analysis_description || '',
+              observations: fullAnalysisResult.observations || [],
+              recommendations: fullAnalysisResult.recommendations || [],
+              emotions: fullAnalysisResult.emotions || {},
+              timestamp: fullAnalysisResult.timestamp || new Date().toISOString(),
+            },
+            aiAnalysisText: [
+              fullAnalysisResult.analysis_description || '',
+              ...(fullAnalysisResult.observations || [])
+            ].filter(Boolean).join('\n'),
+          });
+
+          if (saved) {
+            // Verifica e feedback
+            try {
+              const { DatabaseVerificationService } = await import('../services/database-verification.service');
+              const { UserFeedbackService } = await import('../services/user-feedback.service');
+              const verification = await DatabaseVerificationService.verifyEmotionAnalysis(currentUser.id, saved.id);
+
+              if (!verification.found) {
+                UserFeedbackService.showWarning(
+                  language === 'it'
+                    ? 'L\'analisi è stata salvata ma potrebbe non essere visibile immediatamente.'
+                    : 'Analysis saved but might not be visible immediately.'
+                );
+              } else {
+                UserFeedbackService.showSaveSuccess('analisi');
+              }
+
+              // Aggiorna lo store locale
+              const store = useAnalysisStore.getState();
+              store.addEmotionSession({
+                id: saved.id,
+                timestamp: new Date(saved.created_at),
+                dominant: saved.dominant_emotion,
+                avg_valence: saved.valence,
+                avg_arousal: saved.arousal,
+                confidence: saved.confidence,
+                duration: saved.session_duration || 0,
+              });
+
+              // Onboarding
+              const { OnboardingService } = await import('../services/onboarding.service');
+              const isFirstTime = await OnboardingService.isFirstTime('emotion');
+              if (isFirstTime) {
+                await OnboardingService.markFirstTimeCompleted('emotion');
+              }
+            } catch (e) {
+              console.error('Error in post-save logic:', e);
+            }
+          }
+        }
+        onGoBack();
+      }
+    } catch (error) {
+      console.error('Error saving emotion analysis:', error);
+      try {
+        const { UserFeedbackService } = await import('../services/user-feedback.service');
+        UserFeedbackService.showError(
+          language === 'it'
+            ? 'Errore durante il salvataggio dell\'analisi.'
+            : 'Error saving analysis.'
+        );
+      } catch (e) { }
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   useEffect(() => {
     hideTabBar();
@@ -710,26 +800,37 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         >
           <View style={styles.bottomBarContent}>
             <TouchableOpacity
-              style={[styles.secondaryButton, { borderColor: colors.border }]}
-              onPress={onRetake}
+              style={[styles.secondaryButton, { borderColor: colors.border }, isSaving && { opacity: 0.5 }]}
+              onPress={onGoBack} // 🔥 Cambiato da onRetake a onGoBack
+              disabled={isSaving}
             >
-              <MaterialCommunityIcons name="camera-retake" size={18} color={colors.text} />
+              <MaterialCommunityIcons name="close" size={18} color={colors.text} />
               <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-                {language === 'it' ? 'Ripeti' : 'Retake'}
+                {language === 'it' ? 'Chiudi' : 'Close'}
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.primaryButton} onPress={onGoBack}>
+            <TouchableOpacity
+              style={[styles.primaryButton, isSaving && { opacity: 0.7 }]}
+              onPress={handleSave}
+              disabled={isSaving}
+            >
               <LinearGradient
                 colors={emotionData.gradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.gradientButton}
               >
-                <Text style={styles.primaryButtonText}>
-                  {t('common.done') || 'Done'}
-                </Text>
-                <MaterialCommunityIcons name="check" size={20} color="#fff" />
+                {isSaving ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.primaryButtonText}>
+                      {language === 'it' ? 'Salva analisi' : 'Save analysis'}
+                    </Text>
+                    <MaterialCommunityIcons name="check" size={20} color="#fff" />
+                  </>
+                )}
               </LinearGradient>
             </TouchableOpacity>
           </View>

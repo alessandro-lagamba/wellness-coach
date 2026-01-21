@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
+  ActivityIndicator,
   BackHandler,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,6 +56,17 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
   const { t, language } = useTranslation();
   const { hideTabBar, showTabBar } = useTabBarVisibility();
   const insets = useSafeAreaInsets(); // 🔥 FIX: Per gestire bottom insets nelle bottom bars
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      await onDone();
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   useEffect(() => {
     hideTabBar();
@@ -514,23 +526,33 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
               style={[styles.secondaryButton, { borderColor: colors.border }]}
               onPress={onRetake}
             >
-              <MaterialCommunityIcons name="camera-retake" size={18} color={colors.text} />
+              <MaterialCommunityIcons name="close" size={18} color={colors.text} />
               <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-                {language === 'it' ? 'Ripeti' : 'Retake'}
+                {language === 'it' ? 'Chiudi' : 'Close'}
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.primaryButton} onPress={onDone}>
+            <TouchableOpacity
+              style={[styles.primaryButton, isSaving && { opacity: 0.7 }]}
+              onPress={handleSave}
+              disabled={isSaving}
+            >
               <LinearGradient
                 colors={['#3b82f6', '#2563eb']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.gradientButton}
               >
-                <Text style={styles.primaryButtonText}>
-                  {t('common.done') || 'Done'}
-                </Text>
-                <MaterialCommunityIcons name="check" size={20} color="#fff" />
+                {isSaving ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.primaryButtonText}>
+                      {language === 'it' ? 'Aggiungi ai pasti' : 'Add to Meals'}
+                    </Text>
+                    <MaterialCommunityIcons name="check" size={20} color="#fff" />
+                  </>
+                )}
               </LinearGradient>
             </TouchableOpacity>
           </View>

@@ -7,7 +7,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { ChartType } from '../services/chart-config.service';
 
 const { width } = Dimensions.get('window');
-const CHART_WIDTH = Math.min(400, width - 150);
+const CHART_WIDTH = width - 72; // Screen width - (2 * sectionPadding 20) - (2 * cardPadding 16)
 
 export interface WeeklyProgressCardProps {
     id: ChartType;
@@ -67,33 +67,13 @@ export const WeeklyProgressCard: React.FC<WeeklyProgressCardProps> = ({
                 )}
             </View>
             <View style={styles.progressCardContent}>
-                <View style={styles.progressCardLeft}>
-                    <View style={styles.valueContainer}>
-                        <Text style={[styles.progressCardValue, { color: themeColors.text }]}>
-                            {valueText}
-                        </Text>
-                        {unitText && (
-                            <Text style={[styles.progressCardUnit, { color: themeColors.textSecondary }]}>
-                                {unitText}
-                            </Text>
-                        )}
-                    </View>
-                    <Text
-                        style={[styles.progressCardSubtitle, { color: themeColors.textSecondary }]}
-                        numberOfLines={2}
-                    >
-                        {subtitleText}
-                    </Text>
-                </View>
-                <View style={styles.progressCardRight}>
-                    <MiniTrendChart
-                        data={trendData}
-                        color={color}
-                        maxValue={maxValue}
-                        formatValue={formatValue}
-                        width={CHART_WIDTH}
-                    />
-                </View>
+                <MiniTrendChart
+                    data={trendData}
+                    color={color}
+                    maxValue={maxValue}
+                    formatValue={formatValue}
+                    width={CHART_WIDTH}
+                />
             </View>
         </TouchableOpacity>
     );
@@ -130,35 +110,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     progressCardContent: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-end',
-    },
-    progressCardLeft: {
-        flex: 1,
-        paddingRight: 12,
-    },
-    valueContainer: {
-        flexDirection: 'row',
-        alignItems: 'baseline',
-    },
-    progressCardValue: {
-        fontSize: 28,
-        fontWeight: '700',
-    },
-    progressCardUnit: {
-        fontSize: 14,
-        fontWeight: '500',
-        marginLeft: 4,
-    },
-    progressCardSubtitle: {
-        fontSize: 12,
-        marginTop: 4,
-        lineHeight: 16,
-    },
-    progressCardRight: {
-        width: CHART_WIDTH,
-        alignItems: 'flex-end',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });
 

@@ -398,7 +398,6 @@ export class HealthDataService {
     try {
       // Debounce/lock: evita sync concorrenti o troppo ravvicinate
       if (this.isSyncInProgress && !force) {
-        // 🔥 Restituisci l'ultimo dato sincronizzato invece di undefined
         return {
           success: true,
           data: this.lastHealthData || undefined as any,
@@ -406,7 +405,6 @@ export class HealthDataService {
         };
       }
       if (!force && this.lastSyncAt && Date.now() - this.lastSyncAt < 60_000) {
-        // 🔥 Restituisci l'ultimo dato sincronizzato invece di undefined
         return {
           success: true,
           data: this.lastHealthData || undefined as any,
@@ -415,6 +413,7 @@ export class HealthDataService {
       }
 
       this.isSyncInProgress = true;
+      console.time('HealthDataService_Sync_Total');
 
       // 🔥 CRITICO: Verifica se abbiamo permessi concessi PRIMA di sincronizzare
       const hasAnyPermission = Object.values(this.permissions).some(Boolean);
@@ -423,14 +422,14 @@ export class HealthDataService {
           (Platform.OS === 'android' && HealthConnect));
 
       let healthData: HealthData;
-      let isMock = false; // 🔥 FIX: Simplified - just track if it's mock data
+      let isMock = false;
 
+      console.time('HealthConnect_Fetch');
       if (Platform.OS === 'ios' && AppleHealthKit && this.permissions.steps) {
         const result = await this.syncHealthKitData();
         if (result.success && result.data) {
           healthData = result.data;
         } else {
-          // 🔥 Se i permessi sono concessi ma la sync fallisce, usa l'ultimo dato reale
           if (this.lastHealthData && this.lastHealthData.steps && this.lastHealthData.steps > 0) {
             healthData = this.lastHealthData;
           } else {
@@ -439,15 +438,13 @@ export class HealthDataService {
         }
       } else if (Platform.OS === 'android' && HealthConnect &&
         (this.permissions.steps || this.permissions.heartRate || this.permissions.sleep)) {
-        // Sincronizza anche se solo alcuni permessi sono concessi
+
         const result = await this.syncHealthConnectData();
         if (result.success && result.data) {
           healthData = result.data;
         } else {
           // 🔥 CRITICO: Se i permessi sono concessi ma la sync fallisce, usa l'ultimo dato reale
-          // NON cadere mai nel fallback ai mock se i permessi sono concessi
           if (this.lastHealthData && shouldUseRealData) {
-            // Verifica che l'ultimo dato sia reale (non mock) controllando se ha valori significativi
             const hasRealData = (this.lastHealthData.steps && this.lastHealthData.steps > 0) ||
               (this.lastHealthData.heartRate && this.lastHealthData.heartRate > 0) ||
               (this.lastHealthData.sleepHours && this.lastHealthData.sleepHours > 0);
@@ -462,34 +459,36 @@ export class HealthDataService {
           }
         }
       } else if (this.config.fallbackToMock && !shouldUseRealData) {
-        // 🔥 SOLO se NON abbiamo permessi concessi, usa i mock
         healthData = this.generateMockHealthData();
         isMock = true;
       } else {
-        // Nessuna sorgente disponibile (es. permessi non concessi): non lanciare errore
-        // Ritorna l'ultimo dato valido, così la UI non va in errore
+        console.timeEnd('HealthConnect_Fetch');
+        console.timeEnd('HealthDataService_Sync_Total');
+        // Nessuna sorgente disponibile
         return {
           success: true,
           data: this.lastHealthData || undefined as any,
           lastSyncDate: this.lastSyncAt ? new Date(this.lastSyncAt) : new Date(),
         };
       }
+      console.timeEnd('HealthConnect_Fetch');
 
       // Sync to Supabase
       const currentUser = await AuthService.getCurrentUser();
       if (currentUser && !isMock) {
+        console.time('Supabase_Health_Sync');
         const syncService = HealthDataSyncService.getInstance();
         const syncResult = await syncService.syncHealthData(currentUser.id, healthData);
+        console.timeEnd('Supabase_Health_Sync');
 
         if (!syncResult.success) {
           console.error('❌ Failed to sync to Supabase:', syncResult.error);
         }
       }
 
-      // 🔥 Memorizza l'ultimo dato sincronizzato SOLO se è reale (non mock)
       if (!isMock) {
         this.lastHealthData = healthData;
-        this.lastHealthDataSource = 'health_connect'; // 🔥 Track that this is real data
+        this.lastHealthDataSource = 'health_connect';
       }
 
       const result: HealthDataSyncResult = {
@@ -498,15 +497,15 @@ export class HealthDataService {
         lastSyncDate: new Date(),
       };
       this.lastSyncAt = Date.now();
+      console.timeEnd('HealthDataService_Sync_Total');
       return result;
+
     } catch (error) {
       console.error('❌ Health data sync failed:', error);
+      console.timeEnd('HealthDataService_Sync_Total');
 
-      // 🔥 CRITICO: Se abbiamo permessi concessi e dati reali precedenti, restituiscili
-      // NON restituire un errore che potrebbe causare il fallback ai mock
       const hasAnyPermission = Object.values(this.permissions).some(Boolean);
       if (hasAnyPermission && this.lastHealthData && this.lastHealthDataSource !== 'mock') {
-        // Se abbiamo dati reali precedenti (non mock), restituiscili
         return {
           success: true,
           data: this.lastHealthData,
@@ -581,7 +580,7 @@ export class HealthDataService {
    */
   private async syncHealthConnectData(): Promise<HealthDataSyncResult> {
     try {
-      // 🔥 FIX: Rimuoviamo console.log eccessivi
+      console.time('HealthConnect_Total');
 
       // Assicurati che Health Connect sia inizializzato
       if (HealthConnect.initialize && typeof HealthConnect.initialize === 'function') {
@@ -653,6 +652,7 @@ export class HealthDataService {
         const seenTokens = new Set<string>();
         let pageToken: string | undefined;
 
+        console.time(`HealthConnect_Read_${recordType}`);
         do {
           try {
             if (pageToken && seenTokens.has(pageToken)) {
@@ -685,6 +685,7 @@ export class HealthDataService {
             break;
           }
         } while (pageToken);
+        console.timeEnd(`HealthConnect_Read_${recordType}`);
 
         return allRecords;
       };
@@ -755,9 +756,7 @@ export class HealthDataService {
       // Leggi HeartRate se il permesso è stato concesso
       if (this.permissions.heartRate && HealthConnect.readRecords) {
         try {
-          // 🔥 FIX: Rimuoviamo console.log eccessivi
           const heartRateRecords = await readAllRecords('HeartRate', { timeRangeFilter });
-          // 🔥 FIX: Rimuoviamo console.log eccessivi
 
           const getRecordTimestamp = (record: any): number => {
             const raw =
@@ -797,7 +796,6 @@ export class HealthDataService {
             if (latestBpm > 0) {
               healthData.heartRate = latestBpm;
             }
-            // 🔥 FIX: Rimosso restingHeartRate - non esiste in HealthConnect
           }
 
           // Fallback: se 0 record o bpm nullo, estendi finestra a 24h
@@ -822,21 +820,18 @@ export class HealthDataService {
                 }
               }
             } catch (fallbackError) {
-              // 🔥 FIX: Solo errori critici in console
               console.error('❌ Error reading HeartRate fallback:', fallbackError);
             }
           }
         } catch (error) {
-          // 🔥 FIX: Solo errori critici in console
           console.error('❌ Error reading HeartRate:', error);
         }
       }
 
       // Leggi HRV se il permesso è stato concesso
+      console.log('[DEBUG] HRV Permission Check:', this.permissions.hrv);
       if (this.permissions.hrv && HealthConnect.readRecords) {
         try {
-          // 🔥 FIX: Rimuoviamo console.log eccessivi
-
           const getRecordTimestamp = (record: any): number => {
             const raw =
               record?.time ||
@@ -882,7 +877,7 @@ export class HealthDataService {
           const collectHrvDataset = async (options: any) => {
             for (const type of hrvRecordTypes) {
               const records = await readAllRecords(type, options);
-              // 🔥 FIX: Rimuoviamo console.log eccessivi
+              console.log('[DEBUG] HRV Records found for type', type, ':', records.length);
               if (records.length === 0) continue;
 
               const dataset = records
@@ -926,11 +921,8 @@ export class HealthDataService {
             } else if (averageRounded > 0) {
               healthData.hrv = averageRounded;
             }
-
-            // 🔥 FIX: Rimuoviamo console.log eccessivi
           }
         } catch (error) {
-          // 🔥 FIX: Solo errori critici in console
           console.error('❌ Error reading HRV:', error);
         }
       }
@@ -1010,7 +1002,7 @@ export class HealthDataService {
         healthData.calories = Math.round(healthData.steps * 0.04);
       }
 
-      // 🔥 FIX: Rimuoviamo console.log eccessivi
+      console.timeEnd('HealthConnect_Total');
 
       return {
         success: true,
@@ -1019,6 +1011,7 @@ export class HealthDataService {
       };
     } catch (error) {
       console.error('❌ Health Connect sync error:', error);
+      console.timeEnd('HealthConnect_Total');
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

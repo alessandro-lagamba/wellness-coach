@@ -64,8 +64,6 @@ import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 import { ChatSettingsService, ChatTone, ResponseLength } from '../services/chat-settings.service';
-import { JournalSettingsService, JournalTemplate, JOURNAL_TEMPLATES } from '../services/journal-settings.service';
-import { ExportService } from '../services/export.service';
 import { EmptyStateCard } from './EmptyStateCard';
 import { TimeMachineCalendar } from './TimeMachineCalendar';
 
@@ -289,13 +287,16 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const monthStripScrollRef = useRef<ScrollView>(null); // 🆕 Ref per scroll automatico
   const [showChatMenu, setShowChatMenu] = useState(false); // 🆕 Menu contestuale chat/journal
   const [showChatSettings, setShowChatSettings] = useState(false); // 🆕 Modal impostazioni chat
-  const [showJournalSettings, setShowJournalSettings] = useState(false); // 🆕 Modal impostazioni journal
+  const [showVoiceInterface, setShowVoiceInterface] = useState(false);
   const [chatSettings, setChatSettings] = useState({ tone: 'empathetic' as ChatTone, responseLength: 'standard' as ResponseLength, includeActionSteps: true, localHistoryEnabled: true }); // 🆕 Preferenze chat
-  const [selectedTemplate, setSelectedTemplate] = useState<JournalTemplate>('free'); // 🆕 Template journal selezionato
   const [chatHistory, setChatHistory] = useState<any[]>([]); // 🆕 History delle chat sessions
   const [showChatHistory, setShowChatHistory] = useState(false); // 🆕 Mostra/nascondi history
   const [quickRepliesExpanded, setQuickRepliesExpanded] = useState(false); // 🆕 Quick replies expandible/collapsible
   const messagesListRef = useRef<FlatList>(null); // 🆕 Ref per auto-scroll dei messaggi
+  const micScale = useSharedValue(1);
+  const pulseScale = useSharedValue(1);
+  const voiceInterfaceOpacity = useSharedValue(0);
+  const [isSavingJournal, setIsSavingJournal] = useState(false);
 
   // 🔧 FIX: Messaggio iniziale personalizzato con traduzione
   // 🔥 FIX: Memoizziamo getInitialMessage per evitare ricreazioni
@@ -324,13 +325,10 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   }, []);
   useEffect(() => { AsyncStorage.setItem('chat:mode', mode); }, [mode]);
 
-  // 🆕 Carica preferenze chat e journal all'avvio
   useEffect(() => {
     (async () => {
       const settings = await ChatSettingsService.getSettings();
       setChatSettings(settings);
-      const template = await JournalSettingsService.getTemplate();
-      setSelectedTemplate(template);
     })();
   }, []);
 
@@ -460,26 +458,22 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       }
 
       if (!sanitizedLocalPrompt) {
-        const templatePrompt =
-          JOURNAL_TEMPLATES[selectedTemplate]?.prompt ?? JOURNAL_TEMPLATES.free.prompt;
-        let nextPrompt = templatePrompt;
+        let nextPrompt = "Come ti senti oggi?"; // Prompt di fallback
 
-        if (selectedTemplate === 'free') {
-          if (!cancelled) setIsPromptLoading(true);
-          try {
-            const smartPrompt = await DailyJournalService.generateDailyPrompt({
-              userId: currentUser.id,
-              language,
-              ...contextPayload,
-            });
-            if (!cancelled && smartPrompt) {
-              nextPrompt = smartPrompt;
-            }
-          } catch (error) {
-            console.error('Error generating journal prompt:', error);
-          } finally {
-            if (!cancelled) setIsPromptLoading(false);
+        if (!cancelled) setIsPromptLoading(true);
+        try {
+          const smartPrompt = await DailyJournalService.generateDailyPrompt({
+            userId: currentUser.id,
+            language,
+            ...contextPayload,
+          });
+          if (!cancelled && smartPrompt) {
+            nextPrompt = smartPrompt;
           }
+        } catch (error) {
+          console.error('Error generating journal prompt:', error);
+        } finally {
+          if (!cancelled) setIsPromptLoading(false);
         }
 
         if (!cancelled) {
@@ -535,7 +529,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     return () => {
       cancelled = true;
     };
-  }, [currentUser, selectedDayKey, selectedTemplate, language]);
+  }, [currentUser, selectedDayKey, language]);
 
   // 🆕 Helper per verificare se una data è nel futuro
   const isFutureDate = (isoDate: string): boolean => {
@@ -657,14 +651,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
 
   const handleRegeneratePrompt = useCallback(async () => {
     if (!currentUser?.id) return;
-    const fallbackPrompt =
-      JOURNAL_TEMPLATES[selectedTemplate]?.prompt ?? JOURNAL_TEMPLATES.free.prompt;
-
-    if (selectedTemplate !== 'free') {
-      setJournalPrompt(fallbackPrompt);
-      await DailyJournalService.saveLocalEntry(selectedDayKey, journalText, fallbackPrompt);
-      return;
-    }
+    const fallbackPrompt = "Come ti senti oggi?"; // Fallback fisso
 
     setIsPromptLoading(true);
     try {
@@ -682,7 +669,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     } finally {
       setIsPromptLoading(false);
     }
-  }, [currentUser?.id, selectedTemplate, promptContext, selectedDayKey, journalText, language]);
+  }, [currentUser?.id, promptContext, selectedDayKey, journalText, language]);
 
   // 🔥 FIX: Centra il giorno selezionato quando si passa alla modalità Journal (solo se non c'è già una selezione)
   useEffect(() => {
@@ -770,7 +757,6 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isVoiceMode, setIsVoiceMode] = useState(false);
-  const [showVoiceInterface, setShowVoiceInterface] = useState(false);
   const [voiceModeDismissed, setVoiceModeDismissed] = useState(false);
 
   useEffect(() => {
@@ -1061,11 +1047,6 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   // 🆕 Rimossi log debug per performance
 
   const tts = useMemo(() => UnifiedTTSService.getInstance(), []);
-
-  // Animation values
-  const micScale = useSharedValue(1);
-  const pulseScale = useSharedValue(1);
-  const voiceInterfaceOpacity = useSharedValue(0);
 
   const quickReplies = useMemo(() => [
     { text: t('chat.quickStart.feelingStressed'), icon: 'heartbeat', color: '#ef4444' },
@@ -1874,39 +1855,6 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
     );
   };
 
-  // 🆕 Funzioni per esportazione
-  const handleExportChat = async (format: 'txt' | 'md') => {
-    try {
-      if (format === 'txt') {
-        await ExportService.exportChatToTXT(messages);
-      } else {
-        await ExportService.exportChatToMD(messages);
-      }
-      setShowChatMenu(false);
-    } catch (error) {
-      console.error('Error exporting chat:', error);
-    }
-  };
-
-  const handleExportJournal = async (format: 'txt' | 'md') => {
-    try {
-      const entry = {
-        date: selectedDayKey,
-        content: journalText,
-        aiScore: aiScore || undefined,
-        aiAnalysis: aiAnalysis || undefined,
-      };
-      if (format === 'txt') {
-        await ExportService.exportJournalToTXT(entry);
-      } else {
-        await ExportService.exportJournalToMD(entry);
-      }
-      setShowChatMenu(false);
-    } catch (error) {
-      console.error('Error exporting journal:', error);
-    }
-  };
-
   // 🆕 Funzione per cancellare cronologia locale
   const handleClearLocalHistory = () => {
     Alert.alert(
@@ -2071,7 +2019,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const saveJournalEntry = useCallback(async (dayKey: string) => {
     if (!currentUser) return;
 
-    await DailyJournalService.saveLocalEntry(dayKey, journalText, journalPrompt);
+    setIsSavingJournal(true);
 
     try {
       // Check if we need to generate AI judgment (only if content changed and no existing score)
@@ -2143,21 +2091,15 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
       setOriginalJournalText(journalText);
       Alert.alert('Salvato', 'Journal salvato e analizzato correttamente');
     } catch (e) {
-      // 🆕 Log dell'errore per debugging
       console.error('Error saving journal entry:', e);
-      // 🆕 Mostra messaggio più specifico se possibile
-      const errorMessage = e instanceof Error ? e.message : 'Errore sconosciuto';
-      Alert.alert(
-        'Offline',
-        `Journal salvato in locale, verrà sincronizzato. ${errorMessage.includes('network') || errorMessage.includes('fetch') ? '(Problema di connessione)' : ''}`
-      );
+      Alert.alert('Errore', 'Errore durante il salvataggio');
+    } finally {
+      setIsSavingJournal(false);
     }
   }, [currentUser, journalText, journalPrompt]);
 
   // 🆕 Voice input handler memoizzato (solo per chat, non per journal)
   const handleVoiceInput = useCallback(async (text: string) => {
-    // ✅ REAL VOICE INPUT - No more simulation!
-    // 🆕 Rimosso log per performance
 
     if (mode === 'journal') {
       return;
@@ -2255,12 +2197,14 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
             <FontAwesome name="history" size={18} color={colors.text} />
           </TouchableOpacity>
           {/* Impostazioni Button */}
-          <TouchableOpacity
-            style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}
-            onPress={() => setShowChatMenu(true)}
-          >
-            <FontAwesome name="cog" size={18} color={colors.text} />
-          </TouchableOpacity>
+          {mode === 'chat' && (
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() => setShowChatMenu(true)}
+            >
+              <FontAwesome name="ellipsis-v" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -2707,48 +2651,9 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 confirmText={language === 'it' ? 'VAI ALLA DATA' : 'GO TO DATE'}
               />
 
-              {/* Journal Prompt */}
-              {journalPrompt ? (
-                <LinearGradient
-                  colors={themeMode === 'dark' ? ["rgba(99,102,241,0.2)", "rgba(99,102,241,0.1)"] : ["#EEF2FF", "#FFFFFF"]}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                  style={[styles.journalPromptGrad, { borderColor: colors.border }]}
-                >
-                  <View style={styles.journalPromptHeader}>
-                    <Text style={[styles.journalPromptTitle, { color: colors.text }]}>{t('journal.dailyPrompt')}</Text>
-                    <TouchableOpacity
-                      style={[
-                        styles.pillSecondary,
-                        { backgroundColor: surfaceSecondary, borderColor: colors.border },
-                        (selectedTemplate !== 'free' || isPromptLoading) && styles.pillSecondaryDisabled,
-                      ]}
-                      onPress={handleRegeneratePrompt}
-                      disabled={selectedTemplate !== 'free' || isPromptLoading}
-                    >
-                      <Text style={[styles.pillSecondaryText, { color: colors.primary }]}>
-                        {isPromptLoading ? t('common.loading') : t('journal.regeneratePrompt')}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={[styles.journalPromptText, { color: colors.text }]}>{journalPrompt}</Text>
-                </LinearGradient>
-              ) : null}
-
               {/* Journal Editor */}
               <View style={styles.journalEditorWrap}>
                 <BlurView intensity={12} tint="light" style={styles.journalBlur} />
-                <View style={styles.journalEditorHeader}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={[styles.editorTitle, { color: colors.text }]}>{t('journal.entryTitle')}</Text>
-                    <View style={[styles.dateChip, { backgroundColor: surfaceSecondary }]}>
-                      {/* 🔥 FIX: Mostra sempre la data odierna corrente se selectedDayKey è oggi, altrimenti mostra selectedDayKey */}
-                      <Text style={[styles.dateChipText, { color: colors.textSecondary }]}>
-                        {selectedDayKey === getTodayKey() ? getTodayKey() : selectedDayKey}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.counterText, { color: colors.textTertiary }]}>{journalText.length}/2000</Text>
-                </View>
                 <TextInput
                   style={[styles.journalInput, { color: colors.text }]}
                   multiline
@@ -2759,7 +2664,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 />
                 <View style={styles.journalActions}>
                   <TouchableOpacity
-                    style={styles.journalSave}
+                    style={[styles.journalSave, isSavingJournal && { opacity: 0.7 }]}
                     onPress={async () => {
                       if (!currentUser) return;
                       // 🔥 FIX: Usa selectedDayKey invece di dayKey (che non esiste più)
@@ -2802,8 +2707,13 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                       // Aggiorna il testo originale dopo il salvataggio
                       setOriginalJournalText(journalText);
                     }}
+                    disabled={isSavingJournal}
                   >
-                    <Text style={styles.journalSaveText}>{t('journal.save')}</Text>
+                    {isSavingJournal ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Text style={styles.journalSaveText}>{t('journal.save')}</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
                 {showSavedChip && lastSavedAt && (
@@ -2812,7 +2722,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
               </View>
 
               {/* Uno sguardo sul tuo Diario */}
-              {aiAnalysis && (
+              {journalText.trim().length > 0 && aiAnalysis && (
                 <View style={[styles.aiInsightCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <View style={styles.aiInsightHeader}>
                     <View style={styles.aiInsightTitleRow}>
@@ -2851,19 +2761,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     </View>
                   ))}
                 </View>
-              ) : (
-                // Empty state for journal when no entries exist
-                mode === 'journal' && (
-                  <EmptyStateCard
-                    type="journal"
-                    onAction={() => {
-                      // Focus on journal input
-                      // The input is already visible, so we just need to ensure it's focused
-                      // This will be handled by the TextInput's autoFocus or user interaction
-                    }}
-                  />
-                )
-              )}
+              ) : null}
             </ScrollView>
           )}
         </View>
@@ -2988,28 +2886,6 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
                   </TouchableOpacity>
 
-                  {/* Cronologia & Esportazione */}
-                  <TouchableOpacity
-                    style={[styles.menuOption, { borderBottomColor: colors.border }]}
-                    onPress={() => {
-                      Alert.alert(
-                        'Esporta conversazione',
-                        'Scegli il formato:',
-                        [
-                          { text: 'Annulla', style: 'cancel' },
-                          { text: 'TXT', onPress: () => handleExportChat('txt') },
-                          { text: 'Markdown', onPress: () => handleExportChat('md') },
-                        ]
-                      );
-                    }}
-                  >
-                    <FontAwesome name="download" size={18} color={colors.textSecondary} />
-                    <Text style={[styles.menuOptionText, { color: colors.text }]}>
-                      Esporta conversazione
-                    </Text>
-                    <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
-                  </TouchableOpacity>
-
                   <TouchableOpacity
                     style={[styles.menuOption, { borderBottomColor: colors.border }]}
                     onPress={() => {
@@ -3038,55 +2914,6 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                 </>
               ) : (
                 <>
-                  {/* Template di scrittura */}
-                  <TouchableOpacity
-                    style={[styles.menuOption, { borderBottomColor: colors.border }]}
-                    onPress={() => {
-                      setShowChatMenu(false);
-                      setShowJournalSettings(true);
-                    }}
-                  >
-                    <FontAwesome name="file-text" size={18} color={colors.textSecondary} />
-                    <Text style={[styles.menuOptionText, { color: colors.text }]}>
-                      Template di scrittura
-                    </Text>
-                    <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
-                  </TouchableOpacity>
-
-                  {/* Esporta diario */}
-                  <TouchableOpacity
-                    style={[styles.menuOption, { borderBottomColor: colors.border }]}
-                    onPress={() => {
-                      Alert.alert(
-                        'Esporta diario',
-                        'Scegli il formato:',
-                        [
-                          { text: 'Annulla', style: 'cancel' },
-                          { text: 'TXT', onPress: () => handleExportJournal('txt') },
-                          { text: 'Markdown', onPress: () => handleExportJournal('md') },
-                        ]
-                      );
-                    }}
-                  >
-                    <FontAwesome name="download" size={18} color={colors.textSecondary} />
-                    <Text style={[styles.menuOptionText, { color: colors.text }]}>
-                      Esporta diario
-                    </Text>
-                    <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.menuOption, styles.menuOptionLast]}
-                    onPress={() => {
-                      setShowChatMenu(false);
-                      handleClearJournalEntry();
-                    }}
-                  >
-                    <FontAwesome name="trash" size={18} color={colors.textSecondary} />
-                    <Text style={[styles.menuOptionText, { color: colors.text }]}>
-                      Cancella entry corrente
-                    </Text>
-                  </TouchableOpacity>
                 </>
               )}
             </View>
@@ -3215,57 +3042,6 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                   />
                 </View>
               </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Journal Settings Modal */}
-      <Modal visible={showJournalSettings} transparent animationType="slide" onRequestClose={() => setShowJournalSettings(false)}>
-        <View style={styles.settingsModalBackdrop}>
-          <View style={[styles.settingsModalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={[styles.settingsModalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.settingsModalTitle, { color: colors.text }]}>Template di scrittura</Text>
-              <TouchableOpacity onPress={() => setShowJournalSettings(false)}>
-                <FontAwesome name="times" size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.settingsModalBody} showsVerticalScrollIndicator={false}>
-              {JournalSettingsService.getAvailableTemplates().map((template) => (
-                <TouchableOpacity
-                  key={template.id}
-                  style={[
-                    styles.templateOption,
-                    { borderColor: colors.border },
-                    template.id === 'free' && selectedTemplate === template.id && { borderColor: '#f5c643', backgroundColor: '#fffbea' },
-                    selectedTemplate === template.id && template.id !== 'free' && { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
-                  ]}
-                  onPress={async () => {
-                    setSelectedTemplate(template.id);
-                    await JournalSettingsService.saveTemplate(template.id);
-                    // Aggiorna il prompt se non c'è contenuto
-                    if (!journalText.trim()) {
-                      const prompt = template.prompt;
-                      setJournalPrompt(prompt);
-                      await DailyJournalService.saveLocalEntry(selectedDayKey, journalText, prompt);
-                    }
-                  }}
-                >
-                  <View style={styles.templateOptionContent}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      {template.id === 'free' && <Text style={{ fontSize: 16 }}>✨</Text>}
-                      <Text style={[styles.templateOptionName, { color: colors.text }, selectedTemplate === template.id && { color: colors.primary, fontWeight: '700' }]}>
-                        {template.name}
-                      </Text>
-                    </View>
-                    <Text style={[styles.templateOptionDescription, { color: colors.textSecondary }]}>
-                      {template.description}
-                    </Text>
-                  </View>
-                  {selectedTemplate === template.id && <FontAwesome name="check" size={16} color={colors.primary} />}
-                </TouchableOpacity>
-              ))}
             </ScrollView>
           </View>
         </View>

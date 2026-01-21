@@ -15,6 +15,7 @@ import {
     Alert,
     Modal,
     Platform,
+    ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -29,7 +30,6 @@ import { SafeAreaWrapper } from './shared/SafeAreaWrapper';
 import { DailyJournalService } from '../services/daily-journal.service';
 import { DailyJournalDBService } from '../services/daily-journal-db.service';
 import { AuthService } from '../services/auth.service';
-import { JournalSettingsService, JournalTemplate, JOURNAL_TEMPLATES } from '../services/journal-settings.service';
 
 // Hooks & Context
 import { useTranslation } from '../hooks/useTranslation';
@@ -77,7 +77,6 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
     const [originalJournalText, setOriginalJournalText] = useState('');
     const [journalPrompt, setJournalPrompt] = useState('');
     const [promptContext, setPromptContext] = useState<JournalPromptContext | null>(null);
-    const [isPromptLoading, setIsPromptLoading] = useState(false);
     const [journalHistory, setJournalHistory] = useState<any[]>([]);
     const [selectedDayKey, setSelectedDayKey] = useState(() => getTodayKey());
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -91,9 +90,8 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
     const [showSavedChip, setShowSavedChip] = useState(false);
-    const [selectedTemplate, setSelectedTemplate] = useState<JournalTemplate>('free');
-    const [showJournalSettings, setShowJournalSettings] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     // Refs
     const journalScrollRef = useRef<ScrollView>(null);
@@ -110,10 +108,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
         }
     }, [user?.id]);
 
-    // ==================== LOAD TEMPLATE PREFERENCE ====================
-    useEffect(() => {
-        JournalSettingsService.getTemplate().then(setSelectedTemplate);
-    }, []);
+
 
     // ==================== BUILD MONTH DAYS ====================
     useEffect(() => {
@@ -182,7 +177,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                 setJournalPrompt(sanitizedLocalPrompt);
             }
 
-            // Load context from database
+            // Load context from database for analysis
             let moodNote: string | null = null;
             let sleepNote: string | null = null;
             let moodScore: number | null = null;
@@ -232,30 +227,11 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
 
             if (!cancelled) setPromptContext(contextPayload);
 
-            // Generate prompt if needed
-            if (!sanitizedLocalPrompt) {
-                const templatePrompt = JOURNAL_TEMPLATES[selectedTemplate]?.prompt ?? JOURNAL_TEMPLATES.free.prompt;
-                let nextPrompt = templatePrompt;
 
-                if (selectedTemplate === 'free') {
-                    if (!cancelled) setIsPromptLoading(true);
-                    try {
-                        const smartPrompt = await DailyJournalService.generateDailyPrompt({
-                            userId: currentUser.id,
-                            language,
-                            ...contextPayload,
-                        });
-                        if (!cancelled && smartPrompt) nextPrompt = smartPrompt;
-                    } catch (error) {
-                        console.error('Error generating journal prompt:', error);
-                    } finally {
-                        if (!cancelled) setIsPromptLoading(false);
-                    }
-                }
-
-                if (!cancelled) setJournalPrompt(nextPrompt);
-                await DailyJournalService.saveLocalEntry(selectedDayKey, localContent, nextPrompt);
-            }
+            // Fixed prompt: "Come ti senti oggi?"
+            const fixedPrompt = "Come ti senti oggi?";
+            if (!cancelled) setJournalPrompt(fixedPrompt);
+            await DailyJournalService.saveLocalEntry(selectedDayKey, localContent, fixedPrompt);
 
             // Load recent history
             try {
@@ -288,7 +264,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
 
         loadJournal();
         return () => { cancelled = true; };
-    }, [currentUser?.id, selectedDayKey, selectedTemplate, language]);
+    }, [currentUser?.id, selectedDayKey, language]);
 
     // ==================== AUTO-CENTER DAY STRIP ====================
     useEffect(() => {
@@ -311,36 +287,11 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
     }, [monthDays, selectedDayKey]);
 
     // ==================== HANDLERS ====================
-    const handleRegeneratePrompt = useCallback(async () => {
-        if (!currentUser?.id) return;
-        const fallbackPrompt = JOURNAL_TEMPLATES[selectedTemplate]?.prompt ?? JOURNAL_TEMPLATES.free.prompt;
 
-        if (selectedTemplate !== 'free') {
-            setJournalPrompt(fallbackPrompt);
-            await DailyJournalService.saveLocalEntry(selectedDayKey, journalText, fallbackPrompt);
-            return;
-        }
-
-        setIsPromptLoading(true);
-        try {
-            const smartPrompt = await DailyJournalService.generateDailyPrompt({
-                userId: currentUser.id,
-                language,
-                ...(promptContext || {}),
-            });
-            const nextPrompt = smartPrompt || fallbackPrompt;
-            setJournalPrompt(nextPrompt);
-            await DailyJournalService.saveLocalEntry(selectedDayKey, journalText, nextPrompt);
-        } catch (error) {
-            console.error('Error regenerating journal prompt:', error);
-            setJournalPrompt(fallbackPrompt);
-        } finally {
-            setIsPromptLoading(false);
-        }
-    }, [currentUser?.id, selectedTemplate, promptContext, selectedDayKey, journalText, language]);
 
     const saveJournalEntry = useCallback(async (dayKey: string) => {
         if (!currentUser) return;
+        setIsSaving(true);
 
         await DailyJournalService.saveLocalEntry(dayKey, journalText, journalPrompt);
 
@@ -402,6 +353,8 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
         } catch (e) {
             console.error('Error saving journal entry:', e);
             Alert.alert('Offline', 'Journal salvato in locale, verrà sincronizzato.');
+        } finally {
+            setIsSaving(false);
         }
     }, [currentUser, journalText, journalPrompt]);
 
@@ -502,9 +455,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                 <View style={styles.headerContent}>
                     <Text style={[styles.headerTitle, { color: colors.text }]}>{t('journal.title')}</Text>
                 </View>
-                <TouchableOpacity style={[styles.headerButton, { backgroundColor: surfaceSecondary }]} onPress={() => setShowMenu(true)}>
-                    <FontAwesome name="cog" size={18} color={colors.text} />
-                </TouchableOpacity>
+                <View style={{ width: 40 }} />
             </View>
 
             {/* Main Content */}
@@ -652,45 +603,12 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                     confirmText={language === 'it' ? 'VAI ALLA DATA' : 'GO TO DATE'}
                 />
 
-                {/* Prompt Section */}
-                {journalPrompt ? (
-                    <LinearGradient
-                        colors={themeMode === 'dark' ? ['rgba(99,102,241,0.2)', 'rgba(99,102,241,0.1)'] : ['#EEF2FF', '#FFFFFF']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={[styles.journalPromptGrad, { borderColor: colors.border }]}
-                    >
-                        <View style={styles.journalPromptHeader}>
-                            <Text style={[styles.journalPromptTitle, { color: colors.text }]}>{t('journal.dailyPrompt')}</Text>
-                            <TouchableOpacity
-                                style={[
-                                    styles.pillSecondary,
-                                    { backgroundColor: surfaceSecondary, borderColor: colors.border },
-                                    (selectedTemplate !== 'free' || isPromptLoading) && styles.pillSecondaryDisabled,
-                                ]}
-                                onPress={handleRegeneratePrompt}
-                                disabled={selectedTemplate !== 'free' || isPromptLoading}
-                            >
-                                <Text style={[styles.pillSecondaryText, { color: colors.primary }]}>
-                                    {isPromptLoading ? t('common.loading') : t('journal.regeneratePrompt')}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                        <Text style={[styles.journalPromptText, { color: colors.text }]}>{journalPrompt}</Text>
-                    </LinearGradient>
-                ) : null}
-
                 {/* Editor Section */}
                 <View style={styles.journalEditorWrap}>
                     <BlurView intensity={12} tint="light" style={styles.journalBlur} />
                     <View style={styles.journalEditorHeader}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                             <Text style={[styles.editorTitle, { color: colors.text }]}>{t('journal.entryTitle')}</Text>
-                            <View style={[styles.dateChip, { backgroundColor: surfaceSecondary }]}>
-                                <Text style={[styles.dateChipText, { color: colors.textSecondary }]}>
-                                    {selectedDayKey === getTodayKey() ? getTodayKey() : selectedDayKey}
-                                </Text>
-                            </View>
                         </View>
                         <Text style={[styles.counterText, { color: colors.textTertiary }]}>{journalText.length}/2000</Text>
                     </View>
@@ -704,8 +622,16 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                         maxLength={2000}
                     />
                     <View style={styles.journalActions}>
-                        <TouchableOpacity style={styles.journalSave} onPress={handleSave}>
-                            <Text style={styles.journalSaveText}>{t('journal.save')}</Text>
+                        <TouchableOpacity
+                            style={[styles.journalSave, isSaving && { opacity: 0.8 }]}
+                            onPress={handleSave}
+                            disabled={isSaving}
+                        >
+                            {isSaving ? (
+                                <ActivityIndicator size="small" color="#ffffff" />
+                            ) : (
+                                <Text style={styles.journalSaveText}>{t('journal.save')}</Text>
+                            )}
                         </TouchableOpacity>
                     </View>
                     {showSavedChip && lastSavedAt && (
@@ -716,7 +642,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                 </View>
 
                 {/* AI Insight */}
-                {aiAnalysis && (
+                {journalText.trim().length > 0 && aiAnalysis && (
                     <View style={[styles.aiInsightCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                         <View style={styles.aiInsightHeader}>
                             <View style={styles.aiInsightTitleRow}>
@@ -752,9 +678,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                             </View>
                         ))}
                     </View>
-                ) : (
-                    <EmptyStateCard type="journal" onAction={() => { }} />
-                )}
+                ) : null}
             </ScrollView>
 
             {/* Full Analysis Modal */}
@@ -785,17 +709,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                             </TouchableOpacity>
                         </View>
                         <View style={styles.menuOptions}>
-                            <TouchableOpacity
-                                style={[styles.menuOption, { borderBottomColor: colors.border }]}
-                                onPress={() => {
-                                    setShowMenu(false);
-                                    setShowJournalSettings(true);
-                                }}
-                            >
-                                <FontAwesome name="file-text" size={18} color={colors.textSecondary} />
-                                <Text style={[styles.menuOptionText, { color: colors.text }]}>Template di scrittura</Text>
-                                <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
-                            </TouchableOpacity>
+
                             <TouchableOpacity
                                 style={[styles.menuOption, styles.menuOptionLast]}
                                 onPress={() => {
@@ -811,54 +725,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                 </TouchableOpacity>
             </Modal>
 
-            {/* Journal Settings Modal */}
-            <Modal visible={showJournalSettings} transparent animationType="slide" onRequestClose={() => setShowJournalSettings(false)}>
-                <View style={styles.settingsModalBackdrop}>
-                    <View style={[styles.settingsModalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                        <View style={[styles.settingsModalHeader, { borderBottomColor: colors.border }]}>
-                            <Text style={[styles.settingsModalTitle, { color: colors.text }]}>Template di scrittura</Text>
-                            <TouchableOpacity onPress={() => setShowJournalSettings(false)}>
-                                <FontAwesome name="times" size={18} color={colors.textSecondary} />
-                            </TouchableOpacity>
-                        </View>
-                        <ScrollView style={styles.settingsModalBody} showsVerticalScrollIndicator={false}>
-                            {JournalSettingsService.getAvailableTemplates().map((template) => (
-                                <TouchableOpacity
-                                    key={template.id}
-                                    style={[
-                                        styles.templateOption,
-                                        { borderColor: colors.border },
-                                        template.id === 'free' && selectedTemplate === template.id && { borderColor: '#f5c643', backgroundColor: '#fffbea' },
-                                        selectedTemplate === template.id && template.id !== 'free' && { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-                                    ]}
-                                    onPress={async () => {
-                                        setSelectedTemplate(template.id);
-                                        await JournalSettingsService.saveTemplate(template.id);
-                                        if (!journalText.trim()) {
-                                            const prompt = template.prompt;
-                                            setJournalPrompt(prompt);
-                                            await DailyJournalService.saveLocalEntry(selectedDayKey, journalText, prompt);
-                                        }
-                                    }}
-                                >
-                                    <View style={styles.templateOptionContent}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                            {template.id === 'free' && <Text style={{ fontSize: 16 }}>✨</Text>}
-                                            <Text style={[styles.templateOptionName, { color: colors.text }, selectedTemplate === template.id && { color: colors.primary, fontWeight: '700' }]}>
-                                                {template.name}
-                                            </Text>
-                                        </View>
-                                        <Text style={[styles.templateOptionDescription, { color: colors.textSecondary }]}>
-                                            {template.description}
-                                        </Text>
-                                    </View>
-                                    {selectedTemplate === template.id && <FontAwesome name="check" size={16} color={colors.primary} />}
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
+
         </SafeAreaWrapper>
     );
 };

@@ -97,97 +97,6 @@ export class FoodAnalysisService {
             try {
               const normalizedMealType = normalizeMealType(analysis.mealType);
 
-              // Check duplicati recenti: analisi simili negli ultimi 2 minuti
-              const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-              const { data: recentAnalysis, error: checkError } = await supabase
-                .from(Tables.FOOD_ANALYSES)
-                .select('id, created_at, calories, image_url')
-                .eq('user_id', userId)
-                .gte('created_at', twoMinutesAgo)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-              // Se esiste un'analisi recente con stesso imageUrl o calorie molto simili, aggiornala
-              if (recentAnalysis && !checkError) {
-                const isSimilar =
-                  (analysis.imageUrl && recentAnalysis.image_url === analysis.imageUrl) || // Stessa immagine
-                  (Math.abs(recentAnalysis.calories - analysis.calories) < 50 && !analysis.imageUrl); // Calorie simili e senza nuova immagine
-
-                if (isSimilar) {
-                  EnhancedLoggingService.logDatabaseOperation('update', 'food_analysis', true);
-
-                  // Cifra observations prima di salvare
-                  let encryptedObservations: string[] | null = null;
-                  if (analysis.observations && analysis.observations.length > 0) {
-                    try {
-                      const encrypted = await encryptStringArray(analysis.observations, userId);
-                      if (encrypted) {
-                        // Salva come array con un singolo elemento cifrato (per compatibilità con tipo array)
-                        encryptedObservations = [encrypted];
-                      }
-                    } catch (encError) {
-                      console.warn('[FoodAnalysis] ⚠️ Encryption failed for observations, saving as plaintext (fallback):', encError);
-                      encryptedObservations = analysis.observations; // Fallback
-                    }
-                  }
-
-                  const { data: updated, error: updateError } = await supabase
-                    .from(Tables.FOOD_ANALYSES)
-                    .update({
-                      meal_type: normalizedMealType,
-                      identified_foods: analysis.identifiedFoods,
-                      calories: analysis.calories,
-                      carbohydrates: analysis.carbohydrates,
-                      proteins: analysis.proteins,
-                      fats: analysis.fats,
-                      fiber: analysis.fiber,
-                      vitamins: analysis.vitamins || {},
-                      minerals: analysis.minerals || {},
-                      health_score: analysis.healthScore,
-                      recommendations: analysis.recommendations,
-                      observations: encryptedObservations || analysis.observations,
-                      confidence: analysis.confidence,
-                      analysis_data: analysis.analysisData || {},
-                      image_url: finalImageUrl || recentAnalysis.image_url, // 🔥 FIX: Usa l'URL pubblico di Supabase Storage
-                    })
-                    .eq('id', recentAnalysis.id)
-                    .select()
-                    .single();
-
-                  if (updateError) {
-                    const err = new Error(`Error updating food analysis: ${updateError.message}`);
-                    EnhancedLoggingService.logSaveOperation('food_analysis', userId, false, err);
-                    throw err;
-                  }
-
-                  EnhancedLoggingService.logSaveOperation('food_analysis', userId, true, undefined, updated.id);
-
-                  // Invalida cache quando si aggiorna un'analisi
-                  await cacheService.invalidatePrefix(`food:${userId}`);
-                  await cacheService.invalidate(`ai_context:${userId}`);
-
-                  // 🆕 Verifica post-salvataggio che i dati siano nel database
-                  if (updated?.id) {
-                    const verification = await DatabaseVerificationService.verifyFoodAnalysis(userId, updated.id);
-                    if (!verification.found) {
-                      EnhancedLoggingService.logVerification('food_analysis', userId, false, new Error('Data not found after update'));
-                    }
-                  }
-
-                  // Decifra observations prima di restituire
-                  const result = updated as FoodAnalysis;
-                  if (result.observations && result.observations.length > 0) {
-                    const decrypted = await decryptStringArray(result.observations[0], userId);
-                    if (decrypted !== null) {
-                      result.observations = decrypted;
-                    }
-                  }
-
-                  return result;
-                }
-              }
-
               // Cifra observations prima di salvare
               let encryptedObservations: string[] | null = null;
               if (analysis.observations && analysis.observations.length > 0) {
@@ -203,7 +112,7 @@ export class FoodAnalysisService {
                 }
               }
 
-              // Nessun duplicato trovato, inserisci nuova analisi
+              // Inserisci nuova analisi (rimosso controllo duplicati per permettere pasti multipli)
               const { data, error } = await supabase
                 .from(Tables.FOOD_ANALYSES)
                 .insert({
@@ -568,7 +477,34 @@ export class FoodAnalysisService {
       return [];
     }
   }
+
+  /**
+   * Elimina un'analisi del cibo dal database
+   * 🆕 Usato quando l'utente preme "Chiudi" invece di "Aggiungi ai pasti"
+   */
+  static async deleteFoodAnalysis(userId: string, analysisId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from(Tables.FOOD_ANALYSES)
+        .delete()
+        .eq('id', analysisId)
+        .eq('user_id', userId); // Sicurezza: verifica che l'analisi appartenga all'utente
+
+      if (error) {
+        console.error('Error deleting food analysis:', error);
+        return false;
+      }
+
+      // Invalida cache dopo l'eliminazione
+      await cacheService.invalidatePrefix(`food:${userId}`);
+      await cacheService.invalidate(`ai_context:${userId}`);
+
+      EnhancedLoggingService.logDatabaseOperation('delete', 'food_analysis', true);
+      return true;
+    } catch (error) {
+      console.error('Error in deleteFoodAnalysis:', error);
+      EnhancedLoggingService.logDatabaseOperation('delete', 'food_analysis', false);
+      return false;
+    }
+  }
 }
-
-
-

@@ -149,7 +149,7 @@ export const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
           return (
             <SvgText
               key={`label-${index}`}
-              x={PADDING_LEFT - 4}
+              x={PADDING_LEFT - 8}
               y={y + 4}
               fontSize={9}
               fill={colors.textSecondary}

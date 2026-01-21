@@ -13,6 +13,7 @@ import {
     Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
@@ -46,237 +47,282 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 }) => {
     const { t, language } = useTranslation();
     const { colors, mode: themeMode } = useTheme();
+    const isDark = themeMode === 'dark';
+    // Dynamic Greeting
+    const greeting = useMemo(() => {
+        const h = new Date().getHours();
+        if (language === 'it') {
+            if (h >= 5 && h < 12) return 'Buongiorno,';
+            if (h >= 12 && h < 18) return 'Buon pomeriggio,';
+            return 'Buonasera,';
+        } else {
+            if (h >= 5 && h < 12) return 'Good morning,';
+            if (h >= 12 && h < 18) return 'Good afternoon,';
+            return 'Good evening,';
+        }
+    }, [language]);
 
-    // Streak text - just the number
+    // Streak text
     const streakText = useMemo(() => {
         if (language === 'it') {
-            return streakDays === 1 ? '1 giorno' : `${streakDays} giorni`;
+            return streakDays === 1 ? '1 Giorno di Serie' : `${streakDays} Giorni di Serie`;
         }
-        return streakDays === 1 ? '1 day' : `${streakDays} days`;
+        return streakDays === 1 ? '1 Day Streak' : `${streakDays} Days Streak`;
     }, [streakDays, language]);
-
-    // Dynamic gradient colors based on theme
-    const gradientColors = themeMode === 'dark'
-        ? ['#3a1b69ff', '#221145ff'] as const
-        : ['#9b49cbff', '#3a2b9eff'] as const;
-
-    // Border color for avatar
-    const avatarBorderColor = themeMode === 'dark'
-        ? 'rgba(100, 110, 203, 0.6)'
-        : 'rgba(0, 2, 97, 0.5)';
-
-    // Avatar background color
-    const avatarBgColor = themeMode === 'dark'
-        ? 'rgba(30, 20, 60, 0.8)'
-        : 'rgba(200, 180, 230, 0.5)';
 
     return (
         <View style={styles.container}>
-            {/* Hero Card Container with rounded corners */}
-            <LinearGradient
-                colors={gradientColors}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.heroCard}
-            >
-                {/* Header Row: Greeting + Buttons */}
-                <View style={styles.header}>
-                    <View style={styles.greetingContainer}>
-                        <Text style={styles.greeting}>
-                            {language === 'it' ? 'Ciao' : 'Hello'}, <Text style={styles.userName}>{userName}</Text>
-                        </Text>
-                    </View>
-                    <View style={styles.headerButtons}>
-                        <TouchableOpacity style={styles.headerButton} onPress={onTutorialPress}>
-                            <MaterialCommunityIcons name="help-circle-outline" size={22} color="#fff" />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.headerButton} onPress={onSettingsPress}>
-                            <MaterialCommunityIcons name="cog-outline" size={22} color="#fff" />
-                        </TouchableOpacity>
+            {/* Top Navigation Bar */}
+            <View style={styles.topBar}>
+                <TouchableOpacity
+                    style={[styles.iconBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.03)' }]}
+                    onPress={onTutorialPress}
+                >
+                    <MaterialCommunityIcons name="help-circle-outline" size={24} color={colors.text} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.iconBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.03)' }]}
+                    onPress={onSettingsPress}
+                >
+                    <MaterialCommunityIcons name="cog-outline" size={24} color={colors.text} />
+                </TouchableOpacity>
+            </View>
+
+            {/* Content Container */}
+            <View style={styles.content}>
+
+                {/* Greetings & Streak */}
+                <View style={styles.headerText}>
+                    <Text style={[styles.greeting, { color: colors.text }]}>
+                        {greeting} <Text style={{ fontWeight: '400' }}>{userName}</Text>
+                    </Text>
+
+                    {/* Streak Pill - Moved here to be under greeting as requested implicitely by "remove date" */}
+                    <View style={[styles.streakPill, {
+                        backgroundColor: isDark ? 'rgba(251, 191, 36, 0.1)' : 'rgba(255, 255, 255, 0.6)',
+                        borderColor: 'rgba(251, 191, 36, 0.5)',
+                        marginTop: 8,
+                        marginBottom: 0,
+                    }]}>
+                        <MaterialCommunityIcons name="fire" size={16} color="#f59e0b" />
+                        <Text style={[styles.streakText, { color: isDark ? '#fcd34d' : '#475569' }]}>{streakText}</Text>
                     </View>
                 </View>
 
-                {/* Avatar Section */}
-                <View style={styles.avatarSection}>
-                    {/* Avatar - Image if available, otherwise icon */}
+                {/* Avatar Section with Aura */}
+                <View style={styles.avatarZone}>
+                    {/* Aura Background (Radial Gradient) */}
+                    <View style={styles.auraContainer}>
+                        <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
+                            <Defs>
+                                <RadialGradient id="auraGrad" cx="50%" cy="50%" rx="50%" ry="50%">
+                                    {/* Center - Darker/Intense */}
+                                    <Stop offset="0%" stopColor={isDark ? '#818cf8' : '#be123c'} stopOpacity={isDark ? 0.5 : 0.7} />
+                                    {/* Mid - Fade */}
+                                    <Stop offset="60%" stopColor={isDark ? '#4f46e5' : '#f472b6'} stopOpacity={isDark ? 0.1 : 0.2} />
+                                    {/* Outer - Transparent */}
+                                    <Stop offset="100%" stopColor={colors.background} stopOpacity="0" />
+                                </RadialGradient>
+                            </Defs>
+                            <Rect x="0" y="0" width="100%" height="100%" fill="url(#auraGrad)" />
+                        </Svg>
+                    </View>
+
+                    {/* Main Avatar */}
                     <TouchableOpacity
-                        style={[styles.avatarContainer, { borderColor: avatarBorderColor, backgroundColor: avatarBgColor }]}
+                        style={[styles.avatarWrapper, {
+                            borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#fff',
+                            backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+                        }]}
                         onPress={onAvatarPress}
                         activeOpacity={0.9}
                     >
                         {avatarUri ? (
-                            <Image
-                                source={{ uri: avatarUri }}
-                                style={styles.avatarImage}
-                            />
+                            <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
                         ) : (
-                            <View style={styles.avatarIconContainer}>
-                                <MaterialCommunityIcons name="account" size={80} color="rgba(255, 255, 255, 0.7)" />
-                            </View>
+                            <MaterialCommunityIcons name="account" size={100} color={isDark ? '#cbd5e1' : '#94a3b8'} />
                         )}
                     </TouchableOpacity>
 
-                    {/* Mic Button */}
-                    <TouchableOpacity style={styles.micButton} onPress={onMicPress} activeOpacity={0.8}>
-                        <MaterialCommunityIcons name="microphone" size={25} color="#fff" />
+                    {/* Mic Button - Centered below avatar, Blue color */}
+                    <TouchableOpacity
+                        style={[styles.micButton, {
+                            backgroundColor: colors.primary, // Using primary color (Blue/Violet) as requested
+                            borderColor: isDark ? '#0f172a' : '#fff'
+                        }]}
+                        onPress={onMicPress}
+                    >
+                        <MaterialCommunityIcons name="microphone" size={24} color="#fff" />
                     </TouchableOpacity>
                 </View>
 
-                {/* Streak Badge - Simple: 🔥 + number */}
-                <View style={styles.streakContainer}>
-                    <View style={styles.streakBadge}>
-                        <Text style={styles.streakIcon}>🔥</Text>
-                        <Text style={styles.streakText}>{streakText}</Text>
-                    </View>
-                </View>
-
-                {/* Action Buttons: Chat & Journal - Circular style */}
-                <View style={styles.actionButtons}>
-                    {/* Chat Button */}
-                    <TouchableOpacity style={styles.actionButtonWrapper} onPress={onChatPress} activeOpacity={0.8}>
-                        <View style={[styles.actionButtonCircle, { backgroundColor: '#4c44daff' }]}>
-                            <MaterialCommunityIcons name="chat" size={26} color="#fff" />
-                        </View>
-                        <Text style={styles.actionButtonLabel}>CHAT</Text>
+                {/* Action Buttons Row */}
+                <View style={styles.actionButtonsRow}>
+                    <TouchableOpacity
+                        style={[styles.glassButton, {
+                            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)',
+                            borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(99, 102, 241, 0.3)',
+                        }]}
+                        onPress={onChatPress}
+                    >
+                        <MaterialCommunityIcons name="chat-processing-outline" size={22} color={colors.primary} />
+                        <Text style={[styles.glassButtonText, { color: colors.text }]}>CHAT</Text>
                     </TouchableOpacity>
 
-                    {/* Journal Button */}
-                    <TouchableOpacity style={styles.actionButtonWrapper} onPress={onJournalPress} activeOpacity={0.8}>
-                        <View style={[styles.actionButtonCircle, { backgroundColor: '#b820f3ff' }]}>
-                            <MaterialCommunityIcons name="notebook-outline" size={26} color="#fff" />
-                        </View>
-                        <Text style={styles.actionButtonLabel}>
+                    <TouchableOpacity
+                        style={[styles.glassButton, {
+                            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)',
+                            borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(99, 102, 241, 0.3)',
+                        }]}
+                        onPress={onJournalPress}
+                    >
+                        <MaterialCommunityIcons name="notebook-edit-outline" size={22} color={colors.primary} />
+                        <Text style={[styles.glassButtonText, { color: colors.text }]}>
                             {language === 'it' ? 'DIARIO' : 'JOURNAL'}
                         </Text>
                     </TouchableOpacity>
                 </View>
-            </LinearGradient>
+
+            </View>
         </View>
     );
 };
 
-const AVATAR_SIZE = 160;
+const AVATAR_SIZE = 180; // Increased from 140
 
 const styles = StyleSheet.create({
     container: {
-        paddingHorizontal: 16,
-        paddingTop: 8,
-        paddingBottom: 24, // Increased from 8 for more spacing
+        marginBottom: 24,
     },
-    heroCard: {
-        borderRadius: 24,
-        paddingTop: 16,
-        paddingBottom: 20,
-        paddingHorizontal: 20,
-    },
-    header: {
+    topBar: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
+        paddingHorizontal: 20,
+        marginBottom: 0,
     },
-    greetingContainer: {
-        flex: 1,
+    iconBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    content: {
+        alignItems: 'center',
+    },
+    headerText: {
+        alignItems: 'center',
+        marginBottom: 20,
+        marginTop: 10,
     },
     greeting: {
-        fontSize: 20,
-        color: 'rgba(255, 255, 255, 0.9)',
-        fontWeight: '400',
+        fontSize: 34,
+        fontWeight: '300',
+        letterSpacing: -0.5,
+        textAlign: 'center',
+        marginBottom: 4,
     },
-    userName: {
-        fontWeight: '700',
-        color: '#fff',
-    },
-    headerButtons: {
+    // Removed dateText style
+    streakPill: {
         flexDirection: 'row',
-        gap: 8,
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 100,
+        borderWidth: 1,
+        gap: 6,
     },
-    headerButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    streakText: {
+        fontSize: 14,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    avatarZone: {
+        position: 'relative',
         alignItems: 'center',
         justifyContent: 'center',
+        width: AVATAR_SIZE * 1.6, // Expanded aura zone
+        height: AVATAR_SIZE * 1.6,
+        marginBottom: 20, // Reduced spacing
     },
-    avatarSection: {
-        alignItems: 'center',
+    auraContainer: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
         justifyContent: 'center',
-        marginBottom: 12,
+        alignItems: 'center',
     },
-    avatarContainer: {
+    auraGradient: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        borderRadius: 999, // Circular
+    },
+    avatarWrapper: {
         width: AVATAR_SIZE,
         height: AVATAR_SIZE,
         borderRadius: AVATAR_SIZE / 2,
-        overflow: 'hidden',
-        borderWidth: 3,
+        borderWidth: 5, // Thicker border
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'visible', // Changed to visible for mic button overlap if needed, but mic is absolute sibling
+        // Shadow optimized
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.12,
+        shadowRadius: 24,
+        elevation: 12,
     },
     avatarImage: {
         width: '100%',
         height: '100%',
-    },
-    avatarIconContainer: {
-        width: '100%',
-        height: '100%',
-        alignItems: 'center',
-        justifyContent: 'center',
+        borderRadius: AVATAR_SIZE / 2, // Need to apply radius to image if wrapper has it
     },
     micButton: {
         position: 'absolute',
-        bottom: -23,
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: '#6366f1',
-        alignItems: 'center',
+        bottom: 26, // Overlap bottom
+        left: '50%',
+        marginLeft: -28, // Half width
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: '#373885ff',
-    },
-    streakContainer: {
         alignItems: 'center',
-        marginTop: 16,
-        marginBottom: 16,
+        borderWidth: 3, // Thicker border to merge with avatar border visual
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 6,
     },
-    streakBadge: {
+    // Removed micGradient style as we use solid bg now
+    actionButtonsRow: {
         flexDirection: 'row',
+        width: '100%',
+        paddingHorizontal: 24,
+        gap: 16,
+    },
+    glassButton: {
+        flex: 1,
+        height: 52, // Smaller as requested
+        borderRadius: 26,
+        borderWidth: 1,
+        flexDirection: 'row',
+        justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        gap: 6,
+        gap: 10,
+        shadowColor: "#6366f1",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+        elevation: 3,
     },
-    streakIcon: {
-        fontSize: 18,
-    },
-    streakText: {
+    glassButtonText: {
         fontSize: 14,
-        color: '#fff',
-        fontWeight: '600',
-    },
-    actionButtons: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 40,
-    },
-    actionButtonWrapper: {
-        alignItems: 'center',
-        gap: 8,
-    },
-    actionButtonCircle: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    actionButtonLabel: {
-        fontSize: 12,
-        color: '#fff',
-        fontWeight: '600',
-        letterSpacing: 0.5,
-    },
+        fontWeight: '700',
+        letterSpacing: 1.2,
+    }
 });
 
 export default HeroSection;
