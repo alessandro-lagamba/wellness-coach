@@ -73,7 +73,7 @@ const METRIC_DEFINITIONS = {
 // -----------------------------------------------------
 // Utility: confidenza e colori
 // -----------------------------------------------------
-const getHealthScoreLabel = (score: number, t: (k: string, o?: any)=>string) => {
+const getHealthScoreLabel = (score: number, t: (k: string, o?: any) => string) => {
   if (score >= 80) return t('rating.excellent');
   if (score >= 60) return t('rating.good');
   if (score >= 40) return t('rating.fair');
@@ -149,22 +149,22 @@ const ScoreTile: React.FC<{
   }));
 
   return (
-    <View style={[styles.scoreTileContainer, { borderColor: `${def.color}22`, backgroundColor: colors.surface }]}> 
+    <View style={[styles.scoreTileContainer, { borderColor: `${def.color}22`, backgroundColor: colors.surface }]}>
       {/* Header compatto */}
-      <TouchableOpacity onPress={toggle} activeOpacity={0.9} style={[styles.scoreTile, { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 10 }]}> 
-        <View style={[styles.titleRowLeft, { justifyContent: 'space-between' }]}> 
-          <View style={[styles.titleRowLeft, { gap: 8 }]}> 
-            <MaterialIcons name={def.icon} size={18} color={def.color} /> 
-            <Text style={[styles.scoreLabel, { color: def.color }]}>{t(def.label).toUpperCase()}</Text> 
+      <TouchableOpacity onPress={toggle} activeOpacity={0.9} style={[styles.scoreTile, { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 10 }]}>
+        <View style={[styles.titleRowLeft, { justifyContent: 'space-between' }]}>
+          <View style={[styles.titleRowLeft, { gap: 8 }]}>
+            <MaterialIcons name={def.icon} size={18} color={def.color} />
+            <Text style={[styles.scoreLabel, { color: def.color }]}>{t(def.label).toUpperCase()}</Text>
           </View>
-          <Animated.View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }, chevronStyle]}> 
-            <MaterialIcons name="chevron-right" size={18} color={colors.primary} /> 
+          <Animated.View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }, chevronStyle]}>
+            <MaterialIcons name="chevron-right" size={18} color={colors.primary} />
           </Animated.View>
         </View>
 
         {/* Valore + progress compatti */}
-        <View style={[styles.scoreRow, { marginTop: 4 }]}> 
-          <Text style={[styles.scoreValue, { color: def.color }]}>{Math.round(safeValue)}</Text> 
+        <View style={[styles.scoreRow, { marginTop: 4 }]}>
+          <Text style={[styles.scoreValue, { color: def.color }]}>{Math.round(safeValue)}</Text>
           {unit ? (
             <Text style={[styles.scoreUnit, { color: colors.textSecondary }]}>{unit}</Text>
           ) : maxValue > 0 ? (
@@ -175,20 +175,20 @@ const ScoreTile: React.FC<{
           ) : null}
         </View>
 
-        <View style={[styles.progressTrack, { backgroundColor: colors.borderLight, marginTop: 6 }]}> 
-          <View style={[styles.progressFill, { width: `${Math.min(100, percentage)}%`, backgroundColor: def.color }]} /> 
+        <View style={[styles.progressTrack, { backgroundColor: colors.borderLight, marginTop: 6 }]}>
+          <View style={[styles.progressFill, { width: `${Math.min(100, percentage)}%`, backgroundColor: def.color }]} />
         </View>
       </TouchableOpacity>
 
       {/* Contenuto esteso sotto */}
-      <BottomCollapsible expanded={isExpanded}> 
-        <View style={[styles.definitionSection, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight }]}> 
-          <Text style={[styles.definitionTitle, { color: colors.text }]}>{t('ui.whyItMatters')}</Text> 
-          <Text style={[styles.definitionText, { color: colors.textSecondary }]}>{t(def.whyItMatters)}</Text> 
+      <BottomCollapsible expanded={isExpanded}>
+        <View style={[styles.definitionSection, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight }]}>
+          <Text style={[styles.definitionTitle, { color: colors.text }]}>{t('ui.whyItMatters')}</Text>
+          <Text style={[styles.definitionText, { color: colors.textSecondary }]}>{t(def.whyItMatters)}</Text>
         </View>
-        <View style={styles.definitionSection}> 
-          <Text style={[styles.definitionTitle, { color: colors.text }]}>{t('ui.howItWorks')}</Text> 
-          <Text style={[styles.definitionText, { color: colors.textSecondary }]}>{t(def.howItWorks)}</Text> 
+        <View style={styles.definitionSection}>
+          <Text style={[styles.definitionTitle, { color: colors.text }]}>{t('ui.howItWorks')}</Text>
+          <Text style={[styles.definitionText, { color: colors.textSecondary }]}>{t(def.howItWorks)}</Text>
         </View>
       </BottomCollapsible>
     </View>
@@ -207,7 +207,7 @@ export const FoodCaptureCard: React.FC<FoodCaptureCardProps> = ({ session, daily
   const { t } = useTranslation();
   const { colors } = useTheme();
   const healthScore = session.health_score ?? 70;
-  
+
   // Check if this is fallback data
   const isFallback = session.id === 'fallback' || session.id === 'error-fallback';
 
@@ -234,10 +234,10 @@ export const FoodCaptureCard: React.FC<FoodCaptureCardProps> = ({ session, daily
       mealType === 'breakfast'
         ? 0.15
         : mealType === 'lunch'
-        ? 0.35
-        : mealType === 'snack'
-        ? 0.15
-        : 0.35; // dinner / other
+          ? 0.35
+          : mealType === 'snack'
+            ? 0.15
+            : 0.35; // dinner / other
     const caloriesTarget = Math.max(100, Math.round(dailyGoal * mealShare));
 
     const items: Array<{ key: MetricKey; value: number; maxValue?: number; unit?: string }> = [
@@ -246,41 +246,16 @@ export const FoodCaptureCard: React.FC<FoodCaptureCardProps> = ({ session, daily
       { key: 'proteins', value: proteins, unit: 'g' },
       { key: 'fats', value: fats, unit: 'g' },
     ];
-    
+
     if (healthScore > 0) {
       items.push({ key: 'health_score', value: healthScore, maxValue: 100 });
     }
-    
+
     return items;
   }, [session.macronutrients, healthScore]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            {isFallback ? t('analysis.food.card.sampleTitle') : t('analysis.food.card.lastTitle')}
-          </Text>
-          <View style={[styles.healthBadge, { backgroundColor: colors.surfaceMuted }]}>
-            <View style={[styles.healthDot, { backgroundColor: getHealthScoreColor(healthScore) }]} />
-            <Text style={[styles.healthText, { color: colors.text }]}>
-              {isFallback ? t('analysis.common.sample') : getHealthScoreLabel(healthScore, t)} ({Math.round(healthScore)}%)
-            </Text>
-          </View>
-        </View>
-        {session.meal_type && (
-          <Text style={[styles.mealType, { color: colors.textSecondary }]}>
-            {t(`analysis.food.mealTypes.${session.meal_type}`, { defaultValue: session.meal_type })}
-          </Text>
-        )}
-        {isFallback && (
-          <Text style={[styles.fallbackText, { color: colors.textSecondary }]}>
-            {t('analysis.food.card.sampleHint')}
-          </Text>
-        )}
-      </View>
-
       {/* Lista verticale */}
       <View style={styles.metricsList}>
         {data.map((item) => (
@@ -305,7 +280,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 16,
     marginHorizontal: 16,
-    marginVertical: 12,
+    marginVertical: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
@@ -390,10 +365,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 6,
+    marginTop: 4,
   },
   scoreValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     letterSpacing: -0.2,
   },
@@ -403,11 +378,11 @@ const styles = StyleSheet.create({
     marginLeft: 1,
   },
   progressTrack: {
-    height: 5,
+    height: 4,
     width: '100%',
     borderRadius: 999,
     overflow: 'hidden',
-    marginTop: 8,
+    marginTop: 6,
   },
   progressFill: {
     height: '100%',

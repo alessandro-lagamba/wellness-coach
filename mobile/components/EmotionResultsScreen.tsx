@@ -644,7 +644,6 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
               key={action.id}
               action={action}
               onComplete={() => { }}
-              onDismiss={() => { }}
             />
           ))}
 
@@ -668,7 +667,6 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
                     estimatedTime: '2 min',
                   }}
                   onComplete={() => { }}
-                  onDismiss={() => { }}
                 />
               ))}
             </>

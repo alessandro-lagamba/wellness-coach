@@ -335,7 +335,7 @@ export const TimeMachineCalendar: React.FC<TimeMachineCalendarProps> = ({
 
 const styles = StyleSheet.create({
     overlay: { flex: 1, justifyContent: 'flex-end' },
-    container: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+    container: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 80 },
     handleBar: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 },
     headerLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 2 },

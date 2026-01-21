@@ -18,7 +18,9 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { BlurView } from 'expo-blur';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Markdown from 'react-native-markdown-display';
@@ -59,6 +61,7 @@ interface JournalScreenProps {
 export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
     const { t, language } = useTranslation();
     const { colors, mode: themeMode } = useTheme();
+    const isDark = themeMode === 'dark';
     const { hideTabBar, showTabBar } = useTabBarVisibility();
     const router = useRouter();
     const surfaceSecondary = (colors as any).surfaceSecondary ?? colors.surface;
@@ -603,130 +606,255 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                     confirmText={language === 'it' ? 'VAI ALLA DATA' : 'GO TO DATE'}
                 />
 
-                {/* Editor Section */}
-                <View style={styles.journalEditorWrap}>
-                    <BlurView intensity={12} tint="light" style={styles.journalBlur} />
-                    <View style={styles.journalEditorHeader}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <Text style={[styles.editorTitle, { color: colors.text }]}>{t('journal.entryTitle')}</Text>
-                        </View>
-                        <Text style={[styles.counterText, { color: colors.textTertiary }]}>{journalText.length}/2000</Text>
-                    </View>
-                    <TextInput
-                        style={[styles.journalInput, { color: colors.text }]}
-                        multiline
-                        placeholder={t('journal.placeholder')}
-                        placeholderTextColor={colors.textTertiary}
-                        value={journalText}
-                        onChangeText={setJournalText}
-                        maxLength={2000}
-                    />
-                    <View style={styles.journalActions}>
-                        <TouchableOpacity
-                            style={[styles.journalSave, isSaving && { opacity: 0.8 }]}
-                            onPress={handleSave}
-                            disabled={isSaving}
-                        >
-                            {isSaving ? (
-                                <ActivityIndicator size="small" color="#ffffff" />
-                            ) : (
-                                <Text style={styles.journalSaveText}>{t('journal.save')}</Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-                    {showSavedChip && lastSavedAt && (
-                        <View style={styles.savedChip}>
-                            <Text style={styles.savedChipText}>{t('journal.savedAt', { time: lastSavedAt })}</Text>
-                        </View>
-                    )}
-                </View>
-
-                {/* AI Insight */}
-                {journalText.trim().length > 0 && aiAnalysis && (
-                    <View style={[styles.aiInsightCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                        <View style={styles.aiInsightHeader}>
-                            <View style={styles.aiInsightTitleRow}>
-                                <View style={styles.aiInsightIcon}>
-                                    <Text style={styles.aiInsightIconText}>🤖</Text>
-                                </View>
-                                <Text style={[styles.aiInsightTitle, { color: colors.text }]}>{t('journal.diaryInsight')}</Text>
+                {/* Editor Section (Only if Today) */}
+                {selectedDayKey === toISODateSafe(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()) && (
+                    <View style={styles.journalEditorWrap}>
+                        <BlurView intensity={12} tint="light" style={styles.journalBlur} />
+                        <View style={styles.journalEditorHeader}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <Text style={[styles.editorTitle, { color: colors.text }]}>Come stai?</Text>
                             </View>
+                            <Text style={[styles.counterText, { color: colors.textTertiary }]}>{journalText.length}/2000</Text>
                         </View>
-                        <View style={styles.aiInsightContent}>
-                            <Text style={[styles.aiInsightSummary, { color: colors.textSecondary }]}>{aiAnalysis}</Text>
+                        <TextInput
+                            style={[styles.journalInput, { color: colors.text }]}
+                            multiline
+                            placeholder={t('journal.placeholder')}
+                            placeholderTextColor={colors.textTertiary}
+                            value={journalText}
+                            onChangeText={setJournalText}
+                            maxLength={2000}
+                        />
+                        <View style={styles.journalActions}>
+                            <TouchableOpacity
+                                style={[styles.journalSave, isSaving && { opacity: 0.8 }]}
+                                onPress={handleSave}
+                                disabled={isSaving}
+                            >
+                                {isSaving ? (
+                                    <ActivityIndicator size="small" color="#ffffff" />
+                                ) : (
+                                    <Text style={styles.journalSaveText}>{t('journal.save')}</Text>
+                                )}
+                            </TouchableOpacity>
                         </View>
+                        {showSavedChip && lastSavedAt && (
+                            <View style={styles.savedChip}>
+                                <Text style={styles.savedChipText}>{t('journal.savedAt', { time: lastSavedAt })}</Text>
+                            </View>
+                        )}
+                    </View>
+
+                {/* HISTORICAL RECAP VIEW (If not today) */}
+                {!isFutureDate(selectedDayKey) && selectedDayKey !== toISODateSafe(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()) && (
+                    <View style={styles.historicalRecapContainer}>
+
+                        {/* 1. Daily Snapshot Strip */}
+                        <TouchableOpacity style={styles.dailySnapshotStrip} onPress={() => setShowFullAnalysis(true)}>
+                            <View style={styles.dailySnapshotLeft}>
+                                <View style={styles.dailySnapshotIcon}>
+                                    <MaterialCommunityIcons name="chart-pie" size={24} color="#6366f1" />
+                                </View>
+                                <View>
+                                    <Text style={[styles.dailySnapshotTitle, { color: colors.text }]}>Daily Snapshot</Text>
+                                    <Text style={styles.dailySnapshotSubtitle}>Analisi completa</Text>
+                                </View>
+                            </View>
+                            <View style={styles.dailySnapshotRight}>
+                                {/* Icons for metrics */}
+                                <View style={styles.snapshotMetricIcon}>
+                                    <MaterialCommunityIcons name="emoticon-happy-outline" size={20} color="#f59e0b" />
+                                    <View style={[styles.metricBar, { backgroundColor: '#f59e0b', width: 12 }]} />
+                                </View>
+                                <View style={styles.snapshotMetricIcon}>
+                                    <MaterialCommunityIcons name="face-man-profile" size={20} color="#0ea5e9" />
+                                    <View style={[styles.metricBar, { backgroundColor: '#0ea5e9', width: 16 }]} />
+                                </View>
+                                <View style={styles.snapshotMetricIcon}>
+                                    <MaterialCommunityIcons name="silverware-fork-knife" size={20} color="#10b981" />
+                                    <View style={[styles.metricBar, { backgroundColor: '#10b981', width: 20 }]} />
+                                </View>
+                                <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textTertiary} />
+                            </View>
+                        </TouchableOpacity>
+
+                        {/* 2. Read-Only Journal Card */}
+                        {journalText.trim().length > 0 ? (
+                            <View style={styles.readOnlyJournalCard}>
+                                <View style={styles.readOnlyJournalHeader}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                        <MaterialCommunityIcons name="book-open-page-variant" size={18} color="#6366f1" />
+                                        <Text style={styles.readOnlyJournalLabel}>DIARIO</Text>
+                                    </View>
+                                    <Text style={styles.readOnlyTimeLabel}>18:42</Text>
+                                </View>
+                                <Text style={[styles.readOnlyJournalText, { color: colors.text }]} numberOfLines={4}>
+                                    "{journalText}"
+                                </Text>
+                                <TouchableOpacity style={styles.readOnlyReadMore} onPress={() => { /* Expand or open modal logic if needed */ }}>
+                                    <Text style={styles.readMoreText}>LEGGI TUTTO</Text>
+                                    <MaterialCommunityIcons name="arrow-right" size={14} color="#9ca3af" />
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <View style={styles.emptyHistoryCard}>
+                                <Text style={{ color: colors.textTertiary, fontStyle: 'italic' }}>Nessuna entry per questo giorno.</Text>
+                            </View>
+                        )}
+
+                        {/* 3. Detailed AI Reflection (Bottom Card Style) */}
+                        {journalText.trim().length > 0 && aiAnalysis && (
+                            <View style={styles.historicalReflectionCard}>
+                                <View style={styles.historicalReflectionHeader}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <View style={styles.sparkleIconBox}>
+                                            <MaterialCommunityIcons name="auto-fix" size={18} color="#6366f1" />
+                                        </View>
+                                        <View>
+                                            <Text style={[styles.historicalReflectionTitle, { color: colors.text }]}>Riflessione AI</Text>
+                                            <Text style={styles.historicalDataPoints}>BASATO SU 3 DATA POINTS</Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.sentimentBadge}>
+                                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981', marginRight: 4 }} />
+                                        <Text style={styles.sentimentBadgeText}>Positivo</Text>
+                                    </View>
+                                </View>
+
+                                <Text style={[styles.historicalReflectionText, { color: colors.textSecondary }]}>
+                                    {aiAnalysis}
+                                </Text>
+
+                                {/* Mock Stats Grid */}
+                                <View style={styles.historicalStatsGrid}>
+                                    <View style={[styles.historicalStatBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb' }]}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                                            <MaterialCommunityIcons name="run" size={14} color="#9ca3af" />
+                                            <Text style={styles.statBoxLabel}>ATTIVITÀ</Text>
+                                        </View>
+                                        <Text style={[styles.statBoxValue, { color: colors.text }]}>45 min</Text>
+                                        <View style={{ height: 4, backgroundColor: '#e5e7eb', borderRadius: 2, marginTop: 8, width: '100%' }}>
+                                            <View style={{ height: 4, backgroundColor: '#6366f1', borderRadius: 2, width: '70%' }} />
+                                        </View>
+                                    </View>
+                                    <View style={[styles.historicalStatBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb' }]}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                                            <MaterialCommunityIcons name="brain" size={14} color="#9ca3af" />
+                                            <Text style={styles.statBoxLabel}>CHIAREZZA</Text>
+                                        </View>
+                                        <Text style={[styles.statBoxValue, { color: colors.text }]}>Alta</Text>
+                                        <View style={{ flexDirection: 'row', gap: 2, marginTop: 8 }}>
+                                            <View style={{ flex: 1, height: 4, backgroundColor: '#6366f1', borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }} />
+                                            <View style={{ flex: 1, height: 4, backgroundColor: '#6366f1' }} />
+                                            <View style={{ flex: 1, height: 4, backgroundColor: '#6366f1', borderTopRightRadius: 2, borderBottomRightRadius: 2 }} />
+                                        </View>
+                                    </View>
+                                </View>
+                            </View>
+                        )}
                     </View>
                 )}
-
-                {/* Recent Entries */}
-                {journalHistory?.length > 0 ? (
-                    <View style={styles.journalHistory}>
-                        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('journal.latestNotes')}</Text>
-                        {journalHistory.slice(0, 7).map((it) => (
-                            <View key={it.id} style={[styles.historyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                                <View style={styles.historyHeader}>
-                                    <View style={styles.dateChipSm}>
-                                        <Text style={styles.dateChipSmText}>{it.entry_date}</Text>
-                                    </View>
-                                    <TouchableOpacity onPress={() => handleOpenEntry(it.entry_date)}>
-                                        <Text style={styles.openTxt}>{t('journal.open')}</Text>
-                                    </TouchableOpacity>
-                                </View>
-                                <View style={styles.historyPreviewBox}>
-                                    <Markdown style={markdownStyles}>{it.content}</Markdown>
-                                </View>
-                            </View>
-                        ))}
-                    </View>
-                ) : null}
             </ScrollView>
+        </View>
+    )
+}
 
-            {/* Full Analysis Modal */}
-            <Modal visible={showFullAnalysis} animationType="fade" transparent>
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-                        <View style={styles.modalHeader}>
-                            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('journal.completeAnalysis')}</Text>
-                            <TouchableOpacity onPress={() => setShowFullAnalysis(false)} style={styles.modalClose}>
-                                <FontAwesome name="times" size={18} color={colors.textSecondary} />
-                            </TouchableOpacity>
-                        </View>
-                        <ScrollView style={styles.modalBody}>
-                            {aiAnalysis && <Text style={[styles.modalText, { color: colors.text }]}>{aiAnalysis}</Text>}
-                        </ScrollView>
-                    </View>
+            </View >
+                )}
+
+{/* Refined AI Insight (Reflection) - TODAY ONLY */ }
+{
+    selectedDayKey === toISODateSafe(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()) && journalText.trim().length > 0 && aiAnalysis && (
+        <View style={styles.reflectionCardWrapper}>
+            <View style={[styles.reflectionCard, { borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                {/* Mesh Gradient Background */}
+                <View style={styles.meshBackground}>
+                    <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
+                        <Defs>
+                            <RadialGradient id="grad1" cx="0%" cy="0%" rx="60%" ry="60%">
+                                <Stop offset="0%" stopColor={isDark ? "rgba(88, 28, 135, 0.3)" : "rgba(238, 210, 255, 0.5)"} stopOpacity="1" />
+                                <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                            </RadialGradient>
+                            <RadialGradient id="grad2" cx="100%" cy="100%" rx="60%" ry="60%">
+                                <Stop offset="0%" stopColor={isDark ? "rgba(15, 75, 120, 0.3)" : "rgba(196, 235, 255, 0.5)"} stopOpacity="1" />
+                                <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                            </RadialGradient>
+                        </Defs>
+                        <Rect x="0" y="0" width="100%" height="100%" fill={isDark ? colors.surface : "#ffffff"} fillOpacity={isDark ? 0.3 : 0.4} />
+                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad1)" />
+                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad2)" />
+                    </Svg>
+                    <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
                 </View>
-            </Modal>
 
-            {/* Menu Modal */}
-            <Modal visible={showMenu} transparent animationType="fade" onRequestClose={() => setShowMenu(false)}>
-                <TouchableOpacity style={styles.menuModalBackdrop} activeOpacity={1} onPress={() => setShowMenu(false)}>
-                    <View style={[styles.menuModalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                        <View style={[styles.menuModalHeader, { borderBottomColor: colors.border }]}>
-                            <Text style={[styles.menuModalTitle, { color: colors.text }]}>Opzioni Journal</Text>
-                            <TouchableOpacity onPress={() => setShowMenu(false)}>
-                                <FontAwesome name="times" size={18} color={colors.textSecondary} />
-                            </TouchableOpacity>
+                <View style={styles.reflectionContent}>
+                    <View style={styles.reflectionHeader}>
+                        <View style={styles.reflectionIconBadge}>
+                            <MaterialCommunityIcons name="auto-fix" size={16} color={isDark ? "#818cf8" : "#6366f1"} />
                         </View>
-                        <View style={styles.menuOptions}>
-
-                            <TouchableOpacity
-                                style={[styles.menuOption, styles.menuOptionLast]}
-                                onPress={() => {
-                                    setShowMenu(false);
-                                    handleClearEntry();
-                                }}
-                            >
-                                <FontAwesome name="trash" size={18} color={colors.textSecondary} />
-                                <Text style={[styles.menuOptionText, { color: colors.text }]}>Cancella entry corrente</Text>
-                            </TouchableOpacity>
-                        </View>
+                        <Text style={styles.reflectionLabel}>
+                            {language === 'it' ? 'RIFLESSIONE' : 'REFLECTION'}
+                        </Text>
                     </View>
-                </TouchableOpacity>
-            </Modal>
+
+                    <Text style={[styles.reflectionQuote, { color: colors.text }]}>
+                        "{aiAnalysis}"
+                    </Text>
 
 
-        </SafeAreaWrapper>
+                </View>
+            </View>
+        </View>
+    )
+}
+        </ScrollView >
+
+    {/* Full Analysis Modal */ }
+    < Modal visible = { showFullAnalysis } animationType = "fade" transparent >
+        <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+                <View style={styles.modalHeader}>
+                    <Text style={[styles.modalTitle, { color: colors.text }]}>{t('journal.completeAnalysis')}</Text>
+                    <TouchableOpacity onPress={() => setShowFullAnalysis(false)} style={styles.modalClose}>
+                        <FontAwesome name="times" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.modalBody}>
+                    {aiAnalysis && <Text style={[styles.modalText, { color: colors.text }]}>{aiAnalysis}</Text>}
+                </ScrollView>
+            </View>
+        </View>
+    </Modal >
+
+    {/* Menu Modal */ }
+    < Modal visible = { showMenu } transparent animationType = "fade" onRequestClose = {() => setShowMenu(false)}>
+        <TouchableOpacity style={styles.menuModalBackdrop} activeOpacity={1} onPress={() => setShowMenu(false)}>
+            <View style={[styles.menuModalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={[styles.menuModalHeader, { borderBottomColor: colors.border }]}>
+                    <Text style={[styles.menuModalTitle, { color: colors.text }]}>Opzioni Journal</Text>
+                    <TouchableOpacity onPress={() => setShowMenu(false)}>
+                        <FontAwesome name="times" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.menuOptions}>
+
+                    <TouchableOpacity
+                        style={[styles.menuOption, styles.menuOptionLast]}
+                        onPress={() => {
+                            setShowMenu(false);
+                            handleClearEntry();
+                        }}
+                    >
+                        <FontAwesome name="trash" size={18} color={colors.textSecondary} />
+                        <Text style={[styles.menuOptionText, { color: colors.text }]}>Cancella entry corrente</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </TouchableOpacity>
+    </Modal >
+
+
+        </SafeAreaWrapper >
     );
 };
 
@@ -851,9 +979,81 @@ const styles = StyleSheet.create({
         opacity: 0.5,
     },
     journalEditorWrap: {
-        borderRadius: 16,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        borderBottomLeftRadius: 16,
+        borderBottomRightRadius: 16,
         overflow: 'hidden',
+        marginBottom: 0,
+        zIndex: 10,
+        paddingBottom: 32,
+    },
+    reflectionCardWrapper: {
+        marginTop: -24,
+        paddingHorizontal: 4,
+        zIndex: 0,
+    },
+    reflectionCard: {
+        borderRadius: 24,
+        borderTopLeftRadius: 16,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        overflow: 'hidden',
+    },
+    meshBackground: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    reflectionContent: {
+        padding: 24,
+        paddingTop: 24,
+    },
+    reflectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
         marginBottom: 16,
+    },
+    reflectionIconBadge: {
+        padding: 6,
+        backgroundColor: 'rgba(99,102,241,0.1)',
+        borderRadius: 8,
+    },
+    reflectionLabel: {
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 1.5,
+        color: '#818cf8',
+    },
+    reflectionQuote: {
+        fontSize: 16,
+        lineHeight: 24,
+        marginBottom: 24,
+    },
+    reflectionFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingTop: 16,
+        borderTopWidth: 1,
+    },
+    sentimentLabel: {
+        fontSize: 10,
+        fontWeight: '600',
+        letterSpacing: 1,
+        color: '#9ca3af',
+        textTransform: 'uppercase',
+    },
+    sentimentBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
     journalBlur: {
         ...StyleSheet.absoluteFillObject,
@@ -866,8 +1066,11 @@ const styles = StyleSheet.create({
         paddingBottom: 8,
     },
     editorTitle: {
-        fontSize: 16,
-        fontWeight: '700',
+        fontSize: 24,
+        fontWeight: '400',
+        fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }),
+        lineHeight: 32,
+        marginBottom: 8,
     },
     dateChip: {
         paddingHorizontal: 10,
@@ -946,6 +1149,202 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     aiInsightTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    // Historical Recap Styles
+    historicalRecapContainer: {
+        paddingHorizontal: 4,
+        gap: 20,
+        marginBottom: 40,
+        marginTop: 20, // Add spacing below calendar strip
+    },
+    dailySnapshotStrip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#ffffff', // Or surface
+        padding: 16,
+        borderRadius: 40, // Pill shape
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    dailySnapshotLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    dailySnapshotIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#eef2ff',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    dailySnapshotTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    dailySnapshotSubtitle: {
+        fontSize: 12,
+        color: '#9ca3af',
+    },
+    dailySnapshotRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
+    snapshotMetricIcon: {
+        alignItems: 'center',
+        gap: 4,
+    },
+    metricBar: {
+        height: 3,
+        borderRadius: 1.5,
+    },
+    readOnlyJournalCard: {
+        backgroundColor: '#fff', // Or surface
+        borderRadius: 24,
+        padding: 24,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+        elevation: 3,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.03)',
+    },
+    readOnlyJournalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    readOnlyJournalLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#6366f1',
+        letterSpacing: 1,
+    },
+    readOnlyTimeLabel: {
+        fontSize: 12,
+        fontFamily: Platform.select({ ios: 'Courier', android: 'monospace' }),
+        color: '#9ca3af',
+    },
+    readOnlyJournalText: {
+        fontSize: 18,
+        fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }),
+        fontStyle: 'italic',
+        lineHeight: 28,
+        marginBottom: 16,
+    },
+    readOnlyReadMore: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        gap: 4,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(0,0,0,0.05)',
+    },
+    readMoreText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#9ca3af',
+        letterSpacing: 1,
+    },
+    emptyHistoryCard: {
+        padding: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.02)',
+        borderRadius: 20,
+    },
+    historicalReflectionCard: {
+        backgroundColor: '#fff',
+        borderRadius: 24,
+        padding: 20,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.03)',
+    },
+    historicalReflectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 16,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(0,0,0,0.05)',
+    },
+    sparkleIconBox: {
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        backgroundColor: '#fff',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    historicalReflectionTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    historicalDataPoints: {
+        fontSize: 10,
+        color: '#9ca3af',
+        letterSpacing: 0.5,
+    },
+    sentimentBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#f3f4f6',
+    },
+    sentimentBadgeText: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: '#4b5563',
+    },
+    historicalReflectionText: {
+        fontSize: 14,
+        lineHeight: 22,
+        marginBottom: 20,
+    },
+    historicalStatsGrid: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    historicalStatBox: {
+        flex: 1,
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.03)',
+    },
+    statBoxLabel: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#9ca3af',
+        letterSpacing: 1,
+    },
+    statBoxValue: {
         fontSize: 16,
         fontWeight: '700',
     },

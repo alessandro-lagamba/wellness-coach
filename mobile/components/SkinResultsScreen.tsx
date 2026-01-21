@@ -421,7 +421,6 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
               key={action.id}
               action={action}
               onComplete={() => { }}
-              onDismiss={() => { }}
             />
           ))}
 

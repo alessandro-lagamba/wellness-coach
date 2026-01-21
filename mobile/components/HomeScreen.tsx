@@ -1839,6 +1839,16 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       setIsLoadingActivities(false);
     }
   }, []);
+  useFocusEffect(
+
+    useCallback(() => {
+
+      loadWellnessActivities();
+
+    }, [loadWellnessActivities])
+
+  );
+
 
   // 🆕 Carica le attività wellness dal database
   // 🆕 Carica le attività wellness dal database e attiva subscription realtime

@@ -80,6 +80,8 @@ MICRO-EXPRESSION DETECTION:
 - Asymmetric smile = mixed emotions (not pure joy)
 - Pressed lips = suppressed anger or frustration
 - Inner eyebrow raise = sadness (even if smiling)
+- Redness around eyes, watery eyes, or puffy eyelids = crying (high sadness score).
+- One-sided lip raise or asymmetric tension = sneer/smirk (contempt/disgust).
 
 Consistency:
 - Visible smile => joy > 0.2 (but check for asymmetry or tension).
