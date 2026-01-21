@@ -95,6 +95,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
     const [showSavedChip, setShowSavedChip] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [dailyMetrics, setDailyMetrics] = useState<{ mood: number | null, moodNote: string | null, sleep: number | null, sleepQuality: number | null, energy: string | null, focus: string | null } | null>(null);
 
     // Refs
     const journalScrollRef = useRef<ScrollView>(null);
@@ -228,7 +229,17 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                 focus: summaryFocus,
             };
 
-            if (!cancelled) setPromptContext(contextPayload);
+            if (!cancelled) {
+                setPromptContext(contextPayload);
+                setDailyMetrics({
+                    mood: moodScore,
+                    moodNote,
+                    sleep: sleepHours,
+                    sleepQuality,
+                    energy: summaryEnergy,
+                    focus: summaryFocus
+                });
+            }
 
 
             // Fixed prompt: "Come ti senti oggi?"
@@ -644,7 +655,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                             </View>
                         )}
                     </View>
-
+                )}
                 {/* HISTORICAL RECAP VIEW (If not today) */}
                 {!isFutureDate(selectedDayKey) && selectedDayKey !== toISODateSafe(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()) && (
                     <View style={styles.historicalRecapContainer}>
@@ -661,19 +672,28 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                                 </View>
                             </View>
                             <View style={styles.dailySnapshotRight}>
-                                {/* Icons for metrics */}
+                                {/* Mood */}
                                 <View style={styles.snapshotMetricIcon}>
-                                    <MaterialCommunityIcons name="emoticon-happy-outline" size={20} color="#f59e0b" />
-                                    <View style={[styles.metricBar, { backgroundColor: '#f59e0b', width: 12 }]} />
+                                    <MaterialCommunityIcons
+                                        name={dailyMetrics?.mood ? (dailyMetrics.mood >= 4 ? 'emoticon-happy-outline' : dailyMetrics.mood >= 3 ? 'emoticon-neutral-outline' : 'emoticon-sad-outline') : 'emoticon-outline'}
+                                        size={20}
+                                        color={dailyMetrics?.mood ? (dailyMetrics.mood >= 4 ? '#10b981' : dailyMetrics.mood >= 3 ? '#f59e0b' : '#ef4444') : colors.textTertiary}
+                                    />
+                                    {dailyMetrics?.mood && <View style={[styles.metricBar, { backgroundColor: dailyMetrics.mood >= 4 ? '#10b981' : dailyMetrics.mood >= 3 ? '#f59e0b' : '#ef4444', width: 8 + (dailyMetrics.mood * 3) }]} />}
                                 </View>
+
+                                {/* Sleep */}
                                 <View style={styles.snapshotMetricIcon}>
-                                    <MaterialCommunityIcons name="face-man-profile" size={20} color="#0ea5e9" />
-                                    <View style={[styles.metricBar, { backgroundColor: '#0ea5e9', width: 16 }]} />
+                                    <MaterialCommunityIcons name="bed-outline" size={20} color={dailyMetrics?.sleep ? '#6366f1' : colors.textTertiary} />
+                                    {dailyMetrics?.sleep && <View style={[styles.metricBar, { backgroundColor: '#6366f1', width: Math.min(Math.max(dailyMetrics.sleep * 2, 8), 24) }]} />}
                                 </View>
+
+                                {/* Energy */}
                                 <View style={styles.snapshotMetricIcon}>
-                                    <MaterialCommunityIcons name="silverware-fork-knife" size={20} color="#10b981" />
-                                    <View style={[styles.metricBar, { backgroundColor: '#10b981', width: 20 }]} />
+                                    <MaterialCommunityIcons name="lightning-bolt-outline" size={20} color={dailyMetrics?.energy ? '#eab308' : colors.textTertiary} />
+                                    {dailyMetrics?.energy && <View style={[styles.metricBar, { backgroundColor: '#eab308', width: 16 }]} />}
                                 </View>
+
                                 <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textTertiary} />
                             </View>
                         </TouchableOpacity>
@@ -754,104 +774,99 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                         )}
                     </View>
                 )}
-            </ScrollView>
-        </View>
-    )
-}
 
-            </View >
-                )}
 
-{/* Refined AI Insight (Reflection) - TODAY ONLY */ }
-{
-    selectedDayKey === toISODateSafe(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()) && journalText.trim().length > 0 && aiAnalysis && (
-        <View style={styles.reflectionCardWrapper}>
-            <View style={[styles.reflectionCard, { borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
-                {/* Mesh Gradient Background */}
-                <View style={styles.meshBackground}>
-                    <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
-                        <Defs>
-                            <RadialGradient id="grad1" cx="0%" cy="0%" rx="60%" ry="60%">
-                                <Stop offset="0%" stopColor={isDark ? "rgba(88, 28, 135, 0.3)" : "rgba(238, 210, 255, 0.5)"} stopOpacity="1" />
-                                <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
-                            </RadialGradient>
-                            <RadialGradient id="grad2" cx="100%" cy="100%" rx="60%" ry="60%">
-                                <Stop offset="0%" stopColor={isDark ? "rgba(15, 75, 120, 0.3)" : "rgba(196, 235, 255, 0.5)"} stopOpacity="1" />
-                                <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
-                            </RadialGradient>
-                        </Defs>
-                        <Rect x="0" y="0" width="100%" height="100%" fill={isDark ? colors.surface : "#ffffff"} fillOpacity={isDark ? 0.3 : 0.4} />
-                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad1)" />
-                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad2)" />
-                    </Svg>
-                    <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
-                </View>
 
-                <View style={styles.reflectionContent}>
-                    <View style={styles.reflectionHeader}>
-                        <View style={styles.reflectionIconBadge}>
-                            <MaterialCommunityIcons name="auto-fix" size={16} color={isDark ? "#818cf8" : "#6366f1"} />
+                {/* Refined AI Insight (Reflection) - TODAY ONLY */}
+                {
+                    selectedDayKey === toISODateSafe(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()) && journalText.trim().length > 0 && aiAnalysis && (
+                        <View style={styles.reflectionCardWrapper}>
+                            <View style={[styles.reflectionCard, { borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                                {/* Mesh Gradient Background */}
+                                <View style={styles.meshBackground}>
+                                    <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
+                                        <Defs>
+                                            <RadialGradient id="grad1" cx="0%" cy="0%" rx="60%" ry="60%">
+                                                <Stop offset="0%" stopColor={isDark ? "rgba(88, 28, 135, 0.3)" : "rgba(238, 210, 255, 0.5)"} stopOpacity="1" />
+                                                <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                                            </RadialGradient>
+                                            <RadialGradient id="grad2" cx="100%" cy="100%" rx="60%" ry="60%">
+                                                <Stop offset="0%" stopColor={isDark ? "rgba(15, 75, 120, 0.3)" : "rgba(196, 235, 255, 0.5)"} stopOpacity="1" />
+                                                <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                                            </RadialGradient>
+                                        </Defs>
+                                        <Rect x="0" y="0" width="100%" height="100%" fill={isDark ? colors.surface : "#ffffff"} fillOpacity={isDark ? 0.3 : 0.4} />
+                                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad1)" />
+                                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad2)" />
+                                    </Svg>
+                                    <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+                                </View>
+
+                                <View style={styles.reflectionContent}>
+                                    <View style={styles.reflectionHeader}>
+                                        <View style={styles.reflectionIconBadge}>
+                                            <MaterialCommunityIcons name="auto-fix" size={16} color={isDark ? "#818cf8" : "#6366f1"} />
+                                        </View>
+                                        <Text style={styles.reflectionLabel}>
+                                            {language === 'it' ? 'RIFLESSIONE' : 'REFLECTION'}
+                                        </Text>
+                                    </View>
+
+                                    <Text style={[styles.reflectionQuote, { color: colors.text }]}>
+                                        "{aiAnalysis}"
+                                    </Text>
+
+
+                                </View>
+                            </View>
                         </View>
-                        <Text style={styles.reflectionLabel}>
-                            {language === 'it' ? 'RIFLESSIONE' : 'REFLECTION'}
-                        </Text>
+                    )
+                }
+            </ScrollView >
+
+            {/* Full Analysis Modal */}
+            < Modal visible={showFullAnalysis} animationType="fade" transparent >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('journal.completeAnalysis')}</Text>
+                            <TouchableOpacity onPress={() => setShowFullAnalysis(false)} style={styles.modalClose}>
+                                <FontAwesome name="times" size={18} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView style={styles.modalBody}>
+                            {aiAnalysis && <Text style={[styles.modalText, { color: colors.text }]}>{aiAnalysis}</Text>}
+                        </ScrollView>
                     </View>
-
-                    <Text style={[styles.reflectionQuote, { color: colors.text }]}>
-                        "{aiAnalysis}"
-                    </Text>
-
-
                 </View>
-            </View>
-        </View>
-    )
-}
-        </ScrollView >
+            </Modal >
 
-    {/* Full Analysis Modal */ }
-    < Modal visible = { showFullAnalysis } animationType = "fade" transparent >
-        <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-                <View style={styles.modalHeader}>
-                    <Text style={[styles.modalTitle, { color: colors.text }]}>{t('journal.completeAnalysis')}</Text>
-                    <TouchableOpacity onPress={() => setShowFullAnalysis(false)} style={styles.modalClose}>
-                        <FontAwesome name="times" size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                </View>
-                <ScrollView style={styles.modalBody}>
-                    {aiAnalysis && <Text style={[styles.modalText, { color: colors.text }]}>{aiAnalysis}</Text>}
-                </ScrollView>
-            </View>
-        </View>
-    </Modal >
+            {/* Menu Modal */}
+            < Modal visible={showMenu} transparent animationType="fade" onRequestClose={() => setShowMenu(false)}>
+                <TouchableOpacity style={styles.menuModalBackdrop} activeOpacity={1} onPress={() => setShowMenu(false)}>
+                    <View style={[styles.menuModalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        <View style={[styles.menuModalHeader, { borderBottomColor: colors.border }]}>
+                            <Text style={[styles.menuModalTitle, { color: colors.text }]}>Opzioni Journal</Text>
+                            <TouchableOpacity onPress={() => setShowMenu(false)}>
+                                <FontAwesome name="times" size={18} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.menuOptions}>
 
-    {/* Menu Modal */ }
-    < Modal visible = { showMenu } transparent animationType = "fade" onRequestClose = {() => setShowMenu(false)}>
-        <TouchableOpacity style={styles.menuModalBackdrop} activeOpacity={1} onPress={() => setShowMenu(false)}>
-            <View style={[styles.menuModalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <View style={[styles.menuModalHeader, { borderBottomColor: colors.border }]}>
-                    <Text style={[styles.menuModalTitle, { color: colors.text }]}>Opzioni Journal</Text>
-                    <TouchableOpacity onPress={() => setShowMenu(false)}>
-                        <FontAwesome name="times" size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                </View>
-                <View style={styles.menuOptions}>
-
-                    <TouchableOpacity
-                        style={[styles.menuOption, styles.menuOptionLast]}
-                        onPress={() => {
-                            setShowMenu(false);
-                            handleClearEntry();
-                        }}
-                    >
-                        <FontAwesome name="trash" size={18} color={colors.textSecondary} />
-                        <Text style={[styles.menuOptionText, { color: colors.text }]}>Cancella entry corrente</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </TouchableOpacity>
-    </Modal >
+                            <TouchableOpacity
+                                style={[styles.menuOption, styles.menuOptionLast]}
+                                onPress={() => {
+                                    setShowMenu(false);
+                                    handleClearEntry();
+                                }}
+                            >
+                                <FontAwesome name="trash" size={18} color={colors.textSecondary} />
+                                <Text style={[styles.menuOptionText, { color: colors.text }]}>Cancella entry corrente</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            </Modal >
 
 
         </SafeAreaWrapper >
