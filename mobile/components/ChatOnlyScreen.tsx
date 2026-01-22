@@ -202,14 +202,6 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
     // TTS Service
     const tts = useMemo(() => UnifiedTTSService.getInstance(), []);
 
-    // Quick replies - memoized
-    const quickReplies = useMemo(() => [
-        { text: t('chat.quickStart.feelingStressed'), icon: 'heartbeat', color: '#ef4444' },
-        { text: t('chat.quickStart.sleepBetter'), icon: 'moon-o', color: '#8b5cf6' },
-        { text: t('chat.quickStart.energyTips'), icon: 'bolt', color: '#f59e0b' },
-        { text: t('chat.quickStart.skinAdvice'), icon: 'tint', color: '#3b82f6' },
-    ], [t]);
-
     // ==================== KEYBOARD HANDLING ====================
     useKeyboardHandler(
         {
@@ -714,40 +706,6 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
 
                 {/* Chat Content */}
                 <View style={styles.scrollArea}>
-                    {/* Quick Replies */}
-                    <View style={styles.quickRepliesContainer}>
-                        <TouchableOpacity
-                            style={styles.quickRepliesToggle}
-                            onPress={() => setQuickRepliesExpanded(!quickRepliesExpanded)}
-                        >
-                            <View style={styles.quickRepliesHeaderLeft}>
-                                <FontAwesome name="lightbulb-o" size={14} color={colors.textSecondary} />
-                                <Text style={[styles.quickRepliesToggleText, { color: colors.textSecondary }]}>
-                                    {t('chat.quickStart.toggle') || 'Messaggi suggeriti'}
-                                </Text>
-                            </View>
-                            <FontAwesome name={quickRepliesExpanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.textSecondary} />
-                        </TouchableOpacity>
-
-                        {quickRepliesExpanded && (
-                            <View style={styles.quickRepliesGrid}>
-                                {quickReplies.map((reply) => (
-                                    <TouchableOpacity
-                                        key={reply.text}
-                                        style={[styles.quickReplyCard, { backgroundColor: `${reply.color}15` }]}
-                                        onPress={() => {
-                                            handleQuickReply(reply.text);
-                                            setQuickRepliesExpanded(false);
-                                        }}
-                                    >
-                                        <FontAwesome name={reply.icon as any} size={16} color={reply.color} />
-                                        <Text style={[styles.quickReplyText, { color: reply.color }]}>{reply.text}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        )}
-                    </View>
-
                     {/* Messages */}
                     <FlatList
                         data={messages}
@@ -860,7 +818,11 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                     <View style={[styles.menuModalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                         <View style={[styles.menuModalHeader, { borderBottomColor: colors.border }]}>
                             <Text style={[styles.menuModalTitle, { color: colors.text }]}>Opzioni Chat</Text>
-                            <TouchableOpacity onPress={() => setShowChatMenu(false)}>
+                            <TouchableOpacity
+                                onPress={() => setShowChatMenu(false)}
+                                style={{ padding: 8 }}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            >
                                 <FontAwesome name="times" size={18} color={colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
@@ -1161,13 +1123,17 @@ const styles = StyleSheet.create({
     menuModalBackdrop: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end',
+        justifyContent: 'center',
+        paddingHorizontal: 20
     },
     menuModalContent: {
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
+        borderRadius: 20,
         borderWidth: 1,
-        borderBottomWidth: 0,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
     },
     menuModalHeader: {
         flexDirection: 'row',

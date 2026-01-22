@@ -87,31 +87,54 @@ const MiniInfoCard: React.FC<Props> = ({
   /* ==================== RENDER SMALL ==================== */
   const renderSmall = () => (
     <View style={[styles.innerContainer, { backgroundColor: effectiveBgColor }]}>
-      <View style={styles.smallHeader}>
-        <Text style={[styles.smallLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
+      {/* 1) Title Full Width at Top */}
+      <View style={styles.smallTitleContainer}>
+        <Text
+          style={[styles.smallLabel, { color: colors.text }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          allowFontScaling={false} // 🔒 Fixed font size
+        >
+          {label}
+        </Text>
+      </View>
+
+      {/* 2) Icon Centered in remaining space */}
+      <View style={styles.smallIconContainer}>
         {iconImage && (
           <Image source={iconImage} style={styles.smallIconImage} resizeMode="contain" />
         )}
       </View>
 
-      <View style={styles.smallContent}>
-        <View style={styles.smallValueRow}>
-          <View style={{ flexDirection: "row", alignItems: "flex-end", flex: 1 }}>
+      {/* 3) Values at Bottom */}
+      <View style={styles.smallBottomContainer}>
+        <View style={styles.smallValueWrapper}>
+          <Text
+            style={[
+              primary.toLowerCase() === "complete" ? styles.smallPrimaryValueComplete : styles.smallPrimaryValue,
+              { color: textColor || color },
+            ]}
+            numberOfLines={1}
+            allowFontScaling={false} // 🔒 Fixed font size
+          >
+            {primary}
+          </Text>
+          {!!unit && (
             <Text
-              style={[
-                primary.toLowerCase() === "complete" ? styles.smallPrimaryValueComplete : styles.smallPrimaryValue,
-                { color: textColor || color },
-              ]}
-              numberOfLines={1}
+              style={[styles.smallUnitText, { color: colors.textSecondary }]}
+              allowFontScaling={false} // 🔒 Fixed font size
             >
-              {primary}
+              {unit}
             </Text>
-            {!!unit && <Text style={[styles.smallUnitText, { color: colors.textSecondary }]}>{unit}</Text>}
-          </View>
+          )}
         </View>
 
         {!!subtitle && (
-          <Text style={[styles.smallSubtitle, { color: colors.textSecondary }]} numberOfLines={2}>
+          <Text
+            style={[styles.smallSubtitle, { color: colors.textSecondary }]}
+            numberOfLines={1}
+            allowFontScaling={false} // 🔒 Fixed font size
+          >
             {subtitle}
           </Text>
         )}
@@ -130,12 +153,21 @@ const MiniInfoCard: React.FC<Props> = ({
             )}
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={[styles.miTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
+            <Text
+              style={[styles.miTitle, { color: colors.text }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              allowFontScaling={false}
+            >
               {label}
             </Text>
           </View>
         </View>
-        <Text numberOfLines={1} style={[styles.miValueTopRight, { color: textColor || color }]}>
+        <Text
+          numberOfLines={1}
+          style={[styles.miValueTopRight, { color: textColor || color }]}
+          allowFontScaling={false}
+        >
           {value}
         </Text>
       </View>
@@ -143,7 +175,11 @@ const MiniInfoCard: React.FC<Props> = ({
       <View style={styles.miBodyRow}>
         <View style={{ flex: 1, minWidth: 0, paddingRight: 145 }}>
           {!!subtitle && (
-            <Text numberOfLines={3} style={[styles.miSubtitle, { color: colors.textSecondary }]}>
+            <Text
+              numberOfLines={3}
+              style={[styles.miSubtitle, { color: colors.textSecondary }]}
+              allowFontScaling={false}
+            >
               {subtitle}
             </Text>
           )}
@@ -154,10 +190,18 @@ const MiniInfoCard: React.FC<Props> = ({
         <View style={[styles.miDetailChipFloat, { borderColor: `${color}20`, backgroundColor: `${color}08` }]}>
           <MaterialCommunityIcons name={detailChips[0].icon as any} size={14} color={color} />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={[styles.miChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>
+            <Text
+              style={[styles.miChipLabel, { color: colors.textSecondary }]}
+              numberOfLines={1}
+              allowFontScaling={false}
+            >
               {detailChips[0].label}
             </Text>
-            <Text style={[styles.miChipValue, { color }]} numberOfLines={1}>
+            <Text
+              style={[styles.miChipValue, { color }]}
+              numberOfLines={1}
+              allowFontScaling={false}
+            >
               {detailChips[0].value}
             </Text>
           </View>
@@ -187,17 +231,29 @@ const MiniInfoCard: React.FC<Props> = ({
             )}
           </View>
           <View style={styles.largeHeaderText}>
-            <Text style={[styles.largeLabel, { color: colors.text }]} numberOfLines={1}>
+            <Text
+              style={[styles.largeLabel, { color: colors.text }]}
+              numberOfLines={1}
+              allowFontScaling={false}
+            >
               {label}
             </Text>
             {!!subtitle && (
-              <Text style={styles.largeSubtitle} numberOfLines={1}>
+              <Text
+                style={styles.largeSubtitle}
+                numberOfLines={1}
+                allowFontScaling={false}
+              >
                 {subtitle}
               </Text>
             )}
           </View>
         </View>
-        <Text style={[styles.largeValue, { color: textColor || color }]} numberOfLines={1}>
+        <Text
+          style={[styles.largeValue, { color: textColor || color }]}
+          numberOfLines={1}
+          allowFontScaling={false}
+        >
           {value}
         </Text>
       </View>
@@ -212,10 +268,18 @@ const MiniInfoCard: React.FC<Props> = ({
               <View key={`${chip.label}-${chip.value}`} style={[styles.largeDetailChip, { borderColor: `${color}20`, backgroundColor: `${color}08` }]}>
                 <MaterialCommunityIcons name={chip.icon as any} size={18} color={color} />
                 <View style={styles.largeChipTextContainer}>
-                  <Text style={[styles.largeChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>
+                  <Text
+                    style={[styles.largeChipLabel, { color: colors.textSecondary }]}
+                    numberOfLines={1}
+                    allowFontScaling={false}
+                  >
                     {chip.label}
                   </Text>
-                  <Text style={[styles.largeChipValue, { color }]} numberOfLines={1}>
+                  <Text
+                    style={[styles.largeChipValue, { color }]}
+                    numberOfLines={1}
+                    allowFontScaling={false}
+                  >
                     {chip.value}
                   </Text>
                 </View>
@@ -246,17 +310,69 @@ const styles = StyleSheet.create({
   innerContainer: { flex: 1, borderRadius: 18, padding: 13 },
   relative: { position: "relative" },
 
-  /* ========== SMALL (immutato) ========== */
-  smallHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 },
-  smallLabel: { fontSize: 14, fontWeight: "800", color: "#111827", letterSpacing: -0.1, flex: 1 },
-  smallContent: { flex: 1, justifyContent: "center" },
-  smallValueRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 },
-  smallPrimaryValue: { fontSize: 26, lineHeight: 28, fontWeight: "800", letterSpacing: -0.2 },
-  smallPrimaryValueComplete: { fontSize: 13, lineHeight: 20, fontWeight: "700", letterSpacing: -0.2 },
-  smallValueEmoji: { fontSize: 18, fontWeight: "400", marginLeft: 8 },
-  smallIconImage: { width: 38, height: 38 },
-  smallUnitText: { marginLeft: 3, marginBottom: 3, fontSize: 13, letterSpacing: -0.2, lineHeight: 13, fontWeight: "600", color: "#64748b" },
-  smallSubtitle: { marginTop: 4, fontSize: 10, color: "#475569", fontWeight: "600", lineHeight: 14 },
+  /* ========== SMALL (Refined Layout) ========== */
+  smallTitleContainer: {
+    width: '100%',
+    marginBottom: 4,
+  },
+  smallLabel: {
+    fontSize: 18, // Fixed size
+    fontFamily: 'Figtree_700Bold',
+    // fontWeight: "800",
+    color: "#111827",
+    letterSpacing: -0.1,
+  },
+
+  smallIconContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    // marginVertical: 4, // Optional spacing
+  },
+  smallIconImage: {
+    width: 42,
+    height: 42,
+  },
+
+  smallBottomContainer: {
+    justifyContent: "flex-end",
+    // minHeight: 40,
+  },
+  smallValueWrapper: {
+    flexDirection: "row",
+    alignItems: "baseline", // Align number and unit
+  },
+
+  smallPrimaryValue: {
+    fontSize: 20, // Slightly bigger
+    lineHeight: 24,
+    fontFamily: 'Figtree_700Bold',
+    // fontWeight: "800",
+    letterSpacing: -0.5,
+  },
+  smallPrimaryValueComplete: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: 'Figtree_700Bold',
+    // fontWeight: "700",
+    letterSpacing: -0.2,
+  },
+
+  smallUnitText: {
+    marginLeft: 4,
+    fontSize: 14,
+    letterSpacing: -0.2,
+    fontFamily: 'Figtree_500Medium',
+    // fontWeight: "600",
+    color: "#64748b",
+  },
+  smallSubtitle: {
+    marginTop: 2,
+    fontSize: 11,
+    color: "#475569",
+    fontFamily: 'Figtree_500Medium',
+    // fontWeight: "600",
+  },
 
   /* ========== MEDIUM (immutato) ========== */
   miHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
@@ -264,11 +380,11 @@ const styles = StyleSheet.create({
   miIconChip: { height: 36, width: 36, borderRadius: 18, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
   miIcon: { fontSize: 18, fontWeight: "800" },
   miIconImage: { width: 40, height: 40 },
-  miTitle: { flexShrink: 1, fontSize: 15, fontWeight: "800", color: "#0f172a" },
+  miTitle: { flexShrink: 1, fontSize: 18, fontFamily: 'Figtree_700Bold', color: "#0f172a" },
 
   miBodyRow: { flexDirection: "row", alignItems: "flex-start", flex: 1, marginTop: 4 },
-  miValueTopRight: { fontSize: 26, lineHeight: 30, fontWeight: "900", letterSpacing: -0.5 },
-  miSubtitle: { fontSize: 12, color: "#475569", fontWeight: "600", lineHeight: 18 },
+  miValueTopRight: { fontSize: 26, lineHeight: 30, fontFamily: 'Figtree_700Bold', letterSpacing: -0.5 },
+  miSubtitle: { fontSize: 15, color: "#475569", fontFamily: 'Figtree_500Medium', lineHeight: 18 },
 
   // chip flottante in basso a destra
   miDetailChipFloat: {
@@ -286,8 +402,8 @@ const styles = StyleSheet.create({
     maxWidth: "55%",
   },
   miChipEmoji: { fontSize: 12 },
-  miChipLabel: { fontSize: 10, color: "#64748b", fontWeight: "700" },
-  miChipValue: { fontSize: 12, color: "#0f172a", fontWeight: "900" },
+  miChipLabel: { fontSize: 14, color: "#64748b", fontFamily: 'Figtree_500Medium' },
+  miChipValue: { fontSize: 15, color: "#0f172a", fontFamily: 'Figtree_700Bold' },
 
   /* ========== LARGE (fix posizionamenti) ========== */
   largeHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
@@ -295,18 +411,18 @@ const styles = StyleSheet.create({
   largeHeaderText: { flex: 1, minWidth: 0, justifyContent: "center" },
   largeIconChip: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   largeIcon: { fontSize: 22 },
-  largeIconImage: { width: 54, height: 54 },
-  largeLabel: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
-  largeSubtitle: { marginTop: 2, fontSize: 12, color: "#6b7280", fontWeight: "600" },
+  largeIconImage: { width: 48, height: 48 },
+  largeLabel: { fontSize: 18, fontFamily: 'Figtree_700Bold', letterSpacing: -0.2 }, // Increased size for Large
+  largeSubtitle: { marginTop: 2, fontSize: 16, color: "#6b7280", fontFamily: 'Figtree_500Medium' },
 
-  largeValue: { fontSize: 24, fontWeight: "800", letterSpacing: -0.5, marginLeft: 8 },
+  largeValue: { fontSize: 30, fontFamily: 'Figtree_700Bold', letterSpacing: -0.5, marginLeft: 8 },
 
   largeChipsRow: { marginTop: "auto", flexDirection: "row", flexWrap: "wrap", gap: 7 },
   largeDetailChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, gap: 8, flex: 1, minWidth: 120, maxWidth: "50%" },
   largeChipIcon: { fontSize: 15, flexShrink: 0 },
   largeChipTextContainer: { flex: 1, minWidth: 0 },
-  largeChipLabel: { fontSize: 10, color: "#64748b", fontWeight: "600" },
-  largeChipValue: { fontSize: 12, fontWeight: "700", letterSpacing: -0.2 },
+  largeChipLabel: { fontSize: 14, color: "#64748b", fontFamily: 'Figtree_500Medium' },
+  largeChipValue: { fontSize: 15, fontFamily: 'Figtree_700Bold', letterSpacing: -0.2 },
 })
 
 export default MiniInfoCard

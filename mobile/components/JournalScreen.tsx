@@ -467,7 +467,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                     <FontAwesome name="chevron-left" size={18} color={colors.text} />
                 </TouchableOpacity>
                 <View style={styles.headerContent}>
-                    <Text style={[styles.headerTitle, { color: colors.text }]}>{t('journal.title')}</Text>
+                    <Text style={[styles.headerTitle, { color: colors.text }]} allowFontScaling={false}>{t('journal.title')}</Text>
                 </View>
                 <View style={{ width: 40 }} />
             </View>
@@ -486,13 +486,13 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                         onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
                         style={styles.monthNavBtn}
                     >
-                        <Text style={styles.monthNavTxt}>{'<'}</Text>
+                        <Text style={styles.monthNavTxt} allowFontScaling={false}>{'<'}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => setShowMonthPicker(true)}
                         style={[styles.monthTitleWrap, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
                     >
-                        <Text style={[styles.monthTitle, { color: colors.text }]}>
+                        <Text style={[styles.monthTitle, { color: colors.text }]} allowFontScaling={false}>
                             {currentMonth.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', { month: 'long', year: 'numeric' })}
                         </Text>
                     </TouchableOpacity>
@@ -500,7 +500,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                         onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
                         style={styles.monthNavBtn}
                     >
-                        <Text style={styles.monthNavTxt}>{'>'}</Text>
+                        <Text style={styles.monthNavTxt} allowFontScaling={false}>{'>'}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -899,7 +899,8 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '600',
+        fontFamily: 'Lato_700Bold',
+        letterSpacing: 0.5,
     },
     scrollArea: {
         flex: 1,
@@ -920,7 +921,7 @@ const styles = StyleSheet.create({
     },
     monthNavTxt: {
         fontSize: 20,
-        fontWeight: '700',
+        fontFamily: 'Lato_700Bold',
         color: '#6366f1',
     },
     monthTitleWrap: {
@@ -931,7 +932,7 @@ const styles = StyleSheet.create({
     },
     monthTitle: {
         fontSize: 16,
-        fontWeight: '600',
+        fontFamily: 'Lato_700Bold',
         textTransform: 'capitalize',
     },
     monthStrip: {
@@ -1083,7 +1084,7 @@ const styles = StyleSheet.create({
     editorTitle: {
         fontSize: 24,
         fontWeight: '400',
-        fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }),
+        fontFamily: 'PlayfairDisplay_400Regular_Italic', // Keeps handwritten vibe
         lineHeight: 32,
         marginBottom: 8,
     },
@@ -1252,7 +1253,7 @@ const styles = StyleSheet.create({
     },
     readOnlyJournalText: {
         fontSize: 18,
-        fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }),
+        fontFamily: 'PlayfairDisplay_400Regular_Italic',
         fontStyle: 'italic',
         lineHeight: 28,
         marginBottom: 16,

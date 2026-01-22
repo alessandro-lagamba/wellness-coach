@@ -26,7 +26,8 @@
     "retake": "Ripeti",
     "recommendation": "Raccomandazione",
     "markAsDone": "Segna come Completato",
-    "view": "Vedi"
+    "view": "Vedi",
+    "confirmDelete": "Conferma eliminazione"
   },
   "settings": {
     "title": "Impostazioni",
@@ -180,19 +181,10 @@
       "withName": "Ciao {{name}}! 👋 Sono il tuo AI wellness coach. Come ti senti oggi?",
       "default": "Ciao! 👋 Sono il tuo AI wellness coach. Come ti senti oggi?"
     },
-    "quickReplies": {
-      "stressed": "Mi sento stressato",
-      "sleep": "Aiutami a dormire meglio",
-      "energy": "Dammi consigli per l'energia",
-      "skin": "Consigli per la cura della pelle"
-    },
-    "quickStart": {
-      "title": "Avvio rapido",
-      "toggle": "Messaggi suggeriti",
-      "feelingStressed": "Mi sento stressato",
-      "sleepBetter": "Aiutami a dormire meglio",
-      "energyTips": "Dammi consigli energia",
-      "skinAdvice": "Consigli cura pelle"
+    "clearChat": {
+      "title": "Cancella conversazione",
+      "message": "Vuoi cancellare tutti i messaggi?",
+      "success": "Conversazione cancellata con successo"
     },
     "history": {
       "title": "Cronologia Chat",
@@ -1335,7 +1327,8 @@
         "noRecipes": "Nessuna ricetta disponibile per questo filtro",
         "moveTitle": "Sposta questo pasto",
         "moveSubtitle": "Seleziona il pasto della giornata a cui vuoi assegnarlo.",
-        "analyzed": "Analizzato"
+        "analyzed": "Analizzato",
+        "deleteConfirm": "Sei sicuro di voler eliminare questo pasto dal piano?"
       },
       "preferences": {
         "title": "Preferenze Alimentari",

@@ -965,6 +965,16 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   const [restLevel, setRestLevel] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [hasExistingMoodCheckin, setHasExistingMoodCheckin] = useState(false);
   const [hasExistingSleepCheckin, setHasExistingSleepCheckin] = useState(false);
+  const [isLockDelayActive, setIsLockDelayActive] = useState(false);
+  const lockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const activateLockDelay = useCallback(() => {
+    if (lockTimeoutRef.current) clearTimeout(lockTimeoutRef.current);
+    setIsLockDelayActive(true);
+    lockTimeoutRef.current = setTimeout(() => {
+      setIsLockDelayActive(false);
+    }, 20000); // 20 seconds delay
+  }, []);
 
   // 🆕 moodDescriptors con traduzioni
   const moodDescriptors = [
@@ -1162,9 +1172,15 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   const sleepStats = sleepWidget?.sleep;
   const displayedSleepHours = sleepStats?.hours ?? sleepHours;
 
-  // chiavi giornaliere
+  // chiavi giornaliere - Reset alle 3:30 AM
   const dayKey = () => {
     const now = new Date();
+    // Sposta indietro di 3 ore e 30 minuti
+    // Se sono le 02:00 del 10/01 -> diventa 22:30 del 09/01 -> chiave 09/01
+    // Se sono le 04:00 del 10/01 -> diventa 00:30 del 10/01 -> chiave 10/01
+    now.setHours(now.getHours() - 3);
+    now.setMinutes(now.getMinutes() - 30);
+
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
@@ -1367,6 +1383,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               if (upsertError) throw upsertError;
 
               setHasExistingMoodCheckin(true);
+              activateLockDelay(); // Start grace period
             },
             'save_mood_checkin',
             { maxAttempts: 3, delay: 1000, backoff: 'exponential', shouldRetry: RetryService.isRetryableError }
@@ -1441,6 +1458,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               if (upsertError) throw upsertError;
 
               setHasExistingSleepCheckin(true);
+              activateLockDelay(); // Start grace period
             },
             'save_sleep_checkin',
             { maxAttempts: 3, delay: 1000, backoff: 'exponential', shouldRetry: RetryService.isRetryableError }
@@ -1605,7 +1623,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
         const { supabase } = await import('../lib/supabase');
         const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
         // Recupera tutti i check-in degli ultimi 90 giorni per calcolare lo streak
         const startDate = new Date();
@@ -2236,7 +2254,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             style={styles.successToastGradient}
           >
             <FontAwesome name="check-circle" size={20} color="#fff" />
-            <Text style={styles.successToastText}>{successToast.message}</Text>
+            <Text style={styles.successToastText} allowFontScaling={false}>{successToast.message}</Text>
           </LinearGradient>
         </Animated.View>
       )}
@@ -2299,15 +2317,15 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               <MaterialCommunityIcons name="bell-plus" size={20} color={themeColors.primary} />
             </View>
             <View style={styles.permissionCardCopy}>
-              <Text style={[styles.permissionCardTitle, { color: themeColors.text }]}>
+              <Text style={[styles.permissionCardTitle, { color: themeColors.text }]} allowFontScaling={false}>
                 {t('home.permissions.cardTitle')}
               </Text>
-              <Text style={[styles.permissionCardSubtitle, { color: themeColors.textSecondary }]}>
+              <Text style={[styles.permissionCardSubtitle, { color: themeColors.textSecondary }]} allowFontScaling={false}>
                 {t('home.permissions.cardSubtitle')}
               </Text>
             </View>
             <View style={[styles.permissionCardAction, { borderColor: themeColors.primary }]}>
-              <Text style={[styles.permissionCardActionText, { color: themeColors.primary }]}>
+              <Text style={[styles.permissionCardActionText, { color: themeColors.primary }]} allowFontScaling={false}>
                 {t('home.permissions.cardCta')}
               </Text>
             </View>
@@ -2317,8 +2335,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderContent}>
             <View>
-              <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.todayAtGlance')}</Text>
-              <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.todaySubtitle')}</Text>
+              <Text style={[styles.sectionTitle, { color: themeColors.text }]} allowFontScaling={false}>{t('home.todayAtGlance')}</Text>
+              <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]} allowFontScaling={false}>{t('home.todaySubtitle')}</Text>
             </View>
             <View style={styles.headerActions}>
               {editMode ? (
@@ -2329,7 +2347,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                   }}
                   style={styles.exitEditButton}
                 >
-                  <Text style={styles.exitEditButtonText}>{t('home.done')}</Text>
+                  <Text style={styles.exitEditButtonText} allowFontScaling={false}>{t('home.done')}</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.headerButtons}>
@@ -2349,7 +2367,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                       }
                     ]}
                   >
-                    <Text style={styles.editModeButtonText}>{t('home.edit')}</Text>
+                    <Text style={styles.editModeButtonText} allowFontScaling={false}>{t('home.edit')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -2363,7 +2381,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             {widgetsLoading || widgetData.length === 0 || configLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color={themeColors.primary} style={{ marginBottom: 8 }} />
-                <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>{t('home.loadingWidgets')}</Text>
+                <Text style={[styles.loadingText, { color: themeColors.textSecondary }]} allowFontScaling={false}>{t('home.loadingWidgets')}</Text>
               </View>
             ) : (
               <>
@@ -2581,7 +2599,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             <DailyMoodCard
               moodValue={moodValue as 1 | 2 | 3 | 4 | 5}
               restLevel={restLevel}
-              disabled={hasExistingMoodCheckin && hasExistingSleepCheckin}
+              disabled={(hasExistingMoodCheckin && hasExistingSleepCheckin) && !isLockDelayActive}
               onMoodChange={(v) => {
                 setMoodValue(v);
                 saveMoodCheckin(v);

@@ -39,6 +39,7 @@ interface RecipeEditorModalProps {
     };
     contextNotes?: string;
   } | null;
+  allowDelete?: boolean;
 }
 
 const mealTypes: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -52,6 +53,7 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
   mode = 'edit',
   initialDraft = null,
   aiContext = null,
+  allowDelete = false,
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -232,7 +234,7 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
   };
 
   const confirmDelete = () => {
-    if (!recipe) return;
+    //if (!recipe) return;
     Alert.alert(
       t('analysis.food.recipes.editor.deleteTitle'),
       t('analysis.food.recipes.editor.deleteMessage'),
@@ -243,12 +245,15 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
           style: 'destructive',
           onPress: async () => {
             try {
-              setSaving(true);
-              await recipeLibraryService.delete(recipe.id);
-              onDeleted?.(recipe.id);
+              if (recipe) {
+                await recipeLibraryService.delete(recipe.id);
+                onDeleted?.(recipe.id);
+              } else {
+                // Se non c'è una ricetta salvata (è un pasto scannerizzato), chiama onDeleted senza ID
+                onDeleted?.(undefined as any);
+              }
             } catch (error) {
-              console.error('[RecipeEditorModal] delete error', error);
-              Alert.alert(t('common.error'), t('analysis.food.recipes.editor.deleteError'));
+              // ... gestione errori esistente
             } finally {
               setSaving(false);
             }
@@ -527,7 +532,7 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
         </KeyboardAvoidingView>
 
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          {!isCreateMode && (
+          {(!isCreateMode || allowDelete) && (
             <TouchableOpacity
               style={[styles.deleteButton, { borderColor: colors.error }]}
               onPress={confirmDelete}

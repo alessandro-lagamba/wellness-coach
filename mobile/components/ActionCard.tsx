@@ -16,27 +16,23 @@ import { ActionTrackerService } from '../services/action-tracker.service';
 import wellnessActivitiesService, {
   WellnessActivityInput,
 } from '../services/wellness-activities.service';
+import { TimePickerModal } from './TimePickerModal';
 
 interface ActionCardProps {
   action: ActionInfo;
   onComplete?: (action: ActionInfo) => void;
-  onDismiss?: (action: ActionInfo) => void;
-  onSnooze?: (action: ActionInfo) => void;
-  showSnooze?: boolean;
   compact?: boolean;
 }
 
 export const ActionCard: React.FC<ActionCardProps> = ({
   action,
   onComplete,
-  onDismiss,
-  onSnooze,
-  showSnooze = true,
   compact = false,
 }) => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const fadeAnim = React.useRef(new Animated.Value(1)).current;
   const { colors, mode } = useTheme();
   const { language } = useTranslation();
@@ -174,12 +170,19 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     });
   };
 
-  const handleComplete = async () => {
+  const handleAddPress = () => {
+    setShowTimePicker(true);
+  };
+
+  const handleConfirmTime = async (selectedTime: Date) => {
     if (isProcessing) return;
     setIsProcessing(true);
 
     try {
-      const activityInput = buildActivityInput();
+      const activityInput = {
+        ...buildActivityInput(),
+        scheduledTime: selectedTime,
+      };
       const result = await wellnessActivitiesService.saveActivity(activityInput);
 
       if (!result.success) {
@@ -196,50 +199,10 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       Alert.alert(labels.addErrorTitle, labels.addErrorMessage);
     } finally {
       setIsProcessing(false);
+      setShowTimePicker(false);
     }
   };
 
-  const handleDismiss = () => {
-    Alert.alert(labels.removeTitle, labels.removeMessage, [
-      { text: labels.cancel, style: 'cancel' },
-      {
-        text: labels.dismiss,
-        style: 'destructive',
-        onPress: () => {
-          ActionTrackerService.logAction(action, 'dismissed').catch((error) =>
-            console.warn('[ActionCard] failed to log dismiss', error),
-          );
-          setIsDismissed(true);
-          Animated.timing(fadeAnim, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }).start(() => {
-            Alert.alert(labels.dismissed);
-            onDismiss?.(action);
-          });
-        },
-      },
-    ]);
-  };
-
-  const scheduleSnooze = (hours: number) => {
-    const snoozeUntil = new Date(Date.now() + hours * 60 * 60 * 1000);
-    ActionTrackerService.logAction(action, 'snoozed', snoozeUntil).catch((error) =>
-      console.warn('[ActionCard] failed to log snooze', error),
-    );
-    onSnooze?.({ ...action, snoozeUntil });
-    Alert.alert(labels.snoozed);
-  };
-
-  const handleSnooze = () => {
-    Alert.alert(labels.snoozeTitle, labels.snoozeMessage, [
-      { text: labels.cancel, style: 'cancel' },
-      { text: labels.snoozeHour, onPress: () => scheduleSnooze(1) },
-      { text: labels.snoozeFour, onPress: () => scheduleSnooze(4) },
-      { text: labels.snoozeDay, onPress: () => scheduleSnooze(24) },
-    ]);
-  };
 
   if (isCompleted || isDismissed) {
     return null;
@@ -250,7 +213,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       <Animated.View style={[styles.compactContainer, { opacity: fadeAnim }]}>
         <TouchableOpacity
           style={[styles.compactCard, { borderLeftColor: getPriorityColor(action.priority) }]}
-          onPress={handleComplete}
+          onPress={handleAddPress}
         >
           <View style={styles.compactLeft}>
             <MaterialCommunityIcons
@@ -267,6 +230,12 @@ export const ActionCard: React.FC<ActionCardProps> = ({
             <MaterialCommunityIcons name="check" size={16} color={getPriorityColor(action.priority)} />
           </View>
         </TouchableOpacity>
+        <TimePickerModal
+          visible={showTimePicker}
+          onClose={() => setShowTimePicker(false)}
+          onConfirm={handleConfirmTime}
+          title={action.title}
+        />
       </Animated.View>
     );
   }
@@ -339,7 +308,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
                 opacity: isProcessing ? 0.7 : 1,
               },
             ]}
-            onPress={handleComplete}
+            onPress={handleAddPress}
             disabled={isProcessing}
           >
             {isProcessing ? (
@@ -351,20 +320,14 @@ export const ActionCard: React.FC<ActionCardProps> = ({
               </>
             )}
           </TouchableOpacity>
-
-          {showSnooze && (
-            <TouchableOpacity style={styles.snoozeButton} onPress={handleSnooze}>
-              <MaterialCommunityIcons name="clock-outline" size={16} color="#6b7280" />
-              <Text style={styles.snoozeButtonText}>{labels.snooze}</Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity style={styles.dismissButton} onPress={handleDismiss}>
-            <MaterialCommunityIcons name="close" size={16} color="#6b7280" />
-            <Text style={styles.dismissButtonText}>{labels.dismiss}</Text>
-          </TouchableOpacity>
         </View>
       </View>
+      <TimePickerModal
+        visible={showTimePicker}
+        onClose={() => setShowTimePicker(false)}
+        onConfirm={handleConfirmTime}
+        title={action.title}
+      />
     </Animated.View>
   );
 };

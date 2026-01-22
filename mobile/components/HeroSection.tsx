@@ -65,7 +65,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     // Streak text
     const streakText = useMemo(() => {
         if (language === 'it') {
-            return streakDays === 1 ? '1 Giorno di Serie' : `${streakDays} Giorni di Serie`;
+            return streakDays === 1 ? '1 Giorno Consecutivo' : `${streakDays} Giorni Consecutivi`;
         }
         return streakDays === 1 ? '1 Day Streak' : `${streakDays} Days Streak`;
     }, [streakDays, language]);
@@ -94,8 +94,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
                 {/* Greetings & Streak */}
                 <View style={styles.headerText}>
-                    <Text style={[styles.greeting, { color: colors.text }]}>
-                        {greeting} <Text style={{ fontWeight: '400' }}>{userName}</Text>
+                    <Text
+                        style={[styles.greeting, { color: colors.text }]}
+                        allowFontScaling={false}
+                    >
+                        {greeting} <Text style={{ fontWeight: '400' }} allowFontScaling={false}>{userName}</Text>
                     </Text>
 
                     {/* Streak Pill - Moved here to be under greeting as requested implicitely by "remove date" */}
@@ -106,7 +109,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         marginBottom: 0,
                     }]}>
                         <MaterialCommunityIcons name="fire" size={16} color="#f59e0b" />
-                        <Text style={[styles.streakText, { color: isDark ? '#fcd34d' : '#475569' }]}>{streakText}</Text>
+                        <Text
+                            style={[styles.streakText, { color: isDark ? '#fcd34d' : '#475569' }]}
+                            allowFontScaling={false}
+                        >
+                            {streakText}
+                        </Text>
                     </View>
                 </View>
 
@@ -167,7 +175,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         onPress={onChatPress}
                     >
                         <MaterialCommunityIcons name="chat-processing-outline" size={22} color={colors.primary} />
-                        <Text style={[styles.glassButtonText, { color: colors.text }]}>CHAT</Text>
+                        <Text style={[styles.glassButtonText, { color: colors.text }]} allowFontScaling={false}>CHAT</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -178,7 +186,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         onPress={onJournalPress}
                     >
                         <MaterialCommunityIcons name="notebook-edit-outline" size={22} color={colors.primary} />
-                        <Text style={[styles.glassButtonText, { color: colors.text }]}>
+                        <Text style={[styles.glassButtonText, { color: colors.text }]} allowFontScaling={false}>
                             {language === 'it' ? 'DIARIO' : 'JOURNAL'}
                         </Text>
                     </TouchableOpacity>
@@ -218,7 +226,8 @@ const styles = StyleSheet.create({
     },
     greeting: {
         fontSize: 34,
-        fontWeight: '300',
+        fontFamily: 'Figtree_400Regular', // Using Figtree
+        fontWeight: '400',
         letterSpacing: -0.5,
         textAlign: 'center',
         marginBottom: 4,
@@ -235,7 +244,7 @@ const styles = StyleSheet.create({
     },
     streakText: {
         fontSize: 14,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold', // Using Figtree Bold
         letterSpacing: 0.5,
     },
     avatarZone: {
@@ -320,7 +329,7 @@ const styles = StyleSheet.create({
     },
     glassButtonText: {
         fontSize: 14,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold', // Using Figtree Bold
         letterSpacing: 1.2,
     }
 });

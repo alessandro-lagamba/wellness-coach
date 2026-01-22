@@ -14,7 +14,7 @@ import {
   Alert,
   BackHandler,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, {
@@ -77,7 +77,6 @@ import { RecipeHubModal } from './RecipeHubModal';
 import RecipeEditorModal from './RecipeEditorModal';
 import recipeLibraryService, { MealType, UserRecipe } from '../services/recipe-library.service';
 import mealPlanService, { MealPlanEntry, MealPlanMealType } from '../services/meal-plan.service';
-// Removed useInsights - now using IntelligentInsightsSection directly
 
 const { width } = Dimensions.get('window');
 
@@ -415,8 +414,10 @@ export const FoodAnalysisScreen: React.FC = () => {
 
 const FoodAnalysisScreenContent: React.FC = () => {
   const { start: startCopilot } = useCopilot();
+  const insets = useSafeAreaInsets();
   const { t, language } = useTranslation(); // 🆕 i18n hook
   const { colors } = useTheme();
+  const [recipeEditorAllowDelete, setRecipeEditorAllowDelete] = useState(false);
 
   // 🆕 Utility functions for meal planning
   const toISODate = (date: Date) => {
@@ -1019,11 +1020,13 @@ const FoodAnalysisScreenContent: React.FC = () => {
       };
       contextNotes?: string;
     },
+    allowDelete: boolean = false
   ) => {
     setRecipeEditorMode('create');
     setEditingRecipe(null);
     setRecipeDraft(draft || null);
     setRecipeAiContext(aiContext || null);
+    setRecipeEditorAllowDelete(allowDelete);
     setRecipeEditorVisible(true);
   };
 
@@ -1059,11 +1062,25 @@ const FoodAnalysisScreenContent: React.FC = () => {
     loadRecipeLibrary();
   };
 
-  const handleRecipeDeleted = (id: string) => {
+  const handleRecipeDeleted = async (id?: string) => { // Rendi id opzionale
     setRecipeEditorVisible(false);
     setEditingRecipe(null);
-    setUserRecipes((prev) => prev.filter((recipe) => recipe.id !== id));
-    loadRecipeLibrary();
+
+    if (id) {
+      // Logica esistente per ricette salvate
+      setUserRecipes((prev) => prev.filter((recipe) => recipe.id !== id));
+      loadRecipeLibrary();
+    } else if (pendingAttachSlot) {
+      // NUOVA LOGICA: Elimina la voce dal planner (pasto scannerizzato)
+      try {
+        await mealPlanService.removeEntry(pendingAttachSlot.date, pendingAttachSlot.mealType);
+        await loadMealPlan();
+      } catch (error) {
+        console.error('Failed to remove meal plan entry:', error);
+      } finally {
+        setPendingAttachSlot(null);
+      }
+    }
   };
 
   const getEntryForCell = (dateISO: string, mealType: MealPlanMealType) =>
@@ -1084,6 +1101,33 @@ const FoodAnalysisScreenContent: React.FC = () => {
   };
 
   const closeMoveModal = () => setMoveModal({ visible: false });
+  const handleDeleteEntry = async () => {
+    if (!moveModal.date || !moveModal.fromMealType) return;
+
+    Alert.alert(
+      t('common.confirmDelete') || 'Conferma eliminazione',
+      t('analysis.food.mealPlanner.deleteConfirm') || 'Sei sicuro di voler eliminare questo pasto dal piano?',
+      [
+        {
+          text: t('common.cancel') || 'Annulla',
+          style: 'cancel',
+        },
+        {
+          text: t('common.delete') || 'Elimina',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await mealPlanService.removeEntry(moveModal.date!, moveModal.fromMealType!);
+              await loadMealPlan();
+              closeMoveModal();
+            } catch (error) {
+              console.error('Failed to delete meal plan entry:', error);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleMoveEntry = async (targetMealType: MealPlanMealType) => {
     if (!moveModal.date || !moveModal.fromMealType) return;
@@ -1940,7 +1984,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
         isScreenFocused={true}
         controller={cameraController}
         facing={cameraType}
-        instructionText="Keep a steady, even light on your face for best accuracy"
+        instructionText="Frame the food making sure it is well lit"
         switching={cameraSwitching}
         onReady={handleCameraReady}
       />
@@ -2652,7 +2696,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                               contextNotes: custom.notes || custom.source || 'Analisi da foto del piatto',
                             };
 
-                            openManualRecipeEditor(draft, aiContext);
+                            openManualRecipeEditor(draft, aiContext, true);
                           } else {
                             // Fallback: apri lo slot picker classico
                             openSlotPicker(dateIso, mealType as MealPlanMealType);
@@ -2808,6 +2852,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
         <RecipeEditorModal
           visible={recipeEditorVisible}
           mode={recipeEditorMode}
+          allowDelete={recipeEditorAllowDelete}
           recipe={editingRecipe}
           initialDraft={recipeDraft}
           aiContext={recipeAiContext}
@@ -2890,11 +2935,13 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     backgroundColor: colors.surfaceElevated || colors.surface,
                     borderColor: colors.border,
                     borderWidth: 1,
+                    paddingVertical: 10,
+                    paddingHorizontal: 16,
                   }]}
                   onPress={closeSlotPicker}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.secondaryButtonText, { color: colors.text }]}>{t('common.close')}</Text>
+                  <Text style={[styles.secondaryButtonText, { color: colors.text, fontSize: 13 }]}>{t('common.close')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -2938,10 +2985,29 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
               <View style={styles.slotModalActions}>
                 <TouchableOpacity
-                  style={[styles.secondaryButton, { borderColor: colors.border }]}
+                  style={[styles.secondaryButton, {
+                    borderColor: colors.border,
+                    backgroundColor: colors.surfaceElevated, // Sfondo coerente con il tema
+                    borderWidth: 1,
+                    flex: 1, // Occupa metà spazio
+                  }]}
                   onPress={closeMoveModal}
                 >
                   <Text style={[styles.secondaryButtonText, { color: colors.text }]}>{t('common.close')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.secondaryButton, {
+                    borderColor: '#ef4444',
+                    backgroundColor: '#fef2f2',
+                    borderWidth: 1,
+                    flex: 1, // Occupa metà spazio
+                  }]}
+                  onPress={handleDeleteEntry}
+                >
+                  <MaterialCommunityIcons name="trash-can-outline" size={20} color="#ef4444" />
+                  <Text style={[styles.secondaryButtonText, { color: '#ef4444' }]}>
+                    {t('common.delete') || 'Elimina'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -3325,11 +3391,11 @@ const styles = StyleSheet.create({
   slotModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
   },
   slotModalCard: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderRadius: 24,
+    marginHorizontal: 20,
     borderWidth: 1,
     padding: 24,
     gap: 16,

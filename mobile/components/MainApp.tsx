@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { AuthWrapper } from './AuthWrapper';
-import { ChatScreen } from './ChatScreen';
+import { ChatOnlyScreen } from './ChatOnlyScreen';
 
 /**
  * Main App Component
@@ -15,7 +15,7 @@ export const MainApp: React.FC = () => {
   return (
     <View style={styles.container}>
       <AuthWrapper onAuthSuccess={handleAuthSuccess}>
-        <ChatScreen />
+        <ChatOnlyScreen />
       </AuthWrapper>
     </View>
   );

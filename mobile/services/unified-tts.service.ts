@@ -23,7 +23,7 @@ export class UnifiedTTSService {
    * Initialize Unified TTS (ElevenLabs + expo-speech fallback)
    */
   async initialize(): Promise<void> {
-    console.log('Unified TTS initialized (ElevenLabs → expo-speech)');
+    //console.log('Unified TTS initialized (ElevenLabs → expo-speech)');
   }
 
   /**
@@ -100,18 +100,18 @@ export class UnifiedTTSService {
    */
   private async playAudio(audioBase64: string): Promise<void> {
     this.isSpeaking = true;
-    
+
     try {
       // Create audio from base64 and play it
       const audioUri = `data:audio/mpeg;base64,${audioBase64}`;
-      
+
       // Use expo-av to play the ElevenLabs audio
       const { Audio } = await import('expo-av');
       const { sound } = await Audio.Sound.createAsync(
         { uri: audioUri },
         { shouldPlay: true }
       );
-      
+
       // Set up completion handler
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
@@ -119,7 +119,7 @@ export class UnifiedTTSService {
           sound.unloadAsync();
         }
       });
-      
+
       console.log('🎤 ElevenLabs TTS playing actual generated audio');
     } catch (error) {
       console.error('Error playing audio:', error);
@@ -132,14 +132,14 @@ export class UnifiedTTSService {
    */
   private async speakWithExpoSpeech(text: string, options?: any): Promise<void> {
     this.isSpeaking = true;
-    
+
     try {
       await Speech.speak(text, {
         language: options?.language || 'it-IT',
         pitch: options?.pitch || 1.0,
         rate: options?.rate || 0.8,
       });
-      
+
       // Wait for speech to complete
       await new Promise<void>((resolve) => {
         const checkComplete = () => {

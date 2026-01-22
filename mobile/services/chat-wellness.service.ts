@@ -29,7 +29,7 @@ export class ChatService {
         return null;
       }
 
-      console.log('✅ Chat session created:', data.id);
+      //console.log('✅ Chat session created:', data.id);
       return data;
     } catch (error) {
       console.error('Error in createChatSession:', error);
@@ -166,7 +166,7 @@ export class ChatService {
 
       // Per ogni sessione, verifica se ha messaggi utente e ottieni il primo
       const sessionsWithMessages: (ChatSession & { firstUserMessage?: string })[] = [];
-      
+
       for (const session of sessions) {
         const { data: messages, error: messagesError } = await supabase
           .from(Tables.CHAT_MESSAGES)
@@ -193,7 +193,7 @@ export class ChatService {
           } catch (err) {
             // Se fallisce la decifratura, usa il testo originale (backward compatibility)
           }
-          
+
           sessionsWithMessages.push({
             ...session,
             firstUserMessage: firstMessage
@@ -408,9 +408,9 @@ export class WellnessSuggestionService {
     try {
       // Logica per determinare il suggerimento più appropriato
       // basato su emozioni, pelle, e altri fattori
-      
+
       let category: 'emotion' | 'skin' | 'lifestyle' | 'stress' | 'sleep' | 'nutrition' = 'lifestyle';
-      
+
       if (emotionContext?.dominantEmotion) {
         const emotion = emotionContext.dominantEmotion.toLowerCase();
         if (['sadness', 'anger', 'fear'].includes(emotion)) {
@@ -425,7 +425,7 @@ export class WellnessSuggestionService {
       }
 
       const suggestions = await this.getSuggestionsByCategory(category);
-      
+
       if (suggestions.length > 0) {
         // Per ora restituiamo il primo suggerimento ad alta priorità
         return suggestions.find(s => s.priority_level === 'high') || suggestions[0];
@@ -449,7 +449,7 @@ export class WellnessSuggestionService {
       // Se abbiamo già un suggerimento suggerito dall'AIContext, usalo
       if (aiContext?.suggestedWellnessSuggestion) {
         const suggestedSuggestion = aiContext.suggestedWellnessSuggestion;
-        
+
         // Trova il suggerimento corrispondente nel database
         const { data: suggestion, error } = await supabase
           .from(Tables.WELLNESS_SUGGESTIONS_CATALOG)
@@ -470,7 +470,7 @@ export class WellnessSuggestionService {
 
       // Fallback: usa la logica intelligente basata sui dati
       const suggestion = await this.getSmartSuggestionFromData(userId, aiContext);
-      
+
       if (suggestion) {
         return {
           suggestion,
@@ -510,7 +510,7 @@ export class WellnessSuggestionService {
       const skinHistory = aiContext?.skinHistory || [];
       const behavioralInsights = aiContext?.behavioralInsights || {};
       const temporalPatterns = aiContext?.temporalPatterns || {};
-      
+
       // 1. PRIORITÀ ALTA: Stress indicators
       if (behavioralInsights.stressIndicators?.length > 0) {
         const stressSuggestions = await this.getSuggestionsByCategory('stress');
@@ -558,7 +558,7 @@ export class WellnessSuggestionService {
       // 5. FALLBACK: Suggerimento generale
       const generalSuggestions = await this.getSuggestionsByCategory('lifestyle');
       return generalSuggestions.length > 0 ? generalSuggestions[0] : null;
-      
+
     } catch (error) {
       console.error('Error in getSmartSuggestionFromData:', error);
       return null;
@@ -577,11 +577,11 @@ export class WellnessSuggestionService {
   ): Promise<boolean> {
     try {
       console.log(`🎓 Learning from user interaction: ${action} for suggestion ${suggestionId}`);
-      
+
       // Se suggestionId non è un UUID (es. "breathing-exercises"), 
       // cerchiamo il record corrispondente per nome/titolo
       let actualSuggestionId = suggestionId;
-      
+
       // Controlla se è un UUID valido
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(suggestionId)) {
@@ -592,17 +592,17 @@ export class WellnessSuggestionService {
           .eq('user_id', userId)
           .or(`suggestion_name.ilike.%${suggestionId}%,suggestion_title.ilike.%${suggestionId}%`)
           .limit(1);
-          
+
         if (searchError || !suggestions || suggestions.length === 0) {
           console.log(`⚠️ No database record found for suggestion: ${suggestionId}, skipping database update`);
           // Non è un errore critico, continuiamo
           console.log(`✅ User interaction logged (no DB): ${action} for suggestion ${suggestionId}`);
           return true;
         }
-        
+
         actualSuggestionId = suggestions[0].id;
       }
-      
+
       // Salva l'interazione per analisi future
       const { error } = await supabase
         .from(Tables.USER_WELLNESS_SUGGESTIONS)
@@ -624,7 +624,7 @@ export class WellnessSuggestionService {
       // TODO: Implementare logica di machine learning per migliorare le future selezioni
       // Per ora, logghiamo i pattern per analisi future
       console.log(`✅ User interaction logged: ${action} for suggestion ${suggestionId}`);
-      
+
       return true;
     } catch (error) {
       console.error('Error in learnFromUserInteraction:', error);
@@ -669,10 +669,10 @@ export class WellnessSuggestionService {
       const totalAccepted = suggestions.filter(s => s.interaction_type === 'accepted').length;
       const totalCompleted = suggestions.filter(s => s.interaction_type === 'completed').length;
       const totalDismissed = suggestions.filter(s => s.is_dismissed).length;
-      
+
       const ratings = suggestions.filter(s => s.feedback_rating).map(s => s.feedback_rating);
       const averageRating = ratings.length > 0 ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0;
-      
+
       // Calcola categorie più efficaci (con rating alto)
       const categoryStats = suggestions
         .filter(s => s.feedback_rating && s.feedback_rating >= 4)
@@ -681,9 +681,9 @@ export class WellnessSuggestionService {
           acc[category] = (acc[category] || 0) + 1;
           return acc;
         }, {} as Record<string, number>);
-      
+
       const mostEffectiveCategories = Object.entries(categoryStats)
-        .sort(([,a], [,b]) => b - a)
+        .sort(([, a], [, b]) => b - a)
         .slice(0, 3)
         .map(([category]) => category);
 

@@ -148,6 +148,15 @@ importers:
       '@config-plugins/react-native-webrtc':
         specifier: ^13.0.0
         version: 13.0.0(expo@54.0.24)
+      '@expo-google-fonts/dm-sans':
+        specifier: ^0.4.2
+        version: 0.4.2
+      '@expo-google-fonts/figtree':
+        specifier: ^0.4.1
+        version: 0.4.1
+      '@expo-google-fonts/lato':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@expo-google-fonts/playfair-display':
         specifier: ^0.4.2
         version: 0.4.2
@@ -1198,6 +1207,15 @@ packages:
   '@eslint/plugin-kit@0.4.0':
     resolution: {integrity: sha512-sB5uyeq+dwCWyPi31B2gQlVlo+j5brPlWx4yZBrEaRo/nhdDE8Xke1gsGgtiBdaBTxuTkceLVuVt/pclrasb0A==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@expo-google-fonts/dm-sans@0.4.2':
+    resolution: {integrity: sha512-e/fLH5aCJzkEenz7axvEn8N7IJAKhUwNjIxS75h9j+Ip1M9S7d22M19gJN3A7QW4egVkBJRyQh1hQFhngQn9yA==}
+
+  '@expo-google-fonts/figtree@0.4.1':
+    resolution: {integrity: sha512-6IQQddGeR3yZBSwiIjy2kd1gA+5s2esF8JAFw6M1qqU4RUlj4Zxkw9J+gixAtZFgd+QIS875EPHqeYlpaRcCRw==}
+
+  '@expo-google-fonts/lato@0.4.1':
+    resolution: {integrity: sha512-U2g1sOBFSNgmxhh/Ywgyi7Hx6T3UielX2nmZuP55wqndrIEyNX3HeUQIhhQDe2vZ+nvZI0Z2vTcVjmOn/BM9ow==}
 
   '@expo-google-fonts/playfair-display@0.4.2':
     resolution: {integrity: sha512-mWhBV59RUjSS3aYpytUb7UyHHTnXcHh7epAn7gq+M4XAEh5PuMKUrP8eiUfkJLb6UwHZCi7EhQpUzxHu5OL96w==}
@@ -9154,6 +9172,12 @@ snapshots:
     dependencies:
       '@eslint/core': 0.16.0
       levn: 0.4.1
+
+  '@expo-google-fonts/dm-sans@0.4.2': {}
+
+  '@expo-google-fonts/figtree@0.4.1': {}
+
+  '@expo-google-fonts/lato@0.4.1': {}
 
   '@expo-google-fonts/playfair-display@0.4.2': {}
 

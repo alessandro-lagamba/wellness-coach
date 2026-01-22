@@ -10,6 +10,21 @@ import {
   PlayfairDisplay_600SemiBold,
   PlayfairDisplay_600SemiBold_Italic,
 } from '@expo-google-fonts/playfair-display';
+import {
+  Lato_400Regular,
+  Lato_700Bold,
+  Lato_900Black,
+} from '@expo-google-fonts/lato';
+import {
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_700Bold,
+} from '@expo-google-fonts/dm-sans';
+import {
+  Figtree_400Regular,
+  Figtree_500Medium,
+  Figtree_700Bold,
+} from '@expo-google-fonts/figtree';
 import { registerGlobals } from '@livekit/react-native';
 
 // Do required setup for LiveKit React-Native
@@ -120,6 +135,15 @@ export default function RootLayout() {
     PlayfairDisplay_400Regular_Italic,
     PlayfairDisplay_600SemiBold,
     PlayfairDisplay_600SemiBold_Italic,
+    Lato_400Regular,
+    Lato_700Bold,
+    Lato_900Black,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_700Bold,
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_700Bold,
   });
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree

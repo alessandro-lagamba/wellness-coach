@@ -26,7 +26,8 @@
     "retake": "Retake",
     "recommendation": "Recommendation",
     "markAsDone": "Mark as Done",
-    "view": "View"
+    "view": "View",
+    "confirmDelete": "Confirm Deletion"
   },
   "settings": {
     "title": "Settings",
@@ -178,19 +179,10 @@
       "withName": "Hello {{name}}! 👋 I'm your AI wellness coach. How are you feeling today?",
       "default": "Hello! 👋 I'm your AI wellness coach. How are you feeling today?"
     },
-    "quickReplies": {
-      "stressed": "I'm feeling stressed",
-      "sleep": "Help me sleep better",
-      "energy": "Give me energy tips",
-      "skin": "Skin care advice"
-    },
-    "quickStart": {
-      "title": "Quick Start",
-      "toggle": "Suggested messages",
-      "feelingStressed": "I'm feeling stressed",
-      "sleepBetter": "Help me sleep better",
-      "energyTips": "Give me energy tips",
-      "skinAdvice": "Skin care advice"
+    "clearChat": {
+      "title": "Clear conversation",
+      "message": "Do you want to clear all messages?",
+      "success": "Conversation cleared successfully"
     },
     "history": {
       "title": "Chat History",
@@ -1319,7 +1311,8 @@
         "noRecipes": "No recipes match this filter",
         "moveTitle": "Move this meal",
         "moveSubtitle": "Choose which meal slot you want to assign it to.",
-        "analyzed": "Analyzed"
+        "analyzed": "Analyzed",
+        "deleteConfirm": "Are you sure you want to delete this meal from the plan?"
       },
       "preferences": {
         "title": "Food Preferences",

@@ -160,30 +160,46 @@ const MiniGaugeChart: React.FC<Props> = memo(({
   /** ========== SMALL ========== */
   const renderSmall = () => (
     <View style={[styles.innerContainer, { backgroundColor: effectiveBgColor }]}>
-      <View style={styles.smallHeader}>
-        <Text style={[styles.smallLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
+      {/* 1) Title Full Width at Top */}
+      <View style={styles.smallTitleContainer}>
+        <Text
+          style={[styles.smallLabel, { color: colors.text }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          allowFontScaling={false}
+        >
+          {label}
+        </Text>
       </View>
 
-      <View style={styles.smallContent}>
-        <View style={styles.smallGaugeWrapper}>
-          <Svg width={gaugeSize} height={gaugeSize} viewBox={`0 0 ${VB_SIZE} ${VB_SIZE}`}>
-            <Defs>
-              <SvgLinearGradient id={`grad-${color}-s`} x1="0%" y1="0%" x2="100%" y2="100%">
-                <Stop offset="0%" stopColor={color} stopOpacity={0.7} />
-                <Stop offset="100%" stopColor={color} stopOpacity={1} />
-              </SvgLinearGradient>
-            </Defs>
-            <Circle cx={VB_CENTER} cy={VB_CENTER} r={VB_RADIUS} stroke="#e5e7eb" strokeWidth={VB_STROKE} fill="none" opacity={0.35} />
-            <Circle cx={VB_CENTER} cy={VB_CENTER} r={VB_RADIUS} stroke={`url(#grad-${color}-s)`} strokeWidth={VB_STROKE} fill="none" strokeDasharray={`${progress}, ${circumference}`} strokeLinecap="round" transform={`rotate(-90 ${VB_CENTER} ${VB_CENTER})`} />
-          </Svg>
-          <View style={styles.gaugeCenterSmall} pointerEvents="none">
-            {renderIcon(14, styles.gaugeIconSmall)}
-          </View>
+      {/* 2) Gauge Centered */}
+      <View style={styles.smallGaugeWrapper}>
+        <Svg width={gaugeSize} height={gaugeSize} viewBox={`0 0 ${VB_SIZE} ${VB_SIZE}`}>
+          <Defs>
+            <SvgLinearGradient id={`grad-${color}-s`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor={color} stopOpacity={0.7} />
+              <Stop offset="100%" stopColor={color} stopOpacity={1} />
+            </SvgLinearGradient>
+          </Defs>
+          <Circle cx={VB_CENTER} cy={VB_CENTER} r={VB_RADIUS} stroke="#e5e7eb" strokeWidth={VB_STROKE} fill="none" opacity={0.35} />
+          <Circle cx={VB_CENTER} cy={VB_CENTER} r={VB_RADIUS} stroke={`url(#grad-${color}-s)`} strokeWidth={VB_STROKE} fill="none" strokeDasharray={`${progress}, ${circumference}`} strokeLinecap="round" transform={`rotate(-90 ${VB_CENTER} ${VB_CENTER})`} />
+        </Svg>
+        <View style={styles.gaugeCenterSmall} pointerEvents="none">
+          {renderIcon(14, styles.gaugeIconSmall)}
         </View>
+      </View>
 
-        <View style={styles.smallNumberSection}>
-          {subtitle && <Text style={[styles.smallSubtitle, { color: colors.textSecondary }]} numberOfLines={2}>{subtitle}</Text>}
-        </View>
+      {/* 3) Subtitle/Value at Bottom */}
+      <View style={styles.smallBottomContainer}>
+        {subtitle && (
+          <Text
+            style={[styles.smallSubtitle, { color: colors.textSecondary }]}
+            numberOfLines={1}
+            allowFontScaling={false}
+          >
+            {subtitle}
+          </Text>
+        )}
       </View>
     </View>
   )
@@ -193,10 +209,14 @@ const MiniGaugeChart: React.FC<Props> = memo(({
     <View style={[styles.innerContainer, { backgroundColor: effectiveBgColor }]}>
       <View style={styles.mHeaderRow}>
         <View style={styles.mTitleWrap}>
-          <View style={[styles.mIconChip, { backgroundColor: `${color}15`, borderColor: `${color}32` }]}>
-            {renderIcon(16, styles.mIconImage)}
-          </View>
-          <Text style={[styles.mTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
+          <Text
+            style={[styles.mTitle, { color: colors.text }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            allowFontScaling={false}
+          >
+            {label}
+          </Text>
         </View>
       </View>
 
@@ -222,8 +242,20 @@ const MiniGaugeChart: React.FC<Props> = memo(({
             <View style={[styles.mDetailChip, { borderColor: `${color}20`, backgroundColor: `${color}08` }]}>
               <MaterialCommunityIcons name={detailChips[0].icon as any} size={14} color={color} />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[styles.mChipLabel, { color: colors.textSecondary }]} numberOfLines={1}>{detailChips[0].label}</Text>
-                <Text style={[styles.mChipValue, { color }]} numberOfLines={1}>{detailChips[0].value}</Text>
+                <Text
+                  style={[styles.mChipLabel, { color: colors.textSecondary }]}
+                  numberOfLines={1}
+                  allowFontScaling={false}
+                >
+                  {detailChips[0].label}
+                </Text>
+                <Text
+                  style={[styles.mChipValue, { color }]}
+                  numberOfLines={1}
+                  allowFontScaling={false}
+                >
+                  {detailChips[0].value}
+                </Text>
               </View>
             </View>
           )}
@@ -247,9 +279,21 @@ const MiniGaugeChart: React.FC<Props> = memo(({
             {renderIcon(19, styles.largeIconImage)}
           </View>
           <View style={styles.largeHeaderText}>
-            <Text style={[styles.largeLabel, { color: colors.text }]} numberOfLines={1}>{label}</Text>
+            <Text
+              style={[styles.largeLabel, { color: colors.text }]}
+              numberOfLines={1}
+              allowFontScaling={false}
+            >
+              {label}
+            </Text>
             {subtitle && (
-              <Text style={styles.largeSubtitle} numberOfLines={1}>{subtitle}</Text>
+              <Text
+                style={styles.largeSubtitle}
+                numberOfLines={1}
+                allowFontScaling={false}
+              >
+                {subtitle}
+              </Text>
             )}
           </View>
         </View>
@@ -286,10 +330,18 @@ const MiniGaugeChart: React.FC<Props> = memo(({
             >
               <MaterialCommunityIcons name={chip.icon as any} size={15} color={color} />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[styles.metricLabel, { color: colors.textSecondary }]} numberOfLines={1}>
+                <Text
+                  style={[styles.metricLabel, { color: colors.textSecondary }]}
+                  numberOfLines={1}
+                  allowFontScaling={false}
+                >
                   {chip.label}
                 </Text>
-                <Text style={[styles.metricValue, { color }]} numberOfLines={1}>
+                <Text
+                  style={[styles.metricValue, { color }]}
+                  numberOfLines={1}
+                  allowFontScaling={false}
+                >
                   {chip.value}
                 </Text>
               </View>
@@ -318,15 +370,48 @@ const styles = StyleSheet.create({
   innerContainer: { flex: 1, borderRadius: 18, padding: 13 },
 
   /* SMALL */
-  smallHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 5 },
-  smallLabel: { fontSize: 14, fontWeight: "700", color: "#111827", letterSpacing: -0.1, flex: 1 },
-  smallContent: { flex: 1, flexDirection: "column", alignItems: "center", justifyContent: "space-between" },
-  smallNumberSection: { flex: 1, justifyContent: "center" },
-  smallSubtitle: { fontSize: 10, color: "#475569", fontWeight: "600", lineHeight: 12 },
-  smallGaugeWrapper: { position: "relative", alignItems: "center", justifyContent: "center" },
-  gaugeCenterSmall: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" },
-  gaugeEmojiSmall: { fontSize: 14, fontWeight: "400" },
+  /* SMALL - Refined Vertical Layout */
+  smallTitleContainer: {
+    width: '100%',
+    marginBottom: 4,
+  },
+  smallLabel: {
+    fontSize: 18,
+    fontFamily: 'Figtree_700Bold',
+    // fontWeight: "800",
+    color: "#111827",
+    letterSpacing: -0.1,
+  },
+
+  smallGaugeWrapper: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  gaugeCenterSmall: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   gaugeIconSmall: { width: 38, height: 38 },
+
+  smallBottomContainer: {
+    marginTop: 4,
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  smallSubtitle: {
+    fontSize: 15, // Slightly larger for readability
+    color: "#475569",
+    fontFamily: 'Figtree_500Medium',
+    // fontWeight: "700",
+    lineHeight: 14,
+  },
 
   /* MEDIUM */
   mHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
@@ -335,15 +420,15 @@ const styles = StyleSheet.create({
   mIconEmoji: { fontSize: 18 },
   mIconImage: { width: 40, height: 40 },
   mGaugeIconImage: { width: 50, height: 50 },
-  mTitle: { flexShrink: 1, fontSize: 15, fontWeight: "800", color: "#0f172a" },
+  mTitle: { flexShrink: 1, fontSize: 18, fontFamily: 'Figtree_700Bold', color: "#0f172a" },
   mContentRow: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
   mGaugeBox: { width: 74, height: 74, justifyContent: "center", alignItems: "center", position: "relative" },
   mGaugeCenter: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" },
   mKpiCol: { flex: 1, minWidth: 0, justifyContent: "center" },
-  mKpiTitle: { fontSize: 12, fontWeight: "700", color: "#475569" },
+  mKpiTitle: { fontSize: 12, fontFamily: 'Figtree_500Medium', color: "#475569" },
   mDetailChip: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
-  mChipLabel: { fontSize: 10, fontWeight: "700" },
-  mChipValue: { fontSize: 12, fontWeight: "900" },
+  mChipLabel: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
+  mChipValue: { fontSize: 18, fontFamily: 'Figtree_700Bold' },
   mSpacer4: { height: 4 },
 
   /* LARGE (gauge top-right + chips più in alto) */
@@ -355,9 +440,9 @@ const styles = StyleSheet.create({
   largeHeaderText: { flex: 1, minWidth: 0 },
   largeIconChip: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   largeIconEmoji: { fontSize: 22 },
-  largeIconImage: { width: 54, height: 54 },
-  largeLabel: { fontSize: 15, fontWeight: "700", letterSpacing: -0.2 },
-  largeSubtitle: { marginTop: 2, fontSize: 12, color: "#6b7280", fontWeight: "600" },
+  largeIconImage: { width: 48, height: 48 },
+  largeLabel: { fontSize: 18, fontFamily: 'Figtree_700Bold', letterSpacing: -0.2 }, // Increased size
+  largeSubtitle: { marginTop: 2, fontSize: 15, color: "#6b7280", fontFamily: 'Figtree_500Medium' },
 
   largeBody: { flexDirection: "row", alignItems: "center", flex: 1, gap: 12 },
   gaugeCenterLarge: { position: "absolute", alignItems: "center", justifyContent: "center" },
@@ -380,8 +465,8 @@ const styles = StyleSheet.create({
     minWidth: 90,
     maxWidth: "32%",
   },
-  metricLabel: { fontSize: 10, fontWeight: "600", color: "#64748b" },
-  metricValue: { fontSize: 12, fontWeight: "700", letterSpacing: -0.2 },
+  metricLabel: { fontSize: 14, fontFamily: 'Figtree_500Medium', color: "#64748b" },
+  metricValue: { fontSize: 15, fontFamily: 'Figtree_700Bold', letterSpacing: -0.2 },
 })
 
 export default MiniGaugeChart

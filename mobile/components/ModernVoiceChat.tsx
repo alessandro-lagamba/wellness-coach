@@ -85,17 +85,17 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
       const startAudioSession = async () => {
         try {
           await AudioSession.startAudioSession();
-          console.log('[ModernVoiceChat] ✅ AudioSession started');
+          // console.log('[ModernVoiceChat] ✅ AudioSession started');
         } catch (error) {
           console.error('[ModernVoiceChat] ❌ AudioSession start failed:', error);
         }
       };
-      
+
       startAudioSession();
-      
+
       return () => {
         AudioSession.stopAudioSession();
-        console.log('[ModernVoiceChat] 🛑 AudioSession stopped');
+        // console.log('[ModernVoiceChat] 🛑 AudioSession stopped');
       };
     }
   }, [isLiveKitActive]);
@@ -119,7 +119,7 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
 
   const [hasProcessedResult, setHasProcessedResult] = useState(false);
   const [isListeningLocal, setIsListeningLocal] = useState(false);
-  
+
   // UI state
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -162,7 +162,7 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
 
       if (isFinal && t.trim().length > 2 && !hasProcessedResult) {
         setHasProcessedResult(true);
-        console.log('[ModernVoiceChat] 🎤 Processing text:', t);
+        // console.log('[ModernVoiceChat] 🎤 Processing text:', t);
         ExpoSpeechRecognitionModule.stop();
         onVoiceInput(t);
         setHasProcessedResult(false);
@@ -171,12 +171,12 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
   });
 
   useSpeechRecognitionEvent('start', () => {
-    console.log('[ModernVoiceChat] 🎙️ ✅ Listening STARTED');
+    // console.log('[ModernVoiceChat] 🎙️ ✅ Listening STARTED');
     setIsListeningLocal(true);
   });
 
   useSpeechRecognitionEvent('end', () => {
-    console.log('[ModernVoiceChat] 🎙️ ❌ Listening ENDED');
+    // console.log('[ModernVoiceChat] 🎙️ ❌ Listening ENDED');
     setIsListeningLocal(false);
   });
 
@@ -186,6 +186,8 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
 
   // Start the audio session first - following the exact pattern from working implementation
   useEffect(() => {
+    if (!visible) return;
+
     let start = async () => {
       await AudioSession.startAudioSession();
     };
@@ -194,7 +196,7 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
     return () => {
       AudioSession.stopAudioSession();
     };
-  }, []);
+  }, [visible]);
 
   // Orb entrance
   useEffect(() => {
@@ -227,10 +229,10 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
     } else if (isSpeaking) {
       // 🔊 AI sta parlando
       pulseScale.value = withRepeat(withSequence(withTiming(1.1, { duration: 600 }), withTiming(1, { duration: 600 })), -1, true);
-      
+
       audioBars.current.forEach((bar, index) => {
         const baseDelay = index * 50;
-        
+
         setTimeout(() => {
           if (isSpeaking) {
             bar.value = withRepeat(
@@ -321,30 +323,30 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
   // LiveKit voice chat handlers - following the exact pattern from working implementation
   const handleLiveKitToggle = useCallback(async (enabled: boolean) => {
     setUseLiveKitVoice(enabled);
-    
+
     if (enabled) {
-      console.log('[ModernVoiceChat] 🚀 Starting LiveKit voice chat');
-      
+      // console.log('[ModernVoiceChat] 🚀 Starting LiveKit voice chat');
+
       try {
         // Get token from backend - following the exact pattern from working implementation
         const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://wellness-coach-production.up.railway.app';
-        
+
         // 🆕 Load user profile directly from database if not passed as prop (ensure fresh data)
         let userProfile = currentUserProfile;
         if (currentUser?.id && !userProfile?.first_name) {
-          console.log('[ModernVoiceChat] 🔄 Loading user profile from database...');
+          // console.log('[ModernVoiceChat] 🔄 Loading user profile from database...');
           userProfile = await AuthService.getUserProfile(currentUser.id);
-          console.log('[ModernVoiceChat] ✅ Profile loaded:', userProfile ? { 
-            first_name: userProfile.first_name, 
-            last_name: userProfile.last_name 
-          } : 'null');
+          // console.log('[ModernVoiceChat] ✅ Profile loaded:', userProfile ? { 
+          //   first_name: userProfile.first_name, 
+          //   last_name: userProfile.last_name 
+          // } : 'null');
         }
-        
+
         // 🆕 Extract user name with priority: userProfile.first_name > currentUserProfile.first_name > user_metadata.full_name > email
         const firstName = userProfile?.first_name || currentUserProfile?.first_name || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || undefined;
         const lastName = userProfile?.last_name || currentUserProfile?.last_name || currentUser?.user_metadata?.full_name?.split(' ').slice(1).join(' ') || undefined;
         const userName = firstName || currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0]?.split('.')[0] || 'Utente';
-        
+
         // 🆕 Build user context for unified prompt (ALWAYS pass context if we have user info, even if userContext is null)
         const voiceUserContext = {
           // Historical context from userContext if available
@@ -361,14 +363,14 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
           lastName: lastName,
           userName: userName,
         };
-        
-        console.log('[ModernVoiceChat] 📤 Sending context to backend:', {
-          hasUserContext: !!voiceUserContext,
-          firstName: voiceUserContext?.firstName,
-          userName: voiceUserContext?.userName,
-          hasEmotion: !!aiContext?.currentEmotion,
-          hasSkin: !!aiContext?.currentSkin,
-        });
+
+        // console.log('[ModernVoiceChat] 📤 Sending context to backend:', {
+        //   hasUserContext: !!voiceUserContext,
+        //   firstName: voiceUserContext?.firstName,
+        //   userName: voiceUserContext?.userName,
+        //   hasEmotion: !!aiContext?.currentEmotion,
+        //   hasSkin: !!aiContext?.currentSkin,
+        // });
 
         const response = await fetch(`${BACKEND_URL}/api/livekit/token`, {
           method: 'POST',
@@ -378,7 +380,7 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
           body: JSON.stringify({
             roomName: `wellness-chat-${Date.now()}`,
             identity: `user-${Date.now()}`,
-            metadata: JSON.stringify({ 
+            metadata: JSON.stringify({
               platform: 'mobile',
               // 🆕 Pass user context for unified prompt
               userContext: voiceUserContext,
@@ -394,24 +396,24 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
         }
 
         const data = await response.json();
-        
+
         if (!data.success) {
           throw new Error(data.error || 'Token generation failed');
         }
 
-        console.log('[ModernVoiceChat] ✅ Token received successfully');
-        console.log('[ModernVoiceChat] 📋 Context sent summary:', {
-          firstName: voiceUserContext?.firstName || 'NOT FOUND',
-          userName: voiceUserContext?.userName || 'NOT FOUND',
-          hasContext: !!voiceUserContext,
-        });
-        
+        // console.log('[ModernVoiceChat] ✅ Token received successfully');
+        // console.log('[ModernVoiceChat] 📋 Context sent summary:', {
+        //   firstName: voiceUserContext?.firstName || 'NOT FOUND',
+        //   userName: voiceUserContext?.userName || 'NOT FOUND',
+        //   hasContext: !!voiceUserContext,
+        // });
+
         // Set token and URL for LiveKitRoom component - use our backend's LiveKit URL
         setLiveKitToken(data.token);
         setLiveKitUrl(data.url); // Use the URL from our backend
         setIsLiveKitActive(true);
-        
-        console.log('[ModernVoiceChat] ✅ LiveKit voice chat ready');
+
+        // console.log('[ModernVoiceChat] ✅ LiveKit voice chat ready');
       } catch (error) {
         console.error('[ModernVoiceChat] ❌ Failed to get LiveKit token:', error);
         setUseLiveKitVoice(false);
@@ -419,7 +421,7 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
       }
     } else {
       // Stop LiveKit voice chat
-      console.log('[ModernVoiceChat] 🛑 Stopping LiveKit voice chat');
+      // console.log('[ModernVoiceChat] 🛑 Stopping LiveKit voice chat');
       setLiveKitToken(null);
       setLiveKitUrl(null);
       setIsLiveKitActive(false);
@@ -429,11 +431,11 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
   const handleMicrophonePress = async () => {
     if (useLiveKitVoice) {
       // LiveKit mode: microphone is already managed by LiveKit connection
-      console.log('[ModernVoiceChat] 🎤 LiveKit microphone toggle');
+      // console.log('[ModernVoiceChat] 🎤 LiveKit microphone toggle');
       return;
     } else {
       // 🆕 Auto-attiva LiveKit quando si clicca sul microfono (se non è già attivo)
-      console.log('[ModernVoiceChat] 🎤 Microphone pressed - auto-enabling LiveKit Voice');
+      // console.log('[ModernVoiceChat] 🎤 Microphone pressed - auto-enabling LiveKit Voice');
       handleLiveKitToggle(true);
     }
   };
@@ -477,12 +479,12 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
     // 🆕 Use LiveKit state if available, otherwise use props
     const effectiveIsAISpeaking = liveKitAIState?.isAISpeaking ?? isAISpeaking;
     const effectiveIsListening = liveKitAIState?.isListening ?? (isListeningLocal || (useLiveKitVoice && isMicrophoneEnabled));
-    
+
     // 🆕 When LiveKit is active and connected, show only orb + toggle
     const isLiveKitConnected = !!liveKitAIState;
-    
+
     return (
-          <View style={[styles.overlay, { backgroundColor: colors.background }]}>
+      <View style={[styles.overlay, { backgroundColor: colors.background }]}>
         <View style={styles.container}>
           {/* 🆕 Quando LiveKit NON è connesso: MOSTRA SOLO ORB + CLOSE BUTTON */}
           {!isLiveKitConnected && (
@@ -499,7 +501,7 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
                   isProcessing={false}
                   audioLevels={{ input: 0, output: 0, bass: 0, mid: 0, treble: 0 }}
                 />
-                
+
                 {/* ✅ Overlay con microfono cliccabile - avvia automaticamente LiveKit */}
                 <View style={styles.orbOverlay}>
                   <TouchableOpacity
@@ -554,12 +556,12 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
 
               {/* 🆕 Status text - Minimal when LiveKit connected */}
               <View style={styles.liveKitStatusContainer}>
-                <Text style={[styles.liveKitStatusText, { 
-                  color: effectiveIsAISpeaking ? colors.success : effectiveIsListening ? colors.primary : colors.textSecondary 
+                <Text style={[styles.liveKitStatusText, {
+                  color: effectiveIsAISpeaking ? colors.success : effectiveIsListening ? colors.primary : colors.textSecondary
                 }]}>
-                  {effectiveIsAISpeaking ? `🎙️ ${t('voiceChat.speaking')}` : 
-                   effectiveIsListening ? `🎤 ${t('voiceChat.listening')}` : 
-                   `✅ ${t('voiceChat.connected')}`}
+                  {effectiveIsAISpeaking ? `🎙️ ${t('voiceChat.speaking')}` :
+                    effectiveIsListening ? `🎤 ${t('voiceChat.listening')}` :
+                      `✅ ${t('voiceChat.connected')}`}
                 </Text>
               </View>
 
@@ -594,15 +596,15 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
           )}
         </View>
 
-      <WellnessSuggestionPopup
-        visible={showSuggestion}
-        suggestion={currentSuggestion}
-        onAddToToday={handleAddToToday}
-        onDismiss={handleDismissSuggestion}
-        onStartExercise={handleStartExercise}
-      />
-    </View>
-  );
+        <WellnessSuggestionPopup
+          visible={showSuggestion}
+          suggestion={currentSuggestion}
+          onAddToToday={handleAddToToday}
+          onDismiss={handleDismissSuggestion}
+          onStartExercise={handleStartExercise}
+        />
+      </View>
+    );
   };
 
   // Return LiveKitRoom wrapper if token is available, otherwise return content directly
@@ -619,7 +621,7 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
         audio={true}
         video={false}
       >
-        <LiveKitConnectedContent 
+        <LiveKitConnectedContent
           renderContent={renderContent}
           onVoiceInput={onVoiceInput}
           isListening={isListening}
@@ -651,13 +653,13 @@ const LiveKitConnectedContent: React.FC<{
   const { colors } = useTheme(); // 🆕 Aggiunto tema per sfondo solido
   const room = useRoomContext();
   const { isMicrophoneEnabled } = useLocalParticipant();
-  
+
   // Use useVoiceAssistant hook - this is the KEY difference!
   const { state: agentState, audioTrack, videoTrack, agent } = useVoiceAssistant();
-  
+
   // 🆕 Track AI speaking state from agent
   const [isAISpeakingLiveKit, setIsAISpeakingLiveKit] = React.useState(false);
-  
+
   // 🆕 Update AI speaking state based on agent state
   React.useEffect(() => {
     if (useLiveKitVoice && agentState === 'speaking') {
@@ -666,10 +668,10 @@ const LiveKitConnectedContent: React.FC<{
       setIsAISpeakingLiveKit(false);
     }
   }, [agentState, useLiveKitVoice]);
-  
+
   // Use iOS audio management like the working implementation
   useIOSAudioManagement(room, true);
-  
+
   // Track previous values to log only on actual changes (optimization)
   const prevStateRef = React.useRef({
     roomState: room.state,
@@ -678,36 +680,36 @@ const LiveKitConnectedContent: React.FC<{
     agentId: agent?.identity,
     hasAudioTrack: !!audioTrack,
   });
-  
+
   // Log connection state changes ONLY when they actually change (optimized)
   React.useEffect(() => {
     const prev = prevStateRef.current;
-    const hasChanged = 
+    const hasChanged =
       prev.roomState !== room.state ||
       prev.agentState !== agentState ||
       prev.hasAgent !== !!agent ||
       prev.agentId !== agent?.identity ||
       prev.hasAudioTrack !== !!audioTrack;
-    
+
     if (!hasChanged) return;
-    
+
     // Log only significant state changes
     if (prev.roomState !== room.state) {
-      console.log('[LiveKitConnectedContent] Room state:', room.state);
-      
+      // console.log('[LiveKitConnectedContent] Room state:', room.state);
+
       if (room.state === 'connected') {
-        console.log('[LiveKitConnectedContent] ✅ Successfully connected to LiveKit room!');
+        // console.log('[LiveKitConnectedContent] ✅ Successfully connected to LiveKit room!');
       }
     }
-    
+
     if (prev.hasAgent !== !!agent && agent) {
-      console.log('[LiveKitConnectedContent] 🤖 Agent connected to room!', agent.identity);
+      // console.log('[LiveKitConnectedContent] 🤖 Agent connected to room!', agent.identity);
     }
-    
+
     if (prev.agentState !== agentState) {
-      console.log('[LiveKitConnectedContent] Agent state:', agentState);
+      // console.log('[LiveKitConnectedContent] Agent state:', agentState);
     }
-    
+
     // Update ref with current values
     prevStateRef.current = {
       roomState: room.state,
@@ -717,7 +719,7 @@ const LiveKitConnectedContent: React.FC<{
       hasAudioTrack: !!audioTrack,
     };
   }, [room.state, isMicrophoneEnabled, agent, agentState, audioTrack]);
-  
+
   // Show loading state while connecting or waiting for agent
   if (room.state === 'connecting' || (room.state === 'connected' && !agent)) {
     return (
@@ -744,7 +746,7 @@ const LiveKitConnectedContent: React.FC<{
       </View>
     );
   }
-  
+
   // Show error state if connection failed
   if (room.state === 'disconnected') {
     return (
@@ -761,11 +763,11 @@ const LiveKitConnectedContent: React.FC<{
       </View>
     );
   }
-  
+
   // Show connected state with agent - 🆕 Pass LiveKit agent state to renderContent
-  return <>{renderContent({ 
-    isAISpeaking: isAISpeakingLiveKit, 
-    isListening: isMicrophoneEnabled 
+  return <>{renderContent({
+    isAISpeaking: isAISpeakingLiveKit,
+    isListening: isMicrophoneEnabled
   })}</>;
 };
 

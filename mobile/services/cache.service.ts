@@ -14,7 +14,7 @@ interface CacheEntry<T> {
 
 class CacheService {
   private static readonly CACHE_PREFIX = '@wellness_cache:';
-  
+
   /**
    * Ottiene un valore dalla cache se ancora valido, altrimenti null
    */
@@ -22,14 +22,14 @@ class CacheService {
     try {
       const cacheKey = `${CacheService.CACHE_PREFIX}${key}`;
       const cached = await AsyncStorage.getItem(cacheKey);
-      
+
       if (!cached) {
         return null;
       }
 
       const entry: CacheEntry<T> = JSON.parse(cached);
       const now = Date.now();
-      
+
       // 🆕 Check se la cache è scaduta
       if (now - entry.timestamp > entry.ttl) {
         // Cache scaduta, rimuovila
@@ -38,7 +38,7 @@ class CacheService {
         return null;
       }
 
-      console.log(`[Cache] ✅ Cache hit for key: ${key} (age: ${Math.round((now - entry.timestamp) / 1000)}s)`);
+      //console.log(`[Cache] ✅ Cache hit for key: ${key} (age: ${Math.round((now - entry.timestamp) / 1000)}s)`);
       return entry.data;
     } catch (error) {
       console.error(`[Cache] ❌ Error reading cache for key ${key}:`, error);
@@ -62,7 +62,7 @@ class CacheService {
       };
 
       await AsyncStorage.setItem(cacheKey, JSON.stringify(entry));
-      console.log(`[Cache] 💾 Cached key: ${key} (TTL: ${Math.round(ttlMs / 1000)}s)`);
+      //console.log(`[Cache] 💾 Cached key: ${key} (TTL: ${Math.round(ttlMs / 1000)}s)`);
     } catch (error) {
       console.error(`[Cache] ❌ Error saving cache for key ${key}:`, error);
     }
@@ -89,7 +89,7 @@ class CacheService {
     try {
       const allKeys = await AsyncStorage.getAllKeys();
       const cacheKeys = allKeys.filter(key => key.startsWith(`${CacheService.CACHE_PREFIX}${prefix}`));
-      
+
       if (cacheKeys.length > 0) {
         await AsyncStorage.multiRemove(cacheKeys);
         console.log(`[Cache] 🗑️ Invalidated ${cacheKeys.length} cache keys with prefix: ${prefix}`);
@@ -106,7 +106,7 @@ class CacheService {
     try {
       const allKeys = await AsyncStorage.getAllKeys();
       const cacheKeys = allKeys.filter(key => key.startsWith(CacheService.CACHE_PREFIX));
-      
+
       if (cacheKeys.length > 0) {
         await AsyncStorage.multiRemove(cacheKeys);
         console.log(`[Cache] 🧹 Cleared ${cacheKeys.length} cache entries`);
