@@ -47,6 +47,7 @@ export interface HealthPermissions {
   bodyFat: boolean;
   hydration: boolean;
   mindfulness: boolean;
+  menstruation: boolean; // 🆕 Menstrual cycle
 }
 
 export interface HealthDataSyncResult {
@@ -66,7 +67,7 @@ export interface HealthDataServiceConfig {
   fallbackToMock: boolean;
 }
 
-export type HealthMetricType = 
+export type HealthMetricType =
   | 'steps'
   | 'distance'
   | 'calories'
@@ -83,7 +84,8 @@ export type HealthMetricType =
   | 'weight'
   | 'bodyFat'
   | 'hydration'
-  | 'mindfulnessMinutes';
+  | 'mindfulnessMinutes'
+  | 'menstruation'; // 🆕
 
 export interface HealthMetricConfig {
   type: HealthMetricType;

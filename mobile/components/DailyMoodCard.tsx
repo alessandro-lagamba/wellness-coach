@@ -108,7 +108,10 @@ const DailyMoodCard: React.FC<Props> = memo(({
             {disabled && (
                 <View style={styles.lockedOverlay}>
                     <MaterialCommunityIcons name="lock" size={16} color={isDark ? '#94a3b8' : '#6b7280'} />
-                    <Text style={[styles.lockedText, { color: isDark ? '#94a3b8' : '#6b7280' }]}>
+                    <Text
+                        allowFontScaling={false}
+                        style={[styles.lockedText, { color: isDark ? '#94a3b8' : '#6b7280' }]}
+                    >
                         Compilato oggi
                     </Text>
                 </View>
@@ -120,7 +123,10 @@ const DailyMoodCard: React.FC<Props> = memo(({
                     <View style={[styles.iconContainer, { backgroundColor: 'rgba(96, 165, 250, 0.15)' }]}>
                         <MaterialCommunityIcons name={currentMoodIcon} size={20} color="#60a5fa" />
                     </View>
-                    <Text style={[styles.rowLabel, { color: labelColor }]}>
+                    <Text
+                        allowFontScaling={false}
+                        style={[styles.rowLabel, { color: labelColor }]}
+                    >
                         Umore
                     </Text>
                 </View>
@@ -158,7 +164,10 @@ const DailyMoodCard: React.FC<Props> = memo(({
                     <View style={[styles.iconContainer, { backgroundColor: 'rgba(96, 165, 250, 0.1)' }]}>
                         <MaterialCommunityIcons name={currentSleepIcon} size={20} color="#60a5fa" />
                     </View>
-                    <Text style={[styles.rowLabel, { color: labelColor }]}>
+                    <Text
+                        allowFontScaling={false}
+                        style={[styles.rowLabel, { color: labelColor }]}
+                    >
                         Sonno
                     </Text>
                 </View>

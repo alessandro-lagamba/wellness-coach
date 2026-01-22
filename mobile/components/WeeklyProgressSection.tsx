@@ -83,6 +83,7 @@ export const WeeklyProgressSection: React.FC<WeeklyProgressSectionProps> = ({
 }) => {
     const { t } = useTranslation();
     const { colors: themeColors } = useTheme();
+    const [isExpanded, setIsExpanded] = React.useState(false);
 
     // Use the hook to get processed chart data
     const { enabledChartsVM, disabledChartsVM } = useWeeklyProgressCharts({
@@ -109,7 +110,7 @@ export const WeeklyProgressSection: React.FC<WeeklyProgressSectionProps> = ({
             maxValue={vm.maxValue}
             formatValue={vm.formatValue}
             onPress={() => onChartPress(vm.id, vm.rawValue, vm.color)}
-            editMode={chartEditMode}
+            editMode={false} // Disable edit mode UI
             onDisable={() => toggleChart(vm.id)}
             disabled={!isHealthDataReady}
         />
@@ -117,89 +118,50 @@ export const WeeklyProgressSection: React.FC<WeeklyProgressSectionProps> = ({
 
     return (
         <>
-            {/* Section Header */}
-            <View style={styles.sectionHeader}>
+            {/* Section Header - Clickable Toggle */}
+            <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setIsExpanded(!isExpanded)}
+                style={styles.sectionHeader}
+            >
                 <View style={styles.sectionHeaderContent}>
                     <View style={{ flex: 1, marginRight: 12 }}>
-                        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+                        <Text style={[styles.sectionTitle, { color: themeColors.text }]} allowFontScaling={false}>
                             {t('home.weeklyProgress.title') || 'I tuoi progressi questa settimana'}
                         </Text>
-                        <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
+                        <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary, marginBottom: 4 }]} allowFontScaling={false}>
                             {t('home.weeklyProgress.subtitle') || 'Un riepilogo dei tuoi miglioramenti'}
                         </Text>
-                    </View>
-                    <View style={styles.headerActions}>
-                        {chartEditMode ? (
-                            <>
-                                {availableChartsList.length > 0 && (
-                                    <TouchableOpacity
-                                        onPress={onChartSelectionOpen}
-                                        style={[styles.addChartButton, { backgroundColor: themeColors.primary, borderColor: themeColors.primaryDark }]}
-                                    >
-                                        <FontAwesome name="plus" size={14} color="#ffffff" />
-                                        <Text style={styles.addChartButtonText}>{t('home.addChart')}</Text>
-                                    </TouchableOpacity>
-                                )}
-                                <TouchableOpacity
-                                    onPress={() => setChartEditMode(false)}
-                                    style={styles.exitEditButton}
-                                >
-                                    <Text style={styles.exitEditButtonText}>{t('home.done')}</Text>
-                                </TouchableOpacity>
-                            </>
-                        ) : (
-                            <TouchableOpacity
-                                onPress={() => setChartEditMode(true)}
-                                style={[
-                                    styles.editModeButton,
-                                    {
-                                        backgroundColor: themeColors.primary,
-                                        borderColor: themeColors.primaryDark,
-                                    }
-                                ]}
-                            >
-                                <Text style={styles.editModeButtonText}>{t('home.edit')}</Text>
-                            </TouchableOpacity>
-                        )}
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Text style={[styles.sectionSubtitle, { color: themeColors.primary, fontWeight: '600', marginRight: 4 }]} allowFontScaling={false}>
+                                {isExpanded ? 'Nascondi dettagli' : 'Mostra dettagli'}
+                            </Text>
+                            <MaterialCommunityIcons
+                                name={isExpanded ? "chevron-up" : "chevron-down"}
+                                size={16}
+                                color={themeColors.primary}
+                            />
+                        </View>
                     </View>
                 </View>
-            </View>
+            </TouchableOpacity>
 
-            {/* Charts Container */}
-            <View style={styles.weeklyProgressContainer}>
-                {enabledChartsVM.length === 0 && !chartEditMode ? (
-                    <View style={[styles.emptyCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-                        <Text style={[styles.emptyCardText, { color: themeColors.textSecondary }]}>
-                            {t('home.weeklyProgress.noCharts') || 'Nessun grafico abilitato. Usa il pulsante "Modifica" per abilitare i grafici.'}
-                        </Text>
-                    </View>
-                ) : (
-                    <>
-                        {/* Enabled Charts */}
-                        {enabledChartsVM.map(renderChartCard)}
+            {/* Charts Container - Collapsible */}
+            {isExpanded && (
+                <View style={styles.weeklyProgressContainer}>
+                    {/* Show all charts: enabled first, then disabled */}
+                    {enabledChartsVM.map(renderChartCard)}
+                    {disabledChartsVM.map(renderChartCard)}
 
-                        {/* Disabled Charts (in edit mode) */}
-                        {chartEditMode && disabledChartsVM.length > 0 && (
-                            <View style={styles.disabledChartsContainer}>
-                                <Text style={[styles.disabledChartsTitle, { color: themeColors.textSecondary }]}>
-                                    {t('home.weeklyProgress.disabledCharts') || 'Grafici disabilitati'}
-                                </Text>
-                                {disabledChartsVM.map((vm) => (
-                                    <TouchableOpacity
-                                        key={vm.id}
-                                        onPress={() => enableChart(vm.id)}
-                                        style={[styles.disabledChartCard, { backgroundColor: themeColors.surfaceMuted, borderColor: themeColors.border }]}
-                                    >
-                                        <MaterialCommunityIcons name={vm.icon} size={20} color={vm.color} />
-                                        <Text style={[styles.disabledChartLabel, { color: themeColors.text }]}>{vm.title}</Text>
-                                        <FontAwesome name="plus-circle" size={18} color={themeColors.primary} />
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        )}
-                    </>
-                )}
-            </View>
+                    {enabledChartsVM.length === 0 && disabledChartsVM.length === 0 && (
+                        <View style={[styles.emptyCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+                            <Text style={[styles.emptyCardText, { color: themeColors.textSecondary }]}>
+                                {t('home.weeklyProgress.noCharts') || 'Nessun grafico disponibile.'}
+                            </Text>
+                        </View>
+                    )}
+                </View>
+            )}
         </>
     );
 };

@@ -283,20 +283,19 @@ export class HealthPermissionsService {
       }
 
       // 3) CRITICO: Revoca tutti i permessi esistenti per resettare lo stato
-      // Questo è NECESSARIO se i permessi sono stati negati in precedenza
-      // Health Connect blocca il dialog se i permessi sono stati negati due volte
-      if (HealthConnect.revokeAllPermissions && typeof HealthConnect.revokeAllPermissions === 'function') {
-        try {
-          console.log('🔄 Revoking all existing permissions to reset state...');
-          await HealthConnect.revokeAllPermissions();
-          console.log('✅ All permissions revoked - state reset');
-          // Piccolo delay dopo la revoca per dare tempo a Health Connect di processare
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (revokeError) {
-          // Non bloccare se la revoca fallisce (potrebbe non esserci nulla da revocare)
-          console.log('ℹ️ No permissions to revoke or revoke failed (this is OK):', revokeError);
-        }
-      }
+      // RIMOSSO: Questo resettava i permessi ad ogni richiesta, impedendo l'accesso persistente
+      // if (HealthConnect.revokeAllPermissions && typeof HealthConnect.revokeAllPermissions === 'function') {
+      //   try {
+      //     console.log('🔄 Revoking all existing permissions to reset state...');
+      //     await HealthConnect.revokeAllPermissions();
+      //     console.log('✅ All permissions revoked - state reset');
+      //     // Piccolo delay dopo la revoca per dare tempo a Health Connect di processare
+      //     await new Promise(resolve => setTimeout(resolve, 500));
+      //   } catch (revokeError) {
+      //     // Non bloccare se la revoca fallisce (potrebbe non esserci nulla da revocare)
+      //     console.log('ℹ️ No permissions to revoke or revoke failed (this is OK):', revokeError);
+      //   }
+      // }
 
       // 4) Converte gli ID permessi nei tipi Health Connect
       const toRecordType = (id: string) => this.getHealthConnectPermissionType(id);
@@ -305,7 +304,7 @@ export class HealthPermissionsService {
         accessType: 'read' as const,
       }));
 
-      console.log('📋 Requesting permissions:', permissions);
+      console.log('📋 Requesting permissions:', permissions.map((p: any) => p.recordType));
 
       // 5) APPROCCIO CRITICO: Forza la registrazione dell'app PRIMA di requestPermission
       // Health Connect registra l'app SOLO quando viene fatto un tentativo di lettura
@@ -428,7 +427,9 @@ export class HealthPermissionsService {
           '4. Attiva "Consenti tutto" OPPURE abilita manualmente:\n' +
           '   • Passi (Steps)\n' +
           '   • Frequenza cardiaca (Heart Rate)\n' +
-          '   • Sonno (Sleep Session)\n\n' +
+          '   • Variabilità frequenza cardiaca (HRV)\n' +
+          '   • Sonno (Sleep)\n' +
+          '   • Ciclo mestruale (Menstruation)\n\n' +
           'Poi torna nell\'app e clicca "Ricarica permessi" - i permessi saranno attivi automaticamente!',
           [
             {
@@ -706,6 +707,7 @@ export class HealthPermissionsService {
       'body_fat': 'BodyFatPercentage',
       'hydration': 'Water',
       'mindfulness': 'MindfulSession',
+      'menstruation': 'MenstruationPeriod', // 🆕
     };
     return permissionMap[permissionId] || permissionId;
   }
@@ -722,6 +724,7 @@ export class HealthPermissionsService {
       'blood_pressure': 'BloodPressure',
       'weight': 'Weight',
       'body_fat': 'BodyFat',
+      'menstruation': 'MenstruationPeriod', // 🆕
     };
     return permissionMap[permissionId] || permissionId;
   }
@@ -788,6 +791,8 @@ export class HealthPermissionsService {
 
           if (HealthConnect.getGrantedPermissions && typeof HealthConnect.getGrantedPermissions === 'function') {
             const healthConnectGranted = await HealthConnect.getGrantedPermissions();
+            // Log only record types for brevity
+            if (__DEV__) console.log('📝 Health Connect permissions:', healthConnectGranted.map((p: any) => p.recordType || p));
 
             if (Array.isArray(healthConnectGranted) && healthConnectGranted.length > 0) {
               const grantedIds: string[] = [];
@@ -801,11 +806,15 @@ export class HealthPermissionsService {
                   'Steps': 'steps',
                   'HeartRate': 'heart_rate',
                   'SleepSession': 'sleep',
-                  'HeartRateVariabilityRmssd': 'hrv', // CORRETTO: deve corrispondere al tipo richiesto
-                  'HeartRateVariability': 'hrv', // Manteniamo anche il vecchio nome per retrocompatibilità
+                  'HeartRateVariabilityRmssd': 'hrv', // Standard
+                  'HeartRateVariabilityRmssdRecord': 'hrv', // With Record suffix
+                  'HeartRateVariability': 'hrv', // Generic/Old
+                  'HeartRateVariabilityRecord': 'hrv', // Generic/Old Record
                   'BloodPressure': 'blood_pressure',
                   'Weight': 'weight',
                   'BodyFat': 'body_fat',
+                  'MenstruationPeriod': 'menstruation', // Standard
+                  'MenstruationPeriodRecord': 'menstruation', // With Record suffix
                 };
 
                 const permissionId = idMapping[recordType] || recordType.toLowerCase();

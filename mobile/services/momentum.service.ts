@@ -17,7 +17,7 @@ export class MomentumService {
 
   /**
    * Calcola il Progresso basato su dati reali:
-   * - Giorni consecutivi di login (da daily_copilot_analyses)
+   * - Giorni di attività (presenza in health_data, aggiornata ad ogni apertura app)
    * - Obiettivi raggiunti (confrontando health_data con widget goals)
    * - Trend settimanale
    */
@@ -39,17 +39,17 @@ export class MomentumService {
       const startDateStr = startDate.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
-      // 1. Calcola giorni consecutivi di login (da daily_copilot_analyses)
-      const { data: copilotData, error: copilotError } = await supabase
-        .from('daily_copilot_analyses')
+      // 1. Calcola giorni di attività (usando health_data come proxy di apertura app)
+      const { data: activityData, error: activityError } = await supabase
+        .from('health_data')
         .select('date')
         .eq('user_id', userId)
         .gte('date', startDateStr)
         .lte('date', endDateStr)
         .order('date', { ascending: false });
 
-      if (copilotError) {
-        console.error('❌ Error fetching copilot data for progress:', copilotError);
+      if (activityError) {
+        console.error('❌ Error fetching activity data for progress:', activityError);
       }
 
       // 2. Calcola giorni con obiettivi raggiunti (da health_data e widget goals)
@@ -59,7 +59,10 @@ export class MomentumService {
       const meditationGoal = goals?.meditation ?? 30;
       const sleepGoal = goals?.sleep ?? 8;
 
-      const { data: healthData, error: healthError } = await supabase
+      // Usiamo gli stessi dati già caricati sopra per evitare doppie query
+      const healthData = activityData; // In realtà ci servono anche i valori, ricarichiamo per sicurezza o ottimizziamo dopo
+      
+      const { data: fullHealthData, error: healthError } = await supabase
         .from('health_data')
         .select('date, steps, hydration, mindfulness_minutes, sleep_hours')
         .eq('user_id', userId)
@@ -67,17 +70,17 @@ export class MomentumService {
         .lte('date', endDateStr);
 
       if (healthError) {
-        console.error('❌ Error fetching health data for progress:', healthError);
+        console.error('❌ Error fetching full health data for progress:', healthError);
       }
 
       // 3. Calcola metriche
-      const loginDays = new Set(copilotData?.map(d => d.date) || []);
+      const loginDays = new Set(activityData?.map(d => d.date) || []);
       const totalDays = days;
       const loginPercentage = (loginDays.size / totalDays) * 100;
 
       // Calcola giorni con obiettivi raggiunti
       const healthDataMap = new Map<string, any>();
-      healthData?.forEach(h => {
+      fullHealthData?.forEach(h => {
         healthDataMap.set(h.date, h);
       });
 
@@ -144,8 +147,8 @@ export class MomentumService {
         const previousStartDateStr = previousStartDate.toISOString().split('T')[0];
         const previousEndDateStr = startDate.toISOString().split('T')[0];
 
-        const { data: previousCopilotData } = await supabase
-          .from('daily_copilot_analyses')
+        const { data: previousActivityData } = await supabase
+          .from('health_data')
           .select('date')
           .eq('user_id', userId)
           .gte('date', previousStartDateStr)
@@ -158,7 +161,7 @@ export class MomentumService {
           .gte('date', previousStartDateStr)
           .lt('date', previousEndDateStr);
 
-        const previousLoginDays = new Set(previousCopilotData?.map(d => d.date) || []);
+        const previousLoginDays = new Set(previousActivityData?.map(d => d.date) || []);
         const previousLoginPercentage = (previousLoginDays.size / 7) * 100;
 
         const previousHealthDataMap = new Map<string, any>();

@@ -27,6 +27,7 @@ import Markdown from 'react-native-markdown-display';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SafeAreaWrapper } from './shared/SafeAreaWrapper';
+import { DailySnapshotScreen } from './DailySnapshotScreen';
 
 // Services
 import { DailyJournalService } from '../services/daily-journal.service';
@@ -825,21 +826,13 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
             </ScrollView >
 
             {/* Full Analysis Modal */}
-            < Modal visible={showFullAnalysis} animationType="fade" transparent >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-                        <View style={styles.modalHeader}>
-                            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('journal.completeAnalysis')}</Text>
-                            <TouchableOpacity onPress={() => setShowFullAnalysis(false)} style={styles.modalClose}>
-                                <FontAwesome name="times" size={18} color={colors.textSecondary} />
-                            </TouchableOpacity>
-                        </View>
-                        <ScrollView style={styles.modalBody}>
-                            {aiAnalysis && <Text style={[styles.modalText, { color: colors.text }]}>{aiAnalysis}</Text>}
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal >
+            {/* Daily Snapshot Page */}
+            <Modal visible={showFullAnalysis} animationType="slide" transparent={false} onRequestClose={() => setShowFullAnalysis(false)}>
+                <DailySnapshotScreen
+                    date={selectedDayKey}
+                    onClose={() => setShowFullAnalysis(false)}
+                />
+            </Modal>
 
             {/* Menu Modal */}
             < Modal visible={showMenu} transparent animationType="fade" onRequestClose={() => setShowMenu(false)}>

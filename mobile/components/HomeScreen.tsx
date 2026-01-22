@@ -973,7 +973,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     setIsLockDelayActive(true);
     lockTimeoutRef.current = setTimeout(() => {
       setIsLockDelayActive(false);
-    }, 20000); // 20 seconds delay
+    }, 30000); // 30 seconds delay per l'utente
   }, []);
 
   // 🆕 moodDescriptors con traduzioni
@@ -1256,28 +1256,27 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         if (currentUser?.id) {
           const { supabase } = await import('../lib/supabase');
           const { data: existingCheckin } = await supabase
-            .from('daily_copilot_analyses')
-            .select('mood, sleep_hours, sleep_quality')
+            .from('daily_checkins')
+            .select('mood_value, sleep_quality')
             .eq('user_id', currentUser.id)
             .eq('date', dk)
             .maybeSingle();
 
           if (existingCheckin) {
             // 🔥 FIX: Carica i valori dal database se esiste un check-in
-            if (existingCheckin.mood !== null && existingCheckin.mood !== undefined) {
-              setMoodValue(existingCheckin.mood as 1 | 2 | 3 | 4 | 5);
+            if (existingCheckin.mood_value !== null && existingCheckin.mood_value !== undefined) {
+              setMoodValue(existingCheckin.mood_value as 1 | 2 | 3 | 4 | 5);
               setHasExistingMoodCheckin(true);
             } else {
               setHasExistingMoodCheckin(false);
             }
 
-            // Carica ore di sonno dal database
-            if (existingCheckin.sleep_hours !== null && existingCheckin.sleep_hours !== undefined && existingCheckin.sleep_hours > 0) {
-              setSleepHours(existingCheckin.sleep_hours);
+            // Carica qualità sonno dal database
+            if (existingCheckin.sleep_quality !== null && existingCheckin.sleep_quality !== undefined && existingCheckin.sleep_quality > 0) {
               setHasExistingSleepCheckin(true);
 
-              // Calcola restLevel da sleep_hours (0-12 -> 1-5)
-              const calculatedRestLevel = Math.min(5, Math.max(1, Math.ceil((existingCheckin.sleep_hours / 12) * 5))) as 1 | 2 | 3 | 4 | 5;
+              // Calcola restLevel da sleep_quality (0-100 -> 1-5)
+              const calculatedRestLevel = Math.min(5, Math.max(1, Math.ceil(existingCheckin.sleep_quality / 20))) as 1 | 2 | 3 | 4 | 5;
               setRestLevel(calculatedRestLevel);
             } else {
               setHasExistingSleepCheckin(false);
@@ -1345,8 +1344,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
               // Controlla se esiste già un record per preservare i valori esistenti
               const { data: existing } = await supabase
-                .from('daily_copilot_analyses')
-                .select('id, sleep_hours, sleep_quality, overall_score, health_metrics, recommendations, summary')
+                .from('daily_checkins')
+                .select('id, sleep_quality')
                 .eq('user_id', currentUser.id)
                 .eq('date', dk)
                 .maybeSingle();
@@ -1354,27 +1353,15 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               const upsertData = {
                 user_id: currentUser.id,
                 date: dk,
-                mood: value,
+                mood_value: value,
                 updated_at: new Date().toISOString(),
                 ...(existing ? {
-                  sleep_hours: existing.sleep_hours,
                   sleep_quality: existing.sleep_quality,
-                  overall_score: existing.overall_score,
-                  health_metrics: existing.health_metrics,
-                  recommendations: existing.recommendations,
-                  summary: existing.summary,
-                } : {
-                  overall_score: 50,
-                  sleep_hours: 0,
-                  sleep_quality: 0,
-                  health_metrics: {},
-                  recommendations: [],
-                  summary: {},
-                }),
+                } : {}),
               };
 
               const { error: upsertError } = await supabase
-                .from('daily_copilot_analyses')
+                .from('daily_checkins')
                 .upsert(upsertData, {
                   onConflict: 'user_id,date',
                   ignoreDuplicates: false
@@ -1418,8 +1405,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
               // Controlla se esiste già un record per preservare i valori esistenti
               const { data: existing } = await supabase
-                .from('daily_copilot_analyses')
-                .select('id, mood, overall_score, health_metrics, recommendations, summary')
+                .from('daily_checkins')
+                .select('id, mood_value')
                 .eq('user_id', currentUser.id)
                 .eq('date', dk)
                 .maybeSingle();
@@ -1430,26 +1417,15 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               const upsertData = {
                 user_id: currentUser.id,
                 date: dk,
-                sleep_hours: hours,
                 sleep_quality: sleepQuality,
                 updated_at: new Date().toISOString(),
                 ...(existing ? {
-                  mood: existing.mood,
-                  overall_score: existing.overall_score,
-                  health_metrics: existing.health_metrics,
-                  recommendations: existing.recommendations,
-                  summary: existing.summary,
-                } : {
-                  mood: 3,
-                  overall_score: 50,
-                  health_metrics: {},
-                  recommendations: [],
-                  summary: {},
-                }),
+                  mood_value: existing.mood_value,
+                } : {}),
               };
 
               const { error: upsertError } = await supabase
-                .from('daily_copilot_analyses')
+                .from('daily_checkins')
                 .upsert(upsertData, {
                   onConflict: 'user_id,date',
                   ignoreDuplicates: false
@@ -1626,12 +1602,13 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
         // Recupera tutti i check-in degli ultimi 90 giorni per calcolare lo streak
+        // Basato sulla tabella health_data che viene aggiornata ogni volta che l'utente apre l'app
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - 90);
         const startDateStr = startDate.toISOString().split('T')[0];
 
         const { data: checkins, error } = await supabase
-          .from('daily_copilot_analyses')
+          .from('health_data')
           .select('date')
           .eq('user_id', currentUser.id)
           .gte('date', startDateStr)
@@ -2085,82 +2062,6 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     }
   };
 
-  const renderActivity = (activity: DailyActivity, index: number) => {
-    const animatedStyle = useAnimatedStyle(() => ({
-      opacity: withDelay(index * 80, withTiming(1, { duration: 320 })),
-      transform: [
-        { translateY: withDelay(index * 80, withTiming(0, { duration: 320 })) },
-      ],
-    }));
-
-    const colors = getCategoryColor(activity.category);
-    const completedCount = todaysActivities.filter(a => a.completed).length;
-    const totalCount = todaysActivities.length;
-
-    return (
-      <Animated.View key={activity.id} style={[styles.activityCard, animatedStyle, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-        <TouchableOpacity activeOpacity={0.85}>
-          <View style={styles.activityContent}>
-            <View style={styles.activityLeft}>
-              <View style={[styles.activityIcon, { backgroundColor: activity.completed ? '#10b981' : `${colors[0]}20` }]}>
-                <FontAwesome
-                  name={activity.completed ? 'check' : activity.icon as any}
-                  size={16}
-                  color={activity.completed ? '#ffffff' : colors[0]}
-                />
-              </View>
-              <View style={styles.activityText}>
-                <Text style={[styles.activityTitle, { color: themeColors.text }, activity.completed && styles.activityCompleted]}>
-                  {activity.title}
-                </Text>
-                <Text style={[styles.activityDescription, { color: themeColors.textSecondary }]}>{activity.description}</Text>
-                <Text style={[styles.activityTime, { color: themeColors.textTertiary }]}>{activity.time}</Text>
-              </View>
-            </View>
-            <View style={styles.activityRight}>
-              <View style={styles.statusContainer}>
-                {activity.completed ? (
-                  <View style={styles.completedBadge}>
-                    <FontAwesome name="check-circle" size={20} color="#10b981" />
-                  </View>
-                ) : activity.progress ? (
-                  <View style={styles.progressContainer}>
-                    <View style={styles.progressBar}>
-                      <View style={[styles.progressFill, { width: `${activity.progress}%`, backgroundColor: colors[0] }]} />
-                    </View>
-                    <Text style={styles.progressText}>{activity.progress}%</Text>
-                  </View>
-                ) : (
-                  <View style={styles.pendingBadge}>
-                    <FontAwesome name="clock-o" size={16} color="#6b7280" />
-                  </View>
-                )}
-              </View>
-
-              {/* Sync buttons */}
-              <View style={styles.syncButtons}>
-                {!activity.syncedToCalendar && permissions.calendar && (
-                  <TouchableOpacity
-                    style={styles.syncButton}
-                    onPress={() => syncActivityToCalendar(activity)}
-                    activeOpacity={0.7}
-                  >
-                    <FontAwesome name="calendar-plus-o" size={14} color="#6366f1" />
-                  </TouchableOpacity>
-                )}
-                {activity.syncedToCalendar && (
-                  <View style={styles.syncedBadge}>
-                    <FontAwesome name="calendar-check-o" size={14} color="#10b981" />
-                  </View>
-                )}
-              </View>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  };
-
   const getWidgetWidth = (size: 'small' | 'medium' | 'large') => {
     const screenWidth = width - 40; // 20px margin on each side
     const rowWidth = screenWidth - 16; // 8px gap on each side
@@ -2590,8 +2491,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
         {/* Check-In Giornaliero Section */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCheckIn.title')}</Text>
-          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCheckIn.subtitle')}</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]} allowFontScaling={false}>{t('home.dailyCheckIn.title')}</Text>
+          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]} allowFontScaling={false}>{t('home.dailyCheckIn.subtitle')}</Text>
         </View>
 
         <CopilotStep text="Check-in Giornalieri" order={4} name="dailyCheckin">
@@ -2613,9 +2514,9 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         </CopilotStep>
 
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.activities.title')}</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]} allowFontScaling={false}>{t('home.activities.title')}</Text>
           {todaysActivities.length > 0 && (
-            <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
+            <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]} allowFontScaling={false}>
               {t('home.calendar.ofCompleted', {
                 completed: todaysActivities.filter(a => a.completed).length,
                 total: todaysActivities.length
@@ -2678,8 +2579,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionHeaderContent}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCopilot.title')}</Text>
-                  <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCopilot.subtitle')}</Text>
+                  <Text style={[styles.sectionTitle, { color: themeColors.text }]} allowFontScaling={false}>{t('home.dailyCopilot.title')}</Text>
+                  <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]} allowFontScaling={false}>{t('home.dailyCopilot.subtitle')}</Text>
                 </View>
                 {/* History button rimosso su richiesta utente */}
               </View>
@@ -3229,101 +3130,81 @@ const ActivityItem: React.FC<{
         disabled={isCompleting}
       >
         <View style={styles.activityContent}>
-          {/* Left side with icon and text */}
-          <View style={styles.activityLeft}>
-            <View style={[styles.activityIconContainer, { backgroundColor: activity.completed ? `${colors[0]}15` : `${colors[0]}10` }]}>
-              {activity.completed ? (
-                <LinearGradient
-                  colors={[colors[0], colors[1]]}
-                  style={styles.activityIconGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <FontAwesome name="check" size={18} color="#ffffff" />
-                </LinearGradient>
-              ) : (
-                <FontAwesome
-                  name={activity.icon as any}
-                  size={18}
-                  color={colors[0]}
-                />
-              )}
+          {/* Header: Icon and Title */}
+          <View style={styles.activityHeader}>
+            <View style={[styles.activityIconContainer, { backgroundColor: `${colors[0]}15` }]}>
+              <MaterialCommunityIcons
+                name={activity.icon as any || 'leaf'}
+                size={22}
+                color={colors[0]}
+              />
             </View>
-            <View style={styles.activityText}>
-              <Text style={[
-                styles.activityTitle,
-                { color: activity.completed ? themeColors.textSecondary : themeColors.text },
-                activity.completed && styles.activityCompleted
+            <Text style={[
+              styles.activityTitle,
+              { color: themeColors.text },
+              activity.completed && { opacity: 0.6 }
+            ]}>
+              {activity.title}
+            </Text>
+          </View>
+
+          {/* Body: Description */}
+          <Text style={[
+            styles.activityDescription,
+            { color: themeColors.textSecondary },
+            activity.completed && { opacity: 0.6 }
+          ]}>
+            {activity.description}
+          </Text>
+
+          {/* Separator */}
+          <View style={[styles.activityDivider, { backgroundColor: themeColors.border }]} />
+
+          {/* Footer: Status and Meta */}
+          <View style={styles.activityFooter}>
+            <TouchableOpacity
+              style={styles.footerLeft}
+              onPress={(e) => { e.stopPropagation(); handleToggleComplete(); }}
+              disabled={isCompleting}
+              activeOpacity={0.7}
+            >
+              <View style={[
+                styles.checkbox,
+                { borderColor: activity.completed ? '#10b981' : themeColors.textTertiary },
+                activity.completed && { backgroundColor: '#10b981' }
               ]}>
-                {activity.title}
+                {activity.completed && (
+                  <MaterialCommunityIcons name="check" size={14} color="#fff" />
+                )}
+              </View>
+              <Text
+                style={[styles.statusText, { color: themeColors.textSecondary }]}
+              >
+                {activity.completed ? 'Completata' : 'Segna come completata'}
               </Text>
-              <Text style={[styles.activityDescription, { color: themeColors.textSecondary }]}>
-                {activity.description}
-              </Text>
-              <View style={styles.activityMeta}>
-                <FontAwesome name="clock-o" size={10} color={themeColors.textTertiary} />
-                <Text style={[styles.activityTime, { color: themeColors.textTertiary }]}>
+            </TouchableOpacity>
+
+            <View style={styles.footerRight}>
+              <View style={styles.timeContainer}>
+                <MaterialCommunityIcons name="clock-outline" size={16} color={themeColors.textTertiary} />
+                <Text
+                  style={[styles.timeText, { color: themeColors.textSecondary }]}
+                >
                   {activity.time}
                 </Text>
               </View>
-            </View>
-          </View>
 
-          {/* Right side with status and actions */}
-          <View style={styles.activityRight}>
-            {activity.completed ? (
-              <View style={styles.completedIndicator}>
-                <LinearGradient
-                  colors={['#10b981', '#34d399']}
-                  style={styles.completedBadgeGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <FontAwesome name="check-circle" size={20} color="#ffffff" />
-                </LinearGradient>
-              </View>
-            ) : activity.progress ? (
-              <View style={styles.progressContainer}>
-                <View style={[styles.progressBar, { backgroundColor: `${colors[0]}20` }]}>
-                  <Animated.View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${activity.progress}%`,
-                        backgroundColor: colors[0]
-                      }
-                    ]}
-                  />
-                </View>
-                <Text style={[styles.progressText, { color: colors[0] }]}>
-                  {activity.progress}%
-                </Text>
-              </View>
-            ) : (
-              <View style={[styles.pendingIndicator, { backgroundColor: `${themeColors.textTertiary}15` }]}>
-                <FontAwesome name="clock-o" size={16} color={themeColors.textTertiary} />
-              </View>
-            )}
-
-            {/* Sync button */}
-            <View style={styles.syncButtons}>
-              {!activity.syncedToCalendar && permissions.calendar && (
-                <TouchableOpacity
-                  style={[styles.syncButton, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    onSync(activity);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <FontAwesome name="calendar-plus-o" size={12} color={themeColors.primary} />
-                </TouchableOpacity>
-              )}
-              {activity.syncedToCalendar && (
-                <View style={[styles.syncedBadge, { backgroundColor: `${themeColors.primary}15` }]}>
-                  <FontAwesome name="calendar-check-o" size={12} color={themeColors.primary} />
-                </View>
-              )}
+              <TouchableOpacity
+                style={[styles.calendarSyncButton, { backgroundColor: `${themeColors.primary}10` }]}
+                onPress={(e) => { e.stopPropagation(); onSync(activity); }}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons
+                  name={activity.syncedToCalendar ? "calendar-check" : "calendar-plus"}
+                  size={18}
+                  color={themeColors.primary}
+                />
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -3631,32 +3512,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   activityCard: {
-    borderRadius: 20,
-    marginBottom: 0,
+    borderRadius: 28,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
+    overflow: 'visible',
     borderWidth: 1,
   },
   activityContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 18,
+    flexDirection: 'column',
+    padding: 16,
     backgroundColor: 'transparent',
   },
-  activityLeft: {
+  activityHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
     gap: 14,
+    marginBottom: 8,
   },
   activityIconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26, // Circular instead of rounded square
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -3667,40 +3547,71 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  activityText: {
-    flex: 1,
-    gap: 4,
-  },
+
   activityTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    lineHeight: 22,
-    marginBottom: 2,
+    fontWeight: '700',
+    flex: 1,
   },
   activityCompleted: {
-    textDecorationLine: 'line-through',
     opacity: 0.6,
   },
   activityDescription: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 4,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
   },
-  activityMeta: {
+  activityDivider: {
+    height: 1,
+    width: '100%',
+    marginBottom: 12,
+    opacity: 0.5,
+  },
+  activityFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  footerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  timeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 2,
   },
-  activityTime: {
-    fontSize: 11,
-    fontWeight: '500',
+  timeText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
-  activityRight: {
+  calendarSyncButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    marginLeft: 12,
+  },
+  activityRight: {
+    display: 'none',
   },
   statusContainer: {
     alignItems: 'center',

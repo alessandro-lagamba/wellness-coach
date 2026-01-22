@@ -495,6 +495,59 @@
         "hydration": "Idratazione",
         "hydrationDesc": "Basato sul numero di bicchieri d'acqua consumati rispetto all'obiettivo impostato."
       }
+    },
+    "dailySnapshot": {
+      "title": "Daily Snapshot",
+      "subtitle": "Analisi Completa",
+      "mood": "Umore",
+      "sleep": "Sonno",
+      "steps": "Passi",
+      "calories": "Calorie",
+      "hydration": "Idratazione",
+      "hrv": "HRV",
+      "restingHR": "Battito Riposo",
+      "mindfulness": "Mindfulness",
+      "skinHealth": "Salute Pelle",
+      "goal": "Obiettivo",
+      "valence": "Valenza",
+      "arousal": "Attivazione",
+      "noData": "Nessun dato",
+      "texture": "Texture",
+      "oiliness": "Oleosità",
+      "hydrationSkin": "Idratazione (Pelle)",
+      "redness": "Rossore",
+      "pigmentation": "Macchie"
+    },
+    "widgets": {
+      "steps": "Passi",
+      "meditation": "Meditazione",
+      "hydration": "Idratazione",
+      "sleep": "Sonno",
+      "hrv": "HRV",
+      "cycle": "Ciclo",
+      "calories": "Calorie",
+      "details": {
+        "distance": "Distanza",
+        "volume": "Volume",
+        "today": "Oggi",
+        "sessions": "Sessioni",
+        "streak": "Serie",
+        "calories": "Calorie",
+        "carbs": "Carb.",
+        "protein": "Prot.",
+        "fat": "Grassi"
+      },
+      "units": {
+        "glass_one": "Bicchiere",
+        "glass_other": "Bicchieri",
+        "bottle_one": "Bottiglia",
+        "bottle_other": "Bottiglie",
+        "liter_one": "Litro",
+        "liter_other": "Litri",
+        "min": "min",
+        "km": "km",
+        "day": "g"
+      }
     }
   },
   "analysis": {

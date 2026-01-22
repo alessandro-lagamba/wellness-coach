@@ -4,6 +4,7 @@ import React, { memo, useMemo, useState } from "react"
 import { View, Text, StyleSheet, Platform, useWindowDimensions, LayoutChangeEvent, Image, ImageSourcePropType } from "react-native"
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg"
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons"
+import { useTranslation } from "react-i18next"
 import { useTheme } from "../contexts/ThemeContext"
 
 type WidgetSize = "small" | "medium" | "large"
@@ -104,30 +105,34 @@ const MiniGaugeChart: React.FC<Props> = memo(({
     return "#6b7280"
   }
 
-  // Rimossa la funzione descriptor - non più necessaria
+  // Render icon - image or emoji
+  // 🔥 FIX: Added localization
+  const { t } = useTranslation();
 
   const detailChips = useMemo(() => {
     if (!additionalData) return []
     if ("steps" in additionalData) {
       const d = additionalData.steps
-      const chips = [{ icon: "walk", label: "Steps", value: `${d.current.toLocaleString()}` }]
-      if (size === "large" && d.km) chips.push({ icon: "map-marker-distance", label: "Distance", value: `${d.km.toFixed(1)} km` })
-      if (size === "large" && d.calories) chips.push({ icon: "fire", label: "Calories", value: `${d.calories}` })
+      const chips = [{ icon: "walk", label: t('home.widgets.steps'), value: `${d.current.toLocaleString()}` }]
+      if (size === "large" && d.km) chips.push({ icon: "map-marker-distance", label: t('home.widgets.details.distance'), value: `${d.km.toFixed(1)} ${t('home.widgets.units.km')}` })
+      if (size === "large" && d.calories) chips.push({ icon: "fire", label: t('home.widgets.details.calories'), value: `${d.calories}` })
       return chips
     }
     if ("hydration" in additionalData) {
       const d = additionalData.hydration
-      // 🔥 FIX: Usa unità preferita se disponibile, altrimenti "Glasses" come default
-      const unitLabel = d.unitLabel || "Glasses";
+      // 🔥 FIX: Usa unità preferita e gestisci plurale
+      const unitKey = d.preferredUnit || 'glass';
+      const unitLabel = t(`home.widgets.units.${unitKey}`, { count: Math.ceil(d.glasses), defaultValue: d.unitLabel || "Glasses" });
+
       const chips = [{ icon: "cup-water", label: unitLabel, value: `${d.glasses}/${d.goal}` }]
-      if (size === "large" && d.ml) chips.push({ icon: "water", label: "Volume", value: `${d.ml} ml` })
+      if (size === "large" && d.ml) chips.push({ icon: "water", label: t('home.widgets.details.volume'), value: `${d.ml} ml` })
       return chips
     }
     if ("meditation" in additionalData) {
       const d = additionalData.meditation
-      const chips = [{ icon: "meditation", label: "Today", value: `${d.minutes} min` }]
-      if (size === "large" && d.sessions) chips.push({ icon: "calendar-check", label: "Sessions", value: `${d.sessions}` })
-      if (size === "large" && d.streak) chips.push({ icon: "fire", label: "Streak", value: `${d.streak}d` })
+      const chips = [{ icon: "meditation", label: t('home.widgets.details.today'), value: `${d.minutes} ${t('home.widgets.units.min')}` }]
+      if (size === "large" && d.sessions) chips.push({ icon: "calendar-check", label: t('home.widgets.details.sessions'), value: `${d.sessions}` })
+      if (size === "large" && d.streak) chips.push({ icon: "fire", label: t('home.widgets.details.streak'), value: `${d.streak}${t('home.widgets.units.day')}` })
       return chips
     }
     if ("calories" in additionalData) {
@@ -135,19 +140,19 @@ const MiniGaugeChart: React.FC<Props> = memo(({
       // For Large size, show only current calories. For Medium, show current/goal.
       const valueDisplay = size === "large" ? `${d.current}` : `${d.current}/${d.goal}`
 
-      const chips = [{ icon: "fire", label: "Calories", value: valueDisplay }]
+      const chips = [{ icon: "fire", label: t('home.widgets.details.calories'), value: valueDisplay }]
       if (size === "large" || size === "medium") {
-        chips.push({ icon: "barley", label: "Carbs", value: `${d.carbs}g` })
-        chips.push({ icon: "food-drumstick", label: "Protein", value: `${d.protein}g` })
+        chips.push({ icon: "barley", label: t('home.widgets.details.carbs'), value: `${d.carbs}g` })
+        chips.push({ icon: "food-drumstick", label: t('home.widgets.details.protein'), value: `${d.protein}g` })
         // Only show fat if we have space (Large size usually fits 3 chips comfortably)
         if (size === "large") {
-          chips.push({ icon: "oil", label: "Fat", value: `${d.fat}g` })
+          chips.push({ icon: "oil", label: t('home.widgets.details.fat'), value: `${d.fat}g` })
         }
       }
       return chips
     }
     return []
-  }, [additionalData, size])
+  }, [additionalData, size, t])
 
   // Render icon - image or emoji
   const renderIcon = (emojiSize: number, imageStyle: any) => {

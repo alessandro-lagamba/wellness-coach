@@ -46,7 +46,9 @@ export class HealthDataService {
     bodyFat: false,
     hydration: false,
     mindfulness: false,
+    menstruation: false, // 🆕
   };
+  private needsHrvPermission: boolean = false; // 🔥 Flag to force HRV permission request
 
   private constructor() {
     this.config = {
@@ -75,6 +77,21 @@ export class HealthDataService {
 
       // Carica i permessi concessi se disponibili
       await this.refreshPermissions();
+
+      // 🔥 FIX: If HRV is missing but we have other permissions, auto-request HRV
+      if (this.needsHrvPermission && Platform.OS === 'android') {
+        console.log('🔥 [HRV FIX] Auto-requesting HRV permission...');
+        try {
+          const { HealthPermissionsService } = await import('./health-permissions.service');
+          // Request ALL permissions (unified) to ensure everything is granted at once
+          await this.requestPermissions();
+          // Refresh permissions again after request
+          await this.refreshPermissions();
+          this.needsHrvPermission = false;
+        } catch (err) {
+          console.error('❌ [HRV FIX] Failed to auto-request HRV:', err);
+        }
+      }
 
       if (Platform.OS === 'ios' && this.config.enableHealthKit) {
         return await this.initializeHealthKit();
@@ -119,6 +136,7 @@ export class HealthDataService {
           bodyFat: grantedPermissions.includes('body_fat'),
           hydration: false, // Not directly available
           mindfulness: false, // Not directly available
+          menstruation: grantedPermissions.includes('menstruation'), // 🆕
         };
 
         // 🔥 CRITICO: Verifica se c'è stato un cambiamento nei permessi
@@ -137,6 +155,18 @@ export class HealthDataService {
         this.permissions = newPermissions;
         // 🔥 PERF: Removed verbose logging
         // console.log('📋 Updated local permissions:', this.permissions);
+
+        // 🔥 FIX: Check if we have SOME permissions but HRV is missing
+        // This happens when user granted permissions BEFORE HRV was added
+        const hasSomePermissions = newPermissions.steps || newPermissions.heartRate || newPermissions.sleep;
+        const missingHrv = !newPermissions.hrv;
+
+        if (hasSomePermissions && missingHrv) {
+          console.log('⚠️ [HRV FIX] Detected missing HRV permission while other permissions exist');
+          console.log('⚠️ [HRV FIX] Will request HRV permission on next requestPermissions call');
+          // Store a flag to force HRV request
+          this.needsHrvPermission = true;
+        }
       } else if (Platform.OS === 'ios') {
         // 🔥 FIX: Per iOS, leggi i permessi da HealthPermissionsService
         const { HealthPermissionsService } = await import('./health-permissions.service');
@@ -155,7 +185,9 @@ export class HealthDataService {
           bodyFat: grantedPermissions.includes('body_fat'),
           hydration: false, // Not directly available
           mindfulness: false, // Not directly available
+          menstruation: false, // TODO: Add iOS support
         };
+
 
         this.permissions = newPermissions;
         // 🔥 PERF: Removed verbose logging
@@ -289,6 +321,7 @@ export class HealthDataService {
         bodyFat: false,
         hydration: true,
         mindfulness: true,
+        menstruation: true, // 🆕
       };
 
       // 🔥 FIX: Rimuoviamo console.log eccessivi
@@ -346,6 +379,7 @@ export class HealthDataService {
           bodyFat: results.bodyFatPercentage === 'granted',
           hydration: false, // Not directly available in HealthKit
           mindfulness: results.mindfulSession === 'granted',
+          menstruation: false, // TODO: Add iOS support
         };
 
         resolve(this.permissions);
@@ -361,7 +395,18 @@ export class HealthDataService {
     try {
       const { HealthPermissionsService } = await import('./health-permissions.service');
 
-      const permissionIds = ['steps', 'heart_rate', 'sleep', 'hrv', 'blood_pressure', 'weight', 'body_fat'];
+      // 🔥 UNIFIED: All health permissions requested together
+      // Uses internal IDs that get mapped to Health Connect types
+      const permissionIds = [
+        'steps',
+        'heart_rate',
+        'sleep',
+        'hrv',  // Maps to HeartRateVariabilityRmssd
+        'blood_pressure',
+        'weight',
+        'body_fat',
+        'menstruation'  // Maps to MenstruationPeriod
+      ];
 
       const result = await HealthPermissionsService.requestHealthPermissions(permissionIds);
 
@@ -382,6 +427,7 @@ export class HealthDataService {
         bodyFat: granted.includes('body_fat'),
         hydration: false, // Not directly available in Health Connect
         mindfulness: false, // Not directly available in Health Connect
+        menstruation: granted.includes('menstruation'), // 🆕
       };
 
       return this.permissions;
@@ -463,6 +509,21 @@ export class HealthDataService {
         isMock = true;
       } else {
         console.timeEnd('HealthConnect_Fetch');
+
+        // 🔥 NUOVO: Anche senza permessi, crea un record vuoto per oggi per tracciare lo streak (login)
+        const currentUser = await AuthService.getCurrentUser();
+        if (currentUser) {
+          const emptyHealthData: HealthData = {
+            steps: 0, distance: 0, calories: 0, activeMinutes: 0,
+            heartRate: 0, restingHeartRate: 0, hrv: 0,
+            sleepHours: 0, sleepQuality: 0, deepSleepMinutes: 0, remSleepMinutes: 0, lightSleepMinutes: 0,
+            hydration: 0, mindfulnessMinutes: 0
+          };
+          const syncService = HealthDataSyncService.getInstance();
+          await syncService.syncHealthData(currentUser.id, emptyHealthData);
+          if (__DEV__) console.log('💓 Activity heartbeat synced to Supabase (no health permissions)');
+        }
+
         console.timeEnd('HealthDataService_Sync_Total');
         // Nessuna sorgente disponibile
         return {
@@ -924,6 +985,43 @@ export class HealthDataService {
           }
         } catch (error) {
           console.error('❌ Error reading HRV:', error);
+        }
+      }
+
+      // Leggi Ciclo Mestruale se il permesso è stato concesso
+      if (this.permissions.menstruation && HealthConnect.readRecords) {
+        try {
+          // Cerca negli ultimi 45 giorni
+          const cycleStart = new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000);
+          const cycleOptions = {
+            timeRangeFilter: {
+              operator: 'BETWEEN',
+              startTime: cycleStart.toISOString(),
+              endTime: now.toISOString(),
+            },
+          };
+
+          const records = await readAllRecords('MenstruationPeriod', cycleOptions);
+
+          if (records && records.length > 0) {
+            // Ordina per data decrescente
+            const sorted = records.sort((a: any, b: any) => {
+              const dateA = new Date(a.startTime || a.time).getTime();
+              const dateB = new Date(b.startTime || b.time).getTime();
+              return dateB - dateA;
+            });
+
+            const latest = sorted[0];
+            const periodDate = latest.startTime || latest.time;
+
+            if (periodDate) {
+              const { menstrualCycleService } = await import('./menstrual-cycle.service');
+              await menstrualCycleService.setLastPeriodDate(periodDate);
+              if (__DEV__) console.log('✅ Updated last period date from Health Connect:', periodDate);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error reading MenstruationPeriod:', error);
         }
       }
 

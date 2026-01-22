@@ -45,6 +45,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
   const { colors: themeColors } = useTheme();
   const { t, language } = useTranslation();
   const [showScoreModal, setShowScoreModal] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // 🔥 PERF: Removed debug useEffect that logged on every state change
   // This was causing unnecessary logging and potential performance impact
@@ -303,28 +304,44 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
         end={{ x: 1, y: 1 }}
         style={[styles.card, { borderColor: themeColors.border }]}
       >
-        {/* Header - Redesigned Split Layout */}
-        <View style={styles.header}>
+        {/* Header - Always visible, acts as toggle */}
+        <TouchableOpacity
+          onPress={() => setIsExpanded(!isExpanded)}
+          activeOpacity={0.9}
+          style={[styles.header, { marginBottom: isExpanded ? 20 : 0 }]}
+        >
           {/* Left Column: Typography & Status */}
           <View style={styles.headerLeft}>
-            <Text style={[styles.headerTitleMain, { color: themeColors.text }]}>
+            <Text
+              allowFontScaling={false}
+              style={[styles.headerTitleMain, { color: themeColors.text }]}
+            >
               Il Punteggio
             </Text>
-            <Text style={[styles.headerSubtitleHighlight, { color: scoreColors[0] }]}>
+            <Text
+              allowFontScaling={false}
+              style={[styles.headerSubtitleHighlight, { color: scoreColors[0] }]}
+            >
               di Oggi
             </Text>
 
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              <Text
+                allowFontScaling={false}
+                style={{ color: themeColors.textSecondary, fontSize: 14, fontWeight: '500', marginRight: 4 }}
+              >
+                {isExpanded ? (language === 'it' ? 'Nascondi raccomandazioni' : 'Hide recommendations') : (language === 'it' ? 'Vedi raccomandazioni' : 'See recommendations')}
+              </Text>
+              <MaterialCommunityIcons
+                name={isExpanded ? "chevron-up" : "chevron-down"}
+                size={20}
+                color={themeColors.textSecondary}
+              />
+            </View>
           </View>
 
           {/* Right Column: Enhanced Gauge */}
-          <TouchableOpacity
-            onPress={() => {
-              console.log('Score circle pressed');
-              setShowScoreModal(true);
-            }}
-            activeOpacity={0.7}
-            style={styles.scoreTouchable}
-          >
+          <View style={styles.scoreTouchable}>
             <View style={styles.scoreContainer}>
               {/* Svg Circle Layer */}
               <View style={StyleSheet.absoluteFill}>
@@ -374,17 +391,96 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
 
               {/* Text Layer */}
               <View style={styles.scoreContentCentered}>
-                <Text style={[styles.scoreValue, { color: themeColors.text }]}>
+                <Text
+                  allowFontScaling={false}
+                  style={[styles.scoreValue, { color: themeColors.text }]}
+                >
                   {Math.round(copilotData.overallScore)}
                 </Text>
-                <Text style={[styles.scoreLabelSmall, { color: themeColors.textSecondary }]}>
+                <Text
+                  allowFontScaling={false}
+                  style={[styles.scoreLabelSmall, { color: themeColors.textSecondary }]}
+                >
                   PUNTI
                 </Text>
               </View>
             </View>
-          </TouchableOpacity>
-        </View>
+          </View>
+        </TouchableOpacity>
 
+        {/* Recommendations - Collapsible */}
+        {isExpanded && (
+          <View style={styles.recommendationsContainer}>
+            <Text
+              allowFontScaling={false}
+              style={[styles.recommendationsTitle, { color: themeColors.text }]}
+            >
+              {language === 'it' ? 'Raccomandazioni per oggi:' : 'Today\'s Recommendations:'}
+            </Text>
+
+            <View style={styles.recommendationsList}>
+              {recommendations.length === 0 ? (
+                <View style={[styles.emptyRecommendations, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
+                  <MaterialCommunityIcons name="information-outline" size={24} color={themeColors.textSecondary} />
+                  <Text style={[styles.emptyRecommendationsText, { color: themeColors.textSecondary }]}>
+                    {language === 'it' ? 'Nessuna raccomandazione disponibile al momento' : 'No recommendations available at the moment'}
+                  </Text>
+                </View>
+              ) : (
+                recommendations.map((rec, index) => (
+                  <TouchableOpacity
+                    key={rec.id}
+                    style={[
+                      styles.recommendationCardSimple,
+                      {
+                        borderLeftColor: getPriorityColor(rec.priority),
+                        backgroundColor: themeColors.surfaceElevated,
+                        borderColor: themeColors.border,
+                      }
+                    ]}
+                  >
+                    <Text
+                      style={[styles.recommendationActionSimple, { color: themeColors.text }]}
+                    >
+                      {rec.action}
+                    </Text>
+
+                    <Text
+                      style={[styles.recommendationReasonSimple, { color: themeColors.textSecondary }]}
+                    >
+                      {rec.reason}
+                    </Text>
+
+                    <View style={styles.recommendationFooterSimple}>
+                      <View style={styles.categoryBadgeSimple}>
+                        <MaterialCommunityIcons
+                          name={getCategoryIcon(rec.category) as any}
+                          size={14}
+                          color={getCategoryColor(rec.category)}
+                        />
+                        <Text
+                          style={[
+                            styles.categoryTextSimple,
+                            { color: getCategoryColor(rec.category) }
+                          ]}
+                        >
+                          {t(`popups.recommendation.categories.${rec.category}`)}
+                        </Text>
+                      </View>
+                      {rec.estimatedTime && (
+                        <Text
+                          style={[styles.timeTextSimple, { color: themeColors.textTertiary }]}
+                        >
+                          {rec.estimatedTime}
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          </View>
+        )}
       </LinearGradient>
 
       {/* Score Explanation Modal */}
@@ -959,23 +1055,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0f172a',
     marginBottom: 8,
-    lineHeight: 22,
   },
   recommendationReasonSimple: {
     fontSize: 14,
     color: '#6b7280',
     marginBottom: 12,
-    lineHeight: 20,
   },
   recommendationFooterSimple: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 8,
   },
   categoryBadgeSimple: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 1,
   },
   categoryTextSimple: {
     fontSize: 12,

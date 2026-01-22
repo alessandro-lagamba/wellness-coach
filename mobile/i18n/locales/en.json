@@ -485,6 +485,59 @@
         "hydration": "Hydration",
         "hydrationDesc": "Based on the number of glasses of water consumed compared to the goal of 8 glasses."
       }
+    },
+    "dailySnapshot": {
+      "title": "Daily Snapshot",
+      "subtitle": "Complete Analysis",
+      "mood": "Mood",
+      "sleep": "Sleep",
+      "steps": "Steps",
+      "calories": "Calories",
+      "hydration": "Hydration",
+      "hrv": "HRV",
+      "restingHR": "Resting HR",
+      "mindfulness": "Mindfulness",
+      "skinHealth": "Skin Health",
+      "goal": "Goal",
+      "valence": "Valence",
+      "arousal": "Arousal",
+      "noData": "No Data",
+      "texture": "Texture",
+      "oiliness": "Oiliness",
+      "hydrationSkin": "Hydration (Skin)",
+      "redness": "Redness",
+      "pigmentation": "Pigmentation"
+    },
+    "widgets": {
+      "steps": "Steps",
+      "meditation": "Meditation",
+      "hydration": "Hydration",
+      "sleep": "Sleep",
+      "hrv": "HRV",
+      "cycle": "Cycle",
+      "calories": "Calories",
+      "details": {
+        "distance": "Distance",
+        "volume": "Volume",
+        "today": "Today",
+        "sessions": "Sessions",
+        "streak": "Streak",
+        "calories": "Calories",
+        "carbs": "Carbs",
+        "protein": "Protein",
+        "fat": "Fat"
+      },
+      "units": {
+        "glass_one": "Glass",
+        "glass_other": "Glasses",
+        "bottle_one": "Bottle",
+        "bottle_other": "Bottles",
+        "liter_one": "Liter",
+        "liter_other": "Liters",
+        "min": "min",
+        "km": "km",
+        "day": "d"
+      }
     }
   },
   "analysis": {

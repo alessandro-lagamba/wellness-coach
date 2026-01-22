@@ -59,12 +59,14 @@ export function useHealthData(): UseHealthDataReturn {
         setIsInitialized(success);
 
         if (success) {
-          // Snapshot permessi e sync forzata se già concessi
+          // Snapshot permessi
           const currentPerms = healthService.getPermissions();
           setPermissions(currentPerms);
-          if (Object.values(currentPerms).some(Boolean)) {
-            await syncData();
-          }
+          
+          // 🔥 Forza SEMPRE una sync all'avvio, anche senza permessi
+          // Questo serve per creare il record giornaliero in health_data
+          // e mantenere lo streak (login giornaliero)
+          await syncData();
         }
       } catch (err) {
         console.error('Failed to initialize health service:', err);
