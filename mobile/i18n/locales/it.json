@@ -413,7 +413,7 @@
     },
     "weeklyProgress": {
       "title": "I tuoi progressi questa settimana",
-      "subtitle": "Un riepilogo dei tuoi miglioramenti",
+      "subtitle": "Scopri quanto sei migliorato",
       "today": "Oggi",
       "quality": "qualità",
       "current": "Attuale",
@@ -497,7 +497,7 @@
       }
     },
     "dailySnapshot": {
-      "title": "Daily Snapshot",
+      "title": "Riepilogo Giornaliero",
       "subtitle": "Analisi Completa",
       "mood": "Umore",
       "sleep": "Sonno",

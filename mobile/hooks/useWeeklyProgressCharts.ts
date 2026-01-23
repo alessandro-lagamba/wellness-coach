@@ -32,12 +32,15 @@ interface PlaceholderChartSamples {
     };
 }
 
+import { ImageSourcePropType } from 'react-native';
+
 export interface WeeklyChartVM {
     id: ChartType;
     enabled: boolean;
     canRender: boolean;
     title: string;
     icon: keyof typeof MaterialCommunityIcons.glyphMap;
+    iconImage?: ImageSourcePropType;
     color: string;
     valueText: string;
     unitText?: string;
@@ -50,18 +53,55 @@ export interface WeeklyChartVM {
 
 interface ChartMetadata {
     icon: keyof typeof MaterialCommunityIcons.glyphMap;
+    iconImage?: ImageSourcePropType;
     color: string;
     defaultMax: number;
     roundStep: number;
 }
 
 const CHART_METADATA: Record<ChartType, ChartMetadata> = {
-    steps: { icon: 'walk', color: '#10b981', defaultMax: 10000, roundStep: 5000 },
-    sleepHours: { icon: 'sleep', color: '#6366f1', defaultMax: 10, roundStep: 2 },
-    hrv: { icon: 'heart-pulse', color: '#ef4444', defaultMax: 100, roundStep: 25 },
-    heartRate: { icon: 'heart', color: '#ef4444', defaultMax: 100, roundStep: 25 },
-    hydration: { icon: 'cup-water', color: '#3b82f6', defaultMax: 8, roundStep: 2 },
-    meditation: { icon: 'meditation', color: '#8b5cf6', defaultMax: 30, roundStep: 15 },
+    steps: {
+        icon: 'walk',
+        iconImage: require('../assets/images/widgets_logos/steps.png'),
+        color: '#10b981',
+        defaultMax: 10000,
+        roundStep: 5000
+    },
+    sleepHours: {
+        icon: 'sleep',
+        iconImage: require('../assets/images/widgets_logos/sleep.png'),
+        color: '#6366f1',
+        defaultMax: 10,
+        roundStep: 2
+    },
+    hrv: {
+        icon: 'heart-pulse',
+        iconImage: require('../assets/images/widgets_logos/hrv.png'),
+        color: '#ef4444',
+        defaultMax: 100,
+        roundStep: 25
+    },
+    heartRate: {
+        icon: 'heart',
+        iconImage: require('../assets/images/widgets_logos/hrv.png'), // Heart rate uses same icon as HRV usually or similar
+        color: '#ef4444',
+        defaultMax: 100,
+        roundStep: 25
+    },
+    hydration: {
+        icon: 'cup-water',
+        iconImage: require('../assets/images/widgets_logos/hydration.png'),
+        color: '#3b82f6',
+        defaultMax: 8,
+        roundStep: 2
+    },
+    meditation: {
+        icon: 'meditation',
+        iconImage: require('../assets/images/widgets_logos/meditation.png'),
+        color: '#8b5cf6',
+        defaultMax: 30,
+        roundStep: 15
+    },
 };
 
 /**
@@ -164,6 +204,7 @@ export function useWeeklyProgressCharts({
                         canRender: shouldRender,
                         title: t('widgets.steps'),
                         icon: meta.icon,
+                        iconImage: meta.iconImage,
                         color: meta.color,
                         valueText: rawValue.toLocaleString(),
                         unitText: t('home.weeklyProgress.steps') || 'passi',
@@ -205,6 +246,7 @@ export function useWeeklyProgressCharts({
                         canRender: shouldRender,
                         title: t('widgets.sleep'),
                         icon: meta.icon,
+                        iconImage: meta.iconImage,
                         color: meta.color,
                         valueText: rawValue ? `${Math.round(rawValue * 10) / 10}` : '—',
                         unitText: rawValue ? 'h' : '',
@@ -238,6 +280,7 @@ export function useWeeklyProgressCharts({
                         canRender: shouldRender,
                         title: t('widgets.hrv'),
                         icon: meta.icon,
+                        iconImage: meta.iconImage,
                         color: meta.color,
                         valueText: rawValue >= 100 ? Math.round(rawValue).toString() : (Math.round(rawValue * 10) / 10).toString(),
                         unitText: 'ms',
@@ -272,6 +315,7 @@ export function useWeeklyProgressCharts({
                         canRender: shouldRender,
                         title: t('home.weeklyProgress.heartRate'),
                         icon: meta.icon,
+                        iconImage: meta.iconImage,
                         color: meta.color,
                         valueText: Math.round(rawValue).toString(),
                         unitText: t('home.bpm'),
@@ -311,6 +355,7 @@ export function useWeeklyProgressCharts({
                         canRender: true,
                         title: t('widgets.hydration'),
                         icon: meta.icon,
+                        iconImage: meta.iconImage,
                         color: meta.color,
                         valueText: todayHydrationGlasses.toString(),
                         unitText: t('home.glasses'),
@@ -337,6 +382,7 @@ export function useWeeklyProgressCharts({
                         canRender: true,
                         title: t('widgets.meditation'),
                         icon: meta.icon,
+                        iconImage: meta.iconImage,
                         color: meta.color,
                         valueText: todayMeditationMinutes.toString(),
                         unitText: t('home.minutes'),

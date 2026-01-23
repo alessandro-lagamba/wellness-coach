@@ -1,5 +1,4 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Image, ImageSourcePropType } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { MiniTrendChart } from './MiniTrendChart';
@@ -13,6 +12,7 @@ export interface WeeklyProgressCardProps {
     id: ChartType;
     title: string;
     icon: keyof typeof MaterialCommunityIcons.glyphMap;
+    iconImage?: ImageSourcePropType;
     color: string;
     valueText: string;
     unitText?: string;
@@ -24,12 +24,14 @@ export interface WeeklyProgressCardProps {
     editMode?: boolean;
     onDisable?: () => void;
     disabled?: boolean;
+    width?: number;
 }
 
 export const WeeklyProgressCard: React.FC<WeeklyProgressCardProps> = ({
     id,
     title,
     icon,
+    iconImage,
     color,
     valueText,
     unitText,
@@ -41,8 +43,10 @@ export const WeeklyProgressCard: React.FC<WeeklyProgressCardProps> = ({
     editMode = false,
     onDisable,
     disabled = false,
+    width: manualWidth,
 }) => {
     const { colors: themeColors } = useTheme();
+    const chartWidth = manualWidth || width - 104; // Updated default for new nested layout
 
     return (
         <TouchableOpacity
@@ -53,8 +57,12 @@ export const WeeklyProgressCard: React.FC<WeeklyProgressCardProps> = ({
             disabled={editMode || disabled}
         >
             <View style={styles.progressCardHeader}>
-                <MaterialCommunityIcons name={icon} size={24} color={color} />
-                <Text style={[styles.progressCardTitle, { color: themeColors.text }]}>
+                {iconImage ? (
+                    <Image source={iconImage} style={styles.headerIconImage} resizeMode="contain" />
+                ) : (
+                    <MaterialCommunityIcons name={icon} size={24} color={color} />
+                )}
+                <Text style={[styles.progressCardTitle, { color: themeColors.text }]} allowFontScaling={false}>
                     {title}
                 </Text>
                 {editMode && onDisable && (
@@ -72,7 +80,7 @@ export const WeeklyProgressCard: React.FC<WeeklyProgressCardProps> = ({
                     color={color}
                     maxValue={maxValue}
                     formatValue={formatValue}
-                    width={CHART_WIDTH}
+                    width={chartWidth}
                 />
             </View>
         </TouchableOpacity>
@@ -95,6 +103,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 12,
+    },
+    headerIconImage: {
+        width: 24,
+        height: 24,
     },
     progressCardTitle: {
         fontSize: 15,

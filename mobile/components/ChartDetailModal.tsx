@@ -8,6 +8,8 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
+  Image,
+  ImageSourcePropType,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -63,6 +65,18 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
       case 'hydration': return 'cup-water';
       case 'meditation': return 'meditation';
       default: return 'chart-line';
+    }
+  };
+
+  const getChartIconImage = (): ImageSourcePropType | null => {
+    switch (chartType) {
+      case 'steps': return require('../assets/images/widgets_logos/steps.png');
+      case 'sleepHours': return require('../assets/images/widgets_logos/sleep.png');
+      case 'hrv': return require('../assets/images/widgets_logos/hrv.png');
+      case 'heartRate': return require('../assets/images/widgets_logos/hrv.png');
+      case 'hydration': return require('../assets/images/widgets_logos/hydration.png');
+      case 'meditation': return require('../assets/images/widgets_logos/meditation.png');
+      default: return null;
     }
   };
 
@@ -133,10 +147,10 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
         case 'heartRate':
           setData(trendData.heartRate);
           break;
-      case 'hydration':
-        // I dati dal database sono in ml, convertiamo in bicchieri per il grafico
-        setData(trendData.hydration.map(v => Math.round(v / 250)));
-        break;
+        case 'hydration':
+          // Manteniamo in ml per coerenza con currentValue e precisione
+          setData(trendData.hydration);
+          break;
         case 'meditation':
           setData(trendData.meditation);
           break;
@@ -172,11 +186,15 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
           >
             <View style={styles.headerContent}>
               <View style={styles.headerLeft}>
-                <MaterialCommunityIcons name={getChartIcon() as any} size={28} color={color} />
+                {getChartIconImage() ? (
+                  <Image source={getChartIconImage()!} style={styles.headerIconImage} resizeMode="contain" />
+                ) : (
+                  <MaterialCommunityIcons name={getChartIcon() as any} size={28} color={color} />
+                )}
                 <View style={styles.headerText}>
-                  <Text style={[styles.title, { color: themeColors.text }]}>{getChartTitle()}</Text>
+                  <Text style={[styles.title, { color: themeColors.text }]} allowFontScaling={false}>{getChartTitle()}</Text>
                   {currentValue !== undefined && (
-                    <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+                    <Text style={[styles.subtitle, { color: themeColors.textSecondary }]} allowFontScaling={false}>
                       {getCurrentValueLabel()}
                     </Text>
                   )}
@@ -250,7 +268,7 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
                   <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
                     {t('home.weeklyProgress.average') || 'Media'}
                   </Text>
-                  <Text style={[styles.statValue, { color: themeColors.text }]}>
+                  <Text style={[styles.statValue, { color: themeColors.text }]} numberOfLines={1} adjustsFontSizeToFit>
                     {formatValue(data.reduce((a, b) => a + b, 0) / data.length)}
                   </Text>
                 </View>
@@ -258,7 +276,7 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
                   <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
                     {t('home.weeklyProgress.max') || 'Massimo'}
                   </Text>
-                  <Text style={[styles.statValue, { color: themeColors.text }]}>
+                  <Text style={[styles.statValue, { color: themeColors.text }]} numberOfLines={1} adjustsFontSizeToFit>
                     {formatValue(Math.max(...data))}
                   </Text>
                 </View>
@@ -266,7 +284,7 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
                   <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
                     {t('home.weeklyProgress.min') || 'Minimo'}
                   </Text>
-                  <Text style={[styles.statValue, { color: themeColors.text }]}>
+                  <Text style={[styles.statValue, { color: themeColors.text }]} numberOfLines={1} adjustsFontSizeToFit>
                     {formatValue(Math.min(...data.filter(v => v > 0)))}
                   </Text>
                 </View>
@@ -313,6 +331,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+  },
+  headerIconImage: {
+    width: 32,
+    height: 32,
   },
   headerText: {
     marginLeft: 12,
@@ -377,19 +399,24 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    padding: 16,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 16,
     borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 80,
   },
   statLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 8,
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   statValue: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
   },
 });
 

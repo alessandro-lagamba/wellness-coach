@@ -301,6 +301,27 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
         }
     }, [monthDays, selectedDayKey]);
 
+    // Auto-scroll to center selected day
+    useEffect(() => {
+        if (monthDays.length > 0 && selectedDayKey && monthStripScrollRef.current) {
+            const index = monthDays.indexOf(selectedDayKey);
+            if (index !== -1) {
+                // Item width (52) + gap (8) = 60
+                const ITEM_WIDTH = 60;
+                // Calculate offset to center the item
+                // offset = (index * ITEM_WIDTH) - (SCREEN_WIDTH / 2) + (ITEM_WIDTH / 2)
+                const offset = (index * ITEM_WIDTH) - (width / 2) + (ITEM_WIDTH / 2);
+
+                // Ensure we don't scroll past boundaries (though ScrollView handles this gracefully)
+                const targetOffset = Math.max(0, offset);
+
+                setTimeout(() => {
+                    monthStripScrollRef.current?.scrollTo({ x: targetOffset, animated: true });
+                }, 100); // Small delay to ensure layout is ready
+            }
+        }
+    }, [selectedDayKey, monthDays]);
+
     // ==================== HANDLERS ====================
 
 
@@ -577,7 +598,10 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                             const journalEntries = await DailyJournalDBService.listByDateRange(currentUser.id, firstDay, lastDay);
                             const journalMap: Record<string, { hasEntry: boolean; aiScore?: number }> = {};
                             journalEntries.forEach((entry: any) => {
-                                journalMap[entry.entry_date] = { hasEntry: true, aiScore: entry.ai_score || undefined };
+                                // Only mark if there is actual content
+                                if (entry.content && entry.content.trim().length > 0) {
+                                    journalMap[entry.entry_date] = { hasEntry: true, aiScore: entry.ai_score || undefined };
+                                }
                             });
                             setMonthJournalMap(prev => ({ ...prev, ...journalMap }));
                         } catch (e) {
@@ -585,26 +609,21 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                         }
                     }}
                     getDayMarker={(dateStr) => {
-                        const mood = monthMoodMap[dateStr];
-                        const rest = monthRestMap[dateStr];
                         const journal = monthJournalMap[dateStr];
 
                         let color = '#e2e8f0';
                         let hasMarker = false;
 
-                        if (journal?.hasEntry && journal.aiScore) {
-                            color = DailyJournalService.colorForScore(journal.aiScore);
+                        if (journal?.hasEntry) {
                             hasMarker = true;
-                        } else if (mood) {
-                            color = mood <= 2 ? '#ef4444' : mood === 3 ? '#f59e0b' : '#10b981';
-                            hasMarker = true;
-                        } else if (rest) {
-                            color = rest <= 2 ? '#f87171' : rest === 3 ? '#f59e0b' : '#34d399';
-                            hasMarker = true;
-                        } else if (journal?.hasEntry) {
-                            color = '#6366f1';
-                            hasMarker = true;
+                            if (journal.aiScore) {
+                                color = DailyJournalService.colorForScore(journal.aiScore);
+                            } else {
+                                // Entry exists but no AI score yet - use indigo to indicate "Journaled"
+                                color = '#6366f1';
+                            }
                         }
+
 
                         return { hasMarker, color };
                     }}
@@ -668,7 +687,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                                     <MaterialCommunityIcons name="chart-pie" size={24} color="#6366f1" />
                                 </View>
                                 <View>
-                                    <Text style={[styles.dailySnapshotTitle, { color: colors.text }]}>Daily Snapshot</Text>
+                                    <Text style={[styles.dailySnapshotTitle, { color: colors.text }]}>{t('home.dailySnapshot.title')}</Text>
                                     <Text style={styles.dailySnapshotSubtitle}>Analisi completa</Text>
                                 </View>
                             </View>
@@ -709,13 +728,9 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                                     </View>
                                     <Text style={styles.readOnlyTimeLabel}>18:42</Text>
                                 </View>
-                                <Text style={[styles.readOnlyJournalText, { color: colors.text }]} numberOfLines={4}>
+                                <Text style={[styles.readOnlyJournalText, { color: colors.text }]}>
                                     "{journalText}"
                                 </Text>
-                                <TouchableOpacity style={styles.readOnlyReadMore} onPress={() => { /* Expand or open modal logic if needed */ }}>
-                                    <Text style={styles.readMoreText}>LEGGI TUTTO</Text>
-                                    <MaterialCommunityIcons name="arrow-right" size={14} color="#9ca3af" />
-                                </TouchableOpacity>
                             </View>
                         ) : (
                             <View style={styles.emptyHistoryCard}>
@@ -723,54 +738,45 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                             </View>
                         )}
 
-                        {/* 3. Detailed AI Reflection (Bottom Card Style) */}
+                        {/* 3. Detailed AI Reflection (Editorial Style - Refined) */}
                         {journalText.trim().length > 0 && aiAnalysis && (
-                            <View style={styles.historicalReflectionCard}>
+                            <View style={[
+                                styles.historicalReflectionCard,
+                                {
+                                    backgroundColor: isDark ? '#1c1917' : '#fafaf9', // Stone 50/900
+                                    padding: 24,
+                                    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                    marginTop: -8 // Pull up slightly closer to journal card
+                                }
+                            ]}>
                                 <View style={styles.historicalReflectionHeader}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                        <View style={styles.sparkleIconBox}>
-                                            <MaterialCommunityIcons name="auto-fix" size={18} color="#6366f1" />
-                                        </View>
+                                        <MaterialCommunityIcons name="creation" size={24} color="#f59e0b" />
                                         <View>
-                                            <Text style={[styles.historicalReflectionTitle, { color: colors.text }]}>Riflessione AI</Text>
-                                            <Text style={styles.historicalDataPoints}>BASATO SU 3 DATA POINTS</Text>
+                                            <Text style={[styles.historicalReflectionTitle, { color: colors.text, fontSize: 16, fontStyle: 'italic' }]}>Riflessione</Text>
                                         </View>
                                     </View>
-                                    <View style={styles.sentimentBadge}>
-                                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981', marginRight: 4 }} />
-                                        <Text style={styles.sentimentBadgeText}>Positivo</Text>
-                                    </View>
+
+                                    {aiScore !== null && (
+                                        <View style={[
+                                            styles.sentimentBadge,
+                                            {
+                                                backgroundColor: DailyJournalService.colorForScore(aiScore),
+                                                borderColor: DailyJournalService.colorForScore(aiScore),
+                                                paddingHorizontal: 10,
+                                                paddingVertical: 6
+                                            }
+                                        ]}>
+                                            <Text style={[styles.sentimentBadgeText, { color: '#ffffff', fontSize: 11, fontWeight: '700' }]}>
+                                                {aiScore === 3 ? 'Positivo' : aiScore === 2 ? 'Neutrale' : 'Negativo'}
+                                            </Text>
+                                        </View>
+                                    )}
                                 </View>
 
-                                <Text style={[styles.historicalReflectionText, { color: colors.textSecondary }]}>
+                                <Text style={[styles.historicalReflectionText, { color: colors.textSecondary, marginBottom: 0, lineHeight: 24, fontSize: 15 }]}>
                                     {aiAnalysis}
                                 </Text>
-
-                                {/* Mock Stats Grid */}
-                                <View style={styles.historicalStatsGrid}>
-                                    <View style={[styles.historicalStatBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb' }]}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
-                                            <MaterialCommunityIcons name="run" size={14} color="#9ca3af" />
-                                            <Text style={styles.statBoxLabel}>ATTIVITÀ</Text>
-                                        </View>
-                                        <Text style={[styles.statBoxValue, { color: colors.text }]}>45 min</Text>
-                                        <View style={{ height: 4, backgroundColor: '#e5e7eb', borderRadius: 2, marginTop: 8, width: '100%' }}>
-                                            <View style={{ height: 4, backgroundColor: '#6366f1', borderRadius: 2, width: '70%' }} />
-                                        </View>
-                                    </View>
-                                    <View style={[styles.historicalStatBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb' }]}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
-                                            <MaterialCommunityIcons name="brain" size={14} color="#9ca3af" />
-                                            <Text style={styles.statBoxLabel}>CHIAREZZA</Text>
-                                        </View>
-                                        <Text style={[styles.statBoxValue, { color: colors.text }]}>Alta</Text>
-                                        <View style={{ flexDirection: 'row', gap: 2, marginTop: 8 }}>
-                                            <View style={{ flex: 1, height: 4, backgroundColor: '#6366f1', borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }} />
-                                            <View style={{ flex: 1, height: 4, backgroundColor: '#6366f1' }} />
-                                            <View style={{ flex: 1, height: 4, backgroundColor: '#6366f1', borderTopRightRadius: 2, borderBottomRightRadius: 2 }} />
-                                        </View>
-                                    </View>
-                                </View>
                             </View>
                         )}
                     </View>
@@ -1245,10 +1251,8 @@ const styles = StyleSheet.create({
         color: '#9ca3af',
     },
     readOnlyJournalText: {
-        fontSize: 18,
-        fontFamily: 'PlayfairDisplay_400Regular_Italic',
-        fontStyle: 'italic',
-        lineHeight: 28,
+        fontSize: 16,
+        lineHeight: 24,
         marginBottom: 16,
     },
     readOnlyReadMore: {
@@ -1336,27 +1340,7 @@ const styles = StyleSheet.create({
         lineHeight: 22,
         marginBottom: 20,
     },
-    historicalStatsGrid: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    historicalStatBox: {
-        flex: 1,
-        padding: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.03)',
-    },
-    statBoxLabel: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: '#9ca3af',
-        letterSpacing: 1,
-    },
-    statBoxValue: {
-        fontSize: 16,
-        fontWeight: '700',
-    },
+
     aiInsightContent: {},
     aiInsightSummary: {
         fontSize: 14,

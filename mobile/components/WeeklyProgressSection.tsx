@@ -102,6 +102,7 @@ export const WeeklyProgressSection: React.FC<WeeklyProgressSectionProps> = ({
             id={vm.id}
             title={vm.title}
             icon={vm.icon}
+            iconImage={vm.iconImage}
             color={vm.color}
             valueText={vm.valueText}
             unitText={vm.unitText}
@@ -117,52 +118,62 @@ export const WeeklyProgressSection: React.FC<WeeklyProgressSectionProps> = ({
     );
 
     return (
-        <>
-            {/* Section Header - Clickable Toggle */}
-            <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => setIsExpanded(!isExpanded)}
-                style={styles.sectionHeader}
+        <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]} allowFontScaling={false}>
+                {t('home.weeklyProgress.title') || 'I tuoi progressi questa settimana'}
+            </Text>
+
+            <View
+                style={[
+                    styles.mainContainer,
+                    {
+                        backgroundColor: themeColors.surface,
+                        borderColor: themeColors.border
+                    }
+                ]}
             >
-                <View style={styles.sectionHeaderContent}>
-                    <View style={{ flex: 1, marginRight: 12 }}>
-                        <Text style={[styles.sectionTitle, { color: themeColors.text }]} allowFontScaling={false}>
-                            {t('home.weeklyProgress.title') || 'I tuoi progressi questa settimana'}
-                        </Text>
-                        <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary, marginBottom: 4 }]} allowFontScaling={false}>
-                            {t('home.weeklyProgress.subtitle') || 'Un riepilogo dei tuoi miglioramenti'}
-                        </Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Text style={[styles.sectionSubtitle, { color: themeColors.primary, fontWeight: '600', marginRight: 4 }]} allowFontScaling={false}>
-                                {isExpanded ? 'Nascondi dettagli' : 'Mostra dettagli'}
-                            </Text>
+                <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => setIsExpanded(!isExpanded)}
+                    style={styles.headerTrigger}
+                >
+                    <View style={styles.subtitleRow}>
+                        <View style={[styles.iconContainer, { backgroundColor: themeColors.primary + '15' }]}>
                             <MaterialCommunityIcons
-                                name={isExpanded ? "chevron-up" : "chevron-down"}
-                                size={16}
+                                name="trending-up"
+                                size={22}
                                 color={themeColors.primary}
                             />
                         </View>
+                        <Text style={[styles.sectionSubtitle, { color: '#000000', fontSize: 16, flex: 1, fontWeight: '700' }]} allowFontScaling={false}>
+                            {t('home.weeklyProgress.subtitle') || 'Scopri quanto sei migliorato'}
+                        </Text>
+                        <MaterialCommunityIcons
+                            name={isExpanded ? "chevron-up" : "chevron-down"}
+                            size={24}
+                            color={themeColors.textTertiary}
+                        />
                     </View>
-                </View>
-            </TouchableOpacity>
+                </TouchableOpacity>
 
-            {/* Charts Container - Collapsible */}
-            {isExpanded && (
-                <View style={styles.weeklyProgressContainer}>
-                    {/* Show all charts: enabled first, then disabled */}
-                    {enabledChartsVM.map(renderChartCard)}
-                    {disabledChartsVM.map(renderChartCard)}
+                {/* Charts Container - Inside the main box */}
+                {isExpanded && (
+                    <View style={styles.chartsInside}>
+                        {/* Show all charts: enabled first, then disabled */}
+                        {enabledChartsVM.map(renderChartCard)}
+                        {disabledChartsVM.map(renderChartCard)}
 
-                    {enabledChartsVM.length === 0 && disabledChartsVM.length === 0 && (
-                        <View style={[styles.emptyCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-                            <Text style={[styles.emptyCardText, { color: themeColors.textSecondary }]}>
-                                {t('home.weeklyProgress.noCharts') || 'Nessun grafico disponibile.'}
-                            </Text>
-                        </View>
-                    )}
-                </View>
-            )}
-        </>
+                        {enabledChartsVM.length === 0 && disabledChartsVM.length === 0 && (
+                            <View style={[styles.emptyCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+                                <Text style={[styles.emptyCardText, { color: themeColors.textSecondary }]}>
+                                    {t('home.weeklyProgress.noCharts') || 'Nessun grafico disponibile.'}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                )}
+            </View>
+        </View>
     );
 };
 
@@ -172,63 +183,45 @@ const styles = StyleSheet.create({
         paddingTop: 24,
         paddingBottom: 8,
     },
-    sectionHeaderContent: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-    },
     sectionTitle: {
         fontSize: 20,
         fontWeight: '700',
-        marginBottom: 4,
+        marginBottom: 16,
+    },
+    mainContainer: {
+        borderRadius: 24,
+        borderWidth: 1,
+        width: '100%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+        overflow: 'hidden',
+    },
+    headerTrigger: {
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+    },
+    subtitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    iconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
     },
     sectionSubtitle: {
-        fontSize: 13,
-        lineHeight: 18,
+        fontSize: 15,
+        fontWeight: '500',
+        lineHeight: 22,
     },
-    headerActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    addChartButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        borderWidth: 1,
-        gap: 6,
-    },
-    addChartButtonText: {
-        color: '#ffffff',
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    exitEditButton: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 8,
-        backgroundColor: '#10b981',
-    },
-    exitEditButtonText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#ffffff',
-    },
-    editModeButton: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 8,
-        borderWidth: 1,
-    },
-    editModeButtonText: {
-        color: '#ffffff',
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    weeklyProgressContainer: {
-        paddingHorizontal: 20,
+    chartsInside: {
+        paddingHorizontal: 16,
         paddingBottom: 16,
     },
     emptyCard: {
@@ -239,31 +232,6 @@ const styles = StyleSheet.create({
     emptyCardText: {
         fontSize: 14,
         textAlign: 'center',
-    },
-    disabledChartsContainer: {
-        marginTop: 16,
-        paddingTop: 16,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(128, 128, 128, 0.2)',
-    },
-    disabledChartsTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        marginBottom: 12,
-    },
-    disabledChartCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        marginBottom: 8,
-        gap: 10,
-    },
-    disabledChartLabel: {
-        flex: 1,
-        fontSize: 14,
-        fontWeight: '500',
     },
 });
 

@@ -5,8 +5,8 @@ import { useTheme } from '../contexts/ThemeContext';
 
 const PADDING_TOP = 8;
 const PADDING_BOTTOM = 24; // Spazio per le etichette dei giorni
-const PADDING_LEFT = 32; // Spazio per i valori verticali
-const PADDING_RIGHT = 8;
+const PADDING_LEFT = 36; // Spazio per i valori verticali (aumentato)
+const PADDING_RIGHT = 16; // Spazio a destra per evitare che l'ultima etichetta tocchi il bordo (aumentato)
 
 interface MiniTrendChartProps {
   data: number[];

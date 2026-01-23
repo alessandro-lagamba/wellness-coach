@@ -8,7 +8,7 @@ const CHART_WIDTH = SCREEN_WIDTH - 80; // Larghezza con padding
 const CHART_HEIGHT = 300; // Altezza maggiore per il modal
 const PADDING_TOP = 20;
 const PADDING_BOTTOM = 40; // Spazio per le etichette dei giorni
-const PADDING_LEFT = 48; // Spazio per i valori verticali
+const PADDING_LEFT = 70; // Spazio per i valori verticali (aumentato per evitare troncamenti come 'bicchieri')
 const PADDING_RIGHT = 16;
 const CHART_AREA_WIDTH = CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT;
 const CHART_AREA_HEIGHT = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
@@ -132,23 +132,30 @@ export const TrendChart: React.FC<TrendChartProps> = ({
         })}
 
         {/* Valori della scala verticale */}
-        {scaleValues.map((value, index) => {
-          const normalizedValue = range > 0 ? ((value - min) / range) : 0.5;
-          const y = PADDING_TOP + CHART_AREA_HEIGHT * (1 - normalizedValue);
-          return (
-            <SvgText
-              key={`label-${index}`}
-              x={PADDING_LEFT - 8}
-              y={y + 5}
-              fontSize={11}
-              fill={colors.textSecondary}
-              textAnchor="end"
-              fontWeight="500"
-            >
-              {formatValue(value)}
-            </SvgText>
-          );
-        })}
+        {(() => {
+          const seenLabels = new Set<string>();
+          return scaleValues.map((value, index) => {
+            const label = formatValue(value);
+            if (seenLabels.has(label)) return null;
+            seenLabels.add(label);
+
+            const normalizedValue = range > 0 ? ((value - min) / range) : 0.5;
+            const y = PADDING_TOP + CHART_AREA_HEIGHT * (1 - normalizedValue);
+            return (
+              <SvgText
+                key={`label-${index}`}
+                x={PADDING_LEFT - 8}
+                y={y + 5}
+                fontSize={11}
+                fill={colors.textSecondary}
+                textAnchor="end"
+                fontWeight="500"
+              >
+                {label}
+              </SvgText>
+            );
+          });
+        })()}
 
         {/* Linea di base */}
         <Line
