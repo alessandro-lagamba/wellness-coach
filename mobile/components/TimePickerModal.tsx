@@ -41,10 +41,10 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
   };
 
   const locale = getUserLocale(language);
-  
+
   const formatTime = (date: Date): string => {
-    return new Intl.DateTimeFormat(locale, { 
-      hour: '2-digit', 
+    return new Intl.DateTimeFormat(locale, {
+      hour: '2-digit',
       minute: '2-digit',
       hour12: undefined, // Let system decide
     }).format(date);
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     flex: 1, // 🆕 Permetti al titolo di occupare lo spazio disponibile
   },
   closeButton: {
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   footer: {
     flexDirection: 'row',
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   confirmButton: {
     flex: 1,
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   },
   confirmText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     color: '#ffffff',
   },
 });

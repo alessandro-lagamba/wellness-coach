@@ -172,6 +172,8 @@ const MiniGaugeChart: React.FC<Props> = memo(({
           numberOfLines={1}
           ellipsizeMode="tail"
           allowFontScaling={false}
+          adjustsFontSizeToFit={true}
+          minimumFontScale={0.8}
         >
           {label}
         </Text>
@@ -219,6 +221,8 @@ const MiniGaugeChart: React.FC<Props> = memo(({
             numberOfLines={1}
             ellipsizeMode="tail"
             allowFontScaling={false}
+            adjustsFontSizeToFit={true}
+            minimumFontScale={0.8}
           >
             {label}
           </Text>
@@ -288,6 +292,8 @@ const MiniGaugeChart: React.FC<Props> = memo(({
               style={[styles.largeLabel, { color: colors.text }]}
               numberOfLines={1}
               allowFontScaling={false}
+              adjustsFontSizeToFit={true}
+              minimumFontScale={0.8}
             >
               {label}
             </Text>
@@ -381,11 +387,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   smallLabel: {
-    fontSize: 18,
+    fontSize: 15,
     fontFamily: 'Figtree_700Bold',
     // fontWeight: "800",
     color: "#111827",
-    letterSpacing: -0.1,
+    letterSpacing: -0.5,
   },
 
   smallGaugeWrapper: {

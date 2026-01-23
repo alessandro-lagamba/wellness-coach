@@ -390,9 +390,9 @@ export const EmotionSessionCard = memo(EmotionSessionCardComponent, (prevProps, 
 // Styles
 const styles = StyleSheet.create({
   container: {
+    padding: 16,
+    marginHorizontal: 12,
     borderRadius: 24,
-    padding: 28,
-    marginHorizontal: 16,
     marginVertical: 12,
     borderWidth: 1,
     overflow: 'hidden',
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   },
   stateLabel: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     letterSpacing: 3,
     marginBottom: 8,
   },
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontStyle: 'italic',
     textAlign: 'center',
-    fontFamily: Platform.select({ ios: 'Georgia', android: 'normal' }),
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }),
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   metricTile: {
     flex: 1,
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
   },
   metricHeader: {
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 9,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     letterSpacing: 1.5,
   },
   metricValueRow: {
@@ -526,11 +526,11 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     fontSize: 26,
-    fontWeight: '700', // Bold like GaugeChart
+    fontFamily: 'Figtree_700Bold',
   },
   metricMax: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
     marginLeft: 2,
   },
   progressTrack: {
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   },
   expandText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   expandedContent: {
     marginTop: 12,
@@ -564,11 +564,12 @@ const styles = StyleSheet.create({
   },
   expandedTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 4,
   },
   expandedText: {
-    fontSize: 12,
+    fontSize: 11,
     lineHeight: 18,
+    fontFamily: 'Figtree_500Medium',
   },
 });

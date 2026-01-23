@@ -60,18 +60,18 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
   const syncHealthDataAfterPermissions = useCallback(async () => {
     // 🔥 FIX: Verifica se il componente è ancora montato
     if (!isMountedRef.current) return;
-    
+
     try {
       const { HealthDataService } = await import('../services/health-data.service');
       const healthService = HealthDataService.getInstance();
-      
+
       // 🔥 CRITICO: PRIMA aggiorna i permessi nel servizio
       // Questo è fondamentale perché syncHealthData controlla this.permissions
       await healthService.refreshPermissions();
-      
+
       // 🔥 Aspetta un momento per assicurarci che i permessi siano effettivamente disponibili
       await new Promise(resolve => setTimeout(resolve, 300));
-      
+
       // 🔥 FIX: Forza sincronizzazione immediata bypassando cooldown
       const syncResult = await healthService.syncHealthData(true);
       if (!syncResult.success) {
@@ -94,34 +94,34 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
     // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
     if (!isMountedRef.current) return;
     setIsLoading(true);
-    
+
     try {
       const permissionsState = await HealthPermissionsService.getHealthPermissionsState();
-      
+
       // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
       if (!isMountedRef.current) return;
-      
+
       // Conta quanti permessi sono concessi
       const grantedCount = permissionsState.permissions.filter(p => p.granted).length;
-      
+
       // 🔥 NUOVO: Verifica se tutti i permessi richiesti sono concessi
       const requiredPermissions = permissionsState.permissions.filter(p => p.required);
       const allRequiredGranted = requiredPermissions.length > 0 && requiredPermissions.every(p => p.granted);
-      
+
       // Se ci sono nuovi permessi concessi rispetto a prima, mostra un messaggio di successo
       if (showSuccessIfChanged && grantedCount > previousGrantedCountRef.current && previousGrantedCountRef.current > 0) {
         const newlyGranted = permissionsState.permissions.filter(
           p => p.granted && !state?.permissions.find(sp => sp.id === p.id && sp.granted)
         );
-        
+
         if (newlyGranted.length > 0) {
           // 🔥 FIX: Verifica se il componente è ancora montato prima di mostrare Alert
           if (!isMountedRef.current) return;
-          
+
           // 🔥 Debounce haptic feedback (max una volta ogni 2 secondi)
           const now = Date.now();
           // haptic disabilitato
-          
+
           // Mostra solo un messaggio di successo, l'utente chiude manualmente
           Alert.alert(
             t('common.success'),
@@ -139,16 +139,16 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
           );
         }
       }
-      
+
       // 🔥 RIMOSSO: Auto-chiusura automatica che causava loop infiniti
       // L'utente deve chiudere manualmente il modal dopo aver concesso i permessi
-      
+
       // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
       if (!isMountedRef.current) return;
-      
+
       previousGrantedCountRef.current = grantedCount;
       setState(permissionsState);
-      
+
       // Seleziona automaticamente i permessi richiesti
       const requiredPermissionIds = requiredPermissions.map(p => p.id);
       setSelectedPermissions(requiredPermissionIds);
@@ -187,14 +187,14 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
   const handleRequestPermissions = async () => {
     // 🔥 FIX: Verifica se il componente è ancora montato
     if (!isMountedRef.current) return;
-    
+
     // 🔥 SEMPRE richiedi tutti i permessi richiesti, anche se l'utente non li ha selezionati manualmente
     const requiredPermissions = state?.permissions?.filter(p => p.required) || [];
     const requiredPermissionIds = requiredPermissions.map(p => p.id);
-    
+
     // Combina i permessi richiesti con quelli selezionati manualmente
     const permissionsToRequest = [...new Set([...requiredPermissionIds, ...selectedPermissions])];
-    
+
     if (permissionsToRequest.length === 0) {
       Alert.alert(t('modals.healthPermissions.warning'), t('modals.healthPermissions.selectAtLeastOne'));
       return;
@@ -203,40 +203,40 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
     // 🔥 FIX: Verifica se il componente è ancora montato prima di setState
     if (!isMountedRef.current) return;
     setIsRequesting(true);
-    
+
     try {
       // 🔥 FIX: Rimuoviamo console.log eccessivi
       const result = await HealthPermissionsService.requestHealthPermissions(permissionsToRequest);
-      
+
       // 🔥 FIX: Verifica se il componente è ancora montato prima di continuare
       if (!isMountedRef.current) return;
-      
+
       if (result.success) {
         await HealthPermissionsService.markSetupCompleted();
         // haptic disabilitato
-        
+
         // 🔥 Sincronizza i dati dopo aver ottenuto i permessi
         await syncHealthDataAfterPermissions();
-        
+
         // 🔥 FIX: Verifica se il componente è ancora montato prima di mostrare Alert
         if (!isMountedRef.current) return;
-        
+
         // Costruisci un messaggio più dettagliato se ci sono permessi negati
-        let message = t('modals.healthPermissions.successMessage', { 
-          granted: result.granted.length, 
-          denied: result.denied.length 
+        let message = t('modals.healthPermissions.successMessage', {
+          granted: result.granted.length,
+          denied: result.denied.length
         });
-        
+
         if (result.denied.length > 0) {
           // Mappa i permessi negati ai loro nomi
           const deniedNames = result.denied.map(id => {
             const permission = state.permissions.find(p => p.id === id);
             return permission ? permission.name : id;
           }).join(', ');
-          
+
           message += `\n\n${t('modals.healthPermissions.deniedPermissions')}: ${deniedNames}\n\n${t('modals.healthPermissions.deniedInstructions')}`;
         }
-        
+
         Alert.alert(
           result.denied.length > 0 ? t('modals.healthPermissions.partialSuccess') : t('common.success'),
           message,
@@ -263,15 +263,15 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
       } else {
         // 🔥 FIX: Verifica se il componente è ancora montato prima di mostrare Alert
         if (!isMountedRef.current) return;
-        
+
         Alert.alert(
           t('modals.healthPermissions.deniedTitle'),
           t('modals.healthPermissions.deniedMessage'),
           [
             { text: t('common.cancel'), style: 'cancel' },
-            { 
-              text: t('modals.healthPermissions.openSettings'), 
-              onPress: () => HealthPermissionsService.openHealthSettings() 
+            {
+              text: t('modals.healthPermissions.openSettings'),
+              onPress: () => HealthPermissionsService.openHealthSettings()
             },
           ]
         );
@@ -279,7 +279,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
     } catch (error) {
       // 🔥 FIX: Solo errori critici in console
       console.error('Error requesting permissions:', error);
-      
+
       // 🔥 FIX: Verifica se il componente è ancora montato prima di mostrare Alert
       if (isMountedRef.current) {
         Alert.alert(t('common.error'), t('modals.healthPermissions.errorMessage'));
@@ -338,10 +338,10 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
               {/* Header */}
               <View style={styles.header}>
                 <View style={styles.iconContainer}>
-                  <MaterialCommunityIcons 
-                    name="heart-pulse" 
-                    size={32} 
-                    color="#fff" 
+                  <MaterialCommunityIcons
+                    name="heart-pulse"
+                    size={32}
+                    color="#fff"
                   />
                 </View>
                 <Text style={styles.title}>{t('modals.healthPermissions.title')}</Text>
@@ -377,14 +377,14 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                   <View style={styles.permissionsContainer}>
                     {/* Platform Info */}
                     <View style={styles.platformInfo}>
-                      <MaterialCommunityIcons 
-                        name={Platform.OS === 'ios' ? 'apple' : 'android'} 
-                        size={20} 
-                        color="#fff" 
+                      <MaterialCommunityIcons
+                        name={Platform.OS === 'ios' ? 'apple' : 'android'}
+                        size={20}
+                        color="#fff"
                       />
                       <Text style={styles.platformText}>
-                        {t('modals.healthPermissions.platformAvailable', { 
-                          platform: Platform.OS === 'ios' ? 'HealthKit' : 'Google Fit' 
+                        {t('modals.healthPermissions.platformAvailable', {
+                          platform: Platform.OS === 'ios' ? 'HealthKit' : 'Google Fit'
                         })}
                       </Text>
                     </View>
@@ -468,20 +468,20 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                         try {
                           // 🔥 Ricarica lo stato dei permessi
                           await loadPermissionsState(true);
-                          
+
                           // 🔥 Se tutti i required sono concessi, forza refresh e sync immediata
                           const required = state?.permissions?.filter(p => p.required) || [];
                           const allRequiredGranted = required.length > 0 && required.every(p => p.granted);
                           if (allRequiredGranted) {
                             const { HealthDataService } = await import('../services/health-data.service');
                             const svc = HealthDataService.getInstance();
-                            
+
                             // 🔥 CRITICO: PRIMA aggiorna i permessi nel servizio
                             await svc.refreshPermissions();
-                            
+
                             // 🔥 Aspetta un momento per assicurarci che i permessi siano effettivamente disponibili
                             await new Promise(resolve => setTimeout(resolve, 500));
-                            
+
                             // 🔥 Forza sync immediata
                             const res = await svc.syncHealthData(true);
                             if (!res.success) {
@@ -500,10 +500,10 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                       style={styles.refreshButton}
                       disabled={isLoading}
                     >
-                      <MaterialCommunityIcons 
-                        name="refresh" 
-                        size={18} 
-                        color="#fff" 
+                      <MaterialCommunityIcons
+                        name="refresh"
+                        size={18}
+                        color="#fff"
                         style={{ marginRight: 8 }}
                       />
                       <Text style={styles.refreshButtonText}>
@@ -515,7 +515,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                     </Text>
                   </View>
                 )}
-                
+
                 <View style={styles.buttonContainer}>
                   <TouchableOpacity
                     onPress={handleSkip}
@@ -524,7 +524,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                   >
                     <Text style={styles.skipButtonText}>{t('modals.healthPermissions.skipForNow')}</Text>
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     onPress={handleRequestPermissions}
                     style={[styles.requestButton, { opacity: selectedPermissions.length === 0 ? 0.6 : 1 }]}
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Figtree_700Bold', // Was bold
     color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
   platformText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     marginLeft: 8,
   },
   categoryContainer: {
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
   categoryName: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Figtree_700Bold', // Was bold
   },
   permissionItem: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
   permissionName: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     marginBottom: 4,
   },
   permissionDescription: {
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   refreshButtonText: {
     color: '#fff',
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   refreshButtonHint: {
     color: 'rgba(255, 255, 255, 0.7)',
@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
   skipButtonText: {
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   requestButton: {
     flexDirection: 'row',
@@ -797,7 +797,7 @@ const styles = StyleSheet.create({
   requestButtonText: {
     color: '#60a5fa',
     fontSize: 15,
-    fontWeight: 'bold',
+    fontFamily: 'Figtree_700Bold', // Was bold
     marginLeft: 6,
     flexShrink: 1,
     textAlign: 'center',

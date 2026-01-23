@@ -308,7 +308,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
 
         <View style={styles.contentContainer}>
           {/* Metrics Grid */}
-          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]} allowFontScaling={false}>
             {language === 'it' ? 'METRICHE DETTAGLIATE' : 'DETAILED METRICS'}
           </Text>
 
@@ -358,7 +358,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
           {/* AI Observations / Issues Section */}
           {(fullAnalysisResult?.analysis_description || issueActions.length > 0 || (fullAnalysisResult?.notes && fullAnalysisResult.notes.length > 0)) && (
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>
                 {language === 'it' ? 'OSSERVAZIONI AI' : 'AI OBSERVATIONS'}
               </Text>
               <View style={[styles.observationsCard, { backgroundColor: isDark ? '#1f2937' : '#fff' }]}>
@@ -412,7 +412,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
           )}
 
           {/* Recommendations Section */}
-          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]} allowFontScaling={false}>
             {language === 'it' ? 'RACCOMANDAZIONI PERSONALIZZATE' : 'PERSONALIZED RECOMMENDATIONS'}
           </Text>
 
@@ -456,7 +456,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
               disabled={isSaving}
             >
               <MaterialCommunityIcons name="close" size={18} color={colors.text} />
-              <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
+              <Text style={[styles.secondaryButtonText, { color: colors.text }]} allowFontScaling={false}>
                 {language === 'it' ? 'Chiudi' : 'Close'}
               </Text>
             </TouchableOpacity>
@@ -476,7 +476,7 @@ export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
                   <>
-                    <Text style={styles.primaryButtonText}>
+                    <Text style={styles.primaryButtonText} allowFontScaling={false}>
                       {language === 'it' ? 'Salva analisi' : 'Save analysis'}
                     </Text>
                     <MaterialCommunityIcons name="check" size={20} color="#fff" />
@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     letterSpacing: 1,
     marginBottom: 12,
     opacity: 0.7,
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     flexShrink: 1,
   },
   primaryButton: {
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     flexShrink: 1,
   },
   observationsCard: {
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     lineHeight: 22,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   divider: {
     height: 1,

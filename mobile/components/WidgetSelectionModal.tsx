@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     flex: 1,
   },
   closeButton: {
@@ -289,6 +289,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
+    fontFamily: 'Figtree_500Medium',
     marginTop: 4,
   },
   content: {
@@ -325,11 +326,12 @@ const styles = StyleSheet.create({
   },
   widgetTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     marginBottom: 4,
   },
   widgetSubtitle: {
     fontSize: 13,
+    fontFamily: 'Figtree_500Medium',
   },
   emptyState: {
     flex: 1,
@@ -339,12 +341,13 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     marginTop: 16,
     textAlign: 'center',
   },
   emptyStateSubtext: {
     fontSize: 14,
+    fontFamily: 'Figtree_500Medium',
     marginTop: 8,
     textAlign: 'center',
   },

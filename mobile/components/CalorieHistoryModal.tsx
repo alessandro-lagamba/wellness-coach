@@ -235,7 +235,7 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
             <View style={styles.header}>
               <View style={styles.headerLeft}>
                 <MaterialCommunityIcons name="chart-line" size={28} color="#ef4444" />
-                <Text style={[styles.title, { color: colors.text }]}>
+                <Text style={[styles.title, { color: colors.text }]} allowFontScaling={false}>
                   {t('analysis.food.calorieHistory.title')}
                 </Text>
               </View>
@@ -257,7 +257,7 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
                   {/* Today's Status */}
                   <View style={[styles.statusCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                     <View style={styles.statusHeader}>
-                      <Text style={[styles.statusTitle, { color: colors.text }]}>
+                      <Text style={[styles.statusTitle, { color: colors.text }]} allowFontScaling={false}>
                         {t('analysis.food.calorieHistory.todayStatus')}
                       </Text>
                       <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -276,7 +276,7 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
                     </View>
 
                     <View style={styles.calorieDisplay}>
-                      <Text style={[styles.calorieValue, { color: colors.text }]}>
+                      <Text style={[styles.calorieValue, { color: colors.text }]} allowFontScaling={false}>
                         {Math.round(currentCalories)}
                       </Text>
                       <Text style={[styles.calorieTarget, { color: colors.textSecondary }]}>
@@ -294,7 +294,7 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
 
                   {/* Chart */}
                   <View style={styles.chartSection}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>
                       {t('analysis.food.calorieHistory.last14Days')}
                     </Text>
 
@@ -341,14 +341,14 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
 
                   {/* Weekly Stats */}
                   <View style={styles.statsSection}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>
                       {t('analysis.food.calorieHistory.weeklyStats')}
                     </Text>
 
                     <View style={styles.statsGrid}>
                       <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                         <MaterialCommunityIcons name="fire" size={24} color="#ef4444" />
-                        <Text style={[styles.statValue, { color: colors.text }]}>
+                        <Text style={[styles.statValue, { color: colors.text }]} allowFontScaling={false}>
                           {weeklyStats.avgCalories}
                         </Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -358,7 +358,7 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
 
                       <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                         <MaterialCommunityIcons name="check-circle" size={24} color="#10b981" />
-                        <Text style={[styles.statValue, { color: colors.text }]}>
+                        <Text style={[styles.statValue, { color: colors.text }]} allowFontScaling={false}>
                           {weeklyStats.daysOnTarget}/7
                         </Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -372,7 +372,7 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
                           size={24}
                           color={weeklyStats.trend >= 0 ? '#ef4444' : '#3b82f6'}
                         />
-                        <Text style={[styles.statValue, { color: colors.text }]}>
+                        <Text style={[styles.statValue, { color: colors.text }]} allowFontScaling={false}>
                           {weeklyStats.trend >= 0 ? '+' : ''}{weeklyStats.trend}
                         </Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -387,7 +387,7 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
                         <View style={[styles.balanceItem, { backgroundColor: '#3b82f6' + '15' }]}>
                           <MaterialCommunityIcons name="arrow-down-circle" size={20} color="#3b82f6" />
                           <Text style={[styles.balanceItemText, { color: colors.text }]}>
-                            <Text style={{ fontWeight: '700', color: '#3b82f6' }}>{weeklyStats.totalDeficit} kcal</Text>
+                            <Text style={{ fontFamily: 'Figtree_700Bold', color: '#3b82f6' }}>{weeklyStats.totalDeficit} kcal</Text>
                             {' '}{t('analysis.food.calorieHistory.weeklyDeficit')}
                           </Text>
                         </View>
@@ -397,7 +397,7 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
                         <View style={[styles.balanceItem, { backgroundColor: '#ef4444' + '15' }]}>
                           <MaterialCommunityIcons name="arrow-up-circle" size={20} color="#ef4444" />
                           <Text style={[styles.balanceItemText, { color: colors.text }]}>
-                            <Text style={{ fontWeight: '700', color: '#ef4444' }}>{weeklyStats.totalSurplus} kcal</Text>
+                            <Text style={{ fontFamily: 'Figtree_700Bold', color: '#ef4444' }}>{weeklyStats.totalSurplus} kcal</Text>
                             {' '}{t('analysis.food.calorieHistory.weeklySurplus')}
                           </Text>
                         </View>
@@ -439,7 +439,7 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
         <View style={styles.bmiModalOverlay}>
           <View style={[styles.bmiModalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.bmiHeader}>
-              <Text style={[styles.bmiTitle, { color: colors.text }]}>BMI Categories</Text>
+              <Text style={[styles.bmiTitle, { color: colors.text }]} allowFontScaling={false}>BMI Categories</Text>
               <TouchableOpacity onPress={() => setShowBMIInfo(false)}>
                 <MaterialCommunityIcons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   closeButton: {
     padding: 8,
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   dietBadge: {
     paddingHorizontal: 12,
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
   },
   dietBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   calorieDisplay: {
     flexDirection: 'row',
@@ -553,12 +553,12 @@ const styles = StyleSheet.create({
   },
   calorieValue: {
     fontSize: 48,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold', // Was 800
     letterSpacing: -2,
   },
   calorieTarget: {
     fontSize: 20,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     marginLeft: 8,
   },
   balanceRow: {
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   },
   balanceText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   chartSection: {
     paddingHorizontal: 20,
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 16,
   },
   chartContainer: {
@@ -599,6 +599,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     textAlign: 'center',
+    fontFamily: 'Figtree_500Medium',
   },
   legend: {
     flexDirection: 'row',
@@ -617,7 +618,7 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   statsSection: {
     paddingHorizontal: 20,
@@ -636,11 +637,11 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold', // Was 800
   },
   statLabel: {
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     textAlign: 'center',
   },
   balanceSummary: {
@@ -657,6 +658,7 @@ const styles = StyleSheet.create({
   balanceItemText: {
     fontSize: 14,
     flex: 1,
+    fontFamily: 'Figtree_500Medium',
   },
   tipsSection: {
     flexDirection: 'row',
@@ -671,12 +673,13 @@ const styles = StyleSheet.create({
   },
   tipsTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 4,
   },
   tipsText: {
     fontSize: 13,
     lineHeight: 18,
+    fontFamily: 'Figtree_500Medium',
   },
   infoButton: {
     width: 28,
@@ -711,7 +714,7 @@ const styles = StyleSheet.create({
   },
   bmiTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   bmiTable: {
     gap: 0,
@@ -727,7 +730,7 @@ const styles = StyleSheet.create({
   bmiCol: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
 });
 

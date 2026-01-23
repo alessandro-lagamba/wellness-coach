@@ -891,15 +891,206 @@
       "guides": {
         "smoothness": {
           "title": "Guida miglioramento texture",
-          "description": "Suggerimenti personalizzati per una pelle più uniforme."
+          "description": "Suggerimenti per una pelle più uniforme",
+          "morningHeader": "Mattino",
+          "eveningHeader": "Sera",
+          "sections": {
+            "routine": {
+              "title": "Routine Consigliata",
+              "good": {
+                "routine1": {
+                  "morning": "Mattino: Detergente delicato, Toner (centella asiatica / rice water / ginseng), Siero leggero riequilibrante (centella asiatica / niacinamide ≤5% / pantenolo), Crema idratante leggera, SPF 30–50",
+                  "evening": "Sera: Toner, Detergente delicato, Siero idratante (PHA - gluconolattone / lattobionico), Crema idratante"
+                },
+                "routine2": {
+                  "morning": "Mattino: Detergente delicato, Toner (centella asiatica / rice water), Siero idratante leggero (acido ialuronico / glicerina / centella asiatica), Crema idratante, SPF 30–50",
+                  "evening": "Sera: Detergente delicato, Siero con peptidi pro-texture (2–3× settimana) / centella asiatica, Crema nutriente leggera"
+                }
+              },
+              "medium": {
+                "routine1": {
+                  "morning": "Mattino: Detergente delicato, Siero riequilibrante (niacinamide ≤5% / pantenolo / centella asiatica), Crema idratante, SPF 30–50",
+                  "evening": "Sera: Detergente delicato, Siero idratante o lenitivo (no acidi), Crema idratante"
+                },
+                "routine2": {
+                  "morning": "Mattino: Detergente delicato, Siero idratante-lenitivo (ialuronico / pantenolo / centella asiatica), Crema idratante, SPF 30–50",
+                  "evening": "Sera: Detergente delicato, Siero con peptidi ristrutturanti (3× settimana), Crema nutriente"
+                }
+              },
+              "low": {
+                "routine1": {
+                  "morning": "Mattino: Detergente delicato, Siero idratante (ialuronico / glicerina), Crema idratante, SPF 50",
+                  "evening": "Sera: Detergente delicato, Retinoide delicato (2–3× settimana), Crema riparatrice"
+                },
+                "routine2": {
+                  "morning": "Mattino: Detergente delicato, Siero riequilibrante (niacinamide ≤5% / centella asiatica), Crema idratante, SPF 50",
+                  "evening": "Sera: Detergente delicato, Siero AHA medio-basso (2× settimana, lattico o mandelico) e siero con peptidi riparatori nei giorni restanti, Crema nutriente"
+                }
+              }
+            },
+            "avoid": {
+              "title": "Da Evitare",
+              "items": [
+                "Scrub meccanici",
+                "Esfoliazione quotidiana",
+                "Acidi + retinoidi nello stesso giorno",
+                "Centella asiatica negli stessi giorni di acidi o retinoidi",
+                "Routine \"aggressive\" se c'è rossore associato"
+              ]
+            }
+          }
         },
         "redness": {
-          "title": "Guida riduzione infiammazione",
-          "description": "Come calmare pelle irritata e sensibile."
+          "title": "Guida riduzione rossore",
+          "description": "Come calmare pelle irritata e sensibile",
+          "morningHeader": "Mattino",
+          "eveningHeader": "Sera",
+          "sections": {
+            "routine": {
+              "title": "Routine Consigliata",
+              "good": {
+                "routine1": {
+                  "morning": "Detergente delicato, Siero leggero riequilibrante (niacinamide ≤5% / pantenolo / peptidi), Crema idratante leggera, SPF 30–50",
+                  "evening": "Detergente delicato, Siero idratante (acido ialuronico), Crema idratante"
+                },
+                "routine2": {
+                  "morning": "Detergente delicato, Siero lenitivo (centella asiatica / aloe vera), Crema idratante, SPF 30–50",
+                  "evening": "Detergente delicato, Siero riparatore leggero (pantenolo / allantoina / peptidi), Crema nutriente leggera"
+                }
+              },
+              "medium": {
+                "routine1": {
+                  "morning": "Detergente ultra-delicato, Siero calmante anti-rossore (centella asiatica / madecassoside / beta-glucano), Crema riparatrice barriera (ceramidi, squalano), SPF 50 (minerale o ibrido)",
+                  "evening": "Detergente delicato, Siero barriera-riparatore (ceramidi / niacinamide ≤3%), Crema lenitiva intensa"
+                },
+                "routine2": {
+                  "morning": "Latte detergente delicato, Siero idratante-lenitivo (acido ialuronico / pantenolo), Crema calmante, SPF 50",
+                  "evening": "Detergente delicato, Siero riequilibrante (ectoina / beta-glucano), Crema nutriente calmante"
+                }
+              },
+              "low": {
+                "routine1": {
+                  "morning": "Detergente ultra-delicato (o solo acqua tiepida), Siero ultra-lenitivo (ectoina / pantenolo), Crema lenitiva, SPF 50 minerale (solo se ben tollerato)",
+                  "evening": "Detergente ultra-delicato, Siero riparatore minimal (beta-glucano / ceramidi), Crema riparatrice intensa"
+                },
+                "routine2": {
+                  "morning": "Detergente per pelle reattiva, Siero specifico anti-rossore (centella asiatica / neurocosmetici lenitivi), Crema calmante, SPF 50 minerale (solo se ben tollerato)",
+                  "evening": "Detergente delicato, Siero lenitivo concentrato (madecassoside / allantoina), Crema riparatrice"
+                }
+              }
+            },
+            "avoid": {
+              "title": "Da Evitare",
+              "items": [
+                "Alcol denaturato",
+                "Profumi / oli essenziali",
+                "Vitamina C ad alta concentrazione",
+                "AHA / BHA frequenti",
+                "Retinoidi senza controllo dermatologico"
+              ]
+            }
+          }
         },
         "oiliness": {
           "title": "Guida bilanciamento sebo",
-          "description": "Controlla l'eccesso di sebo con consigli mirati."
+          "description": "Controlla l'eccesso di sebo con consigli mirati.",
+          "morningHeader": "Mattino",
+          "eveningHeader": "Sera",
+          "sections": {
+            "routine": {
+              "title": "Routine Consigliata",
+              "good": {
+                "routine1": {
+                  "morning": "Detergente delicato (gel o latte leggero), Siero riequilibrante leggero (niacinamide ≤5% / pantenolo), Crema idratante leggera, SPF 30–50 (texture fluida)",
+                  "evening": "Detergente delicato, Siero idratante leggero (acido ialuronico), Crema leggera"
+                },
+                "routine2": {
+                  "morning": "Detergente delicato, Siero sebo-equilibrante soft (niacinamide ≤5% / zinco PCA a basso dosaggio), Crema idratante light, SPF 30–50",
+                  "evening": "Detergente delicato, Siero lenitivo (pantenolo / beta-glucano), Crema idratante"
+                }
+              },
+              "medium": {
+                "routine1": {
+                  "morning": "Detergente purificante delicato, Siero sebo-regolatore (niacinamide 4–5% / zinco PCA), Crema gel o oil-free, SPF 30–50 opacizzante",
+                  "evening": "Detergente delicato, Siero riequilibrante (ectoina / beta-glucano), Crema leggera"
+                },
+                "routine2": {
+                  "morning": "Detergente delicato, Siero idratante leggero (acido ialuronico), Crema light, SPF 30–50",
+                  "evening": "Detergente delicato, Siero con BHA leggero (acido salicilico ≤1% — 2× settimana) oppure siero lenitivo/idratante nei giorni restanti, Crema idratante leggera"
+                }
+              },
+              "low": {
+                "routine1": {
+                  "morning": "Detergente purificante (non aggressivo), Siero sebo-regolatore mirato (niacinamide 5% / zinco PCA), Crema oil-free o gel, SPF 50 opacizzante",
+                  "evening": "Detergente delicato, Siero riequilibrante (pantenolo / beta-glucano), Crema leggera"
+                },
+                "routine2": {
+                  "morning": "Detergente delicato, Siero idratante leggero (acido ialuronico), Crema light, SPF 50",
+                  "evening": "Detergente delicato, BHA (acido salicilico — 2–3× settimana), Crema gel lenitiva"
+                }
+              }
+            },
+            "avoid": {
+              "title": "Da Evitare",
+              "items": [
+                "Detergenti aggressivi o sgrassanti",
+                "Alcol denaturato",
+                "Over-cleansing",
+                "Solo prodotti “opacizzanti” senza idratazione"
+              ]
+            }
+          }
+        },
+        "hydration": {
+          "title": "Guida miglioramento idratazione",
+          "description": "Aumenta e mantiene l’idratazione superficiale con una routine semplice e costante.",
+          "morningHeader": "Mattino",
+          "eveningHeader": "Sera",
+          "sections": {
+            "routine": {
+              "title": "Routine Consigliata",
+              "good": {
+                "routine1": {
+                  "morning": "Detergente delicato (gel o latte, pH fisiologico), Siero idratante leggero (acido ialuronico a basso peso / glicerina / peptidi), Crema idratante leggera, SPF 30–50",
+                  "evening": "Detergente delicato, Siero idratante riequilibrante (pantenolo / betaina), Crema leggera"
+                },
+                "routine2": {
+                  "morning": "Detergente delicato, Siero acquoso protettivo (acido ialuronico / ectoina), Crema idratante, SPF 30–50",
+                  "evening": "Detergente delicato, Siero idratante semplice (ialuronico / beta-glucano), Crema idratante"
+                }
+              },
+              "medium": {
+                "routine1": {
+                  "morning": "Detergente delicato, Siero idratante multi-livello (acido ialuronico multi-peso / glicerina / betaina / peptidi), Crema idratante, SPF 30–50",
+                  "evening": "Detergente delicato, Siero idratante intensivo (ialuronico / beta-glucano), Crema idratante"
+                },
+                "routine2": {
+                  "morning": "Detergente delicato, Siero acquoso concentrato (acido ialuronico / pantenolo / peptidi), Crema sigillante leggera, SPF 30–50",
+                  "evening": "Detergente delicato, Siero riequilibrante (ectoina / beta-glucano), Crema idratante"
+                }
+              },
+              "low": {
+                "routine1": {
+                  "morning": "Detergente ultra-delicato, Siero idratante intensivo (ialuronico multi-peso / glicerina / pantenolo / collagene), Crema idratante (non troppo ricca), SPF 30–50",
+                  "evening": "Detergente delicato, Siero idratante concentrato (ialuronico / beta-glucano), Crema idratante"
+                },
+                "routine2": {
+                  "morning": "Detergente delicato, Siero acquoso ad alta concentrazione (ialuronico / betaina), Crema idratante, SPF 30–50",
+                  "evening": "Detergente delicato, Siero idratante + protettivo (ectoina / pantenolo / collagene), Crema idratante"
+                }
+              }
+            },
+            "avoid": {
+              "title": "Da Evitare",
+              "items": [
+                "Detergenti aggressivi o acqua troppo calda",
+                "Alcol denaturato e profumi intensi (se la pelle è sensibile)",
+                "Esfoliazione frequente quando l’idratazione è in calo",
+                "Saltare la crema dopo i sieri acquosi",
+                "Solo prodotti opacizzanti senza fase idratante"
+              ]
+            }
+          }
         },
         "confidence": {
           "title": "Suggerimenti qualità analisi",
@@ -1038,21 +1229,17 @@
       },
       "guideSections": {
         "products": {
-          "title": "🧴 Prodotti Consigliati"
+          "title": "Prodotti Consigliati"
         },
         "nutrition": {
-          "title": "🥗 Nutrizione e Dieta",
-          "antiInflammatory": "🥗 Alimenti Anti-Infiammatori",
-          "dietAdjustments": "🥗 Aggiustamenti Dietetici"
+          "title": "Alimenti consigliati",
+          "antiInflammatory": "Alimenti consigliati"
         },
         "routine": {
-          "title": "📋 Routine Giornaliera",
-          "soothing": "📋 Routine Lenitiva",
-          "oilControl": "📋 Routine Controllo Oleosità"
+          "title": "Routine Giornaliera"
         },
         "timing": {
-          "title": "⏰ Timing Ottimale",
-          "whenToApply": "⏰ Quando Applicare",
+          "title": "Timing Ottimale",
           "optimal": "⏰ Timing Ottimale"
         },
         "photoQuality": {

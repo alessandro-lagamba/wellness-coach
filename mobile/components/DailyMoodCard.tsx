@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     },
     lockedText: {
         fontSize: 13,
-        fontWeight: '500',
+        fontFamily: 'Figtree_500Medium',
     },
 
     // Rows
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     },
     rowLabel: {
         fontSize: 15,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold',
     },
 
     // Selector area

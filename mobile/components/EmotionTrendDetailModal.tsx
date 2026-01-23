@@ -460,12 +460,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   closeButton: {
     width: 36,
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
   },
   periodButtonText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   loadingContainer: {
     padding: 40,
@@ -545,14 +545,14 @@ const styles = StyleSheet.create({
   },
   metricFilterText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   statsSection: {
     marginTop: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 16,
   },
   metricSection: {
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   },
   metricTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   statsRow: {
     flexDirection: 'row',
@@ -587,12 +587,12 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
     marginBottom: 8,
   },
   statValue: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   trendIndicator: {
     flexDirection: 'row',
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
   },
   trendText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   summaryCard: {
     padding: 16,
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 12,
   },
   summaryRow: {
@@ -623,11 +623,11 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   summaryValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
 });
 

@@ -720,7 +720,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
                               style={[
                                 styles.optionText,
                                 { color: isSelected ? '#fff' : colors.textSecondary },
-                                isSelected && { fontWeight: '600' }
+                                isSelected && { fontFamily: 'Figtree_700Bold' }
                               ]}
                             >
                               {opt.label}
@@ -859,7 +859,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     letterSpacing: 1,
     marginBottom: 12,
     opacity: 0.7,
@@ -903,7 +903,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     flexShrink: 1,
   },
   primaryButton: {
@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     flexShrink: 1,
   },
   section: {
@@ -972,7 +972,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     lineHeight: 22,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   divider: {
     height: 1,
@@ -1022,7 +1022,7 @@ const styles = StyleSheet.create({
   },
   contextTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     letterSpacing: -0.3,
   },
   contextSubtitle: {
@@ -1038,7 +1038,7 @@ const styles = StyleSheet.create({
   },
   questionText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     letterSpacing: -0.2,
   },
   optionsRow: {
@@ -1057,7 +1057,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   saveContextButton: {
     height: 50,
@@ -1068,7 +1068,7 @@ const styles = StyleSheet.create({
   saveContextText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     letterSpacing: 0.3,
   },
 });

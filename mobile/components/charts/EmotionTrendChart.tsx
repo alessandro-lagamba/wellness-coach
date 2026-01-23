@@ -122,6 +122,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
                 y={y + 4}
                 textAnchor="end"
                 fontSize="10"
+                fontFamily="Figtree_500Medium"
                 fill={colors.textSecondary}
               >
                 {value}
@@ -144,6 +145,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
                 y={y}
                 textAnchor="middle"
                 fontSize="10"
+                fontFamily="Figtree_500Medium"
                 fill={colors.textSecondary}
               >
                 {point.date}
@@ -285,12 +287,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 2,
   },
   subtitle: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   chartContainer: {
     alignItems: 'center',
@@ -303,6 +305,6 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
 });

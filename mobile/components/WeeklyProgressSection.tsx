@@ -141,11 +141,11 @@ export const WeeklyProgressSection: React.FC<WeeklyProgressSectionProps> = ({
                         <View style={[styles.iconContainer, { backgroundColor: themeColors.primary + '15' }]}>
                             <MaterialCommunityIcons
                                 name="trending-up"
-                                size={22}
+                                size={20}
                                 color={themeColors.primary}
                             />
                         </View>
-                        <Text style={[styles.sectionSubtitle, { color: '#000000', fontSize: 16, flex: 1, fontWeight: '700' }]} allowFontScaling={false}>
+                        <Text style={[styles.sectionSubtitle, { color: '#000000', fontSize: 16, flex: 1, fontFamily: 'Figtree_700Bold' }]} allowFontScaling={false}>
                             {t('home.weeklyProgress.subtitle') || 'Scopri quanto sei migliorato'}
                         </Text>
                         <MaterialCommunityIcons
@@ -184,8 +184,8 @@ const styles = StyleSheet.create({
         paddingBottom: 8,
     },
     sectionTitle: {
-        fontSize: 20,
-        fontWeight: '700',
+        fontSize: 18,
+        fontFamily: 'Figtree_700Bold',
         marginBottom: 16,
     },
     mainContainer: {
@@ -208,8 +208,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     iconContainer: {
-        width: 40,
-        height: 40,
+        width: 30,
+        height: 30,
         borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
@@ -217,8 +217,8 @@ const styles = StyleSheet.create({
     },
     sectionSubtitle: {
         fontSize: 15,
-        fontWeight: '500',
         lineHeight: 22,
+        fontFamily: 'Figtree_500Medium',
     },
     chartsInside: {
         paddingHorizontal: 16,

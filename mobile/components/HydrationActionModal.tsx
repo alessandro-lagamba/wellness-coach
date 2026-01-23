@@ -38,7 +38,7 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
   const isDark = mode === 'dark';
   const slideAnim = useRef(new Animated.Value(height)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
-  
+
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(true);
 
@@ -96,7 +96,7 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
       statusBarTranslucent
     >
       <View style={styles.overlay}>
-        <Animated.View 
+        <Animated.View
           style={[
             styles.backdrop,
             { opacity: backdropAnim }
@@ -104,11 +104,11 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
-        
-        <Animated.View 
+
+        <Animated.View
           style={[
             styles.bottomSheet,
-            { 
+            {
               backgroundColor: colors.surface,
               transform: [{ translateY: slideAnim }],
             },
@@ -162,16 +162,16 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
               ]}
               onPress={() => { setIsAdding(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
             >
-              <MaterialCommunityIcons 
-                name="plus" 
-                size={18} 
-                color={isAdding ? '#fff' : colors.textSecondary} 
+              <MaterialCommunityIcons
+                name="plus"
+                size={18}
+                color={isAdding ? '#fff' : colors.textSecondary}
               />
               <Text style={[styles.toggleText, { color: isAdding ? '#fff' : colors.textSecondary }]}>
                 {t('home.hydrationActions.add') || 'Aggiungi'}
               </Text>
             </Pressable>
-            
+
             <Pressable
               style={({ pressed }) => [
                 styles.toggleBtn,
@@ -181,10 +181,10 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
               ]}
               onPress={() => { setIsAdding(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
             >
-              <MaterialCommunityIcons 
-                name="minus" 
-                size={18} 
-                color={!isAdding ? '#fff' : colors.textSecondary} 
+              <MaterialCommunityIcons
+                name="minus"
+                size={18}
+                color={!isAdding ? '#fff' : colors.textSecondary}
               />
               <Text style={[styles.toggleText, { color: !isAdding ? '#fff' : colors.textSecondary }]}>
                 {t('home.hydrationActions.remove') || 'Rimuovi'}
@@ -203,7 +203,7 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
                   key={num}
                   style={({ pressed }) => [
                     styles.quickBtn,
-                    { 
+                    {
                       backgroundColor: quantity === num ? '#0ea5e9' : colors.background,
                       borderColor: quantity === num ? '#0ea5e9' : colors.border,
                     },
@@ -211,13 +211,13 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
                   ]}
                   onPress={() => { setQuantity(num); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                 >
-                  <MaterialCommunityIcons 
-                    name="cup-water" 
-                    size={20} 
-                    color={quantity === num ? '#fff' : '#0ea5e9'} 
+                  <MaterialCommunityIcons
+                    name="cup-water"
+                    size={20}
+                    color={quantity === num ? '#fff' : '#0ea5e9'}
                   />
                   <Text style={[
-                    styles.quickBtnText, 
+                    styles.quickBtnText,
                     { color: quantity === num ? '#fff' : colors.text }
                   ]}>
                     {num}
@@ -242,13 +242,13 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
                 end={{ x: 1, y: 1 }}
                 style={styles.confirmGradient}
               >
-                <MaterialCommunityIcons 
-                  name={isAdding ? 'water-plus' : 'water-minus'} 
-                  size={22} 
-                  color="#fff" 
+                <MaterialCommunityIcons
+                  name={isAdding ? 'water-plus' : 'water-minus'}
+                  size={22}
+                  color="#fff"
                 />
                 <Text style={styles.confirmText}>
-                  {isAdding 
+                  {isAdding
                     ? `${t('home.hydrationActions.add') || 'Aggiungi'} ${quantity} ${quantity === 1 ? t('home.hydrationActions.glass') || 'bicchiere' : t('home.hydrationActions.glasses') || 'bicchieri'}`
                     : `${t('home.hydrationActions.remove') || 'Rimuovi'} ${quantity} ${quantity === 1 ? t('home.hydrationActions.glass') || 'bicchiere' : t('home.hydrationActions.glasses') || 'bicchieri'}`
                   }
@@ -321,11 +321,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 14,
+    fontFamily: 'Figtree_500Medium',
     marginTop: 2,
   },
   progressContainer: {
@@ -357,14 +358,14 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   quickSelectSection: {
     marginBottom: 20,
   },
   sectionLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     marginBottom: 10,
   },
   quickSelectRow: {
@@ -382,7 +383,7 @@ const styles = StyleSheet.create({
   },
   quickBtnText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   actions: {
     gap: 10,
@@ -400,7 +401,7 @@ const styles = StyleSheet.create({
   },
   confirmText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#fff',
   },
   cancelBtn: {
@@ -409,6 +410,6 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
 });

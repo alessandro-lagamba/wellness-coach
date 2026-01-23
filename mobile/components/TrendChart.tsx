@@ -149,7 +149,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                 fontSize={11}
                 fill={colors.textSecondary}
                 textAnchor="end"
-                fontWeight="500"
+                fontFamily="Figtree_500Medium"
               >
                 {label}
               </SvgText>
@@ -213,7 +213,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
               fontSize={10}
               fill={colors.textSecondary}
               textAnchor="middle"
-              fontWeight="500"
+              fontFamily="Figtree_500Medium"
             >
               {label}
             </SvgText>

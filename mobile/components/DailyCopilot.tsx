@@ -328,7 +328,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
               <Text
                 allowFontScaling={false}
-                style={{ color: themeColors.textSecondary, fontSize: 14, fontWeight: '500', marginRight: 4 }}
+                style={{ color: themeColors.textSecondary, fontSize: 14, fontFamily: 'Figtree_500Medium', marginRight: 4 }}
               >
                 {isExpanded ? (language === 'it' ? 'Nascondi raccomandazioni' : 'Hide recommendations') : (language === 'it' ? 'Vedi raccomandazioni' : 'See recommendations')}
               </Text>
@@ -428,7 +428,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                 </View>
               ) : (
                 recommendations.map((rec, index) => (
-                  <TouchableOpacity
+                  <View
                     key={rec.id}
                     style={[
                       styles.recommendationCardSimple,
@@ -475,7 +475,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                         </Text>
                       )}
                     </View>
-                  </TouchableOpacity>
+                  </View>
                 ))
               )}
             </View>
@@ -718,14 +718,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#0f172a',
     marginBottom: 2,
   },
   subtitle: {
     fontSize: 14,
     color: '#6b7280',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   scoreTouchable: {
     flexShrink: 0,
@@ -747,14 +747,14 @@ const styles = StyleSheet.create({
   },
   scoreValue: {
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold',
     includeFontPadding: false,
     textAlign: 'center',
     lineHeight: 28,
   },
   scoreLabelSmall: {
     fontSize: 9,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -765,12 +765,12 @@ const styles = StyleSheet.create({
   },
   headerTitleMain: {
     fontSize: 26,
-    fontWeight: '800', // Extra bold
+    fontFamily: 'Figtree_700Bold',
     lineHeight: 30,
   },
   headerSubtitleHighlight: {
     fontSize: 26,
-    fontWeight: '800', // Extra bold
+    fontFamily: 'Figtree_700Bold',
     lineHeight: 30,
     marginBottom: 8,
   },
@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     flex: 1,
   },
   modalCloseButton: {
@@ -859,6 +859,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 20,
     color: '#6b7280',
+    fontFamily: 'Figtree_500Medium',
   },
   scoreBreakdown: {
     paddingHorizontal: 8,
@@ -893,7 +894,7 @@ const styles = StyleSheet.create({
   },
   scoreBreakdownLabel: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 0,
     color: '#0f172a',
     flex: 1,
@@ -902,6 +903,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#64748b',
+    fontFamily: 'Figtree_500Medium',
   },
   scoreBreakdownBadge: {
     paddingHorizontal: 12,
@@ -1051,21 +1053,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   recommendationActionSimple: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: 'Figtree_700Bold',
     color: '#0f172a',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   recommendationReasonSimple: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6b7280',
-    marginBottom: 12,
+    marginBottom: 10,
+    fontFamily: 'Figtree_500Medium',
+    lineHeight: 18,
   },
   recommendationFooterSimple: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   categoryBadgeSimple: {
     flexDirection: 'row',
@@ -1074,14 +1078,14 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   categoryTextSimple: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontFamily: 'Figtree_600SemiBold',
     textTransform: 'capitalize',
   },
   timeTextSimple: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#9ca3af',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   viewDetailsButton: {
     borderRadius: 16,
@@ -1126,13 +1130,13 @@ const styles = StyleSheet.create({
   },
   compactTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#0f172a',
   },
   compactSubtitle: {
     fontSize: 12,
     color: '#6b7280',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   compactScoreBadge: {
     paddingHorizontal: 12,
@@ -1141,7 +1145,7 @@ const styles = StyleSheet.create({
   },
   compactScoreText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   compactContent: {
     marginBottom: 12,
@@ -1150,9 +1154,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     marginBottom: 12,
+    fontFamily: 'Figtree_500Medium',
   },
   compactFocusBold: {
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#0f172a',
   },
   compactRecommendations: {
@@ -1190,7 +1195,7 @@ const styles = StyleSheet.create({
   },
   compactRecAction: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     color: '#0f172a',
     marginBottom: 6,
     lineHeight: 18,
@@ -1200,6 +1205,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginBottom: 8,
     lineHeight: 16,
+    fontFamily: 'Figtree_500Medium',
   },
   compactRecFooter: {
     flexDirection: 'row',
@@ -1213,13 +1219,13 @@ const styles = StyleSheet.create({
   },
   compactCategoryText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     textTransform: 'capitalize',
   },
   compactTimeText: {
     fontSize: 11,
     color: '#9ca3af',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   compactViewDetails: {
     flexDirection: 'row',
@@ -1230,7 +1236,7 @@ const styles = StyleSheet.create({
   compactViewDetailsText: {
     fontSize: 14,
     color: '#8b5cf6',
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   headerScoreLabel: {
     fontSize: 18,

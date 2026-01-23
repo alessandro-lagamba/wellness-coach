@@ -64,14 +64,14 @@ export const ResultHero: React.FC<ResultHeroProps> = ({
             <View style={[styles.content, { bottom: Platform.OS === 'ios' ? 30 : 50 }]}>
                 <BlurView intensity={40} tint="dark" style={styles.scoreContainer}>
                     {score !== undefined ? (
-                        <Text style={styles.score}>{score}</Text>
+                        <Text style={styles.score} allowFontScaling={false}>{score}</Text>
                     ) : (
                         <View style={[styles.scorePlaceholder, { backgroundColor: color }]} />
                     )}
                 </BlurView>
                 <View style={styles.textContainer}>
-                    <Text style={styles.subtitle}>{subtitle}</Text>
-                    <Text style={styles.title}>{title}</Text>
+                    <Text style={styles.subtitle} allowFontScaling={false}>{subtitle}</Text>
+                    <Text style={styles.title} allowFontScaling={false}>{title}</Text>
                 </View>
             </View>
         </View>
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     },
     score: {
         fontSize: 36,
-        fontWeight: '800',
+        fontFamily: 'Figtree_700Bold', // Was 800
         color: '#fff',
         letterSpacing: -1,
     },
@@ -141,14 +141,14 @@ const styles = StyleSheet.create({
         marginBottom: 6,
         textTransform: 'uppercase',
         letterSpacing: 1.5,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
         textShadowColor: 'rgba(0,0,0,0.3)',
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 2,
     },
     title: {
         fontSize: 32,
-        fontWeight: '800',
+        fontFamily: 'Figtree_700Bold', // Was 800
         color: '#fff',
         letterSpacing: -0.5,
         textShadowColor: 'rgba(0,0,0,0.3)',

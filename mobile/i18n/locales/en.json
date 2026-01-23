@@ -881,15 +881,206 @@
       "guides": {
         "smoothness": {
           "title": "Texture Improvement Guide",
-          "description": "Personalized tips for smoother, more even skin."
+          "description": "Personalized tips for smoother, more even skin",
+          "morningHeader": "Morning",
+          "eveningHeader": "Evening",
+          "sections": {
+            "routine": {
+              "title": "Recommended Routine",
+              "good": {
+                "routine1": {
+                  "morning": "Morning: Gentle cleanser, Toner (centella asiatica / rice water / ginseng), Lightweight balancing serum (centella asiatica / niacinamide ≤5% / panthenol), Lightweight moisturizer, SPF 30–50",
+                  "evening": "Evening: Toner, Gentle cleanser, Hydrating serum (PHA - gluconolactone / lactobionic), Moisturizer"
+                },
+                "routine2": {
+                  "morning": "Morning: Gentle cleanser, Toner (centella asiatica / rice water), Lightweight hydrating serum (hyaluronic acid / glycerin / centella asiatica), Moisturizer, SPF 30–50",
+                  "evening": "Evening: Gentle cleanser, Serum with pro-texture peptides (2–3× week) / centella asiatica, Lightweight nourishing cream"
+                }
+              },
+              "medium": {
+                "routine1": {
+                  "morning": "Morning: Gentle cleanser, Balancing serum (niacinamide ≤5% / panthenol / centella asiatica), Moisturizer, SPF 30–50",
+                  "evening": "Evening: Gentle cleanser, Hydrating or soothing serum (no acids), Moisturizer"
+                },
+                "routine2": {
+                  "morning": "Morning: Gentle cleanser, Hydrating-soothing serum (hyaluronic / panthenol / centella asiatica), Moisturizer, SPF 30–50",
+                  "evening": "Evening: Gentle cleanser, Serum with restructuring peptides (3× week), Nourishing cream"
+                }
+              },
+              "low": {
+                "routine1": {
+                  "morning": "Morning: Gentle cleanser, Hydrating serum (hyaluronic / glycerin), Moisturizer, SPF 50",
+                  "evening": "Evening: Gentle cleanser, Gentle retinoid (2–3× week), Repairing cream"
+                },
+                "routine2": {
+                  "morning": "Morning: Gentle cleanser, Balancing serum (niacinamide ≤5% / centella asiatica), Moisturizer, SPF 50",
+                  "evening": "Evening: Gentle cleanser, Medium-low AHA serum (2× week, lactic or mandelic) and serum with repairing peptides on remaining days, Nourishing cream"
+                }
+              }
+            },
+            "avoid": {
+              "title": "To Avoid",
+              "items": [
+                "Mechanical scrubs",
+                "Daily exfoliation",
+                "Acids + retinoids on the same day",
+                "Centella asiatica on the same days as acids or retinoids",
+                "\"Aggressive\" routines if there is associated redness"
+              ]
+            }
+          }
         },
         "redness": {
-          "title": "Inflammation Reduction Guide",
-          "description": "Learn how to calm irritated and sensitive skin."
+          "title": "Redness Reduction Guide",
+          "description": "How to calm irritated and sensitive skin",
+          "morningHeader": "Morning",
+          "eveningHeader": "Evening",
+          "sections": {
+            "routine": {
+              "title": "Recommended Routine",
+              "good": {
+                "routine1": {
+                  "morning": "Gentle cleanser, Lightweight balancing serum (niacinamide ≤5% / panthenol / peptides), Lightweight moisturizer, SPF 30–50",
+                  "evening": "Gentle cleanser, Hydrating serum (hyaluronic acid), Moisturizer"
+                },
+                "routine2": {
+                  "morning": "Gentle cleanser, Soothing serum (centella asiatica / aloe vera), Moisturizer, SPF 30–50",
+                  "evening": "Gentle cleanser, Lightweight repairing serum (panthenol / allantoin / peptides), Lightweight nourishing cream"
+                }
+              },
+              "medium": {
+                "routine1": {
+                  "morning": "Ultra-gentle cleanser, Anti-redness calming serum (centella asiatica / madecassoside / beta-glucan), Barrier repair cream (ceramides, squalane), SPF 50 (mineral or hybrid)",
+                  "evening": "Gentle cleanser, Barrier-repairing serum (ceramides / niacinamide ≤3%), Intense soothing cream"
+                },
+                "routine2": {
+                  "morning": "Gentle cleansing milk, Hydrating-soothing serum (hyaluronic acid / panthenol), Calming cream, SPF 50",
+                  "evening": "Gentle cleanser, Balancing serum (ectoin / beta-glucan), Calming nourishing cream"
+                }
+              },
+              "low": {
+                "routine1": {
+                  "morning": "Ultra-gentle cleanser (or lukewarm water only), Ultra-soothing serum (ectoin / panthenol), Soothing cream, Mineral SPF 50 (only if well tolerated)",
+                  "evening": "Ultra-gentle cleanser, Minimal repairing serum (beta-glucan / ceramides), Intense repairing cream"
+                },
+                "routine2": {
+                  "morning": "Reactive skin cleanser, Specific anti-redness serum (centella asiatica / soothing neurocosmetics), Calming cream, Mineral SPF 50 (only if well tolerated)",
+                  "evening": "Gentle cleanser, Concentrated soothing serum (madecassoside / allantoin), Repairing cream"
+                }
+              }
+            },
+            "avoid": {
+              "title": "To Avoid",
+              "items": [
+                "Denatured alcohol",
+                "Fragrances / essential oils",
+                "High concentration Vitamin C",
+                "Frequent AHA / BHA",
+                "Retinoids without dermatological control"
+              ]
+            }
+          }
         },
         "oiliness": {
           "title": "Sebum Balance Guide",
-          "description": "Control excess oil production with expert tips."
+          "description": "Control excess oil production with expert tips.",
+          "morningHeader": "Morning",
+          "eveningHeader": "Evening",
+          "sections": {
+            "routine": {
+              "title": "Recommended Routine",
+              "good": {
+                "routine1": {
+                  "morning": "Gentle cleanser (gel or light cleansing milk), Lightweight balancing serum (niacinamide ≤5% / panthenol), Lightweight moisturizer, SPF 30–50 (fluid texture)",
+                  "evening": "Gentle cleanser, Lightweight hydrating serum (hyaluronic acid), Lightweight moisturizer"
+                },
+                "routine2": {
+                  "morning": "Gentle cleanser, Soft sebum-balancing serum (niacinamide ≤5% / low-dose zinc PCA), Lightweight moisturizer, SPF 30–50",
+                  "evening": "Gentle cleanser, Soothing serum (panthenol / beta-glucan), Moisturizer"
+                }
+              },
+              "medium": {
+                "routine1": {
+                  "morning": "Gentle purifying cleanser, Sebum-regulating serum (niacinamide 4–5% / zinc PCA), Gel or oil-free moisturizer, SPF 30–50 mattifying",
+                  "evening": "Gentle cleanser, Balancing serum (ectoin / beta-glucan), Lightweight moisturizer"
+                },
+                "routine2": {
+                  "morning": "Gentle cleanser, Lightweight hydrating serum (hyaluronic acid), Lightweight moisturizer, SPF 30–50",
+                  "evening": "Gentle cleanser, Light BHA serum (salicylic acid ≤1% — 2× week) or soothing/hydrating serum on remaining days, Lightweight moisturizer"
+                }
+              },
+              "low": {
+                "routine1": {
+                  "morning": "Purifying cleanser (non-stripping), Targeted sebum-regulating serum (niacinamide 5% / zinc PCA), Oil-free or gel moisturizer, SPF 50 mattifying",
+                  "evening": "Gentle cleanser, Balancing serum (panthenol / beta-glucan), Lightweight moisturizer"
+                },
+                "routine2": {
+                  "morning": "Gentle cleanser, Lightweight hydrating serum (hyaluronic acid), Lightweight moisturizer, SPF 50",
+                  "evening": "Gentle cleanser, BHA (salicylic acid — 2–3× week), Soothing gel moisturizer"
+                }
+              }
+            },
+            "avoid": {
+              "title": "To Avoid",
+              "items": [
+                "Harsh or stripping cleansers",
+                "Denatured alcohol",
+                "Over-cleansing",
+                "Only “mattifying” products without hydration"
+              ]
+            }
+          }
+        },
+        "hydration": {
+          "title": "Hydration Improvement Guide",
+          "description": "Boost and maintain surface hydration with a simple, consistent routine.",
+          "morningHeader": "Morning",
+          "eveningHeader": "Evening",
+          "sections": {
+            "routine": {
+              "title": "Recommended Routine",
+              "good": {
+                "routine1": {
+                  "morning": "Gentle cleanser (gel or cleansing milk, physiological pH), Lightweight hydrating serum (low-molecular hyaluronic acid / glycerin / peptides), Lightweight moisturizer, SPF 30–50",
+                  "evening": "Gentle cleanser, Balancing hydrating serum (panthenol / betaine), Lightweight moisturizer"
+                },
+                "routine2": {
+                  "morning": "Gentle cleanser, Watery protective serum (hyaluronic acid / ectoin), Moisturizer, SPF 30–50",
+                  "evening": "Gentle cleanser, Simple hydrating serum (hyaluronic acid / beta-glucan), Moisturizer"
+                }
+              },
+              "medium": {
+                "routine1": {
+                  "morning": "Gentle cleanser, Multi-level hydrating serum (multi-weight hyaluronic acid / glycerin / betaine / peptides), Moisturizer, SPF 30–50",
+                  "evening": "Gentle cleanser, Intensive hydrating serum (hyaluronic acid / beta-glucan), Moisturizer"
+                },
+                "routine2": {
+                  "morning": "Gentle cleanser, Concentrated watery serum (hyaluronic acid / panthenol / peptides), Lightweight sealing moisturizer, SPF 30–50",
+                  "evening": "Gentle cleanser, Rebalancing serum (ectoin / beta-glucan), Moisturizer"
+                }
+              },
+              "low": {
+                "routine1": {
+                  "morning": "Ultra-gentle cleanser, Intensive hydrating serum (multi-weight hyaluronic acid / glycerin / panthenol / collagen), Moisturizer (not too rich), SPF 30–50",
+                  "evening": "Gentle cleanser, Concentrated hydrating serum (hyaluronic acid / beta-glucan), Moisturizer"
+                },
+                "routine2": {
+                  "morning": "Gentle cleanser, High-concentration watery serum (hyaluronic acid / betaine), Moisturizer, SPF 30–50",
+                  "evening": "Gentle cleanser, Hydrating + protective serum (ectoin / panthenol / collagen), Moisturizer"
+                }
+              }
+            },
+            "avoid": {
+              "title": "To Avoid",
+              "items": [
+                "Harsh/stripping cleansers or very hot water",
+                "Denatured alcohol and strong fragrance (especially if sensitive)",
+                "Frequent exfoliation when hydration is dropping",
+                "Skipping moisturizer after watery serums",
+                "Only mattifying products without a hydration step"
+              ]
+            }
+          }
         },
         "confidence": {
           "title": "Analysis Quality Tips",
@@ -1026,31 +1217,28 @@
       },
       "guideSections": {
         "products": {
-          "title": "🧴 Recommended Products"
+          "title": "Recommended Products"
         },
         "nutrition": {
-          "title": "🥗 Nutrition & Diet",
-          "antiInflammatory": "🥗 Anti-Inflammatory Foods",
-          "dietAdjustments": "🥗 Diet Adjustments"
+          "title": "Recommended Foods",
+          "antiInflammatory": "Recommended Foods"
         },
         "routine": {
-          "title": "📋 Daily Routine",
-          "soothing": "📋 Soothing Routine",
-          "oilControl": "📋 Oil-Control Routine"
+          "title": "Daily Routine"
         },
         "timing": {
-          "title": "⏰ Best Timing",
-          "whenToApply": "⏰ When to Apply",
-          "optimal": "⏰ Optimal Timing"
+          "title": "Best Timing",
+          "whenToApply": "When to Apply",
+          "optimal": "Optimal Timing"
         },
         "photoQuality": {
-          "title": "📸 Photo Quality"
+          "title": "Photo Quality"
         },
         "skinPreparation": {
-          "title": "🧼 Skin Preparation"
+          "title": "Skin Preparation"
         },
         "bestPractices": {
-          "title": "📋 Best Practices"
+          "title": "Best Practices"
         }
       },
       "howItWorks": {

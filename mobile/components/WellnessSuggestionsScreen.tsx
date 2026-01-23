@@ -108,7 +108,7 @@ export const WellnessSuggestionsScreen: React.FC = () => {
 
   // Translate all suggestions and categories using useMemo
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const translatedSuggestions = useMemo(() => 
+  const translatedSuggestions = useMemo(() =>
     WELLNESS_SUGGESTIONS.map(getTranslatedSuggestion),
     [t] // Only depend on t, functions will be recreated but that's fine
   );
@@ -124,9 +124,9 @@ export const WellnessSuggestionsScreen: React.FC = () => {
 
   const handleSuggestionPress = (suggestion: WellnessSuggestion) => {
     // Handle specific suggestions with navigation
-    if (suggestion.id === 'breathing-exercises' || 
-        suggestion.title.toLowerCase().includes('breathing') || 
-        suggestion.title.toLowerCase().includes('respirazione')) {
+    if (suggestion.id === 'breathing-exercises' ||
+      suggestion.title.toLowerCase().includes('breathing') ||
+      suggestion.title.toLowerCase().includes('respirazione')) {
       router.push('/breathing-exercise');
     } else {
       // For other suggestions, show a placeholder message for now
@@ -159,16 +159,16 @@ export const WellnessSuggestionsScreen: React.FC = () => {
                 <FontAwesome name={category.icon as any} size={24} color="#ffffff" />
               </View>
               <View style={styles.categoryInfo}>
-                <Text style={styles.categoryTitle}>{category.name}</Text>
-                <Text style={styles.categoryDescription}>{category.description}</Text>
-                <Text style={styles.categoryCount}>
+                <Text style={styles.categoryTitle} allowFontScaling={false}>{category.name}</Text>
+                <Text style={styles.categoryDescription} allowFontScaling={false}>{category.description}</Text>
+                <Text style={styles.categoryCount} allowFontScaling={false}>
                   {t('wellnessSuggestions.categoriesMeta.count', { count: suggestions.length })}
                 </Text>
               </View>
-              <FontAwesome 
-                name={isSelected ? 'chevron-up' : 'chevron-down'} 
-                size={16} 
-                color="#ffffff" 
+              <FontAwesome
+                name={isSelected ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color="#ffffff"
               />
             </View>
 
@@ -184,14 +184,14 @@ export const WellnessSuggestionsScreen: React.FC = () => {
                     <View style={styles.suggestionContent}>
                       <View style={styles.suggestionHeader}>
                         <FontAwesome name={suggestion.icon as any} size={16} color={category.colors.primary} />
-                        <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
-                        <Text style={styles.suggestionDuration}>{suggestion.duration}</Text>
+                        <Text style={styles.suggestionTitle} allowFontScaling={false}>{suggestion.title}</Text>
+                        <Text style={styles.suggestionDuration} allowFontScaling={false}>{suggestion.duration}</Text>
                       </View>
-                      <Text style={styles.suggestionDescription}>{suggestion.description}</Text>
+                      <Text style={styles.suggestionDescription} allowFontScaling={false}>{suggestion.description}</Text>
                       <View style={styles.suggestionTags}>
                         {suggestion.tags.slice(0, 3).map((tag) => (
                           <View key={tag} style={[styles.tag, { backgroundColor: category.colors.light }]}>
-                            <Text style={[styles.tagText, { color: category.colors.primary }]}>{tag}</Text>
+                            <Text style={[styles.tagText, { color: category.colors.primary }]} allowFontScaling={false}>{tag}</Text>
                           </View>
                         ))}
                       </View>
@@ -211,8 +211,8 @@ export const WellnessSuggestionsScreen: React.FC = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>{t('wellnessSuggestions.title')}</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+        <Text style={[styles.title, { color: colors.text }]} allowFontScaling={false}>{t('wellnessSuggestions.title')}</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]} allowFontScaling={false}>
           {t('wellnessSuggestions.subtitle')}
         </Text>
       </View>
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#0f172a',
     marginBottom: 8,
     letterSpacing: -0.5,
@@ -252,6 +252,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#64748b',
     lineHeight: 24,
+    fontFamily: 'Figtree_500Medium',
   },
   scrollView: {
     flex: 1,
@@ -293,20 +294,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   categoryTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 22,
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#ffffff',
     marginBottom: 4,
   },
   categoryDescription: {
-    fontSize: 14,
+    fontSize: 16,
     color: 'rgba(255,255,255,0.9)',
     marginBottom: 4,
+    fontFamily: 'Figtree_500Medium',
   },
   categoryCount: {
-    fontSize: 12,
+    fontSize: 13,
     color: 'rgba(255,255,255,0.8)',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   suggestionsList: {
     gap: 12,
@@ -329,20 +331,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   suggestionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#ffffff',
     flex: 1,
   },
   suggestionDuration: {
-    fontSize: 12,
+    fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   suggestionDescription: {
-    fontSize: 14,
+    fontSize: 15,
     color: 'rgba(255,255,255,0.9)',
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   suggestionTags: {
     flexDirection: 'row',
@@ -355,8 +358,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   tagText: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13,
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
 });
 

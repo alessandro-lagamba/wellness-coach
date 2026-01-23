@@ -31,7 +31,7 @@ import { DailySnapshotScreen } from './DailySnapshotScreen';
 
 // Services
 import { DailyJournalService } from '../services/daily-journal.service';
-import { DailyJournalDBService } from '../services/daily-journal-db.service';
+import { DailyJournalDBService } from '../services/daily-journal-db-local.service';
 import { AuthService } from '../services/auth.service';
 
 // Hooks & Context

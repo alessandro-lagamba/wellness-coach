@@ -313,8 +313,8 @@ const styles = StyleSheet.create({
     },
 
     title: {
-        fontSize: 22,
-        fontWeight: '600',
+        fontSize: 18,
+        fontFamily: 'Figtree_700Bold',
         marginBottom: 12,
     },
 
@@ -335,17 +335,18 @@ const styles = StyleSheet.create({
     },
     scoreNumber: {
         fontSize: 32,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold',
         letterSpacing: -0.5,
     },
     scoreLabel: {
         fontSize: 9,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold',
         letterSpacing: 1.2,
         marginTop: 1,
     },
     checkInText: {
         fontSize: 13,
+        fontFamily: 'Figtree_400Regular',
     },
 
     balanceSection: {
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
     },
     balanceLabel: {
         fontSize: 12,
-        fontWeight: '500',
+        fontFamily: 'Figtree_500Medium',
     },
     balanceBar: {
         height: 10,

@@ -94,12 +94,24 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
                 {/* Greetings & Streak */}
                 <View style={styles.headerText}>
-                    <Text
-                        style={[styles.greeting, { color: colors.text }]}
-                        allowFontScaling={false}
-                    >
-                        {greeting} <Text style={{ fontWeight: '400' }} allowFontScaling={false}>{userName}</Text>
-                    </Text>
+                    <View style={styles.greetingContainer}>
+                        <Text
+                            style={[styles.greeting, { color: colors.text }]}
+                            allowFontScaling={false}
+                            maxFontSizeMultiplier={1}
+                        >
+                            {greeting}{' '}
+                        </Text>
+                        <Text
+                            style={[styles.greeting, { color: colors.text, fontFamily: 'Figtree_500Medium' }]}
+                            allowFontScaling={false}
+                            maxFontSizeMultiplier={1}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                        >
+                            {userName}
+                        </Text>
+                    </View>
 
                     {/* Streak Pill - Moved here to be under greeting as requested implicitely by "remove date" */}
                     <View style={[styles.streakPill, {
@@ -221,16 +233,20 @@ const styles = StyleSheet.create({
     },
     headerText: {
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 12,
         marginTop: 10,
     },
+    greetingContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     greeting: {
-        fontSize: 34,
-        fontFamily: 'Figtree_400Regular', // Using Figtree
-        fontWeight: '400',
+        fontSize: 30,
+        fontFamily: 'Figtree_500Medium',
         letterSpacing: -0.5,
         textAlign: 'center',
-        marginBottom: 4,
     },
     // Removed dateText style
     streakPill: {

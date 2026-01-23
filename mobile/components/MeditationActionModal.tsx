@@ -39,7 +39,7 @@ export const MeditationActionModal: React.FC<MeditationActionModalProps> = ({
   const isDark = mode === 'dark';
   const slideAnim = useRef(new Animated.Value(height)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
-  
+
   const [minutes, setMinutes] = useState(5);
   const [customMinutes, setCustomMinutes] = useState('');
   const [isAdding, setIsAdding] = useState(true);
@@ -115,7 +115,7 @@ export const MeditationActionModal: React.FC<MeditationActionModalProps> = ({
       statusBarTranslucent
     >
       <View style={styles.overlay}>
-        <Animated.View 
+        <Animated.View
           style={[
             styles.backdrop,
             { opacity: backdropAnim }
@@ -123,11 +123,11 @@ export const MeditationActionModal: React.FC<MeditationActionModalProps> = ({
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
-        
-        <Animated.View 
+
+        <Animated.View
           style={[
             styles.bottomSheet,
-            { 
+            {
               backgroundColor: colors.surface,
               transform: [{ translateY: slideAnim }],
             },
@@ -181,16 +181,16 @@ export const MeditationActionModal: React.FC<MeditationActionModalProps> = ({
               ]}
               onPress={() => { setIsAdding(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
             >
-              <MaterialCommunityIcons 
-                name="plus" 
-                size={18} 
-                color={isAdding ? '#fff' : colors.textSecondary} 
+              <MaterialCommunityIcons
+                name="plus"
+                size={18}
+                color={isAdding ? '#fff' : colors.textSecondary}
               />
               <Text style={[styles.toggleText, { color: isAdding ? '#fff' : colors.textSecondary }]}>
                 {t('home.meditationActions.add') || 'Aggiungi'}
               </Text>
             </Pressable>
-            
+
             <Pressable
               style={({ pressed }) => [
                 styles.toggleBtn,
@@ -200,10 +200,10 @@ export const MeditationActionModal: React.FC<MeditationActionModalProps> = ({
               ]}
               onPress={() => { setIsAdding(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
             >
-              <MaterialCommunityIcons 
-                name="minus" 
-                size={18} 
-                color={!isAdding ? '#fff' : colors.textSecondary} 
+              <MaterialCommunityIcons
+                name="minus"
+                size={18}
+                color={!isAdding ? '#fff' : colors.textSecondary}
               />
               <Text style={[styles.toggleText, { color: !isAdding ? '#fff' : colors.textSecondary }]}>
                 {t('home.meditationActions.remove') || 'Rimuovi'}
@@ -222,7 +222,7 @@ export const MeditationActionModal: React.FC<MeditationActionModalProps> = ({
                   key={mins}
                   style={({ pressed }) => [
                     styles.quickBtn,
-                    { 
+                    {
                       backgroundColor: minutes === mins && !customMinutes ? '#8b5cf6' : colors.background,
                       borderColor: minutes === mins && !customMinutes ? '#8b5cf6' : colors.border,
                     },
@@ -283,13 +283,13 @@ export const MeditationActionModal: React.FC<MeditationActionModalProps> = ({
                 end={{ x: 1, y: 1 }}
                 style={styles.confirmGradient}
               >
-                <MaterialCommunityIcons 
-                  name="meditation" 
-                  size={22} 
-                  color="#fff" 
+                <MaterialCommunityIcons
+                  name="meditation"
+                  size={22}
+                  color="#fff"
                 />
                 <Text style={styles.confirmText}>
-                  {isAdding 
+                  {isAdding
                     ? `${t('home.meditationActions.add') || 'Aggiungi'} ${minutes} ${t('home.minutes') || 'min'}`
                     : `${t('home.meditationActions.remove') || 'Rimuovi'} ${minutes} ${t('home.minutes') || 'min'}`
                   }
@@ -362,11 +362,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 14,
+    fontFamily: 'Figtree_500Medium',
     marginTop: 2,
   },
   progressContainer: {
@@ -398,14 +399,14 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   quickSelectSection: {
     marginBottom: 16,
   },
   sectionLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     marginBottom: 10,
   },
   quickSelectRow: {
@@ -422,11 +423,11 @@ const styles = StyleSheet.create({
   },
   quickBtnNumber: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   quickBtnUnit: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     marginTop: 1,
   },
   customSection: {
@@ -443,12 +444,12 @@ const styles = StyleSheet.create({
   customInput: {
     flex: 1,
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     paddingVertical: 10,
   },
   customUnit: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   actions: {
     gap: 10,
@@ -466,7 +467,7 @@ const styles = StyleSheet.create({
   },
   confirmText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#fff',
   },
   cancelBtn: {
@@ -475,6 +476,6 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
 });

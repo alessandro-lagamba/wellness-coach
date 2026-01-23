@@ -95,6 +95,8 @@ export const VideoHero: React.FC<VideoHeroProps> = memo(({
       {/* Content */}
       <View style={styles.content}>
 
+
+
         {showPlayButton && (
           <TouchableOpacity
             style={styles.playButton}
@@ -189,6 +191,24 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'transparent',
+  },
+  textContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 24,
+    right: 24,
+    alignItems: 'flex-start',
+  },
+  title: {
+    fontSize: 20,
+    fontFamily: 'Figtree_700Bold',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontFamily: 'Figtree_500Medium',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
 });
 

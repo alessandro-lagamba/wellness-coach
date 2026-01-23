@@ -51,7 +51,7 @@ import AnimatedOrbVoiceChat from './AnimatedOrbVoiceChat';
 import { ModernVoiceChat } from './ModernVoiceChat';
 import MessageLoadingDots from './MessageLoadingDots';
 import { DailyJournalService } from '../services/daily-journal.service';
-import { DailyJournalDBService } from '../services/daily-journal-db.service';
+import { DailyJournalDBService } from '../services/daily-journal-db-local.service';
 import { AnalysisActionButtons } from './AnalysisActionButtons';
 // Database Services
 import { ChatService, WellnessSuggestionService } from '../services/chat-wellness.service';

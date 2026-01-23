@@ -226,7 +226,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
             </Text>
           </View>
           <View style={styles.compactRight}>
-            <Text style={styles.compactTime}>{action.estimatedTime}</Text>
+            <Text style={styles.compactTime} allowFontScaling={false}>{action.estimatedTime}</Text>
             <MaterialCommunityIcons name="check" size={16} color={getPriorityColor(action.priority)} />
           </View>
         </TouchableOpacity>
@@ -268,12 +268,12 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 
           <View style={styles.headerRight}>
             <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(action.priority) + '20' }]}>
-              <Text style={[styles.priorityText, { color: getPriorityColor(action.priority) }]}>
+              <Text style={[styles.priorityText, { color: getPriorityColor(action.priority) }]} allowFontScaling={false}>
                 {getPriorityLabel(action.priority)}
               </Text>
             </View>
             {action.estimatedTime && (
-              <Text style={styles.timeText}>⏱️ {action.estimatedTime}</Text>
+              <Text style={styles.timeText} allowFontScaling={false}>⏱️ {action.estimatedTime}</Text>
             )}
           </View>
         </View>
@@ -286,7 +286,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         {/* Resources */}
         {action.resources && action.resources.length > 0 && (
           <View style={styles.resourcesSection}>
-            <Text style={styles.resourcesLabel}>Cosa ti serve:</Text>
+            <Text style={styles.resourcesLabel} allowFontScaling={false}>Cosa ti serve:</Text>
             <View style={styles.resourcesList}>
               {action.resources.map((resource, index) => (
                 <View key={index} style={styles.resourceItem}>
@@ -316,7 +316,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
             ) : (
               <>
                 <MaterialCommunityIcons name="calendar-plus" size={16} color="#ffffff" />
-                <Text style={styles.completeButtonText}>{labels.addButton}</Text>
+                <Text style={styles.completeButtonText} allowFontScaling={false}>{labels.addButton}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#111827',
   },
   headerRight: {
@@ -386,11 +386,12 @@ const styles = StyleSheet.create({
   },
   priorityText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   timeText: {
     fontSize: 12,
     color: '#6b7280',
+    fontFamily: 'Figtree_500Medium',
   },
   descriptionSection: {
     padding: 16,
@@ -400,6 +401,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   resourcesSection: {
     paddingHorizontal: 16,
@@ -407,7 +409,7 @@ const styles = StyleSheet.create({
   },
   resourcesLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#6b7280',
     marginBottom: 8,
   },
@@ -422,6 +424,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     marginLeft: 8,
+    fontFamily: 'Figtree_500Medium',
   },
   actionsSection: {
     flexDirection: 'row',
@@ -444,7 +447,7 @@ const styles = StyleSheet.create({
   completeButtonText: {
     color: '#ffffff',
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     marginLeft: 6,
     textAlign: 'center',
     flexShrink: 1,
@@ -463,7 +466,7 @@ const styles = StyleSheet.create({
   snoozeButtonText: {
     color: '#6b7280',
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     marginLeft: 6,
     flexShrink: 1,
   },
@@ -481,7 +484,7 @@ const styles = StyleSheet.create({
   dismissButtonText: {
     color: '#6b7280',
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     marginLeft: 6,
     flexShrink: 1,
   },
@@ -510,7 +513,7 @@ const styles = StyleSheet.create({
   },
   compactTitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     color: '#374151',
     marginLeft: 8,
     flex: 1,
@@ -523,5 +526,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginRight: 8,
+    fontFamily: 'Figtree_500Medium',
   },
 });

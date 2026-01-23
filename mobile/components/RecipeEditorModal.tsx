@@ -316,7 +316,7 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
           <TouchableOpacity onPress={onClose} style={styles.headerButton}>
             <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]} allowFontScaling={false}>
             {isCreateMode
               ? t('analysis.food.recipes.editor.createTitle') ||
               t('analysis.food.recipes.editor.title')
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   headerButton: {
     width: 40,
@@ -613,12 +613,12 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     marginBottom: 6,
   },
   input: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   textarea: {
     minHeight: 80,
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 10,
   },
   chipsRow: {
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   favoriteToggle: {
     flexDirection: 'row',
@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
   },
   favoriteToggleText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   footer: {
     flexDirection: 'row',
@@ -686,7 +686,7 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   saveButton: {
     flex: 1,
@@ -697,7 +697,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   aiButton: {
     paddingHorizontal: 16,
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
   },
   aiButtonText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   nutritionInfo: {
     marginTop: 12,
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
   },
   nutritionText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     flex: 1,
   },
   nutritionValues: {
@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
   },
   nutritionValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
 });
 

@@ -33,7 +33,7 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
   const router = useRouter();
   const { t } = useTranslation();
   const { colors: themeColors } = useTheme();
-  
+
   // Helper functions to get translated titles and descriptions
   const getTranslatedTitle = (id: string): string => {
     const keyMap: { [key: string]: string } = {
@@ -82,8 +82,8 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
   // Get contextual suggestions based on user input
   const getSuggestionsByContext = () => {
     if (!context) return defaultSuggestions;
-    
-    switch(context.toLowerCase()) {
+
+    switch (context.toLowerCase()) {
       case 'stress':
         return stressSuggestions;
       case 'skin':
@@ -94,14 +94,14 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
         return defaultSuggestions;
     }
   };
-  
+
   // Default suggestions - use first 3 items from main data for consistency
   const defaultSuggestions = WELLNESS_SUGGESTIONS.slice(0, 3).map(s => ({
     ...s,
     title: getTranslatedTitle(s.id),
     description: getTranslatedDescription(s.id),
   }));
-  
+
   // Stress-related suggestions
   const stressSuggestions: WellnessSuggestion[] = [
     {
@@ -126,7 +126,7 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
       category: 'nutrition'
     }
   ];
-  
+
   // Skin-related suggestions
   const skinSuggestions: WellnessSuggestion[] = [
     {
@@ -144,7 +144,7 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
       category: 'skin'
     }
   ];
-  
+
   // Sleep-related suggestions
   const sleepSuggestions: WellnessSuggestion[] = [
     {
@@ -162,9 +162,9 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
       category: 'sleep'
     }
   ];
-  
+
   const suggestions = getSuggestionsByContext();
-  
+
   const getCategoryColor = (category: any): string => {
     // Use the actual category colors from the data
     if (typeof category === 'object' && category?.colors?.primary) {
@@ -172,7 +172,7 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
     }
     return '#6b7280'; // fallback color
   };
-  
+
   const getCategoryBg = (category: any): string => {
     // Use the actual category colors from the data
     if (typeof category === 'object' && category?.colors?.light) {
@@ -201,21 +201,21 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
 
     return (
       <Animated.View style={animatedStyle}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.suggestionCard}
           onPress={() => handleSuggestionPress(suggestion)}
           activeOpacity={0.7}
         >
           <View style={[styles.iconContainer, { backgroundColor: getCategoryBg(suggestion.category) }]}>
-            <FontAwesome 
-              name={suggestion.icon as any} 
-              size={18} 
+            <FontAwesome
+              name={suggestion.icon as any}
+              size={18}
               color={getCategoryColor(suggestion.category)}
             />
           </View>
           <View style={styles.suggestionContent}>
-            <Text style={[styles.suggestionTitle, { color: themeColors.text }]}>{suggestion.title}</Text>
-            <Text style={[styles.suggestionDescription, { color: themeColors.textSecondary }]}>{suggestion.description}</Text>
+            <Text style={[styles.suggestionTitle, { color: themeColors.text }]} allowFontScaling={false}>{suggestion.title}</Text>
+            <Text style={[styles.suggestionDescription, { color: themeColors.textSecondary }]} allowFontScaling={false}>{suggestion.description}</Text>
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -225,17 +225,17 @@ export const WellnessSuggestions: React.FC<WellnessSuggestionProps> = ({ context
   return (
     <View style={[styles.container, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: themeColors.text }]}>{t('wellnessSuggestions.personalizedInsights')}</Text>
-        <TouchableOpacity 
+        <Text style={[styles.title, { color: themeColors.text }]} allowFontScaling={false}>{t('wellnessSuggestions.personalizedInsights')}</Text>
+        <TouchableOpacity
           style={styles.viewAllButton}
           onPress={() => router.push('/(tabs)/suggestions')}
         >
-          <Text style={[styles.viewAllText, { color: themeColors.primary }]}>{t('wellnessSuggestions.viewAll')}</Text>
+          <Text style={[styles.viewAllText, { color: themeColors.primary }]} allowFontScaling={false}>{t('wellnessSuggestions.viewAll')}</Text>
         </TouchableOpacity>
       </View>
-      
-      <ScrollView 
-        horizontal 
+
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     // Colore gestito inline con themeColors.text
   },
   viewAllButton: {
@@ -303,13 +303,14 @@ const styles = StyleSheet.create({
   },
   suggestionTitle: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     marginBottom: 4,
     // Colore gestito inline con themeColors.text
   },
   suggestionDescription: {
     fontSize: 10,
     lineHeight: 14,
+    fontFamily: 'Figtree_500Medium',
     // Colore gestito inline con themeColors.textSecondary
   },
 });

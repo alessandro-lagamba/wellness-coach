@@ -43,11 +43,10 @@ export async function saveLanguage(lang: 'en' | 'it'): Promise<void> {
 // Inizializza i18n
 const initI18n = async () => {
   const savedLang = await getSavedLanguage();
-  
+
   i18n
     .use(initReactI18next)
     .init({
-      compatibilityJSON: 'v3', // Per React Native
       resources: {
         en: { translation: en },
         it: { translation: it },
@@ -57,11 +56,12 @@ const initI18n = async () => {
       interpolation: {
         escapeValue: false, // React già fa escape
       },
+      returnObjects: true, // Permette di recuperare array e oggetti dai JSON
       react: {
         useSuspense: false, // Disabilita suspense per React Native
       },
     });
-  
+
   console.log(`[i18n] ✅ Initialized with language: ${savedLang}`);
 };
 
@@ -70,7 +70,6 @@ initI18n().catch((e) => {
   console.error('[i18n] ❌ Failed to initialize:', e);
   // Fallback: inizializza con ITA
   i18n.use(initReactI18next).init({
-    compatibilityJSON: 'v3',
     resources: { en: { translation: en }, it: { translation: it } },
     lng: 'it',
     fallbackLng: 'it',

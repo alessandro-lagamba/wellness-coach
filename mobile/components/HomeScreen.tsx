@@ -46,7 +46,7 @@ import { OnboardingService } from '../services/onboarding.service';
 // Removed useInsights - now using DailyCopilot for insights
 import DailyCopilot from './DailyCopilot';
 import RecommendationDetailModal from './RecommendationDetailModal';
-import { WellnessPermissionsModal } from './WellnessPermissionsModal';
+
 import PushNotificationService from '../services/push-notification.service';
 import DailyCopilotHistory from './DailyCopilotHistory';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -128,6 +128,7 @@ const COMMUNITY_AVATARS = [
 ];
 
 const WalkthroughableView = walkthroughable(View);
+
 const WalkthroughableText = walkthroughable(Text);
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
@@ -238,12 +239,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     },
   }), []);
 
-  // 🔥 Rimuoviamo stato duplicato - usiamo direttamente todaysActivities
-  // const [activities, setActivities] = useState<DailyActivity[]>(() => todaysActivities);
+
   const [syncService] = useState(() => WellnessSyncService.getInstance());
   const [permissions, setPermissions] = useState({ calendar: false, notifications: false });
-  const [showWellnessPermissionsModal, setShowWellnessPermissionsModal] = useState(false);
-  const [requestingWellnessPermissions, setRequestingWellnessPermissions] = useState(false);
+
   useEffect(() => {
     let isMounted = true;
     const syncPermissionStatus = async () => {
@@ -263,6 +262,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       isMounted = false;
     };
   }, [syncService]);
+
 
   const [userFirstName, setUserFirstName] = useState<string>('User');
   const [isUserDataLoading, setIsUserDataLoading] = useState<boolean>(true); // 🆕 Stato per loader avatar
@@ -636,7 +636,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       }
     } catch (error) {
       console.warn('[HomeScreen] Failed to load user gender/cycle data:', error);
-      setCycleData(null);
+      // 🔥 FIX: Non resettare i dati in caso di errore temporaneo per evitare flickering
+      // setCycleData(null);
     }
   }, []);
 
@@ -1988,36 +1989,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     }
   }, []);
 
-  const handleEnableWellnessPermissions = async () => {
-    try {
-      setRequestingWellnessPermissions(true);
-      const result = await syncService.requestPermissions();
-      setPermissions(result);
 
-      if (result.notifications) {
-        await ensureNotificationScheduling();
-      }
-
-      setShowWellnessPermissionsModal(false);
-
-      if (result.calendar || result.notifications) {
-        Alert.alert(t('common.success'), t('home.permissions.success'));
-      } else {
-        Alert.alert(t('home.permissions.required'), t('home.permissions.requiredMessage'), [{ text: t('common.ok') }]);
-      }
-    } catch (error) {
-      console.error('Error requesting wellness permissions:', error);
-      Alert.alert(t('common.error'), t('home.permissions.error'));
-    } finally {
-      setRequestingWellnessPermissions(false);
-    }
-  };
-
-  const handleSkipWellnessPermissions = () => {
-    setShowWellnessPermissionsModal(false);
-  };
-
-  const shouldShowWellnessPermissionCard = !permissions.calendar || !permissions.notifications;
 
   // Removed renderQuickLink function - replaced with Today at a glance widgets
 
@@ -2042,11 +2014,11 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               <FontAwesome name={card.icon as any} size={18} color="#ffffff" />
             </View>
             <View>
-              <Text style={styles.highlightLabel}>{card.label}</Text>
-              <Text style={styles.highlightDelta}>{card.delta}</Text>
+              <Text style={styles.highlightLabel} allowFontScaling={false}>{card.label}</Text>
+              <Text style={styles.highlightDelta} allowFontScaling={false}>{card.delta}</Text>
             </View>
           </View>
-          <Text style={styles.highlightValue}>{card.value}</Text>
+          <Text style={styles.highlightValue} allowFontScaling={false}>{card.value}</Text>
         </LinearGradient>
       </Animated.View>
     );
@@ -2205,39 +2177,13 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           onAvatarPress={() => setCommunityModalVisible(true)}
         />
 
-        {shouldShowWellnessPermissionCard && (
-          <TouchableOpacity
-            style={[
-              styles.permissionCard,
-              { backgroundColor: themeColors.surface, borderColor: themeColors.border }
-            ]}
-            activeOpacity={0.9}
-            onPress={() => setShowWellnessPermissionsModal(true)}
-          >
-            <View style={[styles.permissionCardIcon, { backgroundColor: `${themeColors.primary}20` }]}>
-              <MaterialCommunityIcons name="bell-plus" size={20} color={themeColors.primary} />
-            </View>
-            <View style={styles.permissionCardCopy}>
-              <Text style={[styles.permissionCardTitle, { color: themeColors.text }]} allowFontScaling={false}>
-                {t('home.permissions.cardTitle')}
-              </Text>
-              <Text style={[styles.permissionCardSubtitle, { color: themeColors.textSecondary }]} allowFontScaling={false}>
-                {t('home.permissions.cardSubtitle')}
-              </Text>
-            </View>
-            <View style={[styles.permissionCardAction, { borderColor: themeColors.primary }]}>
-              <Text style={[styles.permissionCardActionText, { color: themeColors.primary }]} allowFontScaling={false}>
-                {t('home.permissions.cardCta')}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        )}
+
 
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderContent}>
             <View>
-              <Text style={[styles.sectionTitle, { color: themeColors.text }]} allowFontScaling={false}>{t('home.todayAtGlance')}</Text>
-              <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]} allowFontScaling={false}>{t('home.todaySubtitle')}</Text>
+              <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.todayAtGlance')}</Text>
+              <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.todaySubtitle')}</Text>
             </View>
             <View style={styles.headerActions}>
               {editMode ? (
@@ -2491,8 +2437,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
         {/* Check-In Giornaliero Section */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]} allowFontScaling={false}>{t('home.dailyCheckIn.title')}</Text>
-          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]} allowFontScaling={false}>{t('home.dailyCheckIn.subtitle')}</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCheckIn.title')}</Text>
+          <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCheckIn.subtitle')}</Text>
         </View>
 
         <CopilotStep text="Check-in Giornalieri" order={4} name="dailyCheckin">
@@ -2514,9 +2460,9 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         </CopilotStep>
 
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]} allowFontScaling={false}>{t('home.activities.title')}</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.activities.title')}</Text>
           {todaysActivities.length > 0 && (
-            <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]} allowFontScaling={false}>
+            <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
               {t('home.calendar.ofCompleted', {
                 completed: todaysActivities.filter(a => a.completed).length,
                 total: todaysActivities.length
@@ -2579,8 +2525,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionHeaderContent}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.sectionTitle, { color: themeColors.text }]} allowFontScaling={false}>{t('home.dailyCopilot.title')}</Text>
-                  <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]} allowFontScaling={false}>{t('home.dailyCopilot.subtitle')}</Text>
+                  <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCopilot.title')}</Text>
+                  <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCopilot.subtitle')}</Text>
                 </View>
                 {/* History button rimosso su richiesta utente */}
               </View>
@@ -2766,14 +2712,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         }}
       />
 
-      <WellnessPermissionsModal
-        visible={showWellnessPermissionsModal}
-        onEnable={handleEnableWellnessPermissions}
-        onSkip={handleSkipWellnessPermissions}
-        loading={requestingWellnessPermissions}
-        missingCalendar={!permissions.calendar}
-        missingNotifications={!permissions.notifications}
-      />
+
 
       {/* WelcomeOverlay rimosso - usiamo solo InteractiveTutorial gestito da AuthWrapper */}
 
@@ -3276,12 +3215,13 @@ const styles = StyleSheet.create({
   },
   permissionCardTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 4,
   },
   permissionCardSubtitle: {
     fontSize: 13,
     lineHeight: 18,
+    fontFamily: 'Figtree_500Medium',
   },
   permissionCardAction: {
     paddingHorizontal: 12,
@@ -3291,7 +3231,7 @@ const styles = StyleSheet.create({
   },
   permissionCardActionText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_500Medium',
   },
   sectionHeaderContent: {
     flexDirection: 'row',
@@ -3310,7 +3250,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     // Colore gestito inline con themeColors.text
   },
   sectionSubtitle: {
@@ -3318,6 +3258,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flexWrap: 'wrap',
     flexShrink: 1,
+    fontFamily: 'Figtree_500Medium',
     // Colore gestito inline con themeColors.textSecondary
   },
   widgetGrid: {
@@ -3365,9 +3306,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 12,
     color: '#6b7280',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
+    marginTop: 8,
   },
   placeholderBanner: {
     marginHorizontal: 20,
@@ -3487,7 +3429,7 @@ const styles = StyleSheet.create({
   },
   emptyActivitiesTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -3497,6 +3439,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
     paddingHorizontal: 12,
+    fontFamily: 'Figtree_500Medium',
   },
   emptyActivitiesButton: {
     flexDirection: 'row',
@@ -3509,7 +3452,8 @@ const styles = StyleSheet.create({
   emptyActivitiesButtonText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
+    textAlign: 'center',
   },
   activityCard: {
     borderRadius: 28,
@@ -3541,6 +3485,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
+
   activityIconGradient: {
     width: '100%',
     height: '100%',
@@ -3550,7 +3495,7 @@ const styles = StyleSheet.create({
 
   activityTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     flex: 1,
   },
   activityCompleted: {
@@ -3560,6 +3505,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 12,
+    fontFamily: 'Figtree_500Medium',
   },
   activityDivider: {
     height: 1,
@@ -3592,7 +3538,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   timeContainer: {
     flexDirection: 'row',
@@ -3601,7 +3547,7 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_500Medium',
   },
   calendarSyncButton: {
     width: 36,
@@ -3713,14 +3659,14 @@ const styles = StyleSheet.create({
   },
   emptySlotText: {
     fontSize: 32,
-    fontWeight: '300',
+    fontFamily: 'Figtree_400Regular',
     marginBottom: 4,
     // Colore gestito inline con themeColors.textTertiary
   },
   emptySlotHint: {
     fontSize: 10,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
     // Colore gestito inline con themeColors.textTertiary
   },
   headerActions: {
@@ -3737,8 +3683,8 @@ const styles = StyleSheet.create({
   },
   exitEditButtonText: {
     fontSize: 12,
+    fontFamily: 'Figtree_700Bold',
     color: '#ffffff',
-    fontWeight: '600',
   },
   editModeButton: {
     paddingHorizontal: 16,
@@ -3750,7 +3696,7 @@ const styles = StyleSheet.create({
   editModeButtonText: {
     fontSize: 12,
     color: '#ffffff', // Sempre bianco sul bottone primario
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   /** ---- Focus Cards ---- */
   focusGrid: {
@@ -3807,7 +3753,7 @@ const styles = StyleSheet.create({
   focusSubtitleLabel: {
     fontSize: 12,
     color: '#0f172a99',
-    fontWeight: '600',
+    fontFamily: 'Figtree_500Medium',
     marginTop: 2,
   },
   focusEmoji: {
@@ -3870,12 +3816,12 @@ const styles = StyleSheet.create({
   },
   moodScoreText: {
     fontSize: 12,
-    fontWeight: '800',
     color: '#ffffff',
+    fontFamily: 'Figtree_700Bold',
   },
   focusMoodValue: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold',
     color: '#047857',
   },
   focusDivider: {
@@ -3895,18 +3841,18 @@ const styles = StyleSheet.create({
   },
   focusBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   focusTitle: {
     color: '#0f172a',
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 12,
   },
   focusPrimaryValue: {
     marginTop: 4,
     fontSize: 32,
-    fontWeight: '900',
+    fontFamily: 'Figtree_700Bold',
     color: '#0f172a',
     lineHeight: 36,
   },
@@ -3915,7 +3861,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6b7280',
     opacity: 0.95,
-    fontWeight: '600',
+    fontFamily: 'Figtree_500Medium',
   },
   sleepSummaryRow: {
     flexDirection: 'row',
@@ -3938,12 +3884,12 @@ const styles = StyleSheet.create({
   },
   sleepQualityValue: {
     fontSize: 20,
-    fontWeight: '900',
+    fontFamily: 'Figtree_700Bold',
     color: '#1d4ed8',
   },
   sleepQualityLabel: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#1e40af',
     marginTop: 1,
     textTransform: 'uppercase',
@@ -3969,7 +3915,7 @@ const styles = StyleSheet.create({
   },
   sleepBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#1e3a8a',
     textAlign: 'center',
   },
@@ -3990,7 +3936,7 @@ const styles = StyleSheet.create({
   },
   sleepChipText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#1e40af',
     textAlign: 'center',
   },
@@ -4017,7 +3963,7 @@ const styles = StyleSheet.create({
   },
   checkinPillText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold',
     color: '#065F46',
   },
   checkinPillActive: {
@@ -4057,7 +4003,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     elevation: 3,
   },
-  emojiText: { fontSize: 22, fontWeight: '700' },
+  emojiText: { fontSize: 22, fontFamily: 'Figtree_700Bold' },
   emojiTextActive: {
     transform: [{ scale: 1.1 }],
   },
@@ -4071,14 +4017,14 @@ const styles = StyleSheet.create({
   },
   focusPrimaryValueSmall: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold',
     color: '#0f172a',
   },
   focusTinyLabel: {
     fontSize: 13,
     color: '#334155',
     marginBottom: 10,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   insightsSection: {
     marginBottom: 24,
@@ -4103,12 +4049,12 @@ const styles = StyleSheet.create({
   },
   sleepQualityValueSmall: {
     fontSize: 11,
-    fontWeight: '900',
+    fontFamily: 'Figtree_700Bold',
     color: '#1d4ed8',
   },
   sleepQualityLabelSmall: {
     fontSize: 7,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#1e40af',
     marginTop: 1,
     textTransform: 'uppercase',
@@ -4124,7 +4070,7 @@ const styles = StyleSheet.create({
   },
   sleepScoreLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'Figtree_500Medium',
     color: '#64748b',
   },
   sleepScoreBadge: {
@@ -4170,12 +4116,12 @@ const styles = StyleSheet.create({
   },
   sleepQualityValueModern: {
     fontSize: 16,
-    fontWeight: '900',
+    fontFamily: 'Figtree_700Bold',
     color: '#1e40af',
   },
   sleepQualityLabelModern: {
     fontSize: 9,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#64748b',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -4199,7 +4145,7 @@ const styles = StyleSheet.create({
   },
   sleepBadgeTextModern: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#1e40af',
   },
 
@@ -4225,7 +4171,7 @@ const styles = StyleSheet.create({
   },
   sliderValueText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#64748b',
   },
   moodInsight: {
@@ -4252,7 +4198,7 @@ const styles = StyleSheet.create({
   tutorialButtonText: {
     color: '#667eea',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_500Medium',
     marginLeft: 4,
   },
   weeklyProgressContainer: {
@@ -4298,7 +4244,7 @@ const styles = StyleSheet.create({
   },
   disabledChartsTitle: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_500Medium',
     marginBottom: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,

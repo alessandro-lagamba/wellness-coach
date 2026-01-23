@@ -86,12 +86,12 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
           <View style={styles.header}>
             <View style={styles.titleContainer}>
               <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-              {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
+              {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]} allowFontScaling={false}>{subtitle}</Text>}
             </View>
 
             <View style={styles.scoreContainer}>
               <Text style={[styles.scoreValue, { color: colors.primary }]}>{latestOverall}</Text>
-              <Text style={[styles.scoreLabel, { color: colors.textSecondary }]}>/100</Text>
+              <Text style={[styles.scoreLabel, { color: colors.textSecondary }]} allowFontScaling={false}>/100</Text>
               {trend !== 0 && (
                 <FontAwesome
                   name={trend > 0 ? 'arrow-up' : 'arrow-down'}
@@ -135,6 +135,7 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
                       y={y + 4}
                       textAnchor="end"
                       fontSize="10"
+                      fontFamily="Figtree_500Medium"
                       fill={colors.textSecondary}
                     >
                       {value}
@@ -160,6 +161,7 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
                       y={y}
                       textAnchor="middle"
                       fontSize="10"
+                      fontFamily="Figtree_500Medium"
                       fill={colors.textSecondary}
                     >
                       {dateLabel}
@@ -213,7 +215,7 @@ export const SkinHealthChart: React.FC<SkinHealthChartProps> = ({ data, title, s
           {!hasData && (
             <View style={styles.placeholderContainer}>
               <FontAwesome name="line-chart" size={24} color={colors.textTertiary} />
-              <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
+              <Text style={[styles.placeholderText, { color: colors.textSecondary }]} allowFontScaling={false}>
                 {t('analysis.skin.trends.emptyState') || 'Inizia un’analisi per vedere i trend'}
               </Text>
             </View>
@@ -250,12 +252,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 2,
   },
   subtitle: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   scoreContainer: {
     alignItems: 'center',
@@ -264,11 +266,11 @@ const styles = StyleSheet.create({
   },
   scoreValue: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   scoreLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   trendIcon: {
     marginLeft: 4,
@@ -294,11 +296,11 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 10,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   metricValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   placeholderContainer: {
     alignItems: 'center',
@@ -307,6 +309,6 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
 });

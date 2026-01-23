@@ -225,14 +225,14 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
       <View style={styles.container}>
         {showTitle && (
           <View style={styles.header}>
-            <Text style={[styles.title, { color: titleColor }]}>{sectionTitle}</Text>
+            <Text style={[styles.title, { color: titleColor }]} allowFontScaling={false}>{sectionTitle}</Text>
             <Text style={[styles.subtitle, { color: subtitleColor }]}>{categoryInfo.subtitle}</Text>
           </View>
         )}
 
         <View style={[styles.loadingCard, { backgroundColor: cardBackground, borderColor: cardBorder }]}>
           <ActivityIndicator size="large" color={accentColor} />
-          <Text style={[styles.loadingText, { color: titleColor }]}>
+          <Text style={[styles.loadingText, { color: titleColor }]} allowFontScaling={false}>
             Generando insight intelligenti...
           </Text>
           <Text style={[styles.loadingSubtext, { color: subtitleColor }]}>
@@ -255,13 +255,13 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
 
         <View style={[styles.errorCard, { backgroundColor: cardBackground, borderColor: cardBorder }]}>
           <MaterialCommunityIcons name="alert-circle" size={32} color="#ef4444" />
-          <Text style={[styles.errorTitle, { color: titleColor }]}>Errore</Text>
+          <Text style={[styles.errorTitle, { color: titleColor }]} allowFontScaling={false}>Errore</Text>
           <Text style={[styles.errorText, { color: subtitleColor }]}>{error}</Text>
           <TouchableOpacity
             style={[styles.retryButton, { backgroundColor: accentColor }]}
-            onPress={loadIntelligentInsights}
+            onPress={() => loadIntelligentInsights()}
           >
-            <Text style={styles.retryButtonText}>Riprova</Text>
+            <Text style={styles.retryButtonText} allowFontScaling={false}>Riprova</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -280,7 +280,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
 
         <View style={[styles.emptyCard, { backgroundColor: cardBackground, borderColor: cardBorder }]}>
           <MaterialCommunityIcons name="lightbulb-outline" size={32} color={accentColor} />
-          <Text style={[styles.emptyTitle, { color: titleColor }]}>Nessun insight disponibile</Text>
+          <Text style={[styles.emptyTitle, { color: titleColor }]} allowFontScaling={false}>Nessun insight disponibile</Text>
           <Text style={[styles.emptyText, { color: subtitleColor }]}>
             Completa più analisi per ricevere insight personalizzati
           </Text>
@@ -295,12 +295,12 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
         <View style={styles.header}>
           <View style={styles.titleRow}>
             <View style={styles.titleContainer}>
-              <Text style={[styles.title, { color: titleColor }]}>{sectionTitle}</Text>
+              <Text style={[styles.title, { color: titleColor }]} allowFontScaling={false}>{sectionTitle}</Text>
               <Text style={[styles.subtitle, { color: subtitleColor }]}>{categoryInfo.subtitle}</Text>
             </View>
             <TouchableOpacity
               style={[styles.refreshButton, { backgroundColor: `${accentColor}22` }]}
-              onPress={loadIntelligentInsights}
+              onPress={() => loadIntelligentInsights()}
             >
               <MaterialCommunityIcons name="refresh" size={20} color={accentColor} />
             </TouchableOpacity>
@@ -312,7 +312,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
       {trendSummary && (
         <View style={[styles.trendCard, { backgroundColor: categoryInfo.bgColors[1], borderColor: cardBorder }]}>
           <LinearGradient
-            colors={categoryInfo.colors}
+            colors={categoryInfo.colors as [string, string, ...string[]]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.trendGradient}
@@ -320,7 +320,7 @@ export const IntelligentInsightsSection: React.FC<IntelligentInsightsSectionProp
             <View style={styles.trendContent}>
               <View style={styles.trendHeader}>
                 <MaterialCommunityIcons name={categoryInfo.icon as any} size={20} color="#ffffff" />
-                <Text style={styles.trendTitle}>Analisi Trend</Text>
+                <Text style={styles.trendTitle} allowFontScaling={false}>Analisi Trend</Text>
               </View>
               <Text style={styles.trendText}>{trendSummary}</Text>
               {focus && (
@@ -364,12 +364,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   refreshButton: {
     width: 36,
@@ -403,18 +404,20 @@ const styles = StyleSheet.create({
   },
   trendTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#ffffff',
   },
   trendText: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   focusText: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.8)',
     fontStyle: 'italic',
+    fontFamily: 'Figtree_500Medium',
   },
   insightsList: {
     gap: 8,
@@ -428,12 +431,13 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     textAlign: 'center',
   },
   loadingSubtext: {
     fontSize: 14,
     textAlign: 'center',
+    fontFamily: 'Figtree_500Medium',
   },
   errorCard: {
     marginHorizontal: 8, // 🔥 FIX: Ridotto da 16 a 8 per allinearsi con le card degli insight
@@ -444,13 +448,14 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#ef4444',
   },
   errorText: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   retryButton: {
     paddingHorizontal: 16,
@@ -460,7 +465,7 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#ffffff',
   },
   emptyCard: {
@@ -472,12 +477,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   emptyText: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
 });
 

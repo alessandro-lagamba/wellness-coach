@@ -314,7 +314,7 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
                   size={24}
                   color="#ffffff"
                 />
-                <Text style={styles.title}>{getPopupTitle()}</Text>
+                <Text style={styles.title} allowFontScaling={false}>{getPopupTitle()}</Text>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <MaterialCommunityIcons name="close" size={24} color="#ffffff" />
@@ -327,10 +327,10 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
             {loading && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={getPopupColors()[0]} />
-                <Text style={styles.loadingText}>
+                <Text style={styles.loadingText} allowFontScaling={false}>
                   Generando analisi dettagliata...
                 </Text>
-                <Text style={styles.loadingSubtext}>
+                <Text style={styles.loadingSubtext} allowFontScaling={false}>
                   L'AI sta analizzando i tuoi dati
                 </Text>
               </View>
@@ -339,13 +339,13 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
             {error && !loading && (
               <View style={styles.errorContainer}>
                 <MaterialCommunityIcons name="alert-circle" size={48} color="#ef4444" />
-                <Text style={styles.errorTitle}>Errore</Text>
-                <Text style={styles.errorText}>{error}</Text>
+                <Text style={styles.errorTitle} allowFontScaling={false}>Errore</Text>
+                <Text style={styles.errorText} allowFontScaling={false}>{error}</Text>
                 <TouchableOpacity
                   style={[styles.retryButton, { backgroundColor: getPopupColors()[0] }]}
                   onPress={loadOrGenerateDetailedAnalysis}
                 >
-                  <Text style={styles.retryButtonText}>Riprova</Text>
+                  <Text style={styles.retryButtonText} allowFontScaling={false}>Riprova</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -358,7 +358,7 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
                     size={20}
                     color={getPopupColors()[0]}
                   />
-                  <Text style={styles.analysisTitle}>Analisi AI</Text>
+                  <Text style={styles.analysisTitle} allowFontScaling={false}>Analisi AI</Text>
                 </View>
                 <Markdown style={markdownStyles}>{analysis}</Markdown>
               </View>
@@ -367,8 +367,8 @@ export const DetailedAnalysisPopup: React.FC<DetailedAnalysisPopupProps> = ({
             {!loading && !error && !analysis && (
               <View style={styles.errorContainer}>
                 <MaterialCommunityIcons name="help-circle" size={48} color="#6b7280" />
-                <Text style={styles.errorTitle}>Nessun contenuto</Text>
-                <Text style={styles.errorText}>
+                <Text style={styles.errorTitle} allowFontScaling={false}>Nessun contenuto</Text>
+                <Text style={styles.errorText} allowFontScaling={false}>
                   Non è stato possibile generare l'analisi. Riprova più tardi.
                 </Text>
               </View>
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#ffffff',
     flexShrink: 1,
   },
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_500Medium', // Was 600
     color: '#374151',
     textAlign: 'center',
   },
@@ -462,6 +462,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
+    fontFamily: 'Figtree_500Medium',
   },
   errorContainer: {
     flex: 1,
@@ -471,7 +472,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#ef4444',
     marginTop: 16,
     marginBottom: 8,
@@ -483,6 +484,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 24,
     paddingHorizontal: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   retryButton: {
     paddingHorizontal: 24,
@@ -492,7 +494,7 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   analysisContainer: {
     flex: 1,
@@ -507,7 +509,7 @@ const styles = StyleSheet.create({
   },
   analysisTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#1e293b',
   },
   analysisText: {
@@ -524,30 +526,31 @@ const markdownStyles = {
     fontSize: 15,
     lineHeight: 24,
     color: '#374151',
+    fontFamily: 'Figtree_500Medium',
   },
   heading1: {
     fontSize: 20,
-    fontWeight: '700' as any,
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#1e293b',
     marginTop: 16,
     marginBottom: 8,
   },
   heading2: {
     fontSize: 18,
-    fontWeight: '700' as any,
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#1e293b',
     marginTop: 14,
     marginBottom: 6,
   },
   heading3: {
     fontSize: 16,
-    fontWeight: '700' as any,
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#1e293b',
     marginTop: 12,
     marginBottom: 4,
   },
   strong: {
-    fontWeight: '700' as any,
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#0f172a',
   },
   em: {

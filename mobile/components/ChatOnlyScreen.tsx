@@ -52,7 +52,7 @@ import { AuthService } from '../services/auth.service';
 import { AnalysisIntentService } from '../services/analysis-intent.service';
 import { ChatSettingsService, ChatTone, ResponseLength } from '../services/chat-settings.service';
 import { ExportService } from '../services/export.service';
-import { DailyJournalDBService } from '../services/daily-journal-db.service';
+import { DailyJournalDBService } from '../services/daily-journal-db-local.service';
 import { BACKEND_URL, getBackendURL } from '../constants/env';
 
 // Hooks & Context
@@ -81,6 +81,7 @@ const chatMarkdownStyles = (themeMode: string, colors: any) => ({
         color: colors.text,
         fontSize: 15,
         lineHeight: 22,
+        fontFamily: 'Figtree_500Medium',
     },
     paragraph: {
         marginTop: 0,
@@ -89,13 +90,13 @@ const chatMarkdownStyles = (themeMode: string, colors: any) => ({
     heading1: {
         color: colors.text,
         fontSize: 20,
-        fontWeight: '700' as const,
+        fontFamily: 'Figtree_700Bold', // Was 700
         marginBottom: 8,
     },
     heading2: {
         color: colors.text,
         fontSize: 18,
-        fontWeight: '600' as const,
+        fontFamily: 'Figtree_700Bold', // Was 600
         marginBottom: 6,
     },
     list_item: {
@@ -885,7 +886,7 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                                                 await ChatSettingsService.saveSettings(updated);
                                             }}
                                         >
-                                            <Text style={[styles.settingsOptionText, { color: colors.text }, chatSettings.tone === tone && { color: colors.primary, fontWeight: '700' }]}>
+                                            <Text style={[styles.settingsOptionText, { color: colors.text }, chatSettings.tone === tone && { color: colors.primary, fontFamily: 'Figtree_700Bold' }]}>
                                                 {tone === 'empathetic' ? 'Empatico' : tone === 'neutral' ? 'Neutro' : tone === 'motivational' ? 'Motivante' : 'Professionale'}
                                             </Text>
                                             {chatSettings.tone === tone && <FontAwesome name="check" size={14} color={colors.primary} />}
@@ -912,7 +913,7 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                                                 await ChatSettingsService.saveSettings(updated);
                                             }}
                                         >
-                                            <Text style={[styles.settingsOptionText, { color: colors.text }, chatSettings.responseLength === length && { color: colors.primary, fontWeight: '700' }]}>
+                                            <Text style={[styles.settingsOptionText, { color: colors.text }, chatSettings.responseLength === length && { color: colors.primary, fontFamily: 'Figtree_700Bold' }]}>
                                                 {length === 'short' ? 'Breve' : length === 'standard' ? 'Standard' : 'Dettagliata'}
                                             </Text>
                                             {chatSettings.responseLength === length && <FontAwesome name="check" size={14} color={colors.primary} />}
@@ -974,7 +975,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
     },
     scrollArea: {
         flex: 1,
@@ -996,7 +997,7 @@ const styles = StyleSheet.create({
     },
     quickRepliesToggleText: {
         fontSize: 13,
-        fontWeight: '500',
+        fontFamily: 'Figtree_500Medium', // Was 500
     },
     quickRepliesGrid: {
         flexDirection: 'row',
@@ -1014,7 +1015,7 @@ const styles = StyleSheet.create({
     },
     quickReplyText: {
         fontSize: 13,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
     },
     messageWrapper: {
         paddingHorizontal: 16,
@@ -1107,7 +1108,7 @@ const styles = StyleSheet.create({
     wellnessBannerTitle: {
         color: '#fff',
         fontSize: 14,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold', // Was 700
     },
     wellnessBannerDescription: {
         color: '#fff',
@@ -1144,7 +1145,7 @@ const styles = StyleSheet.create({
     },
     menuModalTitle: {
         fontSize: 17,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold', // Was 700
     },
     menuOptions: {
         paddingVertical: 8,
@@ -1185,7 +1186,7 @@ const styles = StyleSheet.create({
     },
     settingsModalTitle: {
         fontSize: 17,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold', // Was 700
     },
     settingsModalBody: {
         padding: 16,
@@ -1195,7 +1196,7 @@ const styles = StyleSheet.create({
     },
     settingsSectionTitle: {
         fontSize: 14,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
         marginBottom: 10,
     },
     settingsOptions: {

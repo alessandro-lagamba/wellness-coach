@@ -814,7 +814,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold', // Was 800
     color: '#f1f5f9',
     marginBottom: 8,
     letterSpacing: -0.5,
@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#cbd5e1',
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   avatarContainer: {
     marginBottom: 40,
@@ -931,7 +931,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 30,
     textAlign: 'center',
     letterSpacing: -0.3,
@@ -943,7 +943,7 @@ const styles = StyleSheet.create({
   },
   liveKitStatusText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     textAlign: 'center',
     letterSpacing: -0.2,
   },
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     textAlign: 'center',
     lineHeight: 24,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   instructionsContainer: {
     marginTop: 20,
@@ -976,7 +976,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#cbd5e1',
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   fastChatToggleContainer: {
     marginTop: 15,
@@ -1024,13 +1024,13 @@ const styles = StyleSheet.create({
   },
   fastChatToggleLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#f1f5f9',
     marginRight: 10,
   },
   fastChatToggleLabelMinimal: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#fca5a5',
     marginRight: 12,
   },
@@ -1067,7 +1067,7 @@ const styles = StyleSheet.create({
   stopAudioButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     marginLeft: 8,
   },
   fastChatResponseContainer: {
@@ -1086,7 +1086,7 @@ const styles = StyleSheet.create({
   },
   fastChatResponseTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#22c55e',
     marginBottom: 5,
   },
@@ -1107,7 +1107,7 @@ const styles = StyleSheet.create({
   audioChunksText: {
     fontSize: 12,
     color: '#1e40af',
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
 });
 

@@ -1493,8 +1493,8 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   heroHeader: { flexDirection: 'row', alignItems: 'flex-start' },
-  heroTitle: { fontSize: 22, fontWeight: '700', color: '#ffffff' },
-  heroSubtitle: { marginTop: 8, fontSize: 13, lineHeight: 20, color: 'rgba(255, 255, 255, 0.85)' },
+  heroTitle: { fontSize: 22, fontFamily: 'Figtree_700Bold', color: '#ffffff' },
+  heroSubtitle: { marginTop: 8, fontSize: 14, fontFamily: 'Figtree_500Medium', lineHeight: 20, color: 'rgba(255, 255, 255, 0.85)' },
   heroMedia: { position: 'relative', borderRadius: 24, overflow: 'hidden' },
   heroImage: { width: '100%', height: 240 },
   heroVideo: {
@@ -1525,7 +1525,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
   heroChipLabel: { fontSize: 12, color: 'rgba(255,255,255,0.78)' },
-  heroChipValue: { marginTop: 6, fontSize: 15, fontWeight: '600', color: '#ffffff' },
+  heroChipValue: { marginTop: 6, fontSize: 15, fontFamily: 'Figtree_700Bold', color: '#ffffff' },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1542,7 +1542,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  primaryButtonText: { fontSize: 14, fontWeight: '700', color: '#ffffff' },
+  primaryButtonText: { fontSize: 14, fontFamily: 'Figtree_700Bold', color: '#ffffff' },
   heroButton: { marginTop: 4 },
   heroButtonText: { color: '#312e81' },
   permissionBanner: {
@@ -1550,11 +1550,11 @@ const styles = StyleSheet.create({
     color: '#fee2e2',
     fontSize: 13,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
 
   sectionHeader: { gap: 6 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 0 },
+  sectionTitle: { fontSize: 18, fontFamily: 'Figtree_700Bold', marginBottom: 0 },
   sectionSubtitle: { fontSize: 14, marginBottom: 16, lineHeight: 20 },
   emotionIconRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
@@ -1574,7 +1574,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   metricIconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  metricTitle: { fontSize: 15, fontWeight: '600' },
+  metricTitle: { fontSize: 15, fontFamily: 'Figtree_700Bold' },
   metricBody: { fontSize: 13, lineHeight: 18 },
 
   // Chart card (overview)
@@ -1614,7 +1614,7 @@ const styles = StyleSheet.create({
   },
   captureBackButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   cameraPreview: {
     flex: 1,
@@ -1666,7 +1666,7 @@ const styles = StyleSheet.create({
   cameraLoadingText: {
     color: '#f8fafc',
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   detectionFrame: {
     width: width * 0.68,
@@ -1685,7 +1685,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#f8fafc',
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
     lineHeight: 22,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 1 },
@@ -1721,7 +1721,7 @@ const styles = StyleSheet.create({
   ghostButtonPlaceholder: {
     opacity: 0,
   },
-  ghostButtonText: { color: '#4338ca', fontWeight: '600' },
+  ghostButtonText: { color: '#4338ca', fontFamily: 'Figtree_700Bold' },
 
   // Detecting card
   detectingCard: {
@@ -1738,7 +1738,7 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 10,
   },
-  detectingTitle: { fontSize: 20, fontWeight: '600', color: '#1e293b' },
+  detectingTitle: { fontSize: 20, fontFamily: 'Figtree_700Bold', color: '#1e293b' },
   detectingSubtitle: { fontSize: 14, color: '#475569', textAlign: 'center', lineHeight: 20 },
 
 
@@ -1783,7 +1783,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  resultEmotion: { fontSize: 24, fontWeight: '700', color: '#312e81' },
+  resultEmotion: { fontSize: 24, fontFamily: 'Figtree_700Bold', color: '#312e81' },
   resultSubtitle: { fontSize: 13, color: '#64748b' },
 
   breakdownCard: {
@@ -1799,8 +1799,8 @@ const styles = StyleSheet.create({
   breakdownList: { gap: 14 },
   breakdownItem: { gap: 8 },
   breakdownHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  emotionLabel: { fontSize: 14, fontWeight: '500', color: '#1e293b' },
-  emotionPercentage: { fontSize: 13, color: '#475569', fontWeight: '600' },
+  emotionLabel: { fontSize: 14, fontFamily: 'Figtree_500Medium', color: '#1e293b' },
+  emotionPercentage: { fontSize: 13, color: '#475569', fontFamily: 'Figtree_700Bold' },
 
   historyCard: {
     borderRadius: 28,
@@ -1815,7 +1815,7 @@ const styles = StyleSheet.create({
   historyList: { gap: 12 },
   historyItem: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   historyIconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  historyLabel: { fontSize: 14, fontWeight: '600', color: '#0f172a' },
+  historyLabel: { fontSize: 14, fontFamily: 'Figtree_700Bold', color: '#0f172a' },
   historyMeta: { fontSize: 12, color: '#64748b' },
 
   insightLockedCard: {
@@ -1829,7 +1829,7 @@ const styles = StyleSheet.create({
   },
   insightLockedTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     textAlign: 'center',
   },
   insightLockedSubtitle: {
@@ -1845,7 +1845,7 @@ const styles = StyleSheet.create({
   },
   insightLockedButtonText: {
     color: '#ffffff',
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     fontSize: 14,
   },
 
@@ -1868,7 +1868,7 @@ const styles = StyleSheet.create({
   },
   horoscopeCardTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   horoscopeCardSubtitle: {
     fontSize: 13,
@@ -1900,7 +1900,7 @@ const styles = StyleSheet.create({
   },
   horoscopeTagText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#ffffff',
     letterSpacing: 0.5,
   },
@@ -1915,13 +1915,13 @@ const styles = StyleSheet.create({
   },
   horoscopeTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#ffffff',
     marginBottom: 2,
   },
   horoscopeTitleSecondary: {
     fontSize: 18,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
     fontStyle: 'italic',
     color: 'rgba(255, 255, 255, 0.85)',
     marginBottom: 8,
@@ -1967,7 +1967,7 @@ const styles = StyleSheet.create({
   },
   horoscopeButtonText: {
     color: '#ffffff',
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     fontSize: 15,
   },
   horoscopeLockedContainer: {
@@ -2026,7 +2026,7 @@ const styles = StyleSheet.create({
   },
   exploreDeeperTitle: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#ee2bee',
     letterSpacing: 2,
     textAlign: 'center',
@@ -2081,9 +2081,10 @@ const styles = StyleSheet.create({
     textShadowRadius: 10,
   },
   immersiveCardDescription: {
-    fontSize: 13,
+    fontSize: 12,
     color: 'rgba(255, 255, 255, 0.85)',
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   immersiveCardCTA: {
     flexDirection: 'row',
@@ -2093,7 +2094,7 @@ const styles = StyleSheet.create({
   },
   immersiveCardCTAText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
     color: 'rgba(233, 172, 255, 0.9)',
   },
 
@@ -2111,7 +2112,7 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 6,
   },
-  secondaryButtonText: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
+  secondaryButtonText: { fontSize: 15, fontFamily: 'Figtree_700Bold', color: '#ffffff' },
 
   // How it Works
   howItWorksCard: {
@@ -2127,12 +2128,12 @@ const styles = StyleSheet.create({
   howItWorksHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
   howItWorksIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   howItWorksContent: { flex: 1 },
-  howItWorksTitle: { fontSize: 16, fontWeight: '600', marginBottom: 6 },
+  howItWorksTitle: { fontSize: 16, fontFamily: 'Figtree_700Bold', marginBottom: 6 },
   howItWorksDescription: { fontSize: 13, lineHeight: 18 },
   howItWorksSteps: { gap: 12 },
   howItWorksStep: { flexDirection: 'row', alignItems: 'center' },
   stepNumber: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  stepNumberText: { fontSize: 12, fontWeight: '600', color: '#ffffff' },
+  stepNumberText: { fontSize: 12, fontFamily: 'Figtree_700Bold', color: '#ffffff' },
   stepText: { flex: 1, fontSize: 13, lineHeight: 18 },
 
   // Gauge row
@@ -2207,7 +2208,7 @@ const styles = StyleSheet.create({
   },
   detectingTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#1e293b',
     marginBottom: 12,
     textAlign: 'center',
@@ -2294,7 +2295,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     marginTop: 8,
     marginBottom: 16,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   confidenceBar: {
     width: '100%',
@@ -2358,7 +2359,7 @@ const styles = StyleSheet.create({
   },
   emotionName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     color: '#1e293b',
     marginBottom: 2,
   },
@@ -2466,7 +2467,7 @@ const styles = StyleSheet.create({
     color: '#6366f1',
     textAlign: 'center',
     marginTop: 8,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   // Empty state styles
   emptyStateCard: {
@@ -2507,7 +2508,7 @@ const styles = StyleSheet.create({
   detailedAnalysisButtonText: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     color: '#ffffff',
     textAlign: 'center',
     marginHorizontal: 12,

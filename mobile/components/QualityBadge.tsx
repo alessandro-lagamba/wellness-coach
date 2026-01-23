@@ -44,12 +44,12 @@ export const QualityBadge: React.FC<QualityBadgeProps> = ({
   if (compact) {
     return (
       <View style={[styles.compactContainer, { backgroundColor: getConfidenceColor(confidence.level) + '20' }]}>
-        <MaterialCommunityIcons 
-          name={getConfidenceIcon(confidence.level) as any} 
-          size={16} 
-          color={getConfidenceColor(confidence.level)} 
+        <MaterialCommunityIcons
+          name={getConfidenceIcon(confidence.level) as any}
+          size={16}
+          color={getConfidenceColor(confidence.level)}
         />
-        <Text style={[styles.compactText, { color: getConfidenceColor(confidence.level) }]}>
+        <Text style={[styles.compactText, { color: getConfidenceColor(confidence.level) }]} allowFontScaling={false}>
           {confidence.label}
         </Text>
       </View>
@@ -60,16 +60,16 @@ export const QualityBadge: React.FC<QualityBadgeProps> = ({
     <View style={styles.container}>
       {/* Confidence Badge */}
       <View style={[styles.confidenceContainer, { backgroundColor: getConfidenceColor(confidence.level) + '20' }]}>
-        <MaterialCommunityIcons 
-          name={getConfidenceIcon(confidence.level) as any} 
-          size={20} 
-          color={getConfidenceColor(confidence.level)} 
+        <MaterialCommunityIcons
+          name={getConfidenceIcon(confidence.level) as any}
+          size={20}
+          color={getConfidenceColor(confidence.level)}
         />
         <View style={styles.confidenceInfo}>
-          <Text style={[styles.confidenceLabel, { color: getConfidenceColor(confidence.level) }]}>
+          <Text style={[styles.confidenceLabel, { color: getConfidenceColor(confidence.level) }]} allowFontScaling={false}>
             {confidence.label}
           </Text>
-          <Text style={styles.confidenceScore}>
+          <Text style={styles.confidenceScore} allowFontScaling={false}>
             {Math.round(confidence.score * 100)}%
           </Text>
         </View>
@@ -83,17 +83,17 @@ export const QualityBadge: React.FC<QualityBadgeProps> = ({
         <View style={styles.qualityMessageContainer}>
           <View style={styles.qualityMessageHeader}>
             <MaterialCommunityIcons name="camera" size={16} color="#6b7280" />
-            <Text style={styles.qualityMessageTitle}>Qualità Foto</Text>
+            <Text style={styles.qualityMessageTitle} allowFontScaling={false}>Qualità Foto</Text>
           </View>
           <Text style={styles.qualityMessageText}>{qualityMessage}</Text>
-          
+
           {showRetakeButton && onRetakePress && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.retakeButton}
               onPress={onRetakePress}
             >
               <MaterialCommunityIcons name="camera-retake" size={16} color="#ffffff" />
-              <Text style={styles.retakeButtonText}>Riprova</Text>
+              <Text style={styles.retakeButtonText} allowFontScaling={false}>Riprova</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   },
   compactText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     marginLeft: 4,
   },
   confidenceContainer: {
@@ -132,18 +132,20 @@ const styles = StyleSheet.create({
   },
   confidenceLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   confidenceScore: {
     fontSize: 12,
     color: '#6b7280',
     marginTop: 2,
+    fontFamily: 'Figtree_500Medium',
   },
   confidenceDescription: {
     fontSize: 12,
     color: '#6b7280',
     marginLeft: 8,
     flex: 1,
+    fontFamily: 'Figtree_500Medium',
   },
   qualityMessageContainer: {
     backgroundColor: '#f9fafb',
@@ -159,7 +161,7 @@ const styles = StyleSheet.create({
   },
   qualityMessageTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#374151',
     marginLeft: 6,
   },
@@ -168,6 +170,7 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 12,
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   retakeButton: {
     flexDirection: 'row',
@@ -181,7 +184,7 @@ const styles = StyleSheet.create({
   retakeButtonText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     marginLeft: 6,
   },
 });

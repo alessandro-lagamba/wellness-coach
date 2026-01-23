@@ -164,7 +164,7 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
                   <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={2} ellipsizeMode="tail">
                     {t('analysis.skin.trends.title')}
                   </Text>
-                  <Text style={[styles.subtitle, { color: themeColors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">
+                  <Text style={[styles.subtitle, { color: themeColors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail" allowFontScaling={false}>
                     {t('analysis.skin.trends.detailedView') || 'Visualizzazione dettagliata'}
                   </Text>
                 </View>
@@ -195,6 +195,7 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
                       styles.periodButtonText,
                       { color: days === period ? '#22d3ee' : themeColors.textSecondary },
                     ]}
+                    allowFontScaling={false}
                   >
                     {period === 7
                       ? t('home.weeklyProgress.week', { count: 1 }) || '7 giorni'
@@ -222,7 +223,7 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
                     onPress={() => toggleMetric(metric)}
                   >
                     <View style={[styles.metricFilterDot, { backgroundColor: config.color }]} />
-                    <Text style={[styles.metricFilterText, { color: isActive ? config.color : themeColors.textSecondary }]} numberOfLines={1}>
+                    <Text style={[styles.metricFilterText, { color: isActive ? config.color : themeColors.textSecondary }]} numberOfLines={1} allowFontScaling={false}>
                       {config.label}
                     </Text>
                   </TouchableOpacity>
@@ -239,7 +240,7 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
             ) : data.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <MaterialCommunityIcons name="chart-line" size={48} color={themeColors.textTertiary} />
-                <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+                <Text style={[styles.emptyText, { color: themeColors.textSecondary }]} allowFontScaling={false}>
                   {t('analysis.skin.trends.noData') || 'Registra un’analisi per vedere il trend della pelle'}
                 </Text>
               </View>
@@ -264,6 +265,7 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
                           y={y + 4}
                           textAnchor="end"
                           fontSize="10"
+                          fontFamily="Figtree_500Medium"
                           fill={themeColors.textSecondary}
                         >
                           {value}
@@ -320,6 +322,7 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
                         y={y}
                         textAnchor="middle"
                         fontSize="10"
+                        fontFamily="Figtree_500Medium"
                         fill={themeColors.textSecondary}
                       >
                         {point.date}
@@ -434,12 +437,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   closeButton: {
     width: 36,
@@ -470,7 +473,7 @@ const styles = StyleSheet.create({
   },
   periodButtonText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   metricFilterRow: {
     flexDirection: 'row',
@@ -494,7 +497,7 @@ const styles = StyleSheet.create({
   },
   metricFilterText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   chartContainer: {
     marginBottom: 24,
@@ -535,7 +538,7 @@ const styles = StyleSheet.create({
   },
   metricTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   statsRow: {
     flexDirection: 'row',
@@ -551,12 +554,12 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
     marginBottom: 8,
   },
   statValue: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   trendIndicator: {
     flexDirection: 'row',
@@ -565,7 +568,7 @@ const styles = StyleSheet.create({
   },
   trendText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   summaryCard: {
     padding: 16,
@@ -575,7 +578,7 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 12,
   },
   summaryRow: {
@@ -586,11 +589,11 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   summaryValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   summaryMetricsContainer: {
     marginTop: 4,

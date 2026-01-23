@@ -31,10 +31,10 @@ interface VoiceChatModalProps {
   onUserInput?: (input: string, context: string, assistantResponse: string) => void;
 }
 
-export const VoiceChatModal: React.FC<VoiceChatModalProps> = ({ 
-  visible, 
-  onClose, 
-  onUserInput 
+export const VoiceChatModal: React.FC<VoiceChatModalProps> = ({
+  visible,
+  onClose,
+  onUserInput
 }) => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -42,9 +42,9 @@ export const VoiceChatModal: React.FC<VoiceChatModalProps> = ({
   const [isResponding, setIsResponding] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  
+
   const tts = useMemo(() => TTSService.getInstance(), []);
-  
+
   // Animation values
   const modalScale = useSharedValue(0);
   const modalOpacity = useSharedValue(0);
@@ -92,12 +92,12 @@ export const VoiceChatModal: React.FC<VoiceChatModalProps> = ({
       const startRealSpeechRecognition = async () => {
         try {
           const SpeechRecognitionService = (await import('../services/speechRecognition.service')).default;
-          
+
           await SpeechRecognitionService.startListening(
             (result) => {
               console.log('VoiceChatModal speech result:', result);
               setTranscript(result.transcript);
-              
+
               if (result.isFinal) {
                 setIsListening(false);
                 setIsResponding(true);
@@ -121,7 +121,7 @@ export const VoiceChatModal: React.FC<VoiceChatModalProps> = ({
           setIsListening(false);
         }
       };
-      
+
       startRealSpeechRecognition();
     }
   }, [isListening]);
@@ -131,7 +131,7 @@ export const VoiceChatModal: React.FC<VoiceChatModalProps> = ({
       // 🔥 FIX: Ottieni la lingua dell'utente
       const { getUserLanguage } = await import('../services/language.service');
       const userLanguage = await getUserLanguage();
-      
+
       // Send to OpenAI via backend for real AI response
       const response = await fetch(`${BACKEND_URL}/api/chat/respond`, {
         method: 'POST',
@@ -175,21 +175,21 @@ export const VoiceChatModal: React.FC<VoiceChatModalProps> = ({
           const context = userQuery.toLowerCase().includes('tired') || userQuery.toLowerCase().includes('stressed')
             ? 'stress'
             : userQuery.toLowerCase().includes('skin')
-            ? 'skin'
-            : userQuery.toLowerCase().includes('sleep')
-            ? 'sleep'
-            : 'general';
+              ? 'skin'
+              : userQuery.toLowerCase().includes('sleep')
+                ? 'sleep'
+                : 'general';
           onUserInput(userQuery, context, aiResponse);
         }, 1000);
       }
     } catch (error) {
       console.error('Error processing user input:', error);
       setIsResponding(false);
-      
+
       // Fallback response
       const fallbackResponse = "I'm having trouble processing your request right now. Please try again.";
       setResponse(fallbackResponse);
-      
+
       // Speak fallback response
       try {
         setIsSpeaking(true);
@@ -211,7 +211,7 @@ export const VoiceChatModal: React.FC<VoiceChatModalProps> = ({
       setTranscript('');
       setResponse('');
       setIsListening(true);
-      
+
       // Start pulse animation
       pulseScale.value = withRepeat(
         withSequence(
@@ -369,17 +369,17 @@ export const VoiceChatModal: React.FC<VoiceChatModalProps> = ({
                       isListening
                         ? 'stop'
                         : isResponding
-                        ? 'spinner'
-                        : isSpeaking
-                        ? 'volume-up'
-                        : 'microphone'
+                          ? 'spinner'
+                          : isSpeaking
+                            ? 'volume-up'
+                            : 'microphone'
                     }
                     size={24}
                     color="#ffffff"
                   />
                 </TouchableOpacity>
               </Animated.View>
-              
+
               <Text style={styles.micLabel}>
                 {isListening ? 'Listening...' : isResponding ? 'Processing...' : isSpeaking ? 'Speaking...' : 'Tap to talk'}
               </Text>
@@ -433,13 +433,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#1f2937',
   },
   subtitle: {
     fontSize: 14,
     color: '#6b7280',
     marginTop: 4,
+    fontFamily: 'Figtree_500Medium',
   },
   promptsContainer: {
     flexDirection: 'row',
@@ -457,7 +458,7 @@ const styles = StyleSheet.create({
   },
   promptText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   avatarContainer: {
     alignItems: 'center',
@@ -512,6 +513,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     textAlign: 'center',
+    fontFamily: 'Figtree_500Medium',
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -529,6 +531,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     fontStyle: 'italic',
+    fontFamily: 'Figtree_500Medium',
   },
   aiMessage: {
     backgroundColor: '#6366f1',
@@ -542,6 +545,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ffffff',
     textAlign: 'center',
+    fontFamily: 'Figtree_500Medium',
   },
   micContainer: {
     alignItems: 'center',
@@ -574,7 +578,7 @@ const styles = StyleSheet.create({
   micLabel: {
     fontSize: 12,
     color: '#6b7280',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
 });
 

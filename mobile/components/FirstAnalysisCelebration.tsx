@@ -53,7 +53,7 @@ export const FirstAnalysisCelebration: React.FC<FirstAnalysisCelebrationProps> =
       // Haptic feedback più intenso
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 200);
-      
+
       // Animazioni elaborate
       Animated.parallel([
         Animated.timing(fadeAnim, {
@@ -196,7 +196,7 @@ export const FirstAnalysisCelebration: React.FC<FirstAnalysisCelebrationProps> =
           >
             {/* Header con gradiente migliorato */}
             <LinearGradient
-              colors={[...config.gradient, `${config.gradient[1]}dd`]}
+              colors={([...config.gradient, `${config.gradient[1]}dd`] as unknown) as [string, string, ...string[]]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.header}
@@ -235,7 +235,7 @@ export const FirstAnalysisCelebration: React.FC<FirstAnalysisCelebrationProps> =
               {/* Emoji celebrazione */}
               <Text style={styles.celebrationEmoji}>🎉</Text>
 
-              <Text style={styles.title}>{config.title}</Text>
+              <Text style={styles.title} allowFontScaling={false}>{config.title}</Text>
               <Text style={styles.subtitle}>{config.description}</Text>
             </LinearGradient>
 
@@ -246,7 +246,7 @@ export const FirstAnalysisCelebration: React.FC<FirstAnalysisCelebrationProps> =
                 <View style={[styles.trophyCircle, { backgroundColor: `${config.gradient[0]}20` }]}>
                   <MaterialCommunityIcons name="trophy" size={28} color={config.gradient[0]} />
                 </View>
-                <Text style={[styles.achievementText, { color: colors.text }]}>
+                <Text style={[styles.achievementText, { color: colors.text }]} allowFontScaling={false}>
                   {t('firstAnalysis.achievement')}
                 </Text>
               </View>
@@ -268,12 +268,12 @@ export const FirstAnalysisCelebration: React.FC<FirstAnalysisCelebrationProps> =
                 activeOpacity={0.85}
               >
                 <LinearGradient
-                  colors={config.gradient}
+                  colors={config.gradient as [string, string, ...string[]]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.primaryButtonGradient}
                 >
-                  <Text style={styles.primaryButtonText}>
+                  <Text style={styles.primaryButtonText} allowFontScaling={false}>
                     {t('firstAnalysis.continue')}
                   </Text>
                 </LinearGradient>
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold', // Was 800
     color: '#fff',
     marginBottom: 10,
     textAlign: 'center',
@@ -383,6 +383,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: 8,
+    fontFamily: 'Figtree_500Medium',
   },
   content: {
     padding: 20,
@@ -407,7 +408,7 @@ const styles = StyleSheet.create({
   },
   achievementText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     letterSpacing: -0.2,
   },
   nextStepCard: {
@@ -417,7 +418,7 @@ const styles = StyleSheet.create({
   },
   nextStepTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 8,
     textAlign: 'center',
     letterSpacing: -0.2,
@@ -426,6 +427,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     textAlign: 'center',
+    fontFamily: 'Figtree_500Medium',
   },
   primaryButton: {
     borderRadius: 16,
@@ -446,7 +448,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#fff',
     letterSpacing: -0.2,
   },

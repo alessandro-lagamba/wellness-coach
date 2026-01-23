@@ -125,8 +125,8 @@ export const GaugeChart: React.FC<GaugeChartProps> = memo(({
           style={styles.gaugeCardInner}
         >
           <View style={styles.header}>
-            <Text style={[styles.label, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
-            {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">{subtitle}</Text>}
+            <Text style={[styles.label, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail" allowFontScaling={false}>{label}</Text>
+            {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail" allowFontScaling={false}>{subtitle}</Text>}
           </View>
 
           <View
@@ -172,11 +172,11 @@ export const GaugeChart: React.FC<GaugeChartProps> = memo(({
                 textAnchor="middle"
                 fill={getScoreColor(percentageForLabel)}
               >
-                <TSpan fontSize={valueFontSize} fontWeight="700">
+                <TSpan fontSize={valueFontSize} fontFamily="Figtree_700Bold">
                   {valueStr}
                 </TSpan>
                 {unit && (
-                  <TSpan fontSize={valueFontSize * 0.55} fontWeight="600" dx="2" dy="-1">
+                  <TSpan fontSize={valueFontSize * 0.55} fontFamily="Figtree_500Medium" dx="2" dy="-1">
                     {unit}
                   </TSpan>
                 )}
@@ -186,7 +186,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = memo(({
           <View style={styles.footer}>
             <View style={styles.scoreContainer}>
               <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(percentageForLabel) }]}>
-                <Text style={styles.scoreText}>{getScoreLabel(percentageForLabel)}</Text>
+                <Text style={styles.scoreText} allowFontScaling={false}>{getScoreLabel(percentageForLabel)}</Text>
               </View>
 
               {safeTrend !== undefined && safeTrend !== 0 && (
@@ -196,7 +196,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = memo(({
                     size={10}
                     color={safeTrend > 0 ? '#10b981' : '#ef4444'}
                   />
-                  <Text style={[styles.trendText, { color: safeTrend > 0 ? '#10b981' : '#ef4444' }]}>
+                  <Text style={[styles.trendText, { color: safeTrend > 0 ? '#10b981' : '#ef4444' }]} allowFontScaling={false}>
                     {Math.abs(safeTrend)}
                   </Text>
                 </View>
@@ -252,13 +252,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     textAlign: 'center',
     maxWidth: '100%',
   },
   subtitle: {
     fontSize: 9,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
     marginTop: 2,
     maxWidth: '100%',
   },
@@ -281,8 +281,8 @@ const styles = StyleSheet.create({
     borderRadius: 12, // Ridotto da 12 a 10
   },
   scoreText: {
-    fontSize: 10, // Ridotto da 10 a 9
-    fontWeight: '600',
+    fontSize: 10,
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#ffffff',
   },
   trendContainer: {
@@ -292,6 +292,6 @@ const styles = StyleSheet.create({
   },
   trendText: {
     fontSize: 9, // Ridotto da 10 a 9
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
 });

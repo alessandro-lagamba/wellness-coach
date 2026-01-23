@@ -48,7 +48,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
           <SafeAreaView edges={['bottom']} style={styles.safeArea}>
             <View style={[styles.modalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                <Text style={[styles.modalTitle, { color: colors.text }]} allowFontScaling={false}>
                   {recipe ? recipe.title : t('analysis.food.recipes.loading')}
                 </Text>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -59,7 +59,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
               {loading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color={colors.primary} />
-                  <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                  <Text style={[styles.loadingText, { color: colors.textSecondary }]} allowFontScaling={false}>
                     {t('analysis.food.recipes.generating')}
                   </Text>
                 </View>
@@ -83,13 +83,13 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
                   <View style={styles.recipeMeta}>
                     <View style={styles.recipeMetaItem}>
                       <MaterialCommunityIcons name="clock-outline" size={16} color={colors.textSecondary} />
-                      <Text style={[styles.recipeMetaText, { color: colors.textSecondary }]}>
+                      <Text style={[styles.recipeMetaText, { color: colors.textSecondary }]} allowFontScaling={false}>
                         {recipe.readyInMinutes || recipe.ready_in_minutes || recipe.total_minutes || '?'} {t('analysis.food.fridge.minutes')}
                       </Text>
                     </View>
                     <View style={styles.recipeMetaItem}>
                       <MaterialCommunityIcons name="account-group" size={16} color={colors.textSecondary} />
-                      <Text style={[styles.recipeMetaText, { color: colors.textSecondary }]}>
+                      <Text style={[styles.recipeMetaText, { color: colors.textSecondary }]} allowFontScaling={false}>
                         {recipe.servings} {t('analysis.food.fridge.servings')}
                       </Text>
                     </View>
@@ -111,7 +111,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
 
                     return (
                       <View style={styles.macrosSection}>
-                        <Text style={[styles.macrosTitle, { color: colors.text }]}>
+                        <Text style={[styles.macrosTitle, { color: colors.text }]} allowFontScaling={false}>
                           {t('analysis.food.fridge.nutritionPerServing')}
                         </Text>
                         <View style={styles.macrosGrid}>
@@ -152,7 +152,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
 
                   {/* Ingredients Section */}
                   <View style={styles.ingredientsListSection}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>
                       {t('analysis.food.fridge.ingredients')}
                     </Text>
                     {recipe.ingredients && recipe.ingredients.map((ing: any, index: number) => (
@@ -172,7 +172,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
 
                   {/* Steps Section */}
                   <View style={styles.stepsSection}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>
                       {t('analysis.food.fridge.steps')}
                     </Text>
                     {recipe.steps && recipe.steps.map((step: string, index: number) => (
@@ -188,7 +188,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
                   {/* Tips Section */}
                   {recipe.tips && recipe.tips.length > 0 && (
                     <View style={styles.tipsSection}>
-                      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                      <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>
                         {t('analysis.food.fridge.tips')}
                       </Text>
                       {recipe.tips.map((tip: string, index: number) => (
@@ -203,7 +203,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
                   {/* Shopping Gaps Section */}
                   {recipe.shoppingGaps && recipe.shoppingGaps.length > 0 && (
                     <View style={styles.shoppingGapsSection}>
-                      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                      <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>
                         {t('analysis.food.fridge.missingIngredients')}
                       </Text>
                       {recipe.shoppingGaps.map((gap: string, index: number) => (
@@ -223,7 +223,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
                   style={[styles.closeButtonModal, { backgroundColor: colors.primary }]}
                   onPress={onClose}
                 >
-                  <Text style={[styles.closeButtonText, { color: colors.textInverse }]}>
+                  <Text style={[styles.closeButtonText, { color: colors.textInverse }]} allowFontScaling={false}>
                     {t('common.close')}
                   </Text>
                 </TouchableOpacity>
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     flex: 1,
   },
   closeButton: {
@@ -282,6 +282,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 14,
+    fontFamily: 'Figtree_500Medium',
   },
   scrollView: {
     flex: 1,
@@ -308,13 +309,14 @@ const styles = StyleSheet.create({
   },
   recipeMetaText: {
     fontSize: 14,
+    fontFamily: 'Figtree_500Medium',
   },
   macrosSection: {
     marginBottom: 20,
   },
   macrosTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     marginBottom: 12,
   },
   macrosGrid: {
@@ -331,19 +333,19 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 4,
   },
   macroLabel: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   ingredientsListSection: {
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 16,
   },
   ingredientListItem: {
@@ -356,10 +358,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   optionalText: {
     fontSize: 12,
     fontStyle: 'italic',
+    fontFamily: 'Figtree_500Medium',
   },
   stepsSection: {
     marginBottom: 20,
@@ -379,13 +383,14 @@ const styles = StyleSheet.create({
   },
   stepNumberText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#ffffff',
   },
   stepText: {
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   tipsSection: {
     marginBottom: 20,
@@ -400,6 +405,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   shoppingGapsSection: {
     marginBottom: 20,
@@ -413,6 +419,7 @@ const styles = StyleSheet.create({
   shoppingGapText: {
     flex: 1,
     fontSize: 14,
+    fontFamily: 'Figtree_500Medium',
   },
   buttonContainer: {
     padding: 20,
@@ -428,7 +435,7 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
 });
 

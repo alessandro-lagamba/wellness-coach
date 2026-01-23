@@ -255,10 +255,10 @@ const AnimatedCalorieBar: React.FC<{
   return (
     <View style={[styles.calorieBarContainer, { borderColor: colors.border, backgroundColor: colors.surface }]}>
       <View style={styles.calorieBarHeader}>
-        <Text style={[styles.calorieBarLabel, { color: colors.text }]}>
+        <Text style={[styles.calorieBarLabel, { color: colors.text }]} allowFontScaling={false}>
           {label}
         </Text>
-        <Text style={[styles.calorieBarValue, { color: colors.textSecondary }]}>
+        <Text style={[styles.calorieBarValue, { color: colors.textSecondary }]} allowFontScaling={false}>
           {Math.round(current)} / {max} kcal ({caloriesPercent}%)
         </Text>
       </View>
@@ -3056,11 +3056,12 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     // Color will be set inline with colors.textInverse
   },
   heroSubtitle: {
     fontSize: 13,
+    fontFamily: 'Figtree_400Regular',
     lineHeight: 20,
     // Color will be set inline with rgba(255,255,255,0.85)
   },
@@ -3121,7 +3122,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#ffffff',
   },
   heroButton: {
@@ -3133,6 +3134,7 @@ const styles = StyleSheet.create({
   permissionBanner: {
     marginTop: 12,
     fontSize: 13,
+    fontFamily: 'Figtree_400Regular',
     textAlign: 'center',
     fontWeight: '500',
     // Color will be set inline with colors.warning or colors.accent
@@ -3142,11 +3144,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     // Color will be set inline with colors.text
   },
   sectionSubtitle: {
     fontSize: 13,
+    fontFamily: 'Figtree_400Regular',
     // Color will be set inline with colors.textSecondary
   },
   recipeFiltersCard: {
@@ -3598,7 +3601,7 @@ const styles = StyleSheet.create({
   },
   analyzingTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#1f2937',
   },
   analyzingSubtitle: {
@@ -3606,6 +3609,7 @@ const styles = StyleSheet.create({
     color: '#475569',
     textAlign: 'center',
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   spinner: {
     width: 68,
@@ -3643,7 +3647,7 @@ const styles = StyleSheet.create({
   },
   resultTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#065f46',
   },
   resultSubtitle: {
@@ -3651,6 +3655,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     opacity: 0.7,
     marginTop: 6,
+    fontFamily: 'Figtree_500Medium',
   },
   resultIconWrap: {
     width: 50,
@@ -3683,13 +3688,13 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     color: '#1e293b',
   },
   metricValue: {
     fontSize: 13,
     color: '#475569',
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   recommendationsCard: {
     borderRadius: 28,
@@ -3723,6 +3728,7 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     lineHeight: 19,
     flex: 1,
+    fontFamily: 'Figtree_500Medium',
   },
   secondaryButton: {
     flexDirection: 'row',
@@ -3740,7 +3746,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#ffffff',
   },
   // How It Works Video Section Styles
@@ -3768,12 +3774,13 @@ const styles = StyleSheet.create({
   },
   howItWorksTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 4,
   },
   howItWorksDescription: {
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   videoPlaceholder: {
     width: '100%',
@@ -3824,13 +3831,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     flex: 1,
+    fontFamily: 'Figtree_500Medium',
   },
   frameText: {
     marginTop: 24,
     fontSize: 16,
     color: '#f8fafc',
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     lineHeight: 22,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 1 },
@@ -3862,11 +3870,11 @@ const styles = StyleSheet.create({
   },
   calorieBarLabel: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   calorieBarValue: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   calorieBarTrack: {
     width: '100%',
@@ -3913,19 +3921,19 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 12,
     color: '#64748b',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     marginBottom: 4,
   },
   statValue: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#1e293b',
     marginBottom: 2,
   },
   statSubtext: {
     fontSize: 10,
     color: '#94a3b8',
-    fontWeight: '400',
+    fontFamily: 'Figtree_500Medium', // Was 400
   },
 
   // Enhanced Skin Analysis Styles
@@ -3988,7 +3996,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     marginTop: 8,
     marginBottom: 16,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   skinMetricsRow: {
     flexDirection: 'row',
@@ -4003,10 +4011,11 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     opacity: 0.8,
     marginBottom: 4,
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   skinMetricValue: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#ffffff',
   },
 
@@ -4053,7 +4062,7 @@ const styles = StyleSheet.create({
   },
   metricName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#1e293b',
     marginBottom: 2,
   },
@@ -4073,7 +4082,7 @@ const styles = StyleSheet.create({
   },
   metricPercentage: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   // Enhanced Loading Screen Styles
   loadingContainer: {
@@ -4165,7 +4174,7 @@ const styles = StyleSheet.create({
     color: '#6366f1',
     textAlign: 'center',
     marginTop: 8,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   analysisSteps: {
     flexDirection: 'row',
@@ -4179,7 +4188,7 @@ const styles = StyleSheet.create({
   analysisStepText: {
     fontSize: 11,
     color: '#64748b',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   // Action Buttons
   actionButtonsContainer: {
@@ -4203,7 +4212,7 @@ const styles = StyleSheet.create({
   },
   goBackButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#6366f1',
   },
   retakeButton: {
@@ -4218,7 +4227,7 @@ const styles = StyleSheet.create({
   },
   retakeButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#ffffff',
   },
   // Empty state styles
@@ -4247,7 +4256,7 @@ const styles = StyleSheet.create({
   },
   guideHintText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
 
   // ✅ ADD: Modal styles
@@ -4272,12 +4281,13 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 8,
   },
   modalSubtitle: {
     fontSize: 16,
     lineHeight: 24,
+    fontFamily: 'Figtree_500Medium',
   },
   modalContent: {
     flex: 1,
@@ -4315,7 +4325,7 @@ const styles = StyleSheet.create({
   },
   heroBadgeText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold', // Was 800
     color: '#6366f1',
     letterSpacing: 0.5,
   },
@@ -4339,12 +4349,12 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold', // Was 800
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     textAlign: 'center',
   },
   statDivider: {
@@ -4404,13 +4414,13 @@ const styles = StyleSheet.create({
   },
   bulletNumber: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold', // Was 800
   },
   itemText: {
     flex: 1,
     fontSize: 16,
     lineHeight: 24,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
 
   // ✅ ENHANCED: Action Section
@@ -4435,7 +4445,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#ffffff',
   },
 
@@ -4461,7 +4471,7 @@ const styles = StyleSheet.create({
   detailedAnalysisButtonText: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#ffffff',
     textAlign: 'center',
     marginHorizontal: 12,
@@ -4476,7 +4486,7 @@ const styles = StyleSheet.create({
   },
   guideHintText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
 
   // ✅ ADD: Fridge Section Styles
@@ -4509,12 +4519,13 @@ const styles = StyleSheet.create({
   },
   fridgeTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 6,
   },
   fridgeDescription: {
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   fridgeButton: {
     flexDirection: 'row',
@@ -4532,7 +4543,7 @@ const styles = StyleSheet.create({
   },
   fridgeButtonText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
 
   // ✅ ADD: Nutritional Goals Card Styles
@@ -4565,13 +4576,14 @@ const styles = StyleSheet.create({
   },
   goalsTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 6,
   },
   goalsSubtitle: {
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 4,
+    fontFamily: 'Figtree_500Medium',
   },
   goalsSource: {
     fontSize: 12,
@@ -4593,7 +4605,7 @@ const styles = StyleSheet.create({
   },
   goalsButtonText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   // ✅ ADD: Recipe Hub Styles
   recipeHubPreview: {
@@ -4625,7 +4637,7 @@ const styles = StyleSheet.create({
   },
   recipeHubTagText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#ffffff',
     letterSpacing: 0.5,
   },
@@ -4640,7 +4652,7 @@ const styles = StyleSheet.create({
   },
   recipeHubTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#ffffff',
     marginBottom: 6,
   },
@@ -4648,6 +4660,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   recipeHubIconContainer: {
     width: 64,

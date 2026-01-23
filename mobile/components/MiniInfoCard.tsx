@@ -93,7 +93,9 @@ const MiniInfoCard: React.FC<Props> = ({
           style={[styles.smallLabel, { color: colors.text }]}
           numberOfLines={1}
           ellipsizeMode="tail"
-          allowFontScaling={false} // 🔒 Fixed font size
+          allowFontScaling={false}
+          adjustsFontSizeToFit={true}
+          minimumFontScale={0.7}
         >
           {label}
         </Text>
@@ -158,6 +160,8 @@ const MiniInfoCard: React.FC<Props> = ({
               numberOfLines={1}
               ellipsizeMode="tail"
               allowFontScaling={false}
+              adjustsFontSizeToFit={true}
+              minimumFontScale={0.8}
             >
               {label}
             </Text>
@@ -235,6 +239,8 @@ const MiniInfoCard: React.FC<Props> = ({
               style={[styles.largeLabel, { color: colors.text }]}
               numberOfLines={1}
               allowFontScaling={false}
+              adjustsFontSizeToFit={true}
+              minimumFontScale={0.8}
             >
               {label}
             </Text>
@@ -316,7 +322,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   smallLabel: {
-    fontSize: 18, // Fixed size
+    fontSize: 16, // Fixed size
     fontFamily: 'Figtree_700Bold',
     // fontWeight: "800",
     color: "#111827",

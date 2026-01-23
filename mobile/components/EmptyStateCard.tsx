@@ -102,7 +102,7 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={config.gradient}
+        colors={config.gradient as [string, string, ...string[]]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.card, { borderColor: colors.border }]}
@@ -117,11 +117,11 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({
           </View>
         )}
 
-        <Text style={styles.title}>{config.title}</Text>
-        <Text style={styles.subtitle}>{config.subtitle}</Text>
-        
+        <Text style={styles.title} allowFontScaling={false}>{config.title}</Text>
+        <Text style={styles.subtitle} allowFontScaling={false}>{config.subtitle}</Text>
+
         {config.description && (
-          <Text style={styles.description}>{config.description}</Text>
+          <Text style={styles.description} allowFontScaling={false}>{config.description}</Text>
         )}
 
         {onAction && (
@@ -135,7 +135,7 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({
               style={styles.actionButtonGradient}
             >
               <MaterialCommunityIcons name="arrow-right" size={20} color={config.gradient[0]} />
-              <Text style={[styles.actionButtonText, { color: config.gradient[0] }]}>
+              <Text style={[styles.actionButtonText, { color: config.gradient[0] }]} allowFontScaling={false}>
                 {config.actionText}
               </Text>
             </LinearGradient>
@@ -156,7 +156,7 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({
             activeOpacity={0.7}
           >
             <MaterialCommunityIcons name="information-outline" size={16} color="rgba(255, 255, 255, 0.9)" />
-            <Text style={styles.learnMoreText}>
+            <Text style={styles.learnMoreText} allowFontScaling={false}>
               {t('emptyStates.learnMore')}
             </Text>
           </TouchableOpacity>
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontFamily: 'Figtree_700Bold', // Was bold
     color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     marginBottom: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   description: {
     fontSize: 14,
@@ -213,6 +213,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   actionButton: {
     borderRadius: 12,
@@ -229,7 +230,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   learnMoreButton: {
     flexDirection: 'row',
@@ -243,6 +244,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: 'rgba(255, 255, 255, 0.9)',
     textDecorationLine: 'underline',
+    fontFamily: 'Figtree_500Medium',
   },
 });
 

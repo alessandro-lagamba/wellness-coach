@@ -155,7 +155,7 @@ const ScoreTile: React.FC<{
         <View style={[styles.titleRowLeft, { justifyContent: 'space-between' }]}>
           <View style={[styles.titleRowLeft, { gap: 8 }]}>
             <MaterialIcons name={def.icon} size={18} color={def.color} />
-            <Text style={[styles.scoreLabel, { color: def.color }]}>{t(def.label).toUpperCase()}</Text>
+            <Text style={[styles.scoreLabel, { color: def.color }]} allowFontScaling={false}>{t(def.label).toUpperCase()}</Text>
           </View>
           <Animated.View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }, chevronStyle]}>
             <MaterialIcons name="chevron-right" size={18} color={colors.primary} />
@@ -164,13 +164,13 @@ const ScoreTile: React.FC<{
 
         {/* Valore + progress compatti */}
         <View style={[styles.scoreRow, { marginTop: 4 }]}>
-          <Text style={[styles.scoreValue, { color: def.color }]}>{Math.round(safeValue)}</Text>
+          <Text style={[styles.scoreValue, { color: def.color }]} allowFontScaling={false}>{Math.round(safeValue)}</Text>
           {unit ? (
-            <Text style={[styles.scoreUnit, { color: colors.textSecondary }]}>{unit}</Text>
+            <Text style={[styles.scoreUnit, { color: colors.textSecondary }]} allowFontScaling={false}>{unit}</Text>
           ) : maxValue > 0 ? (
             <>
-              <Text style={[styles.scoreUnit, { color: colors.textSecondary }]}>/</Text>
-              <Text style={[styles.scoreUnit, { color: colors.textSecondary }]}>{Math.round(maxValue)}</Text>
+              <Text style={[styles.scoreUnit, { color: colors.textSecondary }]} allowFontScaling={false}>/</Text>
+              <Text style={[styles.scoreUnit, { color: colors.textSecondary }]} allowFontScaling={false}>{Math.round(maxValue)}</Text>
             </>
           ) : null}
         </View>
@@ -183,11 +183,11 @@ const ScoreTile: React.FC<{
       {/* Contenuto esteso sotto */}
       <BottomCollapsible expanded={isExpanded}>
         <View style={[styles.definitionSection, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight }]}>
-          <Text style={[styles.definitionTitle, { color: colors.text }]}>{t('ui.whyItMatters')}</Text>
+          <Text style={[styles.definitionTitle, { color: colors.text }]} allowFontScaling={false}>{t('ui.whyItMatters')}</Text>
           <Text style={[styles.definitionText, { color: colors.textSecondary }]}>{t(def.whyItMatters)}</Text>
         </View>
         <View style={styles.definitionSection}>
-          <Text style={[styles.definitionTitle, { color: colors.text }]}>{t('ui.howItWorks')}</Text>
+          <Text style={[styles.definitionTitle, { color: colors.text }]} allowFontScaling={false}>{t('ui.howItWorks')}</Text>
           <Text style={[styles.definitionText, { color: colors.textSecondary }]}>{t(def.howItWorks)}</Text>
         </View>
       </BottomCollapsible>
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   healthBadge: {
     flexDirection: 'row',
@@ -316,11 +316,11 @@ const styles = StyleSheet.create({
   },
   healthText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   mealType: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     marginTop: 4,
   },
   fallbackText: {
@@ -328,6 +328,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 6,
     textAlign: 'center',
+    fontFamily: 'Figtree_500Medium',
   },
 
   metricsList: {
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
   },
   scoreLabel: {
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold', // Was 800
     letterSpacing: 0.5,
   },
   scoreRow: {
@@ -369,12 +370,12 @@ const styles = StyleSheet.create({
   },
   scoreValue: {
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold', // Was 800
     letterSpacing: -0.2,
   },
   scoreUnit: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginLeft: 1,
   },
   progressTrack: {
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
   },
   tapHint: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
 
   definitionSection: {
@@ -407,12 +408,13 @@ const styles = StyleSheet.create({
   },
   definitionTitle: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold', // Was 800
     marginBottom: 4,
   },
   definitionText: {
     fontSize: 12.5,
     lineHeight: 18,
+    fontFamily: 'Figtree_500Medium',
   },
 });
 

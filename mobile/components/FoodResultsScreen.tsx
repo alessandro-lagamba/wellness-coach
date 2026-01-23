@@ -387,7 +387,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
 
         <View style={styles.contentContainer}>
           {/* Metrics Grid */}
-          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 32 }]} numberOfLines={2} ellipsizeMode="tail">
+          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 32 }]} numberOfLines={2} ellipsizeMode="tail" allowFontScaling={false}>
             {t('analysis.food.nutritionalBreakdown') || 'NUTRITIONAL BREAKDOWN'}
           </Text>
 
@@ -454,14 +454,14 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
           {/* Identified Foods */}
           {identifiedFoods.length > 0 && (
             <View style={styles.foodsSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={2} ellipsizeMode="tail">
+              <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={2} ellipsizeMode="tail" allowFontScaling={false}>
                 {t('analysis.food.results.identifiedFoods') || 'IDENTIFIED FOODS'}
               </Text>
               <View style={styles.foodsList}>
                 {identifiedFoods.map((food: string, index: number) => (
                   <View key={index} style={[styles.foodChip, { backgroundColor: colors.surface }]}>
                     <MaterialCommunityIcons name="check-circle" size={16} color={colors.primary} />
-                    <Text style={[styles.foodText, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{food}</Text>
+                    <Text style={[styles.foodText, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail" allowFontScaling={false}>{food}</Text>
                   </View>
                 ))}
               </View>
@@ -527,7 +527,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
               onPress={onRetake}
             >
               <MaterialCommunityIcons name="close" size={18} color={colors.text} />
-              <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
+              <Text style={[styles.secondaryButtonText, { color: colors.text }]} allowFontScaling={false}>
                 {language === 'it' ? 'Chiudi' : 'Close'}
               </Text>
             </TouchableOpacity>
@@ -547,7 +547,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
                   <>
-                    <Text style={styles.primaryButtonText}>
+                    <Text style={styles.primaryButtonText} allowFontScaling={false}>
                       {language === 'it' ? 'Aggiungi ai pasti' : 'Add to Meals'}
                     </Text>
                     <MaterialCommunityIcons name="check" size={20} color="#fff" />
@@ -585,6 +585,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 1,
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 12,
     opacity: 0.7,
     marginTop: 16,
@@ -615,7 +616,7 @@ const styles = StyleSheet.create({
   },
   foodText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   mealInsightCard: {
     marginTop: 24,
@@ -637,11 +638,12 @@ const styles = StyleSheet.create({
   },
   mealInsightTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   mealInsightSubtitle: {
     fontSize: 13,
     marginTop: 4,
+    fontFamily: 'Figtree_500Medium',
   },
   mealInsightBadge: {
     flexDirection: 'row',
@@ -653,7 +655,7 @@ const styles = StyleSheet.create({
   },
   mealInsightBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   mealInsightRow: {
     flexDirection: 'row',
@@ -670,12 +672,13 @@ const styles = StyleSheet.create({
   },
   mealInsightRowTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     marginBottom: 4,
   },
   mealInsightRowText: {
     fontSize: 13,
     lineHeight: 18,
+    fontFamily: 'Figtree_500Medium',
   },
   mealInsightPriority: {
     borderWidth: 1,
@@ -686,7 +689,7 @@ const styles = StyleSheet.create({
   },
   mealInsightPriorityText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     textTransform: 'uppercase',
   },
   bottomBar: {
@@ -724,7 +727,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     flexShrink: 1,
   },
   primaryButton: {
@@ -749,7 +752,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     flexShrink: 1,
   },
 });

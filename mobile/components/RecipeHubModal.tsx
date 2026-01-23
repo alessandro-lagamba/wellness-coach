@@ -531,7 +531,7 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
                             {/* Header */}
                             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
                                 <View>
-                                    <Text style={[styles.modalTitle, { color: colors.text }]}>
+                                    <Text style={[styles.modalTitle, { color: colors.text }]} allowFontScaling={false}>
                                         {t('analysis.food.recipes.hubTitle') || 'Ricettario'}
                                     </Text>
                                     <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
@@ -549,7 +549,7 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
                                 onPress={onOpenFridge}
                             >
                                 <MaterialCommunityIcons name="fridge-outline" size={20} color={colors.primary} />
-                                <Text style={[styles.fridgeButtonText, { color: colors.primary }]}>
+                                <Text style={[styles.fridgeButtonText, { color: colors.primary }]} allowFontScaling={false}>
                                     {t('analysis.food.fridge.openButton') || 'Open Fridge & Generate'}
                                 </Text>
                             </TouchableOpacity>
@@ -588,7 +588,7 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
                                         <View style={[styles.fabButton, { backgroundColor: colors.primary, shadowColor: colors.primary }]}>
                                             <MaterialCommunityIcons name="plus" size={30} color={colors.textInverse} />
                                         </View>
-                                        <Text style={[styles.fabLabel, { color: colors.text }]}>
+                                        <Text style={[styles.fabLabel, { color: colors.text }]} allowFontScaling={false}>
                                             {t('analysis.food.recipes.addManual')}
                                         </Text>
                                     </TouchableOpacity>
@@ -811,17 +811,18 @@ const styles = StyleSheet.create({
     },
     selectorLabel: {
         fontSize: 11,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
         textTransform: 'uppercase',
     },
     selectorValue: {
         fontSize: 13,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
         marginTop: 2,
     },
     filterTextInput: {
         flex: 1,
         fontSize: 14,
+        fontFamily: 'Figtree_500Medium',
     },
     filterChipsRow: {
         flexDirection: 'row',
@@ -836,7 +837,7 @@ const styles = StyleSheet.create({
     },
     filterChipText: {
         fontSize: 12,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
     },
     timeChip: {
         flexDirection: 'row',
@@ -884,7 +885,7 @@ const styles = StyleSheet.create({
     fabLabel: {
         marginTop: 8,
         fontSize: 12,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold', // Was 700
     },
 
     // Recipe List
@@ -915,11 +916,12 @@ const styles = StyleSheet.create({
     },
     recipeCardTitle: {
         fontSize: 16,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold', // Was 700
         marginBottom: 4,
     },
     recipeCardMeta: {
         fontSize: 12,
+        fontFamily: 'Figtree_500Medium',
     },
     recipeTagsRow: {
         flexDirection: 'row',
@@ -933,7 +935,7 @@ const styles = StyleSheet.create({
     },
     recipeTagText: {
         fontSize: 10,
-        fontWeight: '500',
+        fontFamily: 'Figtree_500Medium', // Was 500
     },
     recipeActionsRow: {
         flexDirection: 'row',
@@ -952,7 +954,7 @@ const styles = StyleSheet.create({
     },
     recipeActionText: {
         fontSize: 12,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
     },
     emptyRecipeState: {
         alignItems: 'center',
@@ -963,13 +965,14 @@ const styles = StyleSheet.create({
     },
     emptyRecipeTitle: {
         fontSize: 16,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
         marginTop: 12,
         marginBottom: 4,
     },
     emptyRecipeSubtitle: {
         fontSize: 14,
         textAlign: 'center',
+        fontFamily: 'Figtree_500Medium',
     },
 
     // Planner
@@ -989,7 +992,7 @@ const styles = StyleSheet.create({
     },
     weekLabel: {
         fontSize: 14,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
     },
     mealPlannerColumn: {
         width: width * 0.4,
@@ -997,7 +1000,7 @@ const styles = StyleSheet.create({
     },
     mealPlannerDay: {
         fontSize: 14,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
         marginBottom: 8,
         textAlign: 'center',
     },
@@ -1011,11 +1014,12 @@ const styles = StyleSheet.create({
     },
     mealCellTitle: {
         fontSize: 12,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
         marginBottom: 2,
     },
     mealCellMeta: {
         fontSize: 10,
+        fontFamily: 'Figtree_500Medium',
     },
     emptyMealCell: {
         alignItems: 'center',
@@ -1024,6 +1028,7 @@ const styles = StyleSheet.create({
     },
     emptyMealCellText: {
         fontSize: 10,
+        fontFamily: 'Figtree_500Medium',
     },
     mealSummaryRow: {
         flexDirection: 'row',
@@ -1042,7 +1047,7 @@ const styles = StyleSheet.create({
     },
     summaryValue: {
         fontSize: 12,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold', // Was 700
     },
 
     // Suggestions
@@ -1063,13 +1068,14 @@ const styles = StyleSheet.create({
     },
     insightTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold', // Was 700
         marginBottom: 8,
     },
     insightDescription: {
         fontSize: 14,
         lineHeight: 20,
         marginBottom: 16,
+        fontFamily: 'Figtree_500Medium',
     },
     insightAction: {
         flexDirection: 'row',
@@ -1081,7 +1087,7 @@ const styles = StyleSheet.create({
     },
     insightActionText: {
         fontSize: 14,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
     },
     selectorOverlay: {
         flex: 1,
@@ -1097,7 +1103,7 @@ const styles = StyleSheet.create({
     },
     selectorTitle: {
         fontSize: 16,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold', // Was 700
         marginBottom: 4,
     },
     selectorOption: {
@@ -1112,7 +1118,7 @@ const styles = StyleSheet.create({
     },
     selectorOptionText: {
         fontSize: 14,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
     },
     selectorFooter: {
         flexDirection: 'row',
@@ -1126,7 +1132,7 @@ const styles = StyleSheet.create({
     },
     selectorDoneText: {
         fontSize: 13,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold', // Was 700
     },
     // Suggestions styles
     mealTypeSection: {
@@ -1142,11 +1148,11 @@ const styles = StyleSheet.create({
     },
     mealTypeTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold', // Was 700
     },
     mealTypeCount: {
         fontSize: 13,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
     },
     recipeScrollContent: {
         paddingRight: 16,
@@ -1174,12 +1180,13 @@ const styles = StyleSheet.create({
     },
     suggestionRecipeTitle: {
         fontSize: 14,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold', // Was 700
         marginBottom: 4,
     },
     suggestionRecipeMeta: {
         fontSize: 11,
         marginBottom: 8,
+        fontFamily: 'Figtree_500Medium',
     },
     suggestionRecipeTags: {
         flexDirection: 'row',
@@ -1193,6 +1200,6 @@ const styles = StyleSheet.create({
     },
     suggestionRecipeTagText: {
         fontSize: 9,
-        fontWeight: '500',
+        fontFamily: 'Figtree_500Medium', // Was 500
     },
 });

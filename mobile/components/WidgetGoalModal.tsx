@@ -94,8 +94,8 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.scrim}>
         <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.title, { color: colors.text }]}>{meta.title}</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('modals.widgetGoal.subtitle')}</Text>
+          <Text style={[styles.title, { color: colors.text }]} allowFontScaling={false} adjustsFontSizeToFit numberOfLines={1}>{meta.title}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]} allowFontScaling={false} adjustsFontSizeToFit numberOfLines={2}>{t('modals.widgetGoal.subtitle')}</Text>
 
           <View style={styles.inputRow}>
             <TextInput
@@ -111,8 +111,8 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
                 style={[styles.unitPill, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
                 onPress={() => setShowUnitPicker(true)}
               >
-                <Text style={[styles.unitText, { color: colors.text }]}>{meta.unit}</Text>
-                <Text style={[styles.unitArrow, { color: colors.textSecondary }]}> ▼</Text>
+                <Text style={[styles.unitText, { color: colors.text }]} allowFontScaling={false} numberOfLines={1}>{meta.unit}</Text>
+                <Text style={[styles.unitArrow, { color: colors.textSecondary }]} allowFontScaling={false}> ▼</Text>
               </TouchableOpacity>
             ) : (
               <View style={[styles.unitPill, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
@@ -122,14 +122,14 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
           </View>
 
           {widgetId === 'hydration' && (
-            <Text style={[styles.unitInfo, { color: colors.textTertiary }]}>
+            <Text style={[styles.unitInfo, { color: colors.textTertiary }]} allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit>
               {t('modals.widgetGoal.hydration.unitInfo', {
                 ml: hydrationUnitService.getUnitConfig(selectedUnit).mlPerUnit
               }) || `${hydrationUnitService.getUnitConfig(selectedUnit).mlPerUnit}ml per ${meta.unit}`}
             </Text>
           )}
 
-          <Text style={[styles.rangeHint, { color: colors.textSecondary }]}>
+          <Text style={[styles.rangeHint, { color: colors.textSecondary }]} allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit>
             {t('modals.widgetGoal.rangeHint', {
               min: meta.min,
               max: meta.max,
@@ -139,10 +139,10 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
 
           <View style={styles.buttons}>
             <TouchableOpacity style={[styles.btn, styles.btnGhost, { backgroundColor: colors.surfaceMuted }]} onPress={onClose}>
-              <Text style={[styles.btnText, { color: colors.text }]}>{t('common.cancel')}</Text>
+              <Text style={[styles.btnText, { color: colors.text }]} allowFontScaling={false}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.btn, styles.btnPrimary, { backgroundColor: colors.primary }]} onPress={handleSave}>
-              <Text style={[styles.btnText, styles.btnPrimaryText]}>{t('common.save')}</Text>
+              <Text style={[styles.btnText, styles.btnPrimaryText]} allowFontScaling={false}>{t('common.save')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -154,7 +154,7 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
           <View style={styles.pickerOverlay}>
             <TouchableOpacity style={styles.pickerBackdrop} onPress={() => setShowUnitPicker(false)} activeOpacity={1} />
             <View style={[styles.pickerContent, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.pickerTitle, { color: colors.text }]}>
+              <Text style={[styles.pickerTitle, { color: colors.text }]} allowFontScaling={false}>
                 {t('modals.widgetGoal.hydration.selectUnit') || 'Seleziona unità'}
               </Text>
               {hydrationUnitService.getAllUnits().map((u) => (
@@ -167,14 +167,14 @@ const WidgetGoalModal: React.FC<Props> = ({ visible, widgetId, initialValue, onC
                   }}
                 >
                   {/* Fix translation key: 'glass' -> 'glasses' per matchare it.json */}
-                  <Text style={[styles.pickerItemText, { color: colors.text }]}>
+                  <Text style={[styles.pickerItemText, { color: colors.text }]} allowFontScaling={false} numberOfLines={1}>
                     {t(`modals.widgetGoal.hydration.units.${u.unit === 'glass' ? 'glasses' : u.unit}`) || u.label}
                   </Text>
-                  {selectedUnit === u.unit && <Text style={{ color: colors.primary, fontWeight: 'bold' }}>✓</Text>}
+                  {selectedUnit === u.unit && <Text style={{ color: colors.primary, fontFamily: 'Figtree_700Bold' }} allowFontScaling={false}>✓</Text>}
                 </TouchableOpacity>
               ))}
               <TouchableOpacity style={styles.pickerCancelBtn} onPress={() => setShowUnitPicker(false)}>
-                <Text style={[styles.pickerCancelText, { color: colors.error || '#ef4444' }]}>{t('common.cancel')}</Text>
+                <Text style={[styles.pickerCancelText, { color: colors.error || '#ef4444' }]} allowFontScaling={false}>{t('common.cancel')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -204,8 +204,8 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 16,
   },
-  title: { fontSize: 20, fontWeight: '800', color: '#0f172a' },
-  subtitle: { marginTop: 4, fontSize: 13, color: '#6b7280', marginBottom: 20 },
+  title: { fontSize: 20, fontFamily: 'Figtree_800ExtraBold', color: '#0f172a' },
+  subtitle: { marginTop: 4, fontSize: 13, color: '#6b7280', marginBottom: 20, fontFamily: 'Figtree_500Medium' },
   inputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   input: {
     flex: 1,
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     paddingHorizontal: 16,
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#0f172a',
     backgroundColor: '#F8FAFC',
   },
@@ -231,26 +231,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
   },
-  unitText: { fontSize: 13, fontWeight: '700', color: '#111827' },
-  unitArrow: { fontSize: 10, marginLeft: 4 },
-  unitInfo: { marginTop: 4, fontSize: 12, fontStyle: 'italic' },
-  rangeHint: { marginTop: 12, fontSize: 13, color: '#9CA3AF' },
+  unitText: { fontSize: 13, fontFamily: 'Figtree_700Bold', color: '#111827' },
+  unitArrow: { fontSize: 10, marginLeft: 4, fontFamily: 'Figtree_500Medium' },
+  unitInfo: { marginTop: 4, fontSize: 12, fontStyle: 'italic', fontFamily: 'Figtree_500Medium' },
+  rangeHint: { marginTop: 12, fontSize: 13, color: '#9CA3AF', fontFamily: 'Figtree_500Medium' },
   buttons: { marginTop: 24, flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
   btn: { height: 48, paddingHorizontal: 24, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   btnGhost: { backgroundColor: '#F3F4F6' },
   btnPrimary: { backgroundColor: '#3b82f6' },
   btnPrimaryText: { color: '#fff' },
-  btnText: { fontSize: 16, fontWeight: '700' },
+  btnText: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
 
   /* Picker Styles */
   pickerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end', zIndex: 1000 },
   pickerBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' },
   pickerContent: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 40 },
-  pickerTitle: { fontSize: 16, fontWeight: '700', marginBottom: 15, textAlign: 'center' },
+  pickerTitle: { fontSize: 16, fontFamily: 'Figtree_700Bold', marginBottom: 15, textAlign: 'center' },
   pickerItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  pickerItemText: { fontSize: 16, fontWeight: '600' },
+  pickerItemText: { fontSize: 16, fontFamily: 'Figtree_600SemiBold' },
   pickerCancelBtn: { marginTop: 15, paddingVertical: 10, alignItems: 'center' },
-  pickerCancelText: { fontSize: 16, fontWeight: '700' },
+  pickerCancelText: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
 });
 
 export default WidgetGoalModal;

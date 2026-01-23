@@ -182,19 +182,19 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
   // ✅ Memoization per evitare ricalcoli inutili
   const current = useMemo(() => TUTORIAL_STEPS[currentStep], [currentStep]);
   const last = useMemo(() => currentStep === TUTORIAL_STEPS.length - 1, [currentStep]);
-  
+
   // ✅ Memoization dei colori derivati
   const { accent, accentSecondary, accentSoft, accentStroke, gradientColors } = useMemo(() => {
     const accent = current.color[0];
     const accentSecondary = current.color[current.color.length - 1] || accent;
     const accentSoft = `${accent}1A`;
     const accentStroke = `${accent}33`;
-    
+
     // Assicurati che colors sia sempre un array di almeno 2 colori
     const gradientColors = current.color.length >= 2
       ? (current.color as [string, string, ...string[]])
       : ([current.color[0], current.color[0]] as [string, string]);
-    
+
     return { accent, accentSecondary, accentSoft, accentStroke, gradientColors };
   }, [current.color]);
 
@@ -202,7 +202,7 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
     if (visible) {
       // Reset initial states
       cardOpacity.setValue(1);
-      
+
       Animated.parallel([
         Animated.timing(modalFadeAnim, {
           toValue: 1,
@@ -235,7 +235,7 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
 
   React.useEffect(() => {
     Animated.timing(progressAnim, {
-      toValue: (currentStep+1)/TUTORIAL_STEPS.length,
+      toValue: (currentStep + 1) / TUTORIAL_STEPS.length,
       duration: 250,
       useNativeDriver: false,
     }).start();
@@ -254,14 +254,14 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
     setIsAnimating(true);
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     // Reset pan immediately
     pan.setValue(0);
-    
+
     // Change step immediately - NO animation on opacity
     // This prevents the flash/invisible card issue
     setCurrentStep(next);
-    
+
     const step = TUTORIAL_STEPS[next];
     if (step.targetScreen && onNavigateToScreen) {
       if (step.id === 'completato') {
@@ -269,7 +269,7 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
       } else {
         onNavigateToScreen(step.targetScreen);
       }
-      
+
       // Scroll helpers
       setTimeout(() => {
         if (next === 2) {
@@ -284,8 +284,8 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
     setTimeout(() => setIsAnimating(false), 100);
   };
 
-  const next = () => last ? onComplete() : goTo(currentStep+1);
-  const prev = () => goTo(currentStep-1);
+  const next = () => last ? onComplete() : goTo(currentStep + 1);
+  const prev = () => goTo(currentStep - 1);
 
   const skip = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -312,7 +312,7 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
       {/* Backdrop scuro per contrasto */}
       <Animated.View style={[styles.backdrop, { opacity: modalFadeAnim }]} />
-      
+
       {/* Bottom sheet animato */}
       <Animated.View
         style={[
@@ -349,10 +349,10 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
                   <Animated.View
                     style={[
                       styles.progressFill,
-                      { 
+                      {
                         width: progressAnim.interpolate({
-                          inputRange: [0,1],
-                          outputRange: ['0%','100%']
+                          inputRange: [0, 1],
+                          outputRange: ['0%', '100%']
                         })
                       }
                     ]}
@@ -362,8 +362,8 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
                   {currentStep + 1} / {TUTORIAL_STEPS.length}
                 </Text>
               </View>
-              <Pressable 
-                onPress={skip} 
+              <Pressable
+                onPress={skip}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 style={({ pressed }) => [
                   styles.skipBtn,
@@ -408,9 +408,9 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
             {/* Footer con bottoni migliorati e feedback visivo */}
             <View style={styles.footer}>
               {currentStep > 0 ? (
-                <Pressable 
-                  onPress={prev} 
-                  disabled={isAnimating} 
+                <Pressable
+                  onPress={prev}
+                  disabled={isAnimating}
                   style={({ pressed }) => [
                     styles.secondaryBtn,
                     pressed && styles.secondaryBtnPressed
@@ -421,9 +421,9 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
                 </Pressable>
               ) : <View style={{ flex: 1 }} />}
 
-              <Pressable 
-                onPress={next} 
-                disabled={isAnimating} 
+              <Pressable
+                onPress={next}
+                disabled={isAnimating}
                 style={({ pressed }) => [
                   styles.primaryBtn,
                   pressed && styles.primaryBtnPressed
@@ -438,10 +438,10 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
                   <Text style={styles.primaryTxt}>
                     {last ? 'Scopri l\'App!' : current.actionText}
                   </Text>
-                  <MaterialCommunityIcons 
-                    name={last ? 'rocket-launch' : 'arrow-right'} 
-                    size={18} 
-                    color="#ffffff" 
+                  <MaterialCommunityIcons
+                    name={last ? 'rocket-launch' : 'arrow-right'}
+                    size={18}
+                    color="#ffffff"
                   />
                 </LinearGradient>
               </Pressable>
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
   },
   stepCounter: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
   },
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
   },
   skip: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#fff',
   },
   cardContainer: {
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 23,
-    fontWeight: '900',
+    fontFamily: 'Figtree_700Bold', // Was 900
     textAlign: 'center',
     marginBottom: 10,
     letterSpacing: -0.5,
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     lineHeight: 23,
     marginBottom: 6,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     color: '#0f172a',
     paddingHorizontal: 4,
   },
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
   },
   featureTxt: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#0f172a',
     flexShrink: 1,
   },
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
   secondaryTxt: {
     color: '#ffffff',
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   primaryBtn: {
     flex: 1,
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
   },
   primaryTxt: {
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold', // Was 800
     color: '#ffffff',
   },
 });

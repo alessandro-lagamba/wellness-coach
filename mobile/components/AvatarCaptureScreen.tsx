@@ -61,7 +61,7 @@ export const AvatarCaptureScreen: React.FC = () => {
 
     try {
       setCapturing(true);
-      
+
       // Cattura la foto
       const photo = await cameraController.ref.current.takePictureAsync({
         quality: 0.9,
@@ -103,8 +103,8 @@ export const AvatarCaptureScreen: React.FC = () => {
         setGenerating(false);
         Alert.alert(
           t('common.error') || 'Errore',
-          error instanceof Error 
-            ? error.message 
+          error instanceof Error
+            ? error.message
             : t('avatar.generationError') || 'Errore durante la generazione dell\'avatar. Riprova.'
         );
       }
@@ -176,7 +176,7 @@ export const AvatarCaptureScreen: React.FC = () => {
                   <>
                     <FontAwesome name="camera" size={20} color="#ffffff" />
                     <Text style={styles.captureButtonText}>
-                      {!cameraController.ready 
+                      {!cameraController.ready
                         ? (t('avatar.cameraNotReady') || 'Attendere...')
                         : (t('avatar.capture') || 'Scatta foto')
                       }
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   cameraContainer: {
     flex: 1,
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   captureButtonText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   generatingContainer: {
     alignItems: 'center',
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   },
   generatingText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
 });
 

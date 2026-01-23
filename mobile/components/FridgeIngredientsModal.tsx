@@ -1799,6 +1799,7 @@ const styles = StyleSheet.create({
   expiryInput: {
     flex: 1,
     fontSize: 13, // 🔥 FIX: Font leggermente più piccolo
+    fontFamily: 'Figtree_500Medium',
     minWidth: 0, // Permette al flex di funzionare
   },
   addButton: {
@@ -1814,14 +1815,14 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   recipeSection: {
     gap: 20,
   },
   recipeTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 8,
   },
   recipeMeta: {
@@ -1836,13 +1837,14 @@ const styles = StyleSheet.create({
   },
   recipeMetaText: {
     fontSize: 14,
+    fontFamily: 'Figtree_500Medium',
   },
   macrosSection: {
     marginBottom: 20,
   },
   macrosTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     marginBottom: 12,
   },
   macrosGrid: {
@@ -1859,12 +1861,12 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 4,
   },
   macroLabel: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   ingredientsListSection: {
     marginBottom: 20,
@@ -1879,10 +1881,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   optionalText: {
     fontSize: 12,
     fontStyle: 'italic',
+    fontFamily: 'Figtree_500Medium',
   },
   stepsSection: {
     marginBottom: 20,
@@ -1902,13 +1906,14 @@ const styles = StyleSheet.create({
   },
   stepNumberText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#ffffff',
   },
   stepText: {
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   tipsSection: {
     marginBottom: 20,
@@ -1923,6 +1928,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   shoppingGapsSection: {
     marginBottom: 20,
@@ -1936,6 +1942,7 @@ const styles = StyleSheet.create({
   shoppingGapText: {
     flex: 1,
     fontSize: 14,
+    fontFamily: 'Figtree_500Medium',
   },
   buttonContainer: {
     padding: 20,
@@ -1959,7 +1966,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   generateButton: {
     flex: 1,
@@ -1972,7 +1979,7 @@ const styles = StyleSheet.create({
   },
   generateButtonText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   recipeActions: {
     flexDirection: 'row',
@@ -1991,7 +1998,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 14, // ✅ FIX: Ridotto leggermente per evitare overflow
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     textAlign: 'center',
   },
   primaryButton: {
@@ -2005,7 +2012,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 14, // ✅ FIX: Ridotto leggermente per evitare overflow
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     textAlign: 'center',
   },
   saveLibraryButton: {
@@ -2022,7 +2029,7 @@ const styles = StyleSheet.create({
   },
   saveLibraryButtonText: {
     fontSize: 14, // ✅ FIX: Ridotto leggermente per evitare overflow
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     flexShrink: 1, // ✅ FIX: Permette al testo di ridursi se necessario
   },
   saveRecipeOverlay: {
@@ -2039,7 +2046,7 @@ const styles = StyleSheet.create({
   },
   saveRecipeTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   saveRecipeSubtitle: {
     fontSize: 14,
@@ -2054,11 +2061,11 @@ const styles = StyleSheet.create({
   },
   saveRecipeLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   saveRecipeInput: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   saveRecipeTextarea: {
     minHeight: 80,
@@ -2077,7 +2084,7 @@ const styles = StyleSheet.create({
   },
   saveRecipeChipText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   favoriteToggle: {
     flexDirection: 'row',
@@ -2090,7 +2097,7 @@ const styles = StyleSheet.create({
   },
   favoriteToggleText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   savedIngredientsSection: {
     marginBottom: 24,
@@ -2110,16 +2117,18 @@ const styles = StyleSheet.create({
   },
   savedIngredientName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     marginBottom: 4,
   },
   savedIngredientExpiry: {
     fontSize: 13,
     marginTop: 2,
+    fontFamily: 'Figtree_500Medium',
   },
   savedIngredientQuantity: {
     fontSize: 13,
     marginTop: 2,
+    fontFamily: 'Figtree_500Medium',
   },
   savedIngredientActions: {
     flexDirection: 'row',
@@ -2146,7 +2155,7 @@ const styles = StyleSheet.create({
   },
   categoryLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     marginBottom: 6,
   },
   categoryChips: {
@@ -2175,7 +2184,7 @@ const styles = StyleSheet.create({
   },
   categoryChipText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   commaHintContainer: {
     flexDirection: 'row',
@@ -2191,7 +2200,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 18,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
 });
 

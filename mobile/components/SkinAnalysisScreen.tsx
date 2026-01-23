@@ -99,18 +99,17 @@ const skincareGuides = {
     subtitle: 'Suggerimenti per una pelle più uniforme',
     image: 'https://images.unsplash.com/photo-1654781350550-0dc72ecb6fae?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=998',
     sections: {
-      products: {
-        title: '🧴 Prodotti Consigliati',
-        items: [
-          'Esfolianti chimici (AHA/BHA) - 2-3 volte a settimana',
-          'Retinoidi - Inizia con basse concentrazioni',
-          'Sieri idratanti con acido ialuronico',
-          'Detergenti delicati con ceramidi',
-          'SPF 30+ protezione quotidiana'
-        ]
+      routine: {
+        title: 'Routine Consigliata',
+        isDynamic: true, // Flag per indicare che questa sezione è dinamica
+        items: [] // Verranno popolati dinamicamente
+      },
+      avoid: {
+        title: 'Da Evitare',
+        items: [] // Verranno popolati da i18n
       },
       nutrition: {
-        title: '🥗 Nutrizione e Dieta',
+        title: 'Alimenti consigliati',
         items: [
           'Acidi grassi Omega-3 (pesce, noci, semi)',
           'Alimenti ricchi di Vitamina C (agrumi, frutti di bosco)',
@@ -119,17 +118,8 @@ const skincareGuides = {
           'Limita cibi processati e zuccheri'
         ]
       },
-      routine: {
-        title: '📋 Routine Giornaliera',
-        items: [
-          'Mattina: Detergente delicato → Vitamina C → Idratante → SPF',
-          'Sera: Doppia detersione → Esfoliante (2-3x/sett) → Retinolo → Idratante',
-          'Settimanale: Maschera purificante profonda',
-          'Mensile: Trattamento professionale'
-        ]
-      },
       timing: {
-        title: '⏰ Tempistiche Ottimali',
+        title: 'Tempistiche Ottimali',
         items: [
           'Esfoliare la sera, non la mattina',
           'I retinoidi funzionano meglio di notte',
@@ -141,22 +131,21 @@ const skincareGuides = {
     }
   },
   redness: {
-    title: 'Guida riduzione infiammazione',
+    title: 'Guida riduzione rossore',
     subtitle: 'Come calmare pelle irritata e sensibile',
     image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80',
     sections: {
-      products: {
-        title: '🧴 Prodotti Consigliati',
-        items: [
-          'Sieri alla niacinamide (concentrazione 2-5%)',
-          'Prodotti alla Centella asiatica (Cica)',
-          'Gel di aloe vera per sollievo immediato',
-          'Detergenti delicati senza profumo',
-          'SPF minerale con ossido di zinco'
-        ]
+      routine: {
+        title: 'Routine Consigliata',
+        isDynamic: true,
+        items: []
+      },
+      avoid: {
+        title: 'Da Evitare',
+        items: []
       },
       nutrition: {
-        title: '🥗 Alimenti Anti-Infiammatori',
+        title: 'Nutrizione e Dieta',
         items: [
           'Curcuma e zenzero (antinfiammatori naturali)',
           'Verdure a foglia verde',
@@ -165,18 +154,8 @@ const skincareGuides = {
           'Evita cibi piccanti e alcol'
         ]
       },
-      routine: {
-        title: '📋 Routine Lenitiva',
-        items: [
-          'Mattina: Detergente delicato → Niacinamide → Idratante calmante → SPF',
-          'Sera: Olio detergente → Detergente delicato → Siero alla Centella → Idratante',
-          'Usa acqua tiepida, mai calda',
-          'Tampona per asciugare, non sfregare',
-          'Applica i prodotti con mani pulite'
-        ]
-      },
       timing: {
-        title: '⏰ Quando Applicare',
+        title: 'Tempistiche Ottimali',
         items: [
           'Applica prodotti calmanti subito dopo la detersione',
           'Usa SPF ogni mattina, anche in casa',
@@ -192,18 +171,17 @@ const skincareGuides = {
     subtitle: 'Controlla la produzione di sebo in eccesso',
     image: 'https://images.unsplash.com/photo-1718490953028-021d352b14fd?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1699',
     sections: {
-      products: {
-        title: '🧴 Prodotti Controllo Oleosità',
-        items: [
-          'Detergenti all\'acido salicilico (1-2%)',
-          'Maschere all\'argilla (caolino, bentonite)',
-          'Idratanti oil-free e non comedogenici',
-          'Primer e solari opacizzanti',
-          'Tonici esfolianti delicati'
-        ]
+      routine: {
+        title: 'Routine consigliata',
+        isDynamic: true,
+        items: []
+      },
+      avoid: {
+        title: 'Da Evitare',
+        items: []
       },
       nutrition: {
-        title: '🥗 Aggiustamenti Dietetici',
+        title: 'Nutrizione e Dieta',
         items: [
           'Riduci latticini e cibi processati',
           'Limita zuccheri e carboidrati raffinati',
@@ -212,18 +190,8 @@ const skincareGuides = {
           'Considera integratori di zinco e vitamine B'
         ]
       },
-      routine: {
-        title: '📋 Routine Controllo Oleosità',
-        items: [
-          'Mattina: Detergente acido salicilico → Tonico → Idratante leggero → SPF opacizzante',
-          'Sera: Doppia detersione → Maschera argilla (2x/sett) → Idratante leggero',
-          'Tampona il sebo in eccesso durante il giorno',
-          'Usa salviette assorbenti al bisogno',
-          'Non esagerare con la detersione (può aumentare il sebo)'
-        ]
-      },
       timing: {
-        title: '⏰ Tempistiche Ottimali',
+        title: 'Tempistiche Ottimali',
         items: [
           'Detergi subito dopo aver sudato',
           'Applica maschere all\'argilla di sera',
@@ -234,49 +202,38 @@ const skincareGuides = {
       }
     }
   },
-  confidence: {
-    title: 'Suggerimenti qualità analisi',
-    subtitle: 'Ottieni l\'analisi della pelle più accurata',
-    image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80',
+  hydration: {
+    title: 'Guida miglioramento idratazione',
+    subtitle: 'Aumenta e mantieni l\'idratazione della pelle',
+    image: 'https://images.unsplash.com/photo-1519415387722-a1c3bbef716c?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=1200',
     sections: {
-      products: {
-        title: '📸 Qualità della Foto',
-        items: [
-          'Usa luce naturale vicino a una finestra',
-          'Tieni il telefono all\'altezza degli occhi',
-          'Assicurati che il viso sia completamente inquadrato',
-          'Rimuovi occhiali e accessori',
-          'Tieni i capelli lontani dal viso'
-        ]
+      routine: {
+        title: 'Routine Consigliata',
+        isDynamic: true,
+        items: []
+      },
+      avoid: {
+        title: 'Da Evitare',
+        items: []
       },
       nutrition: {
-        title: '🧼 Preparazione della Pelle',
+        title: 'Nutrizione e Dieta',
         items: [
-          'Pulisci accuratamente il viso prima dell\'analisi',
-          'Rimuovi completamente il trucco',
-          'Aspetta 30 minuti dopo il lavaggio',
-          'Evita di applicare prodotti prima della scansione',
-          'Assicurati che la pelle sia asciutta e pulita'
-        ]
-      },
-      routine: {
-        title: '📋 Best Practice',
-        items: [
-          'Analizza alla stessa ora ogni giorno',
-          'Usa condizioni di illuminazione costanti',
-          'Scatta da più angolazioni se necessario',
-          'Confronta i risultati nel tempo',
-          'Traccia i cambiamenti nella tua routine'
+          'Bevi almeno 8 bicchieri d\'acqua al giorno',
+          'Consuma frutta e verdura ricche d\'acqua (cetrioli, anguria)',
+          'Acidi grassi Omega-3 (pesce, noci, semi di lino)',
+          'Limita alcol e caffeina che disidratano',
+          'Aggiungi cibi ricchi di vitamina E (avocado, mandorle)'
         ]
       },
       timing: {
-        title: '⏰ Tempistiche Ottimali',
+        title: 'Tempistiche Ottimali',
         items: [
-          'L\'analisi mattutina mostra lo stato naturale della pelle',
-          'L\'analisi serale mostra l\'usura quotidiana',
-          'Evita l\'analisi dopo trattamenti intensi',
-          'Aspetta 24-48 ore dopo nuovi prodotti',
-          'La costanza negli orari migliora l\'accuratezza'
+          'Applica sieri idratanti su pelle ancora umida',
+          'Usa creme più ricche la sera',
+          'Idrata subito dopo la detersione',
+          'Riapplica durante il giorno in ambienti secchi',
+          'Aspetta 2-3 settimane per vedere miglioramenti'
         ]
       }
     }
@@ -303,10 +260,10 @@ const insightCards: InsightCard[] = [
     image: 'https://images.unsplash.com/photo-1718490953028-021d352b14fd?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1699',
   },
   {
-    id: 'confidence',
-    title: 'Analysis Quality Tips',
-    description: 'Get the most accurate skin analysis results.',
-    image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80',
+    id: 'hydration',
+    title: 'Hydration Improvement Guide',
+    description: 'Boost and maintain your skin hydration levels.',
+    image: 'https://images.unsplash.com/photo-1519415387722-a1c3bbef716c?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=1200',
   },
 ];
 
@@ -385,6 +342,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
   // ✅ ADD: Modal state for skincare guides
   const [selectedGuide, setSelectedGuide] = useState<string | null>(null);
+  const [randomRoutineIndex, setRandomRoutineIndex] = useState<number>(1);
 
   // Loading state to prevent empty state flash
   // Initialize to false if store already has data
@@ -1190,6 +1148,9 @@ const SkinAnalysisScreenContent: React.FC = () => {
   // ✅ ADD: Function to open skincare guide
   const openSkincareGuide = (guideId: string) => {
     setSelectedGuide(guideId);
+    if (guideId === 'smoothness') {
+      setRandomRoutineIndex(Math.random() > 0.5 ? 1 : 2);
+    }
   };
 
   const closeSkincareGuide = () => {
@@ -1201,8 +1162,9 @@ const SkinAnalysisScreenContent: React.FC = () => {
     const colors = {
       products: '#8b5cf6',    // Purple
       nutrition: '#10b981',   // Green  
-      routine: '#f59e0b',     // Orange
-      timing: '#ef4444',      // Red
+      routine: '#8b5cf6',     // Orange
+      timing: '#0ea5e9',      // Blue/Sky Blue
+      avoid: '#ef4444',       // Red
       photoQuality: '#8b5cf6',
       skinPreparation: '#10b981',
       bestPractices: '#f59e0b',
@@ -1210,15 +1172,25 @@ const SkinAnalysisScreenContent: React.FC = () => {
     return colors[key as keyof typeof colors] || '#6366f1';
   };
 
-  const getSectionEmoji = (key: string) => {
+  const getSectionIcon = (key: string) => {
+    // Custom images for specific sections
+    if (key === 'routine' || key === 'bestPractices') {
+      return require('../assets/images/skincareroutine.png');
+    }
+    if (key === 'timing') {
+      return require('../assets/images/timing.png');
+    }
+    if (key === 'avoid') {
+      return require('../assets/images/stop.png');
+    }
+    if (key === 'nutrition') {
+      return require('../assets/images/meal.png');
+    }
+
     const emojis = {
       products: '🧴',
-      nutrition: '🥗',
-      routine: '📋',
-      timing: '⏰',
       photoQuality: '📸',
       skinPreparation: '🧼',
-      bestPractices: '📋',
     };
     return emojis[key as keyof typeof emojis] || '📝';
   };
@@ -1230,18 +1202,21 @@ const SkinAnalysisScreenContent: React.FC = () => {
       nutrition: guideId === 'redness'
         ? t('analysis.skin.guideSections.nutrition.antiInflammatory')
         : guideId === 'oiliness'
-          ? t('analysis.skin.guideSections.nutrition.dietAdjustments')
+          ? t('analysis.skin.guideSections.nutrition.title')
           : t('analysis.skin.guideSections.nutrition.title'),
-      routine: guideId === 'redness'
-        ? t('analysis.skin.guideSections.routine.soothing')
-        : guideId === 'oiliness'
-          ? t('analysis.skin.guideSections.routine.oilControl')
-          : t('analysis.skin.guideSections.routine.title'),
+      routine: guideId === 'smoothness'
+        ? t('analysis.skin.guides.smoothness.sections.routine.title')
+        : guideId === 'redness'
+          ? t('analysis.skin.guideSections.routine.title')
+          : guideId === 'oiliness'
+            ? t('analysis.skin.guideSections.routine.title')
+            : t('analysis.skin.guideSections.routine.title'),
       timing: guideId === 'redness'
-        ? t('analysis.skin.guideSections.timing.whenToApply')
+        ? t('analysis.skin.guideSections.timing.title')
         : guideId === 'confidence'
           ? t('analysis.skin.guideSections.timing.optimal')
           : t('analysis.skin.guideSections.timing.title'),
+      avoid: t('analysis.skin.guides.smoothness.sections.avoid.title'),
       photoQuality: t('analysis.skin.guideSections.photoQuality.title'),
       skinPreparation: t('analysis.skin.guideSections.skinPreparation.title'),
       bestPractices: t('analysis.skin.guideSections.bestPractices.title'),
@@ -1676,10 +1651,19 @@ const SkinAnalysisScreenContent: React.FC = () => {
                     <Text style={[styles.backButtonText, { color: colors.text }]}>{t('common.back') || 'Indietro'}</Text>
                   </TouchableOpacity>
                 </View>
-                <Text style={[styles.modalTitle, { color: colors.text }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}>
+                <Text
+                  allowFontScaling={false}
+                  style={[styles.modalTitle, { color: colors.text }]}
+                  numberOfLines={2}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
                   {t(`analysis.skin.guides.${selectedGuide}.title`, { defaultValue: skincareGuides[selectedGuide as keyof typeof skincareGuides]?.title })}
                 </Text>
-                <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+                <Text
+                  allowFontScaling={false}
+                  style={[styles.modalSubtitle, { color: colors.textSecondary }]}
+                >
                   {t(`analysis.skin.guides.${selectedGuide}.description`, { defaultValue: skincareGuides[selectedGuide as keyof typeof skincareGuides]?.subtitle })}
                 </Text>
               </View>
@@ -1697,63 +1681,250 @@ const SkinAnalysisScreenContent: React.FC = () => {
                     style={styles.heroImage}
                     fallbackColor="#f3f4f6"
                   />
-                  <View style={styles.heroOverlay}>
-                    <View style={styles.heroBadge}>
-                      <Text style={styles.heroBadgeText}>{t('analysis.skin.guideModal.expertGuide')}</Text>
-                    </View>
-                  </View>
-                </View>
 
-                {/* Quick Stats Row */}
-                <View style={[styles.quickStatsRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statNumber, { color: colors.primary }]}>5</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('analysis.skin.guideModal.keyTips')}</Text>
-                  </View>
-                  <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statNumber, { color: colors.primary }]}>4</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('analysis.skin.guideModal.categories')}</Text>
-                  </View>
-                  <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statNumber, { color: colors.primary }]}>2-4</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('analysis.skin.guideModal.weeks')}</Text>
-                  </View>
                 </View>
 
                 {/* Sections with Enhanced Design */}
-                {Object.entries(skincareGuides[selectedGuide as keyof typeof skincareGuides]?.sections || {}).map(([key, section], index) => (
-                  <View key={key} style={[
-                    styles.sectionCard,
-                    {
-                      backgroundColor: index % 2 === 0 ? colors.surface : colors.surfaceMuted,
-                      borderLeftWidth: 4,
-                      borderLeftColor: getSectionColor(key),
-                      borderColor: colors.border,
-                    }
-                  ]}>
-                    <View style={styles.sectionHeaderRow}>
-                      <View style={[styles.sectionIcon, { backgroundColor: `${getSectionColor(key)}20` }]}>
-                        <Text style={[styles.sectionEmoji, { color: getSectionColor(key) }]}>
-                          {getSectionEmoji(key)}
-                        </Text>
-                      </View>
-                      <Text style={[styles.sectionTitle, { color: colors.text }]}>{getSectionTitle(key, selectedGuide || '')}</Text>
-                    </View>
+                {Object.entries(skincareGuides[selectedGuide as keyof typeof skincareGuides]?.sections || {}).map(([key, section], index) => {
+                  let items = section.items;
 
-                    <View style={styles.itemsContainer}>
-                      {section.items.map((item, itemIndex) => (
-                        <View key={itemIndex} style={[styles.itemCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                          <View style={[styles.itemBullet, { backgroundColor: `${getSectionColor(key)}15` }]}>
-                            <Text style={[styles.bulletNumber, { color: getSectionColor(key) }]}>{itemIndex + 1}</Text>
-                          </View>
-                          <Text style={[styles.itemText, { color: colors.text }]}>{item}</Text>
+                  // Dynamic logic for smoothness guide
+                  if (selectedGuide === 'smoothness') {
+                    if (key === 'routine') {
+                      const score = latestSkinCapture?.scores?.texture || 0;
+                      const level = score >= 70 ? 'good' : score >= 45 ? 'medium' : 'low';
+
+                      const routineKey = randomRoutineIndex === 1 ? 'routine1' : 'routine2';
+                      const morningStr = t(`analysis.skin.guides.smoothness.sections.routine.${level}.${routineKey}.morning`);
+                      const eveningStr = t(`analysis.skin.guides.smoothness.sections.routine.${level}.${routineKey}.evening`);
+
+                      // Split by comma and clean up
+                      const cleanMorning = morningStr.replace(/^(Mattino|Morning):\s*/i, '');
+                      const cleanEvening = eveningStr.replace(/^(Sera|Evening):\s*/i, '');
+
+                      const morningSteps = cleanMorning.split(',').map(s => s.trim());
+                      const eveningSteps = cleanEvening.split(',').map(s => s.trim());
+
+                      items = [
+                        { text: t('analysis.skin.guides.smoothness.morningHeader', { defaultValue: 'Mattino' }), isHeader: true },
+                        ...morningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 })),
+                        { text: t('analysis.skin.guides.smoothness.eveningHeader', { defaultValue: 'Sera' }), isHeader: true },
+                        ...eveningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 }))
+                      ] as any;
+                    } else if (key === 'avoid') {
+                      // Get avoid items from translations
+                      const avoidItems = t('analysis.skin.guides.smoothness.sections.avoid.items', { returnObjects: true });
+
+                      if (Array.isArray(avoidItems) && avoidItems.length > 0) {
+                        items = avoidItems;
+                      } else {
+                        // Fallback to hardcoded items if translation fails
+                        items = [
+                          'Scrub meccanici',
+                          'Esfoliazione quotidiana',
+                          'Acidi + retinoidi nello stesso giorno',
+                          'Routine "aggressive" se c\'è rossore'
+                        ];
+                      }
+                    }
+                  }
+
+                  // Dynamic logic for redness guide
+                  if (selectedGuide === 'redness') {
+                    if (key === 'routine') {
+                      const score = latestSkinCapture?.scores?.redness || 0;
+                      const level = score >= 75 ? 'low' : score >= 40 ? 'medium' : 'good';
+
+                      const routineKey = randomRoutineIndex === 1 ? 'routine1' : 'routine2';
+                      const morningStr = t(`analysis.skin.guides.redness.sections.routine.${level}.${routineKey}.morning`);
+                      const eveningStr = t(`analysis.skin.guides.redness.sections.routine.${level}.${routineKey}.evening`);
+
+                      // Split by comma and clean up
+                      const cleanMorning = morningStr.replace(/^(Mattino|Morning):\s*/i, '');
+                      const cleanEvening = eveningStr.replace(/^(Sera|Evening):\s*/i, '');
+
+                      const morningSteps = cleanMorning.split(',').map(s => s.trim());
+                      const eveningSteps = cleanEvening.split(',').map(s => s.trim());
+
+                      items = [
+                        { text: t('analysis.skin.guides.redness.morningHeader', { defaultValue: 'Mattino' }), isHeader: true },
+                        ...morningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 })),
+                        { text: t('analysis.skin.guides.redness.eveningHeader', { defaultValue: 'Sera' }), isHeader: true },
+                        ...eveningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 }))
+                      ] as any;
+                    } else if (key === 'avoid') {
+                      const avoidItems = t('analysis.skin.guides.redness.sections.avoid.items', { returnObjects: true });
+                      if (Array.isArray(avoidItems) && avoidItems.length > 0) {
+                        items = avoidItems;
+                      } else {
+                        items = [
+                          'Alcol denaturato',
+                          'Profumi / oli essenziali',
+                          'Vitamina C ad alta concentrazione',
+                          'AHA / BHA frequenti',
+                          'Retinoidi senza controllo dermatologico'
+                        ];
+                      }
+                    }
+                  }
+
+                  // Dynamic logic for oiliness guide
+                  if (selectedGuide === 'oiliness') {
+                    if (key === 'routine') {
+                      const score = latestSkinCapture?.scores?.oiliness || 0;
+                      const level = score >= 70 ? 'low' : score >= 40 ? 'medium' : 'good';
+
+                      const routineKey = randomRoutineIndex === 1 ? 'routine1' : 'routine2';
+                      const morningStr = t(`analysis.skin.guides.oiliness.sections.routine.${level}.${routineKey}.morning`);
+                      const eveningStr = t(`analysis.skin.guides.oiliness.sections.routine.${level}.${routineKey}.evening`);
+
+                      const cleanMorning = morningStr.replace(/^(Mattino|Morning):\s*/i, '');
+                      const cleanEvening = eveningStr.replace(/^(Sera|Evening):\s*/i, '');
+
+                      const morningSteps = cleanMorning.split(',').map(s => s.trim());
+                      const eveningSteps = cleanEvening.split(',').map(s => s.trim());
+
+                      items = [
+                        { text: t('analysis.skin.guides.oiliness.morningHeader', { defaultValue: 'Mattino' }), isHeader: true },
+                        ...morningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 })),
+                        { text: t('analysis.skin.guides.oiliness.eveningHeader', { defaultValue: 'Sera' }), isHeader: true },
+                        ...eveningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 }))
+                      ] as any;
+                    } else if (key === 'avoid') {
+                      const avoidItems = t('analysis.skin.guides.oiliness.sections.avoid.items', { returnObjects: true });
+                      if (Array.isArray(avoidItems) && avoidItems.length > 0) {
+                        items = avoidItems;
+                      } else {
+                        items = [
+                          'Detergenti aggressivi schiumogeni',
+                          'Alcol denaturato nei tonici',
+                          'Oli comedogenici (cocco, germe di grano)',
+                          'Creme troppo ricche/occlusive',
+                          'Toccarsi il viso frequentemente'
+                        ];
+                      }
+                    }
+                  }
+
+                  // Dynamic logic for hydration guide
+                  if (selectedGuide === 'hydration') {
+                    if (key === 'routine') {
+                      const score = latestSkinCapture?.scores?.hydration || 0;
+                      const level = score >= 70 ? 'good' : score >= 40 ? 'medium' : 'low';
+
+                      const routineKey = randomRoutineIndex === 1 ? 'routine1' : 'routine2';
+                      const morningStr = t(`analysis.skin.guides.hydration.sections.routine.${level}.${routineKey}.morning`);
+                      const eveningStr = t(`analysis.skin.guides.hydration.sections.routine.${level}.${routineKey}.evening`);
+
+                      const cleanMorning = morningStr.replace(/^(Mattino|Morning):\s*/i, '');
+                      const cleanEvening = eveningStr.replace(/^(Sera|Evening):\s*/i, '');
+
+                      const morningSteps = cleanMorning.split(',').map(s => s.trim());
+                      const eveningSteps = cleanEvening.split(',').map(s => s.trim());
+
+                      items = [
+                        { text: t('analysis.skin.guides.hydration.morningHeader', { defaultValue: 'Mattino' }), isHeader: true },
+                        ...morningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 })),
+                        { text: t('analysis.skin.guides.hydration.eveningHeader', { defaultValue: 'Sera' }), isHeader: true },
+                        ...eveningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 }))
+                      ] as any;
+                    } else if (key === 'avoid') {
+                      const avoidItems = t('analysis.skin.guides.hydration.sections.avoid.items', { returnObjects: true });
+                      if (Array.isArray(avoidItems) && avoidItems.length > 0) {
+                        items = avoidItems;
+                      } else {
+                        items = [
+                          'Detergenti aggressivi o acqua troppo calda',
+                          'Alcol denaturato e profumi intensi',
+                          'Esfoliazione frequente quando l\'idratazione è in calo',
+                          'Saltare la crema dopo i sieri acquosi',
+                          'Solo prodotti opacizzanti senza fase idratante'
+                        ];
+                      }
+                    }
+                  }
+
+                  return (
+                    <View key={key} style={[
+                      styles.sectionCard,
+                      {
+                        backgroundColor: key === 'avoid' ? '#fff5f5' : key === 'timing' ? '#f0f9ff' : (index % 2 === 0 ? colors.surface : colors.surfaceMuted),
+                        borderLeftWidth: 4,
+                        borderLeftColor: getSectionColor(key),
+                        borderColor: colors.border,
+                      }
+                    ]}>
+                      <View style={styles.sectionHeaderRow}>
+                        <View style={[styles.sectionIcon, { backgroundColor: `${getSectionColor(key)}20` }]}>
+                          {(() => {
+                            const icon = getSectionIcon(key);
+                            if (typeof icon === 'string') {
+                              return (
+                                <Text style={[styles.sectionEmoji, { color: getSectionColor(key) }]}>
+                                  {icon}
+                                </Text>
+                              );
+                            }
+                            return (
+                              <Image
+                                source={icon}
+                                style={{ width: key === 'nutrition' ? 30 : 26, height: key === 'nutrition' ? 30 : 26 }}
+                                resizeMode="contain"
+                              />
+                            );
+                          })()}
                         </View>
-                      ))}
+                        <Text allowFontScaling={false} style={[styles.sectionTitle, { color: colors.text }]}>{getSectionTitle(key, selectedGuide || '')}</Text>
+                      </View>
+
+                      <View style={styles.itemsContainer}>
+                        {items.map((item, itemIndex) => {
+                          const isObject = typeof item === 'object' && item !== null;
+                          const isHeader = isObject && (item as any).isHeader;
+                          const text = isObject ? (item as any).text : item;
+                          const displayIndex = isObject ? (item as any).displayIndex : itemIndex + 1;
+
+                          if (isHeader) {
+                            return (
+                              <Text
+                                key={itemIndex}
+                                allowFontScaling={false}
+                                style={[styles.routineSubHeader, { color: getSectionColor(key) }]}
+                              >
+                                {text}
+                              </Text>
+                            );
+                          }
+
+                          return (
+                            <View key={itemIndex} style={styles.itemCard}>
+                              <View style={[styles.itemBullet, { backgroundColor: `${getSectionColor(key)}15` }]}>
+                                <Text
+                                  allowFontScaling={false}
+                                  style={[styles.bulletNumber, { color: getSectionColor(key) }]}
+                                >
+                                  {displayIndex}
+                                </Text>
+                              </View>
+                              <Text
+                                allowFontScaling={false}
+                                style={[
+                                  styles.itemText,
+                                  {
+                                    color: colors.text,
+                                    flex: 1
+                                  }
+                                ]}
+                              >
+                                {text}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
 
                 {/* Action Button */}
                 <View style={styles.actionSection}>
@@ -1847,13 +2018,14 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#ffffff',
   },
   heroSubtitle: {
     fontSize: 13,
     lineHeight: 20,
     color: 'rgba(255,255,255,0.85)',
+    fontFamily: 'Figtree_500Medium',
   },
   heroMedia: {
     borderRadius: 24,
@@ -1887,11 +2059,12 @@ const styles = StyleSheet.create({
   heroChipLabel: {
     fontSize: 12,
     color: 'rgba(255,255,255,0.75)',
+    fontFamily: 'Figtree_500Medium',
   },
   heroChipValue: {
     marginTop: 6,
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#ffffff',
   },
   primaryButton: {
@@ -1912,7 +2085,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#ffffff',
   },
   heroButton: {
@@ -1926,19 +2099,20 @@ const styles = StyleSheet.create({
     color: '#fef3c7',
     fontSize: 13,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   sectionHeader: {
     gap: 6,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#0f172a',
   },
   sectionSubtitle: {
     fontSize: 13,
     color: '#64748b',
+    fontFamily: 'Figtree_500Medium',
   },
   insightsSection: {
     marginBottom: 24,
@@ -1968,12 +2142,12 @@ const styles = StyleSheet.create({
   },
   stepNumberText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#1d4ed8',
   },
   stepTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#0f172a',
     marginBottom: 6,
   },
@@ -1981,6 +2155,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#475569',
     lineHeight: 18,
+    fontFamily: 'Figtree_500Medium',
   },
   insightList: {
     gap: 16,
@@ -2010,12 +2185,13 @@ const styles = StyleSheet.create({
   },
   insightTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     marginBottom: 8,
   },
   insightDescription: {
     fontSize: 13,
     lineHeight: 18,
+    fontFamily: 'Figtree_500Medium',
   },
   insightLockedCard: {
     marginHorizontal: 16,
@@ -2028,13 +2204,14 @@ const styles = StyleSheet.create({
   },
   insightLockedTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     textAlign: 'center',
   },
   insightLockedSubtitle: {
     fontSize: 13,
     lineHeight: 20,
     textAlign: 'center',
+    fontFamily: 'Figtree_500Medium',
   },
   insightLockedButton: {
     marginTop: 4,
@@ -2044,7 +2221,7 @@ const styles = StyleSheet.create({
   },
   insightLockedButtonText: {
     color: '#ffffff',
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     fontSize: 14,
   },
   cameraPreview: {
@@ -2087,7 +2264,7 @@ const styles = StyleSheet.create({
   cameraLoadingText: {
     color: '#f8fafc',
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     textAlign: 'center',
   },
   detectionFrame: {
@@ -2122,7 +2299,7 @@ const styles = StyleSheet.create({
   cameraSwitchText: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   captureHeader: {
     width: '100%',
@@ -2142,7 +2319,7 @@ const styles = StyleSheet.create({
   },
   captureBackButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   captureLayout: {
     flex: 1,
@@ -2177,7 +2354,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   ghostButtonText: {
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#4338ca',
   },
   analyzingCard: {
@@ -2196,7 +2373,7 @@ const styles = StyleSheet.create({
   },
   analyzingTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#1f2937',
   },
   analyzingSubtitle: {
@@ -2241,7 +2418,7 @@ const styles = StyleSheet.create({
   },
   resultTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#065f46',
   },
   resultSubtitle: {
@@ -2249,6 +2426,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     opacity: 0.7,
     marginTop: 6,
+    fontFamily: 'Figtree_500Medium',
   },
   resultIconWrap: {
     width: 50,
@@ -2281,13 +2459,13 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     color: '#1e293b',
   },
   metricValue: {
     fontSize: 13,
     color: '#475569',
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   recommendationsCard: {
     borderRadius: 28,
@@ -2321,6 +2499,7 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     lineHeight: 19,
     flex: 1,
+    fontFamily: 'Figtree_500Medium',
   },
   secondaryButton: {
     flexDirection: 'row',
@@ -2338,7 +2517,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#ffffff',
   },
   // How It Works Video Section Styles
@@ -2366,7 +2545,7 @@ const styles = StyleSheet.create({
   },
   howItWorksTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 4,
   },
   howItWorksDescription: {
@@ -2422,13 +2601,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     flex: 1,
+    fontFamily: 'Figtree_500Medium',
   },
   frameText: {
     marginTop: 24,
     fontSize: 16,
     color: '#f8fafc',
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     lineHeight: 22,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 1 },
@@ -2479,19 +2659,19 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 12,
     color: '#64748b',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     marginBottom: 4,
   },
   statValue: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#1e293b',
     marginBottom: 2,
   },
   statSubtext: {
     fontSize: 10,
     color: '#94a3b8',
-    fontWeight: '400',
+    fontFamily: 'Figtree_500Medium', // Was 400
   },
 
   // Enhanced Skin Analysis Styles
@@ -2554,7 +2734,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     marginTop: 8,
     marginBottom: 16,
-    fontWeight: '500',
+    fontFamily: 'Figtree_700Bold', // Was 500
   },
   skinMetricsRow: {
     flexDirection: 'row',
@@ -2569,10 +2749,11 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     opacity: 0.8,
     marginBottom: 4,
+    fontFamily: 'Figtree_500Medium',
   },
   skinMetricValue: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#ffffff',
   },
 
@@ -2619,7 +2800,7 @@ const styles = StyleSheet.create({
   },
   metricName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#1e293b',
     marginBottom: 2,
   },
@@ -2821,7 +3002,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalHeader: {
-    paddingTop: 20,
+    paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
@@ -2840,11 +3021,11 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   modalTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 8,
     paddingRight: 20, // Extra padding to prevent overflow
   },
@@ -2888,7 +3069,7 @@ const styles = StyleSheet.create({
   },
   heroBadgeText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold',
     color: '#6366f1',
     letterSpacing: 0.5,
   },
@@ -2912,12 +3093,12 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     textAlign: 'center',
   },
   statDivider: {
@@ -2929,7 +3110,9 @@ const styles = StyleSheet.create({
   // ✅ ENHANCED: Section Cards
   sectionCard: {
     borderRadius: 20,
-    padding: 24,
+    paddingTop: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
@@ -2941,12 +3124,12 @@ const styles = StyleSheet.create({
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12, // Ridotto da 20
   },
   sectionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40, // Ridotto da 48
+    height: 40, // Ridotto da 48
+    borderRadius: 20, // Ridotto da 24
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -2961,29 +3144,36 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
+    alignItems: 'center', // Centra verticalmente il testo rispetto al numero
+    paddingVertical: 8,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    shadowOpacity: 0, // Assicura che non ci siano ombre residue
+    elevation: 0,
   },
   itemBullet: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
-    marginTop: 2,
+    marginRight: 10,
   },
   bulletNumber: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold',
   },
   itemText: {
     flex: 1,
+    fontSize: 15, // Reduced font size
+    lineHeight: 22, // Adjusted line height
+    fontFamily: 'Figtree_500Medium',
+  },
+  routineSubHeader: {
     fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '500',
+    fontFamily: 'Figtree_700Bold',
+    marginTop: 8, // Ridotto da 16
+    marginBottom: 8,
   },
 
   // ✅ ENHANCED: Action Section
@@ -3008,7 +3198,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#ffffff',
   },
 
@@ -3034,7 +3224,7 @@ const styles = StyleSheet.create({
   detailedAnalysisButtonText: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     color: '#ffffff',
     textAlign: 'center',
     marginHorizontal: 12,

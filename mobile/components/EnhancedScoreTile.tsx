@@ -78,7 +78,7 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
       'MEDIUM': { it: 'MEDIA', en: 'MEDIUM' },
       'VERY HIGH': { it: 'MOLTO ALTA', en: 'VERY HIGH' },
     };
-    
+
     const upperLabel = label.toUpperCase();
     if (translations[upperLabel]) {
       return translations[upperLabel][language as 'it' | 'en'] || label;
@@ -121,8 +121,8 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
 
   return (
     <View style={[
-      styles.container, 
-      { 
+      styles.container,
+      {
         shadowColor: color,
         backgroundColor: isDark ? '#1f2937' : '#ffffff',
         borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6',
@@ -140,7 +140,7 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
           </LinearGradient>
 
           <View style={styles.metricInfo}>
-            <Text style={[styles.label, { color: isDark ? '#9ca3af' : '#6b7280' }]}>{label}</Text>
+            <Text style={[styles.label, { color: isDark ? '#9ca3af' : '#6b7280' }]} allowFontScaling={false}>{label}</Text>
             <Text style={[styles.value, { color: isDark ? '#f3f4f6' : '#1f2937' }]}>{Math.round(value)}</Text>
           </View>
         </View>
@@ -148,14 +148,14 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
         <View style={styles.rightSection}>
           {bucket && (
             <View style={[styles.bucketBadge, { backgroundColor: bucket.color + '15' }]}>
-              <Text style={[styles.bucketText, { color: bucket.color }]}>
+              <Text style={[styles.bucketText, { color: bucket.color }]} allowFontScaling={false}>
                 {translateBucketLabel(bucket.label)}
               </Text>
             </View>
           )}
 
           {trend && (
-            <Text style={[styles.trendText, { color: getTrendColor(trend) }]}>
+            <Text style={[styles.trendText, { color: getTrendColor(trend) }]} allowFontScaling={false}>
               {trend.trend} {trend.percentage}%
             </Text>
           )}
@@ -182,7 +182,7 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
 
         {trend && (
           <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: isDark ? '#6b7280' : '#9ca3af' }]}>Trend</Text>
+            <Text style={[styles.detailLabel, { color: isDark ? '#6b7280' : '#9ca3af' }]} allowFontScaling={false}>Trend</Text>
             <Text style={[styles.detailValue, { color: getTrendColor(trend) }]}>
               {trend.trend} {trend.percentage}% {trend.text}
             </Text>
@@ -191,7 +191,7 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
 
         {bucket && (
           <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: isDark ? '#6b7280' : '#9ca3af' }]}>Status</Text>
+            <Text style={[styles.detailLabel, { color: isDark ? '#6b7280' : '#9ca3af' }]} allowFontScaling={false}>Status</Text>
             <Text style={[styles.detailValue, { color: isDark ? '#d1d5db' : '#374151' }]}>{bucket.description}</Text>
           </View>
         )}
@@ -200,13 +200,13 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
           <View style={[styles.actionContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb' }]}>
             <View style={styles.actionHeader}>
               <MaterialCommunityIcons name="lightbulb-on-outline" size={16} color={getPriorityColor(action.priority)} />
-              <Text style={[styles.actionTitle, { color: getPriorityColor(action.priority) }]}>Recommendation</Text>
+              <Text style={[styles.actionTitle, { color: getPriorityColor(action.priority) }]} allowFontScaling={false}>Recommendation</Text>
             </View>
 
             <Text style={[styles.actionDescription, { color: isDark ? '#9ca3af' : '#4b5563' }]}>{action.description}</Text>
 
             {action.estimatedTime && (
-              <Text style={[styles.actionTime, { color: isDark ? '#6b7280' : '#6b7280' }]}>⏱️ {action.estimatedTime}</Text>
+              <Text style={[styles.actionTime, { color: isDark ? '#6b7280' : '#6b7280' }]} allowFontScaling={false}>⏱️ {action.estimatedTime}</Text>
             )}
 
             <TouchableOpacity
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#6b7280',
     marginBottom: 2,
     textTransform: 'uppercase',
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold', // Was 800
     letterSpacing: -0.5,
   },
   rightSection: {
@@ -285,12 +285,12 @@ const styles = StyleSheet.create({
   },
   bucketText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     textTransform: 'uppercase',
   },
   trendText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     marginBottom: 4,
   },
   expandedContent: {
@@ -307,14 +307,14 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#9ca3af',
     marginBottom: 4,
     textTransform: 'uppercase',
   },
   detailValue: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
     color: '#374151',
     lineHeight: 20,
   },
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   },
   actionTitle: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     textTransform: 'uppercase',
   },
   actionDescription: {
@@ -340,12 +340,14 @@ const styles = StyleSheet.create({
     color: '#4b5563',
     marginBottom: 12,
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   actionTime: {
     fontSize: 12,
     color: '#6b7280',
-    marginBottom: 8,
+    marginBottom: 0, // Adjusted padding
     fontStyle: 'italic',
+    fontFamily: 'Figtree_500Medium',
   },
   actionButton: {
     flexDirection: 'row',
@@ -358,6 +360,6 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: '#ffffff',
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
 });

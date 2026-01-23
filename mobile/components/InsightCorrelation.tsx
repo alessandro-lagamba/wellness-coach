@@ -38,19 +38,19 @@ export const InsightCorrelation: React.FC<InsightCorrelationProps> = ({
   useEffect(() => {
     if (skinData || emotionData) {
       setIsLoading(true);
-      
+
       // Simula calcolo asincrono degli insight
       setTimeout(() => {
         try {
           // Importa CorrelationService dinamicamente per evitare errori di import
           const { CorrelationService } = require('../services/correlation.service');
           const calculatedInsights = CorrelationService.getInsights(skinData, emotionData);
-          
+
           // Filtra e limita gli insight
           const filteredInsights = calculatedInsights
             .filter(insight => insight.confidence >= 0.6) // Solo insight con confidence alta
             .slice(0, maxInsights);
-          
+
           setInsights(filteredInsights);
         } catch (error) {
           console.warn('Error calculating insights:', error);
@@ -91,19 +91,19 @@ export const InsightCorrelation: React.FC<InsightCorrelationProps> = ({
   if (compact) {
     return (
       <View style={styles.compactContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.compactHeader}
           onPress={handleToggleExpanded}
         >
           <View style={styles.compactLeft}>
             <MaterialCommunityIcons name="lightbulb" size={16} color="#8b5cf6" />
-            <Text style={styles.compactTitle}>Insights</Text>
+            <Text style={styles.compactTitle} allowFontScaling={false}>Insights</Text>
             <Text style={styles.compactCount}>({insights.length})</Text>
           </View>
-          <MaterialCommunityIcons 
-            name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-            size={16} 
-            color="#6b7280" 
+          <MaterialCommunityIcons
+            name={isExpanded ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color="#6b7280"
           />
         </TouchableOpacity>
 
@@ -127,7 +127,7 @@ export const InsightCorrelation: React.FC<InsightCorrelationProps> = ({
   return (
     <View style={styles.container}>
       {/* Header */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.header}
         onPress={handleToggleExpanded}
       >
@@ -137,27 +137,27 @@ export const InsightCorrelation: React.FC<InsightCorrelationProps> = ({
           </View>
           <View style={styles.headerInfo}>
             {showTitle && (
-              <Text style={styles.title}>💡 Insights Intelligenti</Text>
+              <Text style={styles.title} allowFontScaling={false}>💡 Insights Intelligenti</Text>
             )}
             <Text style={styles.subtitle}>
-              {isLoading 
-                ? 'Calcolando correlazioni...' 
+              {isLoading
+                ? 'Calcolando correlazioni...'
                 : `${insights.length} correlazioni rilevate`
               }
             </Text>
           </View>
         </View>
-        
+
         <View style={styles.headerRight}>
           {insights.length > 0 && (
             <View style={styles.countBadge}>
-              <Text style={styles.countText}>{insights.length}</Text>
+              <Text style={styles.countText} allowFontScaling={false}>{insights.length}</Text>
             </View>
           )}
-          <MaterialCommunityIcons 
-            name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-            size={20} 
-            color="#6b7280" 
+          <MaterialCommunityIcons
+            name={isExpanded ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color="#6b7280"
           />
         </View>
       </TouchableOpacity>
@@ -171,7 +171,7 @@ export const InsightCorrelation: React.FC<InsightCorrelationProps> = ({
               <Text style={styles.loadingText}>Analizzando i tuoi dati...</Text>
             </View>
           ) : (
-            <ScrollView 
+            <ScrollView
               style={styles.insightsList}
               showsVerticalScrollIndicator={false}
             >
@@ -184,7 +184,7 @@ export const InsightCorrelation: React.FC<InsightCorrelationProps> = ({
                   expanded={false}
                 />
               ))}
-              
+
               {/* Footer con disclaimer */}
               <View style={styles.footer}>
                 <Text style={styles.disclaimer}>
@@ -237,13 +237,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#111827',
     marginBottom: 2,
   },
   subtitle: {
     fontSize: 14,
     color: '#6b7280',
+    fontFamily: 'Figtree_500Medium',
   },
   headerRight: {
     flexDirection: 'row',
@@ -259,7 +260,7 @@ const styles = StyleSheet.create({
   countText: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   content: {
     maxHeight: 400,
@@ -274,6 +275,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginLeft: 8,
+    fontFamily: 'Figtree_500Medium',
   },
   insightsList: {
     padding: 16,
@@ -290,6 +292,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     lineHeight: 16,
+    fontFamily: 'Figtree_500Medium',
   },
   // Compact styles
   compactContainer: {
@@ -315,7 +318,7 @@ const styles = StyleSheet.create({
   },
   compactTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#111827',
     marginLeft: 6,
   },
@@ -323,6 +326,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginLeft: 4,
+    fontFamily: 'Figtree_500Medium',
   },
   compactContent: {
     paddingHorizontal: 12,

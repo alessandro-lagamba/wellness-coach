@@ -138,13 +138,14 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 18,
-        fontWeight: 'bold',
+        fontFamily: 'Figtree_700Bold', // Was bold
         marginBottom: 8,
     },
     description: {
         fontSize: 14,
         lineHeight: 20,
         marginBottom: 20,
+        fontFamily: 'Figtree_500Medium',
     },
     footer: {
         flexDirection: 'row',
@@ -157,7 +158,7 @@ const styles = StyleSheet.create({
     },
     progressText: {
         fontSize: 12,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
     },
     actions: {
         flexDirection: 'row',
@@ -189,6 +190,6 @@ const styles = StyleSheet.create({
     nextButtonText: {
         color: '#fff',
         fontSize: 14,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold', // Was 600
     },
 });

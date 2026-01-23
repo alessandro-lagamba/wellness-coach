@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     },
     progressCardTitle: {
         fontSize: 15,
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold',
         marginLeft: 10,
         flex: 1,
     },

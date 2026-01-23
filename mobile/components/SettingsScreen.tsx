@@ -9,13 +9,15 @@ import { UserProfile } from '../lib/supabase';
 import { PersonalInformationScreen } from './settings/PersonalInformationScreen';
 import { MenstrualCycleSettings } from './settings/MenstrualCycleSettings';
 import { HealthPermissionsModal } from './HealthPermissionsModal';
+import { WellnessPermissionsModal } from './WellnessPermissionsModal';
 import { useHealthData } from '../hooks/useHealthData';
 import { useTranslation } from '../hooks/useTranslation';
 import { saveLanguage } from '../i18n';
-import { DailyJournalDBService } from '../services/daily-journal-db.service';
+import { DailyJournalDBService } from '../services/daily-journal-db-local.service';
 import { Switch } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext'; // 🆕 Theme hook
 import { EmptyStateCard } from './EmptyStateCard';
+import WellnessSyncService from '../services/wellness-sync.service';
 
 interface SettingsItem {
   id: string;
@@ -46,7 +48,7 @@ const UserProfileCard = ({
     return (
       <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <ActivityIndicator size="small" color={colors.primary} />
-        <Text style={[styles.profileLoadingText, { color: colors.textSecondary }]}>{t('settings.profile.loading')}</Text>
+        <Text style={[styles.profileLoadingText, { color: colors.textSecondary }]} allowFontScaling={false}>{t('settings.profile.loading')}</Text>
       </View>
     );
   }
@@ -66,8 +68,8 @@ const UserProfileCard = ({
           <FontAwesome name="user" size={24} color={colors.textInverse} />
         </View>
         <View style={styles.profileInfo}>
-          <Text style={[styles.profileName, { color: colors.text }]}>{userProfile.full_name || 'User'}</Text>
-          <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>{userProfile.email}</Text>
+          <Text style={[styles.profileName, { color: colors.text }]} allowFontScaling={false}>{userProfile.full_name || 'User'}</Text>
+          <Text style={[styles.profileEmail, { color: colors.textSecondary }]} allowFontScaling={false}>{userProfile.email}</Text>
         </View>
       </View>
 
@@ -111,7 +113,7 @@ const SettingsSection = ({
 }) => {
   return (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>{title}</Text>
       {items.map((item) => (
         <TouchableOpacity
           key={item.id}
@@ -123,8 +125,8 @@ const SettingsSection = ({
             <FontAwesome name={item.icon as any} size={16} color={colors.primary} />
           </View>
           <View style={styles.rowCopy}>
-            <Text style={[styles.rowTitle, { color: colors.text }]}>{item.label}</Text>
-            <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]}>{item.description}</Text>
+            <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>{item.label}</Text>
+            <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>{item.description}</Text>
           </View>
           {/* 🆕 Mostra Switch per dark-mode, altrimenti chevron */}
           {item.id === 'dark-mode' ? (
@@ -206,7 +208,7 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
   return (
     <SafeAreaWrapper style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>{t('settings.notificationsTitle')}</Text>
+        <Text style={[styles.title, { color: colors.text }]} allowFontScaling={false}>{t('settings.notificationsTitle')}</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {t('settings.notificationsDescription')}
         </Text>
@@ -216,7 +218,7 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
         <View style={styles.content}>
           {/* Category toggles */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('settings.notificationsCategories') || 'Categorie'}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>{t('settings.notificationsCategories') || 'Categorie'}</Text>
 
             {[{ id: 'emotionSkin', label: t('settings.notifications.emotionSkin') || 'Analisi Emozioni/Pelle', value: emotionSkin, setter: setEmotionSkin },
             { id: 'diary', label: t('settings.notifications.diary') || 'Diario', value: diary, setter: setDiary },
@@ -244,9 +246,9 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
           {/* Diary time customization */}
           {diary && (
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('settings.notifications.diaryTimeTitle') || 'Orario Diario'}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>{t('settings.notifications.diaryTimeTitle') || 'Orario Diario'}</Text>
               <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border, justifyContent: 'space-between' }]}>
-                <Text style={[styles.rowTitle, { color: colors.text }]}>
+                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>
                   {format2(diaryHour)}:{format2(diaryMinute)}
                 </Text>
                 <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -281,7 +283,7 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
               ) : (
                 <>
                   <FontAwesome name="check" size={16} color={colors.primary} />
-                  <Text style={[styles.logoutText, { color: colors.primary }]}>{t('common.save')}</Text>
+                  <Text style={[styles.logoutText, { color: colors.primary }]} allowFontScaling={false}>{t('common.save')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -292,7 +294,7 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
               disabled={loading}
             >
               <FontAwesome name="chevron-left" size={16} color={colors.textSecondary} />
-              <Text style={[styles.logoutText, { color: colors.textSecondary }]}>{t('common.back')}</Text>
+              <Text style={[styles.logoutText, { color: colors.textSecondary }]} allowFontScaling={false}>{t('common.back')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -314,7 +316,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   const [isLoading, setIsLoading] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<'main' | 'personal-info' | 'notifications' | 'menstrual-cycle'>('main');
   const [healthPermissionsModal, setHealthPermissionsModal] = useState<boolean>(false);
+  const [showWellnessPermissionsModal, setShowWellnessPermissionsModal] = useState<boolean>(false);
+  const [requestingWellnessPermissions, setRequestingWellnessPermissions] = useState<boolean>(false);
+  const [wellnessPermissions, setWellnessPermissions] = useState({ calendar: false, notifications: false });
+  const [syncService] = useState(() => WellnessSyncService.getInstance());
+
   const emailVerified = Boolean(resolvedUser?.email_confirmed_at);
+
 
   // Health data hook
   const { permissions: healthPermissions, hasData: hasHealthData, isInitialized } = useHealthData();
@@ -366,6 +374,22 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       isMounted = false;
     };
   }, [user]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkWellnessPermissions = async () => {
+      try {
+        const status = await syncService.getPermissionsStatus();
+        if (isMounted) {
+          setWellnessPermissions(status);
+        }
+      } catch (error) {
+        console.error('Error checking wellness permissions in Settings:', error);
+      }
+    };
+    checkWellnessPermissions();
+    return () => { isMounted = false; };
+  }, [syncService]);
 
   useEffect(() => {
     if (!resolvedUser) {
@@ -463,6 +487,32 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       } as UserProfile);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleEnableWellnessPermissions = async () => {
+    try {
+      setRequestingWellnessPermissions(true);
+      const result = await syncService.requestPermissions();
+      setWellnessPermissions(result);
+
+      if (result.notifications) {
+        const { NotificationService } = await import('../services/notifications.service');
+        await NotificationService.scheduleDefaults();
+      }
+
+      setShowWellnessPermissionsModal(false);
+
+      if (result.calendar || result.notifications) {
+        Alert.alert(t('common.success'), t('home.permissions.success'));
+      } else {
+        Alert.alert(t('home.permissions.required'), t('home.permissions.requiredMessage'), [{ text: t('common.ok') }]);
+      }
+    } catch (error) {
+      console.error('Error requesting wellness permissions in Settings:', error);
+      Alert.alert(t('common.error'), t('home.permissions.error'));
+    } finally {
+      setRequestingWellnessPermissions(false);
     }
   };
 
@@ -590,6 +640,71 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
     );
   };
 
+  // 🆕 Handler per backup dati locali
+  const handleBackupData = async () => {
+    Alert.alert(
+      t('settings.backupTitle') || 'Backup Dati',
+      t('settings.backupConfirm') || 'Esporta tutti i tuoi dati personali (diario, chat, analisi) in un file di backup. Potrai usare questo file per ripristinare i dati su un nuovo dispositivo.',
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.backupAction') || 'Esporta',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const { BackupService } = await import('../services/local-storage/backup.service');
+              const success = await BackupService.shareBackup();
+              if (success) {
+                Alert.alert(
+                  t('common.success'),
+                  t('settings.backupSuccess') || 'Backup creato con successo. Salvalo in un luogo sicuro.'
+                );
+              }
+            } catch (error) {
+              Alert.alert(t('common.error'), String(error));
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // 🆕 Handler per ripristino dati
+  const handleRestoreData = async () => {
+    Alert.alert(
+      t('settings.restoreTitle') || 'Ripristina Dati',
+      t('settings.restoreConfirm') || 'Importa i dati da un file di backup precedente. I dati esistenti verranno mantenuti e quelli nel backup verranno aggiunti.',
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.restoreAction') || 'Importa',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const { BackupService } = await import('../services/local-storage/backup.service');
+              const result = await BackupService.importBackup();
+              if (result.success && result.stats) {
+                const total = (Object.values(result.stats) as number[]).reduce((a, b) => a + b, 0);
+                Alert.alert(
+                  t('common.success'),
+                  t('settings.restoreSuccess', { count: total }) || `Ripristinati ${total} elementi con successo.`
+                );
+              } else if (!result.success) {
+                Alert.alert(t('common.error'), result.error || 'Errore durante il ripristino');
+              }
+            } catch (error) {
+              Alert.alert(t('common.error'), String(error));
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleItemPress = (itemId: string) => {
     switch (itemId) {
       case 'profile':
@@ -682,8 +797,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
     <SafeAreaWrapper style={[styles.container, { backgroundColor: safeAreaBackground }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>{t('settings.title')}</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+        <Text style={[styles.title, { color: colors.text }]} allowFontScaling={false}>{t('settings.title')}</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]} allowFontScaling={false}>
           {t('settings.subtitle')}
         </Text>
       </View>
@@ -698,10 +813,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
                 <MaterialCommunityIcons name="email-check" size={24} color="#8b5cf6" />
               </View>
               <View style={styles.verificationCopy}>
-                <Text style={[styles.verificationTitle, { color: colors.text }]}>
+                <Text style={[styles.verificationTitle, { color: colors.text }]} allowFontScaling={false}>
                   {t('settings.verifyEmailTitle') || 'Conferma la tua email'}
                 </Text>
-                <Text style={[styles.verificationMessage, { color: colors.textSecondary }]}>
+                <Text style={[styles.verificationMessage, { color: colors.textSecondary }]} allowFontScaling={false}>
                   {t('settings.verifyEmailDescriptionNew') || `Abbiamo inviato un'email di verifica a ${resolvedUser.email}. Apri la tua casella email e clicca sul link di conferma per attivare il tuo account e accedere a tutte le funzionalità dell'app.`}
                 </Text>
               </View>
@@ -711,7 +826,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
                 activeOpacity={0.8}
               >
                 <MaterialCommunityIcons name="refresh" size={16} color="#8b5cf6" style={{ marginRight: 6 }} />
-                <Text style={[styles.verificationButtonText, { color: '#8b5cf6' }]}>
+                <Text style={[styles.verificationButtonText, { color: '#8b5cf6' }]} allowFontScaling={false}>
                   {t('settings.verifyEmailAction') || 'Verifica stato'}
                 </Text>
               </TouchableOpacity>
@@ -720,7 +835,34 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
 
           {/* User Profile Card / Placeholder */}
           {resolvedUser ? (
-            <UserProfileCard userProfile={userProfile} isLoading={isLoading} t={t} colors={colors} />
+            <>
+              <UserProfileCard userProfile={userProfile} isLoading={isLoading} t={t} colors={colors} />
+
+              {(!wellnessPermissions.calendar || !wellnessPermissions.notifications) && (
+                <TouchableOpacity
+                  style={[
+                    styles.permissionCard,
+                    { backgroundColor: colors.surface, borderColor: colors.border, marginTop: 16 }
+                  ]}
+                  activeOpacity={0.9}
+                  onPress={() => setShowWellnessPermissionsModal(true)}
+                >
+                  <View style={styles.permissionCardCopy}>
+                    <Text style={[styles.permissionCardTitle, { color: colors.text }]} allowFontScaling={false}>
+                      {t('home.permissions.cardTitle')}
+                    </Text>
+                    <Text style={[styles.permissionCardSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>
+                      {t('home.permissions.cardSubtitle')}
+                    </Text>
+                  </View>
+                  <View style={[styles.permissionCardAction, { borderColor: colors.primary }]}>
+                    <Text style={[styles.permissionCardActionText, { color: colors.primary }]} allowFontScaling={false}>
+                      {t('home.permissions.cardCta')}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            </>
           ) : (
             <EmptyStateCard
               type="general"
@@ -750,23 +892,59 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
             colors={colors}
             darkModeValue={mode === 'dark'} // 🆕 Pass dark mode value
           />
+          {/* 🆕 Data Backup/Restore Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>{t('settings.dataManagement') || 'Gestione Dati'}</Text>
+
+            {/* Backup Button */}
+            <TouchableOpacity
+              style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={handleBackupData}
+              activeOpacity={0.85}
+            >
+              <View style={[styles.rowIconWrapper, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
+                <FontAwesome name="cloud-upload" size={16} color="#22c55e" />
+              </View>
+              <View style={styles.rowCopy}>
+                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>{t('settings.backupTitle') || 'Esporta Backup'}</Text>
+                <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>{t('settings.backupDescription') || 'Salva i tuoi dati in un file'}</Text>
+              </View>
+              <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
+            </TouchableOpacity>
+
+            {/* Restore Button */}
+            <TouchableOpacity
+              style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={handleRestoreData}
+              activeOpacity={0.85}
+            >
+              <View style={[styles.rowIconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                <FontAwesome name="cloud-download" size={16} color="#3b82f6" />
+              </View>
+              <View style={styles.rowCopy}>
+                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>{t('settings.restoreTitle') || 'Ripristina Backup'}</Text>
+                <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>{t('settings.restoreDescription') || 'Importa dati da un file'}</Text>
+              </View>
+              <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
+            </TouchableOpacity>
+          </View>
 
           {/* Reset App Button */}
           <TouchableOpacity
-            style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: '#f59e0b' + '40' }]}
+            style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: '#f59e0b40' }]}
             onPress={handleResetApp}
           >
             <MaterialCommunityIcons name="refresh" size={16} color="#f59e0b" />
-            <Text style={[styles.logoutText, { color: '#f59e0b' }]}>{t('settings.resetApp')}</Text>
+            <Text style={[styles.logoutText, { color: '#f59e0b' }]} allowFontScaling={false}>{t('settings.resetApp')}</Text>
           </TouchableOpacity>
 
           {/* Logout Button */}
           <TouchableOpacity
-            style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.error + '40' }]}
+            style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: String(colors.error) + '40' }]}
             onPress={handleLogout}
           >
             <FontAwesome name="sign-out" size={16} color={colors.error} />
-            <Text style={[styles.logoutText, { color: colors.error }]}>{t('settings.logout')}</Text>
+            <Text style={[styles.logoutText, { color: colors.error }]} allowFontScaling={false}>{t('settings.logout')}</Text>
           </TouchableOpacity>
 
           {/* Account Deletion Button - Solid Red with Extra Spacing */}
@@ -814,12 +992,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
             disabled={isLoading}
           >
             <MaterialCommunityIcons name="account-remove" size={16} color="#fff" />
-            <Text style={[styles.logoutText, { color: '#fff' }]}>{t('settings.deleteAccount')}</Text>
+            <Text style={[styles.logoutText, { color: '#fff' }]} allowFontScaling={false}>{t('settings.deleteAccount')}</Text>
           </TouchableOpacity>
 
           <View style={[styles.versionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.versionLabel, { color: colors.textSecondary }]}>{t('settings.version')}</Text>
-            <Text style={[styles.versionValue, { color: colors.primary }]}>{t('settings.versionValue')}</Text>
+            <Text style={[styles.versionLabel, { color: colors.textSecondary }]} allowFontScaling={false}>{t('settings.version')}</Text>
+            <Text style={[styles.versionValue, { color: colors.primary }]} allowFontScaling={false}>{t('settings.versionValue')}</Text>
           </View>
         </View>
       </ScrollView>
@@ -854,6 +1032,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
         }}
       />
 
+      <WellnessPermissionsModal
+        visible={showWellnessPermissionsModal}
+        onEnable={handleEnableWellnessPermissions}
+        onSkip={() => setShowWellnessPermissionsModal(false)}
+        loading={requestingWellnessPermissions}
+        missingCalendar={!wellnessPermissions.calendar}
+        missingNotifications={!wellnessPermissions.notifications}
+      />
     </SafeAreaWrapper>
   );
 };
@@ -873,7 +1059,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#0f172a',
     marginBottom: 8,
     letterSpacing: -0.5,
@@ -882,6 +1068,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#64748b',
     lineHeight: 24,
+    fontFamily: 'Figtree_500Medium',
   },
   scrollView: {
     flex: 1,
@@ -913,12 +1100,13 @@ const styles = StyleSheet.create({
   },
   verificationTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 4,
   },
   verificationMessage: {
     fontSize: 13,
     lineHeight: 19,
+    fontFamily: 'Figtree_500Medium',
   },
   verificationButton: {
     borderWidth: 1,
@@ -926,17 +1114,14 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
-  verificationButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
+
   section: {
     marginBottom: 32,
     marginTop: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#0f172a',
     marginBottom: 16,
     letterSpacing: -0.3,
@@ -971,7 +1156,7 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#0f172a',
     marginBottom: 2,
   },
@@ -979,6 +1164,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   versionCard: {
     marginTop: 20,
@@ -997,10 +1183,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
     marginBottom: 4,
+    fontFamily: 'Figtree_500Medium',
   },
   versionValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#6366f1',
   },
   // Profile Card Styles
@@ -1036,13 +1223,14 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     color: '#0f172a',
     marginBottom: 4,
   },
   profileEmail: {
     fontSize: 14,
     color: '#64748b',
+    fontFamily: 'Figtree_500Medium',
   },
   profileDetails: {
     borderTopWidth: 1,
@@ -1058,23 +1246,25 @@ const styles = StyleSheet.create({
   profileDetailLabel: {
     fontSize: 14,
     color: '#64748b',
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   profileDetailValue: {
     fontSize: 14,
     color: '#0f172a',
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   profileLoadingText: {
     fontSize: 14,
     color: '#64748b',
     textAlign: 'center',
     marginTop: 8,
+    fontFamily: 'Figtree_500Medium',
   },
   profileErrorText: {
     fontSize: 14,
     color: '#ef4444',
     textAlign: 'center',
+    fontFamily: 'Figtree_500Medium',
   },
   // Logout Button Styles
   logoutButton: {
@@ -1096,7 +1286,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     color: '#ef4444',
     marginLeft: 8,
   },
@@ -1108,6 +1298,42 @@ const styles = StyleSheet.create({
     minWidth: 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  verificationButtonText: {
+    fontSize: 14,
+    fontFamily: 'Figtree_700Bold',
+  },
+  permissionCard: {
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  permissionCardCopy: {
+    flex: 1,
+    marginRight: 12,
+  },
+  permissionCardTitle: {
+    fontSize: 16,
+    fontFamily: 'Figtree_700Bold',
+    marginBottom: 2,
+  },
+  permissionCardSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Figtree_500Medium',
+    lineHeight: 18,
+  },
+  permissionCardAction: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  permissionCardActionText: {
+    fontSize: 13,
+    fontFamily: 'Figtree_700Bold',
   },
 });
 

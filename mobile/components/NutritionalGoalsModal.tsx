@@ -388,7 +388,7 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
           <SafeAreaView edges={['bottom']} style={styles.safeArea}>
             <View style={[styles.modalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>{t('analysis.food.goals.title')}</Text>
+                <Text style={[styles.modalTitle, { color: colors.text }]} allowFontScaling={false}>{t('analysis.food.goals.title')}</Text>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                   <FontAwesome name="times" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -403,7 +403,7 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
 
                 {/* Daily Calories */}
                 <View style={styles.inputGroup}>
-                  <Text style={[styles.label, { color: colors.text }]}>{t('analysis.food.goals.dailyCalories')}</Text>
+                  <Text style={[styles.label, { color: colors.text }]} allowFontScaling={false}>{t('analysis.food.goals.dailyCalories')}</Text>
                   <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                     <TextInput
                       style={[styles.input, { color: colors.text }]}
@@ -416,7 +416,7 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                       placeholder="2000"
                       placeholderTextColor={colors.textTertiary}
                     />
-                    <Text style={[styles.unitText, { color: colors.textSecondary }]}>kcal</Text>
+                    <Text style={[styles.unitText, { color: colors.textSecondary }]} allowFontScaling={false}>kcal</Text>
                   </View>
                 </View>
 
@@ -428,7 +428,7 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                 <View style={styles.inputGroup}>
                   <View style={styles.labelRow}>
                     <Text style={[styles.label, { color: colors.text }]}>{t('analysis.food.metrics.carbohydrates')}</Text>
-                    <Text style={[styles.percentageDisplay, { color: colors.primary }]}>{goals.carbs_percentage ?? 50}%</Text>
+                    <Text style={[styles.percentageDisplay, { color: colors.primary }]} allowFontScaling={false}>{goals.carbs_percentage ?? 50}%</Text>
                   </View>
                   <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                     <TextInput
@@ -443,7 +443,7 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                       placeholderTextColor={colors.textTertiary}
                       returnKeyType="done"
                     />
-                    <Text style={[styles.unitText, { color: colors.textSecondary }]}>%</Text>
+                    <Text style={[styles.unitText, { color: colors.textSecondary }]} allowFontScaling={false}>%</Text>
                   </View>
                   <Text style={[styles.helperText, { color: colors.textTertiary }]}>
                     {t('analysis.food.goals.carbsDesc')}
@@ -454,7 +454,7 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                 <View style={styles.inputGroup}>
                   <View style={styles.labelRow}>
                     <Text style={[styles.label, { color: colors.text }]}>{t('analysis.food.metrics.proteins')}</Text>
-                    <Text style={[styles.percentageDisplay, { color: colors.error }]}>{goals.proteins_percentage ?? 30}%</Text>
+                    <Text style={[styles.percentageDisplay, { color: colors.error }]} allowFontScaling={false}>{goals.proteins_percentage ?? 30}%</Text>
                   </View>
                   <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                     <TextInput
@@ -469,7 +469,7 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                       placeholderTextColor={colors.textTertiary}
                       returnKeyType="done"
                     />
-                    <Text style={[styles.unitText, { color: colors.textSecondary }]}>%</Text>
+                    <Text style={[styles.unitText, { color: colors.textSecondary }]} allowFontScaling={false}>%</Text>
                   </View>
                   <Text style={[styles.helperText, { color: colors.textTertiary }]}>
                     {t('analysis.food.goals.proteinsDesc')}
@@ -480,7 +480,7 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                 <View style={styles.inputGroup}>
                   <View style={styles.labelRow}>
                     <Text style={[styles.label, { color: colors.text }]}>{t('analysis.food.metrics.fats')}</Text>
-                    <Text style={[styles.percentageDisplay, { color: colors.accent }]}>{goals.fats_percentage ?? 20}%</Text>
+                    <Text style={[styles.percentageDisplay, { color: colors.accent }]} allowFontScaling={false}>{goals.fats_percentage ?? 20}%</Text>
                   </View>
                   <View style={[styles.sliderContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                     <TextInput
@@ -495,7 +495,7 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                       placeholderTextColor={colors.textTertiary}
                       returnKeyType="done"
                     />
-                    <Text style={[styles.unitText, { color: colors.textSecondary }]}>%</Text>
+                    <Text style={[styles.unitText, { color: colors.textSecondary }]} allowFontScaling={false}>%</Text>
                   </View>
                   <Text style={[styles.helperText, { color: colors.textTertiary }]}>
                     {t('analysis.food.goals.fatsDesc')}
@@ -504,11 +504,11 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
 
                 {/* Total Percentage Display */}
                 <View style={[styles.totalDisplay, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                  <Text style={[styles.totalLabel, { color: colors.text }]}>{t('analysis.food.goals.total')}</Text>
+                  <Text style={[styles.totalLabel, { color: colors.text }]} allowFontScaling={false}>{t('analysis.food.goals.total')}</Text>
                   <Text style={[
                     styles.totalValue,
                     { color: Math.abs(((goals.carbs_percentage ?? 50) + (goals.proteins_percentage ?? 30) + (goals.fats_percentage ?? 20)) - 100) < 1 ? colors.success : colors.error }
-                  ]}>
+                  ]} allowFontScaling={false}>
                     {(goals.carbs_percentage ?? 50) + (goals.proteins_percentage ?? 30) + (goals.fats_percentage ?? 20)}%
                   </Text>
                 </View>
@@ -599,7 +599,7 @@ export const NutritionalGoalsModal: React.FC<NutritionalGoalsModalProps> = ({
                       ) : (
                         <>
                           <FontAwesome name="save" size={16} color={colors.textInverse} />
-                          <Text style={[styles.saveButtonText, { color: colors.textInverse }]}>
+                          <Text style={[styles.saveButtonText, { color: colors.textInverse }]} allowFontScaling={false}>
                             {isValid ? t('common.save') : `Totale: ${currentTotal}%`}
                           </Text>
                         </>
@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   closeButton: {
     padding: 4,
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
   },
   dietGoalText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     textAlign: 'center',
   },
   modeSelector: {
@@ -700,7 +700,7 @@ const styles = StyleSheet.create({
   },
   modeButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   aiSection: {
     padding: 20,
@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
   },
   aiSectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginTop: 12,
     marginBottom: 8,
   },
@@ -720,6 +720,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
   aiButton: {
     flexDirection: 'row',
@@ -732,14 +733,14 @@ const styles = StyleSheet.create({
   },
   aiButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   inputGroup: {
     marginBottom: 20,
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
     marginBottom: 8,
   },
   labelRow: {
@@ -750,7 +751,7 @@ const styles = StyleSheet.create({
   },
   percentageDisplay: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -771,10 +772,11 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
+    fontFamily: 'Figtree_500Medium',
   },
   unitText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   bmiSection: {
     padding: 16,
@@ -790,12 +792,12 @@ const styles = StyleSheet.create({
   },
   bmiTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginBottom: 4,
   },
   bmiValue: {
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: 'Figtree_700Bold', // Was 800
   },
   bmiTable: {
     gap: 8,
@@ -810,11 +812,11 @@ const styles = StyleSheet.create({
   },
   bmiRowLabel: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium', // Was 500
   },
   bmiRowValue: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
 
   helperText: {
@@ -823,7 +825,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginTop: 12,
     marginBottom: 4,
   },
@@ -842,11 +844,11 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   totalValue: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
   nutritionistSection: {
     padding: 16,
@@ -857,7 +859,7 @@ const styles = StyleSheet.create({
   },
   nutritionistTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
     marginTop: 8,
     marginBottom: 4,
   },
@@ -866,6 +868,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 12,
     lineHeight: 18,
+    fontFamily: 'Figtree_500Medium',
   },
   nutritionistButton: {
     flexDirection: 'row',
@@ -879,7 +882,7 @@ const styles = StyleSheet.create({
   },
   nutritionistButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold', // Was 600
   },
   buttonContainer: {
     padding: 20,
@@ -897,6 +900,6 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold', // Was 700
   },
 });
