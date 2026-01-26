@@ -125,7 +125,18 @@
       "saveError": "Error saving cycle data.",
       "loadError": "Error loading cycle data.",
       "loading": "Loading..."
-    }
+    },
+    "dataManagement": "Data Management",
+    "backupTitle": "Export Backup",
+    "backupDescription": "Save your data to a file",
+    "backupConfirm": "Export all your personal data (journal, chat, analysis) to a backup file. You can use this file to restore your data on a new device.",
+    "backupAction": "Export",
+    "backupSuccess": "Backup created successfully. Save it to a secure location.",
+    "restoreTitle": "Restore Backup",
+    "restoreDescription": "Import data from a file",
+    "restoreConfirm": "Import data from a previous backup file. Existing data will be kept and backup data will be added.",
+    "restoreAction": "Import",
+    "restoreSuccess": "Restored {{count}} items successfully."
   },
   "journal": {
     "title": "Journal",
@@ -222,7 +233,8 @@
       "menuTitle": "Update information",
       "success": "Information updated successfully",
       "error": "Error during update"
-    }
+    },
+    "orContinueWith": "or continue with"
   },
   "voiceChat": {
     "title": "Voice Chat",

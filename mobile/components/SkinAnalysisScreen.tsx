@@ -205,7 +205,7 @@ const skincareGuides = {
   hydration: {
     title: 'Guida miglioramento idratazione',
     subtitle: 'Aumenta e mantieni l\'idratazione della pelle',
-    image: 'https://images.unsplash.com/photo-1519415387722-a1c3bbef716c?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=1200',
+    image: 'https://images.unsplash.com/photo-1676755029584-5650586944d0?q=80&w=800&h=450&auto=format&fit=crop&crop=top&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     sections: {
       routine: {
         title: 'Routine Consigliata',
@@ -263,7 +263,7 @@ const insightCards: InsightCard[] = [
     id: 'hydration',
     title: 'Hydration Improvement Guide',
     description: 'Boost and maintain your skin hydration levels.',
-    image: 'https://images.unsplash.com/photo-1519415387722-a1c3bbef716c?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=1200',
+    image: 'https://images.unsplash.com/photo-1676755029584-5650586944d0?q=80&w=800&h=450&auto=format&fit=crop&crop=top&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
   },
 ];
 
@@ -1611,7 +1611,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
                   <Text style={[styles.insightTitle, { color: colors.text }]}>{t(`analysis.skin.guides.${card.id}.title`, { defaultValue: card.title })}</Text>
                   <Text style={[styles.insightDescription, { color: colors.textSecondary }]}>{t(`analysis.skin.guides.${card.id}.description`, { defaultValue: card.description })}</Text>
                   <View style={styles.guideHint}>
-                    <Text style={[styles.guideHintText, { color: colors.primary }]}>{t('analysis.skin.advancedModules.tapForGuide')}</Text>
+                    <Text style={[styles.guideHintText, { fontFamily: 'Figtree_500Medium', color: colors.primary }]}>{t('analysis.skin.advancedModules.tapForGuide')}</Text>
                     <FontAwesome name="chevron-right" size={12} color={colors.primary} />
                   </View>
                 </View>

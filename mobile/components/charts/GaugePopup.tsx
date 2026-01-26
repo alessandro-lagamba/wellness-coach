@@ -153,36 +153,40 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={[styles.popupContainer, { backgroundColor: colors.surface, shadowColor: colors.shadowColor }]}>
-            {/* Header */}
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
-              <View style={styles.titleContainer}>
-                <View style={styles.titleRow}>
-                  {icon && (
-                    <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
-                      <MaterialCommunityIcons name={icon as any} size={24} color={color} />
-                    </View>
-                  )}
-                  <View style={styles.titleTextContainer}>
-                    <Text style={[styles.title, { color: colors.text }]}>{label}</Text>
-                    <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
+        <View style={[styles.popupContainer, { backgroundColor: colors.surface, shadowColor: colors.shadowColor }]}>
+          {/* Header - Fixed at top */}
+          <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <View style={styles.titleContainer}>
+              <View style={styles.titleRow}>
+                {icon && (
+                  <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
+                    <MaterialCommunityIcons name={icon as any} size={24} color={color} />
                   </View>
+                )}
+                <View style={styles.titleTextContainer}>
+                  <Text style={[styles.title, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
+                  <Text style={[styles.subtitle, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{subtitle}</Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <FontAwesome name="times" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
             </View>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <FontAwesome name="times" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
 
-            {/* Content */}
+          {/* Scrollable Content */}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.content}>
               {/* Score Section */}
               <View style={styles.scoreSection}>
-                <Text style={[styles.valueText, { color }]}>{value}/{maxValue}</Text>
+                <Text style={[styles.valueText, { color }]} adjustsFontSizeToFit numberOfLines={1}>{value}/{maxValue}</Text>
                 {bucket && (
                   <View style={[styles.bucketBadge, { backgroundColor: `${bucket.color}20`, borderColor: `${bucket.color}40` }]}>
-                    <Text style={[styles.bucketText, { color: bucket.color }]}>{t(bucket.label)}</Text>
+                    <Text style={[styles.bucketText, { color: bucket.color }]} maxFontSizeMultiplier={1.5}>{t(bucket.label)}</Text>
                   </View>
                 )}
               </View>
@@ -190,7 +194,7 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
               {/* Trend Section */}
               {trendInfo && (
                 <View style={[styles.trendSection, { backgroundColor: colors.surfaceMuted }]}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.trend')}</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]} maxFontSizeMultiplier={1.5}>{t('popups.gauge.trend')}</Text>
                   <View style={styles.trendRow}>
                     <FontAwesome
                       name={trendInfo.trend === '↑' ? 'arrow-up' : trendInfo.trend === '↓' ? 'arrow-down' : 'arrow-right'}
@@ -207,23 +211,23 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
 
               {/* Why it matters */}
               <View style={styles.infoSection}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.whyImportant')}</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]} maxFontSizeMultiplier={1.5}>{t('popups.gauge.whyImportant')}</Text>
                 <Text style={[styles.infoText, { color: colors.textSecondary }]}>{metricInfo.whyItMatters}</Text>
               </View>
 
               {/* How it works */}
               <View style={styles.infoSection}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.howItWorks')}</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]} maxFontSizeMultiplier={1.5}>{t('popups.gauge.howItWorks')}</Text>
                 <Text style={[styles.infoText, { color: colors.textSecondary }]}>{metricInfo.howItWorks}</Text>
               </View>
 
               {/* Examples */}
               {Object.keys(metricInfo.examples).length > 0 && (
                 <View style={styles.infoSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.examples')}</Text>
-                  {Object.entries(metricInfo.examples).map(([key, example]) => (
-                    <View key={key} style={styles.exampleRow}>
-                      <Text style={styles.exampleLabel}>{key === 'positive' || key === 'good' || key === 'balanced' ? '✓' : '⚠'}</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]} maxFontSizeMultiplier={1.5}>{t('popups.gauge.examples')}</Text>
+                  {Object.entries(metricInfo.examples).map(([key, example], index) => (
+                    <View key={index} style={styles.exampleRow}>
+                      <Text style={styles.exampleIcon} maxFontSizeMultiplier={1.5}>{key === 'positive' || key === 'good' || key === 'balanced' ? '✓' : '⚠'}</Text>
                       <Text style={[styles.exampleText, { color: colors.textSecondary }]}>{example}</Text>
                     </View>
                   ))}
@@ -233,9 +237,9 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
               {/* Action Section */}
               {action && action.actionable && (
                 <View style={styles.actionSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('popups.gauge.recommendedAction')}</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]} maxFontSizeMultiplier={1.5}>{t('popups.gauge.recommendedAction')}</Text>
                   <View style={[styles.actionCard, { backgroundColor: colors.surfaceMuted, borderLeftColor: '#0ea5e9' }]}>
-                    <Text style={[styles.actionTitle, { color: colors.text }]}>{action.title}</Text>
+                    <Text style={[styles.actionTitle, { color: colors.text }]} maxFontSizeMultiplier={1.5}>{action.title}</Text>
                     <Text style={[styles.actionDescription, { color: colors.textSecondary }]}>{action.description}</Text>
                     {action.resources && action.resources.length > 0 && (
                       <View style={styles.resourcesContainer}>
@@ -250,14 +254,14 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
               )}
 
               {/* Disclaimer */}
-              <View style={[styles.disclaimerSection, { backgroundColor: mode === 'dark' ? 'rgba(245, 158, 11, 0.15)' : '#fef3c7', borderLeftColor: '#f59e0b' }]}>
+              <View style={[styles.disclaimerSection, { backgroundColor: mode === 'dark' ? 'rgba(245, 158, 11, 0.15)' : '#fef3c7', borderLeftColor: '#f59e0b', marginBottom: 20 }]}>
                 <Text style={[styles.disclaimerText, { color: mode === 'dark' ? colors.textSecondary : '#92400e' }]}>
                   {t('popups.gauge.disclaimer')}
                 </Text>
               </View>
             </View>
-          </View>
-        </ScrollView>
+          </ScrollView>
+        </View>
       </View>
     </Modal>
   );
@@ -266,33 +270,29 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 20,
   },
   popupContainer: {
     width: width * 0.9,
-    maxHeight: height * 0.8,
-    borderRadius: 20,
-    padding: 20,
+    maxHeight: height * 0.85,
+    borderRadius: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 20,
+    overflow: 'hidden', // Ensure header and content stay within rounded corners
+    display: 'flex',
+    flexDirection: 'column',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 15,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
   },
   titleContainer: {
@@ -314,27 +314,38 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
+    fontFamily: 'Figtree_700Bold',
   },
   subtitle: {
     fontSize: 14,
     marginTop: 2,
+    fontFamily: 'Figtree_500Medium',
   },
   closeButton: {
     padding: 8,
+    marginLeft: 8,
+  },
+  scrollView: {
+    width: '100%',
+  },
+  scrollContent: {
+    paddingBottom: 0,
   },
   content: {
     gap: 20,
+    padding: 24,
+    paddingBottom: 32,
   },
   scoreSection: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 4,
   },
   valueText: {
     fontSize: 48,
-    fontWeight: '700',
+    fontFamily: 'Figtree_800ExtraBold',
     marginBottom: 10,
+    letterSpacing: -1,
   },
   bucketBadge: {
     paddingHorizontal: 16,
@@ -344,15 +355,16 @@ const styles = StyleSheet.create({
   },
   bucketText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
+    textTransform: 'uppercase',
   },
   trendSection: {
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 8,
   },
   trendRow: {
@@ -361,35 +373,40 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   trendText: {
-    fontSize: 14,
+    fontSize: 15,
+    fontFamily: 'Figtree_500Medium',
     flex: 1,
+    flexWrap: 'wrap',
   },
   trendPercentage: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontFamily: 'Figtree_700Bold',
   },
   infoSection: {
     gap: 8,
   },
   infoText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
+    fontFamily: 'Figtree_500Medium',
   },
   exampleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
-    marginBottom: 4,
+    gap: 10,
+    marginBottom: 6,
   },
-  exampleLabel: {
+  exampleIcon: {
     fontSize: 16,
-    fontWeight: '600',
-    width: 20,
+    fontFamily: 'Figtree_700Bold',
+    width: 16,
+    textAlign: 'center',
   },
   exampleText: {
-    fontSize: 14,
+    fontSize: 15,
     flex: 1,
-    lineHeight: 20,
+    lineHeight: 22,
+    fontFamily: 'Figtree_500Medium',
   },
   actionSection: {
     gap: 8,
@@ -401,33 +418,36 @@ const styles = StyleSheet.create({
   },
   actionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontFamily: 'Figtree_700Bold',
+    marginBottom: 6,
   },
   actionDescription: {
     fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 8,
+    lineHeight: 22,
+    marginBottom: 10,
+    fontFamily: 'Figtree_500Medium',
   },
   resourcesContainer: {
     gap: 4,
   },
   resourcesLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   resourceItem: {
     fontSize: 12,
     marginLeft: 8,
+    fontFamily: 'Figtree_500Medium',
   },
   disclaimerSection: {
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     borderLeftWidth: 4,
   },
   disclaimerText: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: 'Figtree_500Medium',
     fontStyle: 'italic',
   },
 });

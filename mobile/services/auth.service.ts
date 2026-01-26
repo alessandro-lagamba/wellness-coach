@@ -9,28 +9,28 @@ export class AuthService {
   static async getCurrentUser(): Promise<User | null> {
     try {
       // 🔥 FIX: Rimossi log eccessivi - manteniamo solo errori critici
-      
+
       // 🔥 PRIMA: Ripristina la sessione (importante per React Native)
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (session?.user) {
         return session.user;
       }
-      
+
       // Se non c'è sessione, prova a ottenere l'utente direttamente
       const { data: { user }, error } = await supabase.auth.getUser();
-      
+
       if (error) {
         // ✅ FIX: Distingui tra errori normali (session missing) e errori critici
         const isNormalError = error.message?.includes('Auth session missing') ||
-                             error.message?.includes('Invalid Refresh Token') ||
-                             error.message?.includes('Already Used');
-        
+          error.message?.includes('Invalid Refresh Token') ||
+          error.message?.includes('Already Used');
+
         if (!isNormalError) {
           // Solo loggare errori inaspettati
           console.warn('⚠️ Error getting user:', error.message);
         }
-        
+
         // Se fallisce, controlla la persistenza locale
         const authState = await AuthPersistenceService.loadAuthData();
         if (authState?.user && authState?.session) {
@@ -40,16 +40,16 @@ export class AuthService {
               access_token: authState.session.access_token,
               refresh_token: authState.session.refresh_token,
             });
-            
+
             if (!sessionError && sessionData.session?.user) {
               return sessionData.session.user;
             }
-            
+
             // ✅ FIX: Se setSession fallisce con errori normali, non loggare come errore
             if (sessionError) {
               const isNormalSessionError = sessionError.message?.includes('Invalid Refresh Token') ||
-                                          sessionError.message?.includes('Already Used') ||
-                                          sessionError.message?.includes('expired');
+                sessionError.message?.includes('Already Used') ||
+                sessionError.message?.includes('expired');
               if (!isNormalSessionError) {
                 console.warn('⚠️ Error restoring session:', sessionError.message);
               }
@@ -57,7 +57,7 @@ export class AuthService {
           } catch (restoreError: any) {
             // ✅ FIX: Errori di restore sono gestiti, non loggare come critici
             const isNormalRestoreError = restoreError?.message?.includes('Invalid Refresh Token') ||
-                                        restoreError?.message?.includes('Already Used');
+              restoreError?.message?.includes('Already Used');
             if (!isNormalRestoreError) {
               console.warn('⚠️ Error restoring session:', restoreError?.message || restoreError);
             }
@@ -65,7 +65,7 @@ export class AuthService {
         }
         return null;
       }
-      
+
       return user;
     } catch (error) {
       console.error('❌ Error getting current user:', error);
@@ -99,8 +99,8 @@ export class AuthService {
    * garantendo che siano disponibili nei user_metadata dopo la conferma email.
    */
   static async signUpWithMetadata(
-    email: string, 
-    password: string, 
+    email: string,
+    password: string,
     metadata: {
       full_name?: string;
       first_name?: string;
@@ -153,13 +153,13 @@ export class AuthService {
       // 🔥 FIX: Non creiamo il profilo durante la registrazione
       // Il profilo verrà creato automaticamente quando l'utente verifica l'email
       // Questo evita di avere profili per utenti che non completano la verifica
-      
+
       console.log('✅ Signup successful!');
       console.log('📧 User email:', data.user?.email);
       console.log('📧 Email confirmed:', data.user?.email_confirmed_at);
       console.log('📧 User metadata:', data.user?.user_metadata);
       console.log('📧 Confirmation email should be sent to:', email);
-      
+
       if (data.user) {
         // Inizializza la chiave di cifratura E2E per il nuovo utente
         // (solo se l'email è già verificata, altrimenti verrà fatto dopo la verifica)
@@ -191,6 +191,46 @@ export class AuthService {
   }
 
   /**
+   * Effettua il login con provider OAuth (Google, Apple)
+   */
+  static async signInWithOAuth(provider: 'google' | 'apple'): Promise<{ error: any; data: any }> {
+    try {
+      // 🆕 Track login attempt
+      try {
+        const { AnalyticsService } = require('./analytics.service');
+        await AnalyticsService.trackEvent('screen_viewed', { feature: 'social_login', provider });
+      } catch (error) {
+        // Analytics not available, ignore
+      }
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: 'wellnesscoach://auth/callback',
+          // Per Apple è necessario specificare gli scope se vogliamo nome/email
+          queryParams: provider === 'apple' ? {
+            scope: 'name email',
+            response_type: 'code id_token',
+          } : {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) {
+        console.error(`Error signing in with ${provider}:`, error);
+        return { error, data: null };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error(`Error in signInWithOAuth (${provider}):`, error);
+      return { error, data: null };
+    }
+  }
+
+  /**
    * Effettua il login
    */
   static async signIn(email: string, password: string, rememberMe: boolean = true): Promise<{ user: User | null; error: any }> {
@@ -215,7 +255,7 @@ export class AuthService {
       // Salva i dati di autenticazione per la persistenza
       if (data.user && data.session) {
         await AuthPersistenceService.saveAuthData(data.user, data.session, rememberMe);
-        
+
         // Inizializza la chiave di cifratura E2E per questo utente
         // La chiave viene derivata dalla password e salvata in SecureStore
         try {
@@ -249,7 +289,7 @@ export class AuthService {
   static async signOut(): Promise<{ error: any }> {
     try {
       const { error } = await supabase.auth.signOut();
-      
+
       if (error) {
         console.error('Error signing out:', error);
         return { error };
@@ -257,7 +297,7 @@ export class AuthService {
 
       // Pulisce i dati di persistenza
       await AuthPersistenceService.clearAuthData();
-      
+
       // Cancella la chiave di cifratura dalla sessione
       try {
         const { clearEncryptionKey } = await import('./encryption.service');
@@ -316,13 +356,13 @@ export class AuthService {
     try {
       // Ottieni l'utente autenticato corrente
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
+
       if (authError || !user) {
         // ✅ FIX: Non loggare errori normali (session missing è normale quando l'utente non è loggato)
         const isNormalError = authError?.message?.includes('Auth session missing') ||
-                             authError?.message?.includes('Invalid Refresh Token') ||
-                             authError?.message?.includes('Already Used');
-        
+          authError?.message?.includes('Invalid Refresh Token') ||
+          authError?.message?.includes('Already Used');
+
         if (!isNormalError && authError) {
           console.error('Error getting authenticated user:', authError);
         }
@@ -332,7 +372,7 @@ export class AuthService {
       // 🔥 FIX: Usa firstName/lastName passati come parametri, altrimenti parse da fullName
       let finalFirstName: string | undefined = firstName;
       let finalLastName: string | undefined = lastName;
-      
+
       if (!finalFirstName && !finalLastName && fullName && fullName.trim()) {
         const nameParts = fullName.trim().split(' ');
         finalFirstName = nameParts[0];
@@ -370,17 +410,17 @@ export class AuthService {
    */
   static getDisplayName(profile: UserProfile | null): string {
     if (!profile) return 'User';
-    
+
     if (profile.first_name) {
       return profile.first_name;
     }
-    
+
     if (profile.full_name) {
       // Extract first name from full_name as fallback
       const nameParts = profile.full_name.trim().split(' ');
       return nameParts[0];
     }
-    
+
     return 'User';
   }
 
@@ -389,15 +429,15 @@ export class AuthService {
    */
   static getFullDisplayName(profile: UserProfile | null): string {
     if (!profile) return 'User';
-    
+
     if (profile.first_name && profile.last_name) {
       return `${profile.first_name} ${profile.last_name}`;
     }
-    
+
     if (profile.full_name) {
       return profile.full_name;
     }
-    
+
     return 'User';
   }
 
@@ -408,13 +448,13 @@ export class AuthService {
     try {
       // Ottieni l'utente autenticato corrente
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
+
       if (authError || !user) {
         // ✅ FIX: Non loggare errori normali (session missing è normale quando l'utente non è loggato)
         const isNormalError = authError?.message?.includes('Auth session missing') ||
-                             authError?.message?.includes('Invalid Refresh Token') ||
-                             authError?.message?.includes('Already Used');
-        
+          authError?.message?.includes('Invalid Refresh Token') ||
+          authError?.message?.includes('Already Used');
+
         if (!isNormalError && authError) {
           console.error('Error getting authenticated user:', authError);
         }
@@ -443,19 +483,19 @@ export class AuthService {
    * Aggiorna il profilo utente
    */
   static async updateUserProfile(
-    userId: string, 
+    userId: string,
     updates: Partial<Omit<UserProfile, 'id' | 'created_at' | 'updated_at'>>
   ): Promise<UserProfile | null> {
     try {
       // Ottieni l'utente autenticato corrente
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
+
       if (authError || !user) {
         // ✅ FIX: Non loggare errori normali (session missing è normale quando l'utente non è loggato)
         const isNormalError = authError?.message?.includes('Auth session missing') ||
-                             authError?.message?.includes('Invalid Refresh Token') ||
-                             authError?.message?.includes('Already Used');
-        
+          authError?.message?.includes('Invalid Refresh Token') ||
+          authError?.message?.includes('Already Used');
+
         if (!isNormalError && authError) {
           console.error('Error getting authenticated user:', authError);
         }
@@ -489,12 +529,13 @@ export class AuthService {
     metadata?: { deviceType?: string; appVersion?: string; osVersion?: string }
   ): Promise<void> {
     try {
-      const profile = await this.getUserProfile();
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user?.id) {
         return;
       }
+
+      const profile = await this.getUserProfile(user.id);
 
       const existingPreferences = (profile?.preferences || {}) as Record<string, any>;
       const updatedPreferences = {
@@ -600,7 +641,7 @@ export class AuthService {
       // 🔥 PRIMA: Ripristina la sessione Supabase (importante per React Native)
       // Supabase potrebbe non aver ancora ripristinato la sessione all'avvio
       const { data: { session: restoredSession } } = await supabase.auth.getSession();
-      
+
       if (restoredSession?.user) {
         return true;
       }
@@ -614,24 +655,24 @@ export class AuthService {
             access_token: authState.session.access_token,
             refresh_token: authState.session.refresh_token,
           });
-          
+
           if (error) {
             // ✅ FIX: Distingui tra errori normali e critici
             const isNormalError = error.message?.includes('Invalid Refresh Token') ||
-                                 error.message?.includes('Already Used') ||
-                                 error.message?.includes('expired') ||
-                                 error.message?.includes('Auth session missing');
-            
+              error.message?.includes('Already Used') ||
+              error.message?.includes('expired') ||
+              error.message?.includes('Auth session missing');
+
             if (!isNormalError) {
               // Solo loggare errori inaspettati
               console.warn('⚠️ Failed to restore session from persisted data:', error.message);
             }
-            
+
             // Tenta di rinnovare la sessione se necessario
             const refreshedState = await AuthPersistenceService.refreshSession(authState.session);
             return refreshedState?.isAuthenticated || false;
           }
-          
+
           if (data.session?.user) {
             // Salva nuovamente i dati aggiornati
             await AuthPersistenceService.saveAuthData(data.session.user, data.session, true);
@@ -640,12 +681,12 @@ export class AuthService {
         } catch (restoreError: any) {
           // ✅ FIX: Errori di restore sono gestiti, non loggare come critici
           const isNormalRestoreError = restoreError?.message?.includes('Invalid Refresh Token') ||
-                                      restoreError?.message?.includes('Already Used') ||
-                                      restoreError?.message?.includes('expired');
+            restoreError?.message?.includes('Already Used') ||
+            restoreError?.message?.includes('expired');
           if (!isNormalRestoreError) {
             console.warn('⚠️ Error restoring session:', restoreError?.message || restoreError);
           }
-          
+
           // Tenta di rinnovare la sessione se necessario
           const refreshedState = await AuthPersistenceService.refreshSession(authState.session);
           return refreshedState?.isAuthenticated || false;

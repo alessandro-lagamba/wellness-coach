@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DailyJournalDBService } from './daily-journal-db.service';
+import { DailyJournalDBService } from './daily-journal-db-local.service';
 
 const STORAGE_KEYS = {
   journal: (d: string) => `journal:entry:${d}`,

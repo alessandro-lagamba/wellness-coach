@@ -127,7 +127,18 @@
       "saveError": "Errore nel salvataggio dei dati del ciclo.",
       "loadError": "Errore nel caricamento dei dati del ciclo.",
       "loading": "Caricamento..."
-    }
+    },
+    "dataManagement": "Gestione Dati",
+    "backupTitle": "Esporta Backup",
+    "backupDescription": "Salva i tuoi dati in un file",
+    "backupConfirm": "Esporta tutti i tuoi dati personali (diario, chat, analisi) in un file di backup. Potrai usare questo file per ripristinare i dati su un nuovo dispositivo.",
+    "backupAction": "Esporta",
+    "backupSuccess": "Backup creato con successo. Salvalo in un luogo sicuro.",
+    "restoreTitle": "Ripristina Backup",
+    "restoreDescription": "Importa dati da un file",
+    "restoreConfirm": "Importa i dati da un file di backup precedente. I dati esistenti verranno mantenuti e quelli nel backup verranno aggiunti.",
+    "restoreAction": "Importa",
+    "restoreSuccess": "Ripristinati {{count}} elementi con successo."
   },
   "journal": {
     "title": "Diario",
@@ -224,7 +235,8 @@
       "menuTitle": "Aggiorna informazioni",
       "success": "Informazioni aggiornate con successo",
       "error": "Errore durante l'aggiornamento"
-    }
+    },
+    "orContinueWith": "oppure continua con"
   },
   "voiceChat": {
     "title": "Chat Vocale",

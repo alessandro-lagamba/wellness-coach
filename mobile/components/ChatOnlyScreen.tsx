@@ -837,7 +837,7 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                                 }}
                             >
                                 <FontAwesome name="sliders" size={18} color={colors.textSecondary} />
-                                <Text style={[styles.menuOptionText, { color: colors.text }]}>Comportamento Assistente</Text>
+                                <Text style={[styles.menuOptionText, { fontFamily: 'Figtree_400Regular' }, { color: colors.text }]}>Comportamento Assistente</Text>
                                 <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
                             </TouchableOpacity>
 
@@ -849,7 +849,7 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                                 }}
                             >
                                 <FontAwesome name="trash" size={18} color={colors.textSecondary} />
-                                <Text style={[styles.menuOptionText, { color: colors.text }]}>Cancella conversazione</Text>
+                                <Text style={[styles.menuOptionText, { fontFamily: 'Figtree_400Regular' }, { color: colors.text }]}>Cancella conversazione</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -937,6 +937,7 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                                         thumbColor="#fff"
                                     />
                                 </View>
+                                <View style={{ marginBottom: 16 }} />
                             </View>
                         </View>
                     </View>
@@ -1212,6 +1213,7 @@ const styles = StyleSheet.create({
     },
     settingsOptionText: {
         fontSize: 15,
+        fontFamily: 'Figtree_400Regular', // Was 400
     },
     settingsToggleRow: {
         flexDirection: 'row',

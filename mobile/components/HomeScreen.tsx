@@ -3117,7 +3117,7 @@ const ActivityItem: React.FC<{
                 )}
               </View>
               <Text
-                style={[styles.statusText, { color: themeColors.textSecondary }]}
+                style={[styles.statusText, { color: themeColors.textSecondary }]} allowFontScaling={false}
               >
                 {activity.completed ? 'Completata' : 'Segna come completata'}
               </Text>
@@ -3417,7 +3417,11 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderStyle: 'dashed',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
   },
   emptyActivitiesIconContainer: {
     width: 72,

@@ -16,6 +16,7 @@ import {
     Modal,
     Platform,
     ActivityIndicator,
+    useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
@@ -53,13 +54,17 @@ import {
     isPastDate,
 } from '../utils/chat-journal.utils';
 
-const { width } = Dimensions.get('window');
+// Consts for accurate centering calculations
+const DAY_PILL_WIDTH = 52;
+const DAY_PILL_GAP = 8;
+const CONTAINER_PADDING = 8;
 
 interface JournalScreenProps {
     user?: any;
 }
 
 export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
+    const { width } = useWindowDimensions();
     const { t, language } = useTranslation();
     const { colors, mode: themeMode } = useTheme();
     const isDark = themeMode === 'dark';
@@ -281,46 +286,30 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
         return () => { cancelled = true; };
     }, [currentUser?.id, selectedDayKey, language]);
 
-    // ==================== AUTO-CENTER DAY STRIP ====================
-    useEffect(() => {
-        if (monthStripScrollRef.current && monthDays.length > 0) {
-            const targetIndex = monthDays.indexOf(selectedDayKey);
-            if (targetIndex >= 0) {
-                const timer = setTimeout(() => {
-                    if (monthStripScrollRef.current) {
-                        const pillWidth = 52;
-                        const gap = 8;
-                        const totalWidth = pillWidth + gap;
-                        const offsetRight = 205;
-                        const scrollX = Math.max(0, targetIndex * totalWidth - (width / 2) + (totalWidth / 2) - offsetRight);
-                        monthStripScrollRef.current.scrollTo({ x: scrollX, animated: true });
-                    }
-                }, 500);
-                return () => clearTimeout(timer);
-            }
-        }
-    }, [monthDays, selectedDayKey]);
-
     // Auto-scroll to center selected day
+    const scrollToDay = useCallback((dayIndex: number) => {
+        if (dayIndex !== -1 && monthStripScrollRef.current) {
+            // Calculate exact center position
+            // Item center = Padding + (Index * (Width + Gap)) + (Width / 2)
+            const itemCenter = CONTAINER_PADDING + (dayIndex * (DAY_PILL_WIDTH + DAY_PILL_GAP)) + (DAY_PILL_WIDTH / 2);
+            // Scroll target = Item Center - (Screen Width / 2)
+            const targetOffset = Math.max(0, itemCenter - (width / 2));
+
+            monthStripScrollRef.current.scrollTo({ x: targetOffset, animated: true });
+        }
+    }, [width]); // Re-create when width changes (orientation change)
+
     useEffect(() => {
-        if (monthDays.length > 0 && selectedDayKey && monthStripScrollRef.current) {
+        if (monthDays.length > 0 && selectedDayKey) {
             const index = monthDays.indexOf(selectedDayKey);
             if (index !== -1) {
-                // Item width (52) + gap (8) = 60
-                const ITEM_WIDTH = 60;
-                // Calculate offset to center the item
-                // offset = (index * ITEM_WIDTH) - (SCREEN_WIDTH / 2) + (ITEM_WIDTH / 2)
-                const offset = (index * ITEM_WIDTH) - (width / 2) + (ITEM_WIDTH / 2);
-
-                // Ensure we don't scroll past boundaries (though ScrollView handles this gracefully)
-                const targetOffset = Math.max(0, offset);
-
+                // Delay to ensure layout is ready
                 setTimeout(() => {
-                    monthStripScrollRef.current?.scrollTo({ x: targetOffset, animated: true });
-                }, 100); // Small delay to ensure layout is ready
+                    scrollToDay(index);
+                }, 300);
             }
         }
-    }, [selectedDayKey, monthDays]);
+    }, [selectedDayKey, monthDays, scrollToDay]);
 
     // ==================== HANDLERS ====================
 
@@ -475,9 +464,9 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
 
     // Markdown styles
     const markdownStyles = useMemo(() => ({
-        body: { color: colors.text },
-        paragraph: { marginVertical: 4, lineHeight: 22, fontSize: 15 },
-        link: { color: colors.primary },
+        body: { color: colors.text, fontFamily: 'Figtree_400Regular' },
+        paragraph: { marginVertical: 4, lineHeight: 22, fontSize: 15, fontFamily: 'Figtree_400Regular' },
+        link: { color: colors.primary, fontFamily: 'Figtree_600SemiBold' },
     }), [colors]);
 
     // ==================== RENDER ====================
@@ -665,7 +654,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                                 {isSaving ? (
                                     <ActivityIndicator size="small" color="#ffffff" />
                                 ) : (
-                                    <Text style={styles.journalSaveText}>{t('journal.save')}</Text>
+                                    <Text style={[styles.journalSaveText, { fontFamily: 'Figtree_500Medium' }]}>{t('journal.save')}</Text>
                                 )}
                             </TouchableOpacity>
                         </View>
@@ -898,7 +887,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 18,
-        fontFamily: 'Lato_700Bold',
+        fontFamily: 'Figtree_700Bold',
         letterSpacing: 0.5,
     },
     scrollArea: {
@@ -920,7 +909,7 @@ const styles = StyleSheet.create({
     },
     monthNavTxt: {
         fontSize: 20,
-        fontFamily: 'Lato_700Bold',
+        fontFamily: 'Figtree_700Bold',
         color: '#6366f1',
     },
     monthTitleWrap: {
@@ -931,7 +920,7 @@ const styles = StyleSheet.create({
     },
     monthTitle: {
         fontSize: 16,
-        fontFamily: 'Lato_700Bold',
+        fontFamily: 'Figtree_700Bold',
         textTransform: 'capitalize',
     },
     monthStrip: {
@@ -943,8 +932,8 @@ const styles = StyleSheet.create({
     },
     dayPill: {
         width: 52,
-        height: 72,
-        borderRadius: 26,
+        height: 62, // Reduced from 72
+        borderRadius: 20, // Adjusted from 26
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
@@ -957,7 +946,7 @@ const styles = StyleSheet.create({
     },
     dayText: {
         fontSize: 16,
-        fontWeight: '600',
+        fontFamily: 'Figtree_600SemiBold',
     },
     journalPromptGrad: {
         borderRadius: 16,
@@ -973,12 +962,12 @@ const styles = StyleSheet.create({
     },
     journalPromptTitle: {
         fontSize: 14,
-        fontWeight: '600',
+        fontFamily: 'Figtree_600SemiBold',
     },
     journalPromptText: {
         fontSize: 15,
         lineHeight: 22,
-        fontStyle: 'italic',
+        fontFamily: 'Figtree_400Regular_Italic',
     },
     pillSecondary: {
         paddingHorizontal: 12,
@@ -988,7 +977,7 @@ const styles = StyleSheet.create({
     },
     pillSecondaryText: {
         fontSize: 12,
-        fontWeight: '600',
+        fontFamily: 'Figtree_600SemiBold',
     },
     pillSecondaryDisabled: {
         opacity: 0.5,
@@ -1035,7 +1024,7 @@ const styles = StyleSheet.create({
     },
     reflectionLabel: {
         fontSize: 10,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold',
         letterSpacing: 1.5,
         color: '#818cf8',
     },
@@ -1043,6 +1032,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         lineHeight: 24,
         marginBottom: 24,
+        fontFamily: 'Figtree_400Regular',
     },
     reflectionFooter: {
         flexDirection: 'row',
@@ -1053,7 +1043,7 @@ const styles = StyleSheet.create({
     },
     sentimentLabel: {
         fontSize: 10,
-        fontWeight: '600',
+        fontFamily: 'Figtree_600SemiBold',
         letterSpacing: 1,
         color: '#9ca3af',
         textTransform: 'uppercase',
@@ -1094,10 +1084,11 @@ const styles = StyleSheet.create({
     },
     dateChipText: {
         fontSize: 12,
-        fontWeight: '500',
+        fontFamily: 'Figtree_500Medium',
     },
     counterText: {
         fontSize: 12,
+        fontFamily: 'Figtree_400Regular',
     },
     journalInput: {
         padding: 16,
@@ -1106,6 +1097,7 @@ const styles = StyleSheet.create({
         lineHeight: 22,
         minHeight: 200,
         textAlignVertical: 'top',
+        fontFamily: 'Figtree_400Regular',
     },
     journalActions: {
         flexDirection: 'row',
@@ -1122,7 +1114,7 @@ const styles = StyleSheet.create({
     journalSaveText: {
         color: '#fff',
         fontSize: 15,
-        fontWeight: '600',
+        fontFamily: 'Figtree_600SemiBold',
     },
     savedChip: {
         position: 'absolute',
@@ -1136,7 +1128,7 @@ const styles = StyleSheet.create({
     savedChipText: {
         color: '#fff',
         fontSize: 12,
-        fontWeight: '600',
+        fontFamily: 'Figtree_600SemiBold',
     },
     aiInsightCard: {
         borderRadius: 16,
@@ -1162,10 +1154,11 @@ const styles = StyleSheet.create({
     },
     aiInsightIconText: {
         fontSize: 16,
+        fontFamily: 'Figtree_400Regular',
     },
     aiInsightTitle: {
         fontSize: 16,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold',
     },
     // Historical Recap Styles
     historicalRecapContainer: {
@@ -1202,11 +1195,12 @@ const styles = StyleSheet.create({
     },
     dailySnapshotTitle: {
         fontSize: 16,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold',
     },
     dailySnapshotSubtitle: {
         fontSize: 12,
         color: '#9ca3af',
+        fontFamily: 'Figtree_500Medium',
     },
     dailySnapshotRight: {
         flexDirection: 'row',
@@ -1241,19 +1235,20 @@ const styles = StyleSheet.create({
     },
     readOnlyJournalLabel: {
         fontSize: 11,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold',
         color: '#6366f1',
         letterSpacing: 1,
     },
     readOnlyTimeLabel: {
         fontSize: 12,
-        fontFamily: Platform.select({ ios: 'Courier', android: 'monospace' }),
+        fontFamily: 'Figtree_500Medium',
         color: '#9ca3af',
     },
     readOnlyJournalText: {
         fontSize: 16,
         lineHeight: 24,
         marginBottom: 16,
+        fontFamily: 'Figtree_400Regular',
     },
     readOnlyReadMore: {
         flexDirection: 'row',
@@ -1266,7 +1261,7 @@ const styles = StyleSheet.create({
     },
     readMoreText: {
         fontSize: 10,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold',
         color: '#9ca3af',
         letterSpacing: 1,
     },
@@ -1313,12 +1308,13 @@ const styles = StyleSheet.create({
     },
     historicalReflectionTitle: {
         fontSize: 14,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold',
     },
     historicalDataPoints: {
         fontSize: 10,
         color: '#9ca3af',
         letterSpacing: 0.5,
+        fontFamily: 'Figtree_500Medium',
     },
     sentimentBadge: {
         flexDirection: 'row',
@@ -1332,26 +1328,28 @@ const styles = StyleSheet.create({
     },
     sentimentBadgeText: {
         fontSize: 10,
-        fontWeight: '600',
+        fontFamily: 'Figtree_600SemiBold',
         color: '#4b5563',
     },
     historicalReflectionText: {
         fontSize: 14,
         lineHeight: 22,
         marginBottom: 20,
+        fontFamily: 'Figtree_400Regular',
     },
 
     aiInsightContent: {},
     aiInsightSummary: {
         fontSize: 14,
         lineHeight: 20,
+        fontFamily: 'Figtree_400Regular',
     },
     journalHistory: {
         marginTop: 8,
     },
     sectionTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold',
         marginBottom: 12,
     },
     historyCard: {
@@ -1374,12 +1372,12 @@ const styles = StyleSheet.create({
     },
     dateChipSmText: {
         fontSize: 11,
-        fontWeight: '600',
+        fontFamily: 'Figtree_600SemiBold',
         color: '#6366f1',
     },
     openTxt: {
         fontSize: 13,
-        fontWeight: '600',
+        fontFamily: 'Figtree_600SemiBold',
         color: '#6366f1',
     },
     historyPreviewBox: {
@@ -1409,7 +1407,7 @@ const styles = StyleSheet.create({
     },
     modalTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold',
     },
     modalClose: {
         padding: 4,
@@ -1420,6 +1418,7 @@ const styles = StyleSheet.create({
     modalText: {
         fontSize: 15,
         lineHeight: 22,
+        fontFamily: 'Figtree_400Regular',
     },
     menuModalBackdrop: {
         flex: 1,
@@ -1441,7 +1440,7 @@ const styles = StyleSheet.create({
     },
     menuModalTitle: {
         fontSize: 17,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold',
     },
     menuOptions: {
         paddingVertical: 8,
@@ -1457,6 +1456,7 @@ const styles = StyleSheet.create({
     menuOptionText: {
         flex: 1,
         fontSize: 15,
+        fontFamily: 'Figtree_500Medium',
     },
     menuOptionLast: {
         borderBottomWidth: 0,
@@ -1482,7 +1482,7 @@ const styles = StyleSheet.create({
     },
     settingsModalTitle: {
         fontSize: 17,
-        fontWeight: '700',
+        fontFamily: 'Figtree_700Bold',
     },
     settingsModalBody: {
         padding: 16,
@@ -1500,12 +1500,13 @@ const styles = StyleSheet.create({
     },
     templateOptionName: {
         fontSize: 15,
-        fontWeight: '600',
+        fontFamily: 'Figtree_600SemiBold',
         marginBottom: 4,
     },
     templateOptionDescription: {
         fontSize: 13,
         lineHeight: 18,
+        fontFamily: 'Figtree_400Regular',
     },
 });
 

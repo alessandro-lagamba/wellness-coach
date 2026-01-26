@@ -1,5 +1,4 @@
 import { supabase } from '../lib/supabase';
-import { Tables } from '../constants/database.types';
 import { DailyCopilotData } from './daily-copilot.service';
 
 export interface DailyCopilotRecord {
@@ -15,6 +14,7 @@ export interface DailyCopilotRecord {
     hrv: number;
     hydration: number;
     resting_hr?: number;
+    meditationMinutes?: number;
   };
   recommendations: {
     id: string;
@@ -57,7 +57,7 @@ class DailyCopilotDBService {
       // ✅ FIX: Use local timezone for "today" to avoid timezone issues
       const now = new Date();
       const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      
+
       const recordData = {
         user_id: userId,
         date: date,
@@ -112,9 +112,9 @@ class DailyCopilotDBService {
 
     } catch (error) {
       console.error('Error in saveDailyCopilotData:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
@@ -131,7 +131,7 @@ class DailyCopilotDBService {
       const now = new Date();
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const targetDate = date || today;
-      
+
       const { data, error } = await supabase
         .from('daily_copilot_analyses')
         .select('*')
@@ -152,9 +152,9 @@ class DailyCopilotDBService {
 
     } catch (error) {
       console.error('Error in getDailyCopilotData:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
@@ -183,9 +183,9 @@ class DailyCopilotDBService {
 
     } catch (error) {
       console.error('Error in getDailyCopilotHistory:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
@@ -196,8 +196,8 @@ class DailyCopilotDBService {
   async getDailyCopilotStats(
     userId: string,
     days: number = 30
-  ): Promise<{ 
-    success: boolean; 
+  ): Promise<{
+    success: boolean;
     data?: {
       averageScore: number;
       averageMood: number;
@@ -206,8 +206,8 @@ class DailyCopilotDBService {
       totalRecommendations: number;
       mostCommonCategory: string;
       trend: 'improving' | 'stable' | 'declining';
-    }; 
-    error?: string 
+    };
+    error?: string
   }> {
     try {
       const startDate = new Date();
@@ -236,11 +236,11 @@ class DailyCopilotDBService {
       const averageMood = data.reduce((sum, record) => sum + record.mood, 0) / totalRecords;
       const averageSleepHours = data.reduce((sum, record) => sum + record.sleep_hours, 0) / totalRecords;
       const averageSleepQuality = data.reduce((sum, record) => sum + record.sleep_quality, 0) / totalRecords;
-      
+
       // Conta le raccomandazioni per categoria
       const categoryCount: { [key: string]: number } = {};
       let totalRecommendations = 0;
-      
+
       data.forEach(record => {
         record.recommendations.forEach(rec => {
           categoryCount[rec.category] = (categoryCount[rec.category] || 0) + 1;
@@ -248,17 +248,17 @@ class DailyCopilotDBService {
         });
       });
 
-      const mostCommonCategory = Object.keys(categoryCount).reduce((a, b) => 
+      const mostCommonCategory = Object.keys(categoryCount).reduce((a, b) =>
         categoryCount[a] > categoryCount[b] ? a : b, 'energy'
       );
 
       // Calcola il trend
       const recentScores = data.slice(-7).map(r => r.overall_score);
       const olderScores = data.slice(0, Math.min(7, data.length)).map(r => r.overall_score);
-      
+
       const recentAvg = recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length;
       const olderAvg = olderScores.reduce((sum, score) => sum + score, 0) / olderScores.length;
-      
+
       let trend: 'improving' | 'stable' | 'declining' = 'stable';
       if (recentAvg > olderAvg + 5) trend = 'improving';
       else if (recentAvg < olderAvg - 5) trend = 'declining';
@@ -277,9 +277,9 @@ class DailyCopilotDBService {
 
     } catch (error) {
       console.error('Error in getDailyCopilotStats:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
@@ -308,9 +308,9 @@ class DailyCopilotDBService {
 
     } catch (error) {
       console.error('Error in deleteDailyCopilotData:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }

@@ -1224,7 +1224,7 @@ export const EmotionDetectionScreen: React.FC = () => {
                 >
                   <View style={styles.immersiveCardContent}>
                     {/* Title */}
-                    <Text style={styles.immersiveCardTitle}>
+                    <Text style={styles.immersiveCardTitle} allowFontScaling={false}>
                       {language === 'it' ? 'Le Tue Stelle Oggi' : 'Your Stars Today'}
                     </Text>
 
@@ -1320,7 +1320,7 @@ export const EmotionDetectionScreen: React.FC = () => {
                 >
                   <View style={styles.immersiveCardContent}>
                     {/* Title */}
-                    <Text style={styles.immersiveCardTitle}>
+                    <Text style={styles.immersiveCardTitle} allowFontScaling={false}>
                       {language === 'it' ? 'Il Te Stesso del Passato' : 'Your Past Self'}
                     </Text>
 

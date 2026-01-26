@@ -120,7 +120,7 @@ export const WeeklyProgressSection: React.FC<WeeklyProgressSectionProps> = ({
     return (
         <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: themeColors.text }]} allowFontScaling={false}>
-                {t('home.weeklyProgress.title') || 'I tuoi progressi questa settimana'}
+                {t('home.weeklyProgress.title')}
             </Text>
 
             <View
@@ -145,7 +145,7 @@ export const WeeklyProgressSection: React.FC<WeeklyProgressSectionProps> = ({
                                 color={themeColors.primary}
                             />
                         </View>
-                        <Text style={[styles.sectionSubtitle, { color: '#000000', fontSize: 16, flex: 1, fontFamily: 'Figtree_700Bold' }]} allowFontScaling={false}>
+                        <Text style={[styles.sectionSubtitle, { color: themeColors.text, fontSize: 18, flex: 1, fontFamily: 'Figtree_700Bold' }]} allowFontScaling={false}>
                             {t('home.weeklyProgress.subtitle') || 'Scopri quanto sei migliorato'}
                         </Text>
                         <MaterialCommunityIcons
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
         paddingBottom: 8,
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontFamily: 'Figtree_700Bold',
         marginBottom: 16,
     },

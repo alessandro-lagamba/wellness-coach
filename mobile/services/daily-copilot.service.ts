@@ -4,6 +4,8 @@ import { AIContextService } from './ai-context.service';
 import DailyCopilotDBService from './daily-copilot-db.service';
 import { RetryService } from './retry.service';
 import { getUserLanguage, getLanguageInstruction } from './language.service';
+import { widgetConfigService } from './widget-config.service';
+import { widgetGoalsService } from './widget-goals.service';
 
 export interface ThemeIndicator {
   icon: string;
@@ -13,8 +15,23 @@ export interface ThemeIndicator {
   category: 'nutrition' | 'movement' | 'recovery' | 'mindfulness' | 'energy';
 }
 
+export interface ScoreItem {
+  score: number;  // 0..100
+  weight: number; // punti peso (es. 25, 30...)
+  value: number;
+  goal?: number;
+}
+
+export interface ScoreCalculationResult {
+  score: number | null;                 // null se dati insufficienti
+  breakdown: Record<string, ScoreItem>;
+  missingData: string[];                // dati mancanti per calcolo obbligatorio + opzionali abilitati
+  availableCategories: string[];         // categorie effettivamente incluse nel calcolo
+}
+
 export interface DailyCopilotData {
   overallScore: number;        // 0-100
+  scoreDetails?: ScoreCalculationResult;
   mood: number;               // 1-5 dal check-in
   sleep: {
     hours: number;
@@ -27,7 +44,7 @@ export interface DailyCopilotData {
     hrv: number;
     hydration: number;
     restingHR?: number;
-    // Altri dati HealthKit
+    meditationMinutes?: number;
   };
   recommendations: {
     id: string;
@@ -126,7 +143,7 @@ class DailyCopilotService {
           },
           timestamp: new Date().toISOString()
         };
-        const fallbackAnalysis = this.generateFallbackAnalysis(fallbackData);
+        const fallbackAnalysis = await this.generateFallbackAnalysis(fallbackData);
         // Salva comunque nel database
         await this.dbService.saveDailyCopilotData(currentUser.id, fallbackAnalysis);
         return fallbackAnalysis;
@@ -140,7 +157,7 @@ class DailyCopilotService {
       if (!copilotData) {
         console.warn('⚠️ Daily Copilot: AI analysis failed, using fallback');
         // 🔥 FIX: Usa fallback invece di ritornare null
-        const fallbackAnalysis = this.generateFallbackAnalysis(analysisData);
+        const fallbackAnalysis = await this.generateFallbackAnalysis(analysisData);
         // Salva comunque nel database
         await this.dbService.saveDailyCopilotData(currentUser.id, fallbackAnalysis);
         return fallbackAnalysis;
@@ -338,12 +355,13 @@ class DailyCopilotService {
     steps: number;
     hrv: number;
     hydration: number;
+    meditationMinutes: number;
     restingHR?: number;
   }> {
     try {
       const currentUser = await AuthService.getCurrentUser();
       if (!currentUser?.id) {
-        return { steps: 5000, hrv: 35, hydration: 6, restingHR: 65 };
+        return { steps: 5000, hrv: 35, hydration: 6, meditationMinutes: 0, restingHR: 65 };
       }
 
       // 🔥 FIX: Prova prima a prendere i dati dal database (più aggiornati)
@@ -352,7 +370,7 @@ class DailyCopilotService {
 
       const { data: healthData } = await supabase
         .from('health_data')
-        .select('steps, hrv, hydration, resting_heart_rate')
+        .select('steps, hrv, hydration, resting_heart_rate, mindfulness_minutes')
         .eq('user_id', currentUser.id)
         .eq('date', today)
         .maybeSingle();
@@ -362,6 +380,7 @@ class DailyCopilotService {
           steps: healthData.steps,
           hrv: healthData.hrv,
           hydration: healthData.hydration ? Math.round(healthData.hydration / 250) : 6,
+          meditationMinutes: healthData.mindfulness_minutes || 0,
           restingHR: healthData.resting_heart_rate
         });
 
@@ -369,6 +388,7 @@ class DailyCopilotService {
           steps: healthData.steps || 5000,
           hrv: healthData.hrv || 35,
           hydration: healthData.hydration ? Math.round(healthData.hydration / 250) : 6, // Converti ml in bicchieri
+          meditationMinutes: healthData.mindfulness_minutes || 0,
           restingHR: healthData.resting_heart_rate || 65
         };
       }
@@ -385,6 +405,7 @@ class DailyCopilotService {
             steps: data.steps,
             hrv: data.hrv,
             hydration: data.hydration ? Math.round(data.hydration / 250) : 6,
+            meditationMinutes: data.mindfulnessMinutes || 0,
             restingHR: data.restingHeartRate
           });
 
@@ -392,6 +413,7 @@ class DailyCopilotService {
             steps: data.steps || 5000,
             hrv: data.hrv || 35,
             hydration: data.hydration ? Math.round(data.hydration / 250) : 6,
+            meditationMinutes: data.mindfulnessMinutes || 0,
             restingHR: data.restingHeartRate || 65
           };
         }
@@ -405,17 +427,26 @@ class DailyCopilotService {
           steps: aiContext.currentHealth.steps || 5000,
           hrv: aiContext.currentHealth.hrv || 35,
           hydration: aiContext.currentHealth.hydration || 6,
+          meditationMinutes: aiContext.currentHealth.mindfulnessMinutes || 0,
           restingHR: aiContext.currentHealth.restingHR || 65
         };
       }
 
       // Fallback finale: valori di default
       console.warn('⚠️ Daily Copilot: No health data available, using defaults');
-      return { steps: 5000, hrv: 35, hydration: 6, restingHR: 65 };
+      return { steps: 5000, hrv: 35, hydration: 6, meditationMinutes: 0, restingHR: 65 };
     } catch (error) {
       console.error('❌ Error getting health metrics:', error);
-      return { steps: 5000, hrv: 35, hydration: 6, restingHR: 65 };
+      return { steps: 5000, hrv: 35, hydration: 6, meditationMinutes: 0, restingHR: 65 };
     }
+  }
+
+  /**
+   * Ottiene i minuti di meditazione odierni
+   */
+  private async getTodayMeditationMinutes(): Promise<number> {
+    const healthMetrics = await this.getHealthMetrics({});
+    return healthMetrics.meditationMinutes;
   }
 
   /**
@@ -667,7 +698,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
             }
 
             // Parsing dell'analisi AI
-            return this.parseAIAnalysis(analysisText, data);
+            return await this.parseAIAnalysis(analysisText, data);
           } catch (error: any) {
             clearTimeout(timeoutId);
 
@@ -700,15 +731,18 @@ OUTPUT FORMAT (return ONLY valid JSON):
     } catch (error) {
       console.error('Error generating AI analysis after retries:', error);
       // Fallback con analisi basica - sempre disponibile
-      return this.generateFallbackAnalysis(data);
+      return await this.generateFallbackAnalysis(data);
     }
   }
 
   /**
    * Parsing dell'analisi AI
    */
-  private parseAIAnalysis(analysisText: string, data: CopilotAnalysisRequest): DailyCopilotData {
+  private async parseAIAnalysis(analysisText: string, data: CopilotAnalysisRequest): Promise<DailyCopilotData> {
     try {
+      // Calcoliamo il punteggio deterministico come "verità" o base
+      const scoreResult = await this.calculateDeterministicScore(data);
+      const deterministicScore = scoreResult.score || 50;
       // Try to parse the entire response as JSON first
       let parsedData = null;
       try {
@@ -786,7 +820,8 @@ OUTPUT FORMAT (return ONLY valid JSON):
         }
 
         return {
-          overallScore: parsedData.overallScore || this.calculateOverallScore(data),
+          overallScore: deterministicScore,
+          scoreDetails: scoreResult,
           mood: data.mood,
           sleep: data.sleep,
           healthMetrics: data.healthMetrics,
@@ -852,17 +887,22 @@ OUTPUT FORMAT (return ONLY valid JSON):
   /**
    * Genera un'analisi di fallback basata sui dati
    */
-  private generateFallbackAnalysis(data: CopilotAnalysisRequest): DailyCopilotData {
-    const overallScore = this.calculateOverallScore(data);
+  private async generateFallbackAnalysis(data: CopilotAnalysisRequest): Promise<DailyCopilotData> {
+    const scoreResult = await this.calculateDeterministicScore(data);
+    const overallScore = scoreResult.score || 50;
     const recommendations = this.generateRecommendations(data);
     const summary = this.generateSummary(data, recommendations);
     const themeIndicators = this.extractThemeIndicators(recommendations);
 
     return {
       overallScore,
+      scoreDetails: scoreResult,
       mood: data.mood,
       sleep: data.sleep,
-      healthMetrics: data.healthMetrics,
+      healthMetrics: {
+        ...data.healthMetrics,
+        meditationMinutes: await this.getTodayMeditationMinutes()
+      },
       recommendations,
       summary,
       themeIndicators,
@@ -870,31 +910,107 @@ OUTPUT FORMAT (return ONLY valid JSON):
   }
 
   /**
-   * Calcola il punteggio generale
+   * Calcola il punteggio generale (Legacy wrapper around deterministic score)
    */
-  private calculateOverallScore(data: CopilotAnalysisRequest): number {
-    let score = 0;
+  private async calculateOverallScore(data: CopilotAnalysisRequest): Promise<number> {
+    const result = await this.calculateDeterministicScore(data);
+    return result.score || 50;
+  }
 
-    // Mood (20%)
-    score += (data.mood / 5) * 20;
+  private clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+  private round2 = (n: number) => Math.round(n * 100) / 100;
 
-    // Sleep (30%)
-    const sleepScore = (data.sleep.hours / 8) * 0.7 + (data.sleep.quality / 100) * 0.3;
-    score += Math.min(sleepScore, 1) * 30;
+  /**
+   * New Deterministic Score Logic
+   * Calcola il punteggio pesato in base ai widget abilitati e ai goals
+   */
+  async calculateDeterministicScore(data: CopilotAnalysisRequest): Promise<ScoreCalculationResult> {
+    // 1. Get enabled widgets
+    const config = await widgetConfigService.getWidgetConfig();
+    const goals = await widgetGoalsService.getGoals();
 
-    // Steps (20%)
-    const stepsScore = Math.min(data.healthMetrics.steps / 10000, 1);
-    score += stepsScore * 20;
+    const enabledWidgetIds = new Set(config.filter(w => w.enabled).map(w => w.id));
 
-    // HRV (15%)
-    const hrvScore = Math.min(data.healthMetrics.hrv / 50, 1);
-    score += hrvScore * 15;
+    const breakdown: Record<string, ScoreItem> = {};
+    const missingData: string[] = [];
+    const availableCategories: string[] = [];
 
-    // Hydration (15%)
-    const hydrationScore = Math.min(data.healthMetrics.hydration / 8, 1);
-    score += hydrationScore * 15;
+    let totalPoints = 0;
+    let totalWeight = 0;
 
-    return Math.round(score);
+    // --- A. MOOD (Mandatory, Weight 25) ---
+    // User logic: Mood is always enabled
+    const moodScore = (data.mood / 5) * 100;
+    breakdown['mood'] = { score: moodScore, weight: 25, value: data.mood };
+    totalPoints += (moodScore * 25) / 100;
+    totalWeight += 25;
+    availableCategories.push('mood');
+
+    // --- B. SLEEP (Mandatory, Weight 30) ---
+    // 70% hours, 30% quality vs goal
+    const sleepGoal = goals.sleep || 8;
+    const sleepHoursScore = this.clamp01(data.sleep.hours / sleepGoal) * 100;
+    const sleepQualityScore = data.sleep.quality; // quality è già 0-100
+    const combinedSleepScore = (sleepHoursScore * 0.7) + (sleepQualityScore * 0.3);
+
+    breakdown['sleep'] = { score: combinedSleepScore, weight: 30, value: data.sleep.hours, goal: sleepGoal };
+    totalPoints += (combinedSleepScore * 30) / 100;
+    totalWeight += 30;
+    availableCategories.push('sleep');
+
+    // --- C. STEPS (Optional, Weight 20) ---
+    if (enabledWidgetIds.has('steps')) {
+      const stepsGoal = goals.steps || 10000;
+      const stepsScore = this.clamp01(data.healthMetrics.steps / stepsGoal) * 100;
+      breakdown['steps'] = { score: stepsScore, weight: 20, value: data.healthMetrics.steps, goal: stepsGoal };
+      totalPoints += (stepsScore * 20) / 100;
+      totalWeight += 20;
+      availableCategories.push('steps');
+    }
+
+    // --- D. HYDRATION (Optional, Weight 15) ---
+    if (enabledWidgetIds.has('hydration')) {
+      const hydroGoal = goals.hydration || 8;
+      const hydroScore = this.clamp01(data.healthMetrics.hydration / hydroGoal) * 100;
+      breakdown['hydration'] = { score: hydroScore, weight: 15, value: data.healthMetrics.hydration, goal: hydroGoal };
+      totalPoints += (hydroScore * 15) / 100;
+      totalWeight += 15;
+      availableCategories.push('hydration');
+    }
+
+    // --- E. HRV (Optional, Weight 10) ---
+    if (enabledWidgetIds.has('hrv')) {
+      const hrvTarget = 50; // Valore indicativo di "buona salute"
+      const hrvScore = this.clamp01(data.healthMetrics.hrv / hrvTarget) * 100;
+      breakdown['hrv'] = { score: hrvScore, weight: 10, value: data.healthMetrics.hrv, goal: hrvTarget };
+      totalPoints += (hrvScore * 10) / 100;
+      totalWeight += 10;
+      availableCategories.push('hrv');
+    }
+
+    // --- F. MEDITATION (Optional, Weight 10) ---
+    if (enabledWidgetIds.has('meditation')) {
+      const medGoal = goals.meditation || 20;
+      const medValue = await this.getTodayMeditationMinutes();
+      const medScore = this.clamp01(medValue / medGoal) * 100;
+      breakdown['meditation'] = { score: medScore, weight: 10, value: medValue, goal: medGoal };
+      totalPoints += (medScore * 10) / 100;
+      totalWeight += 10;
+      availableCategories.push('meditation');
+    }
+
+    // 3. Final Normalized Score
+    // Se totalWeight è ad esempio 100, moltiplichiamo totalPoints per (100/110) se avessimo pesi extra...
+    // Ma qui facciamo una normalizzazione pura: (punti acquisiti / peso totale possibile) * 100
+    // Poiché totalPoints è già basato sui pesi, facciamo:
+    const finalScore = totalWeight > 0 ? (totalPoints / totalWeight) * 100 : null;
+
+    return {
+      score: finalScore !== null ? Math.round(finalScore) : null,
+      breakdown,
+      missingData,
+      availableCategories
+    };
   }
 
   /**
