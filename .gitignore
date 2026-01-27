@@ -114,3 +114,7 @@ Thumbs.db
 backend/src/temp/
 *.wav
 *.m4a
+
+# Firebase
+GoogleService-Info.plist
+**/GoogleService-Info.plist
