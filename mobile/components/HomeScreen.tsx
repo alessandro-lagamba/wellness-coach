@@ -1460,12 +1460,17 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     switch (widgetId) {
       case 'steps':
       case 'hrv':
-        // Questi hanno bisogno dei permessi salute
+      case 'sleep':
+      case 'calories':
+        // 🔥 Questi widget hanno bisogno dei permessi salute
         if (healthStatus !== 'ready') {
-          if (healthStatus === 'waiting-permission') {
-            setHealthPermissionsModal(true);
-          }
+          // 🔥 FIX: Apri sempre il modal permessi se HealthKit non è pronto
+          setHealthPermissionsModal(true);
           return;
+        }
+        // Se i permessi sono OK, apri il modal goal per steps/sleep
+        if (widgetId === 'steps' || widgetId === 'sleep') {
+          setGoalModal({ visible: true, widgetId });
         }
         break;
       case 'hydration':
@@ -1478,9 +1483,6 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         break;
       case 'cycle':
         setCycleModal(true);
-        break;
-      case 'sleep':
-        setGoalModal({ visible: true, widgetId: 'sleep' });
         break;
     }
   };
@@ -1802,10 +1804,16 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         // Determina l'icona in base alla categoria
         const iconMap: Record<string, string> = {
           mindfulness: 'leaf',
-          movement: 'road',
-          nutrition: 'tint',
-          recovery: 'moon-o',
+          movement: 'run',
+          nutrition: 'water',
+          recovery: 'moon-waning-crescent',
         };
+
+        // Special case for skincare guides
+        let finalIcon = iconMap[activity.category] || 'heart-outline';
+        if (activity.title.toLowerCase().includes('guida') || activity.title.toLowerCase().includes('skincare')) {
+          finalIcon = 'face-man-profile';
+        }
 
         // Formatta l'orario
         const timeStr = activity.scheduled_time || '12:00';
@@ -1819,7 +1827,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           id: activity.id,
           title: activity.title,
           description: activity.description,
-          icon: iconMap[activity.category] || 'heart',
+          icon: finalIcon,
           completed: activity.completed,
           time: formattedTime,
           category: activity.category,
@@ -2560,6 +2568,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           onChartSelectionOpen={() => setChartSelectionModal(true)}
           toggleChart={toggleChart}
           enableChart={enableChart}
+          onPermissionRequest={() => setHealthPermissionsModal(true)} // 🔥 Open HealthPermissionsModal
         />
       </ScrollView>
 
@@ -3014,8 +3023,10 @@ const ActivityItem: React.FC<{
   permissions: { calendar: boolean; notifications: boolean };
   onActivityUpdated?: () => void;
 }> = ({ activity, index, onSync, permissions, onActivityUpdated }) => {
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, mode } = useTheme();
   const [isCompleting, setIsCompleting] = React.useState(false);
+  const { useRouter } = require('expo-router');
+  const router = useRouter();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -3061,11 +3072,34 @@ const ActivityItem: React.FC<{
     }
   };
 
+  const handleActivityPress = () => {
+    // Check if it's a skin guide
+    const title = activity.title.toLowerCase();
+    if (title.includes('guida') || title.includes('skincare')) {
+      let guideId = '';
+      if (title.includes('texture')) guideId = 'smoothness';
+      else if (title.includes('rossore')) guideId = 'redness';
+      else if (title.includes('sebo') || title.includes('oleosità')) guideId = 'oiliness';
+      else if (title.includes('idratazione')) guideId = 'hydration';
+
+      if (guideId) {
+        router.push({
+          pathname: '/(tabs)/skin',
+          params: { guide: guideId }
+        });
+        return;
+      }
+    }
+
+    // Default behavior for other activities
+    handleToggleComplete();
+  };
+
   return (
     <Animated.View style={[styles.activityCard, animatedStyle, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
       <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={handleToggleComplete}
+        activeOpacity={0.8}
+        onPress={handleActivityPress}
         disabled={isCompleting}
       >
         <View style={styles.activityContent}>
@@ -3128,6 +3162,7 @@ const ActivityItem: React.FC<{
                 <MaterialCommunityIcons name="clock-outline" size={16} color={themeColors.textTertiary} />
                 <Text
                   style={[styles.timeText, { color: themeColors.textSecondary }]}
+                  allowFontScaling={false}
                 >
                   {activity.time}
                 </Text>

@@ -63,6 +63,7 @@ export interface WeeklyProgressSectionProps {
     onChartSelectionOpen: () => void;
     toggleChart: (chartId: ChartType) => void;
     enableChart: (chartId: ChartType) => void;
+    onPermissionRequest: () => void; // 🔥 New prop
 }
 
 export const WeeklyProgressSection: React.FC<WeeklyProgressSectionProps> = ({
@@ -80,6 +81,7 @@ export const WeeklyProgressSection: React.FC<WeeklyProgressSectionProps> = ({
     onChartSelectionOpen,
     toggleChart,
     enableChart,
+    onPermissionRequest,
 }) => {
     const { t } = useTranslation();
     const { colors: themeColors } = useTheme();
@@ -114,6 +116,7 @@ export const WeeklyProgressSection: React.FC<WeeklyProgressSectionProps> = ({
             editMode={false} // Disable edit mode UI
             onDisable={() => toggleChart(vm.id)}
             disabled={!isHealthDataReady}
+            onDisabledPress={onPermissionRequest} // 🔥 Trigger modal on disabled click
         />
     );
 

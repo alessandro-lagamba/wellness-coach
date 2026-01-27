@@ -1,6 +1,6 @@
 import { Platform, Alert, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import AppleHealthKit, { HealthValue, HealthKitPermissions } from 'react-native-health';
+import AppleHealthKit, { HealthValue, HealthKitPermissions, HealthPermission as HKPermission } from 'react-native-health';
 
 // Import Health Connect statico e semplice
 let HealthConnect: any = null;
@@ -65,9 +65,9 @@ export class HealthPermissionsService {
     {
       id: 'hrv',
       name: 'Variabilità Frequenza Cardiaca (HRV)',
-      description: 'Monitora i livelli di stress e recupero',
+      description: 'Monitora i livelli di stress e recupero (essenziale per insight avanzati)',
       category: 'vitals',
-      required: false,
+      required: true,
       granted: false,
       icon: '💓',
     },
@@ -588,18 +588,28 @@ export class HealthPermissionsService {
         };
       }
 
-      const permissions: any = {};
+      // 🔥 FIX: Formato corretto per initHealthKit
+      // Deve essere { permissions: { read: [...], write: [...] } }
+      const readPermissions: HKPermission[] = [];
+      const writePermissions: HKPermission[] = [];
 
       // Mappa i permessi richiesti
       permissionIds.forEach(id => {
         const permissionType = this.getHealthKitPermissionType(id);
         if (permissionType) {
-          permissions[permissionType] = {
-            read: [permissionType],
-            write: [],
-          };
+          readPermissions.push(permissionType as HKPermission);
+          // Aggiungi anche write per alcuni tipi se necessario
         }
       });
+
+      const permissions: HealthKitPermissions = {
+        permissions: {
+          read: readPermissions,
+          write: writePermissions,
+        },
+      };
+
+      console.log('[HealthKit] Requesting permissions with:', JSON.stringify(permissions));
 
       return new Promise((resolve) => {
         try {
@@ -612,12 +622,17 @@ export class HealthPermissionsService {
                 denied: permissionIds,
               });
             } else {
-              // Salva i permessi concessi
-              this.saveGrantedPermissions(permissionIds);
+              // 🔥 FIX CRITICO: iOS NON dice quali permessi sono stati concessi!
+              // initHealthKit mostra la UI dei permessi ma non ritorna l'esito.
+              // NON possiamo salvare i permessi qui - dobbiamo verificarli provando a leggere i dati.
+              // Per ora NON salviamo nulla - la verifica reale avviene quando si tenta di leggere i dati.
+              console.log('[HealthKit] Permission request completed - actual grants cannot be determined from iOS API');
+
+              // Ritorniamo success ma con granted vuoto - il vero stato verrà verificato quando tentiamo di leggere
               resolve({
                 success: true,
-                granted: permissionIds,
-                denied: [],
+                granted: [], // Non possiamo sapere cosa è stato concesso
+                denied: [], // Non possiamo sapere cosa è stato negato
               });
             }
           });
@@ -878,7 +893,31 @@ export class HealthPermissionsService {
    * IMPORTANTE: Cerca di aprire direttamente la pagina delle app o la pagina principale
    */
   static async openHealthSettings(): Promise<void> {
-    if (Platform.OS !== 'android' || !hasHC || !HealthConnect) {
+    // 🔥 iOS: Apri l'app Salute di Apple
+    if (Platform.OS === 'ios') {
+      try {
+        // Prima prova ad aprire direttamente l'app Salute
+        const canOpen = await Linking.canOpenURL('x-apple-health://');
+        if (canOpen) {
+          await Linking.openURL('x-apple-health://');
+        } else {
+          // Fallback alle impostazioni generiche dell'app
+          await Linking.openSettings();
+        }
+      } catch (error) {
+        console.warn('⚠️ Error opening Apple Health:', error);
+        // Fallback alle impostazioni generiche
+        try {
+          await Linking.openSettings();
+        } catch {
+          // Ignore
+        }
+      }
+      return;
+    }
+
+    // Android: gestisce Health Connect
+    if (!hasHC || !HealthConnect) {
       console.warn('⚠️ Cannot open Health Connect settings: not available');
       return;
     }

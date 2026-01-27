@@ -45,6 +45,7 @@ import { EmptyStateCard } from './EmptyStateCard';
 // Services
 import { UnifiedTTSService } from '../services/unified-tts.service';
 import { ChatService, WellnessSuggestionService } from '../services/chat-wellness.service';
+import { LocalChatService, LocalChatSession, LocalChatMessage } from '../services/local-storage/local-chat.service';
 import { EmotionAnalysisService } from '../services/emotion-analysis.service';
 import { SkinAnalysisService } from '../services/skin-analysis.service';
 import { AIContextService } from '../services/ai-context.service';
@@ -188,7 +189,7 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
         includeActionSteps: true,
         localHistoryEnabled: true,
     });
-    const [chatHistory, setChatHistory] = useState<any[]>([]);
+    const [chatHistory, setChatHistory] = useState<LocalChatSession[]>([]);
     const [showChatHistory, setShowChatHistory] = useState(false);
     const [quickRepliesExpanded, setQuickRepliesExpanded] = useState(false);
 
@@ -277,21 +278,20 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
         const initializeServices = async () => {
             try {
                 await tts.initialize();
+
+                // Prune old messages (7 days)
+                await LocalChatService.pruneOldMessages(7);
+
                 if (currentUser?.id) {
                     const context = await AIContextService.getCompleteContext(currentUser.id, true);
                     setAiContext(context);
 
                     const dateLocale = language === 'it' ? 'it-IT' : 'en-US';
                     const sessionDate = new Date().toLocaleDateString(dateLocale);
-                    const session = await ChatService.createChatSession(
-                        currentUser.id,
-                        t('chat.sessionName', { date: sessionDate }),
-                        context.currentEmotion ? {
-                            dominantEmotion: context.currentEmotion.emotion,
-                            valence: context.currentEmotion.valence,
-                            arousal: context.currentEmotion.arousal,
-                            confidence: context.currentEmotion.confidence,
-                        } : undefined
+
+                    // Create local session
+                    const session = await LocalChatService.createSession(
+                        t('chat.sessionName', { date: sessionDate })
                     );
                     if (session) setCurrentSessionId(session.id);
                 }
@@ -305,16 +305,17 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
     // Load chat history
     useEffect(() => {
         const loadHistory = async () => {
-            if (!currentUser?.id) return;
             try {
-                const sessions = await ChatService.getUserChatSessions(currentUser.id, 20);
+                const sessions = await LocalChatService.listSessions();
                 setChatHistory(sessions);
             } catch (error) {
                 console.error('Error loading chat history:', error);
             }
         };
-        loadHistory();
-    }, [currentUser?.id]);
+        if (showChatHistory) {
+            loadHistory();
+        }
+    }, [showChatHistory, currentSessionId]); // Reload when history opens or session changes
 
     // Auto-scroll to bottom
     useEffect(() => {
@@ -344,19 +345,18 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
         setShowLoadingCloud(true);
 
         try {
-            // Save user message
-            if (currentUser && currentSessionId) {
-                await ChatService.saveChatMessage(
+            // Save user message (Local)
+            if (currentSessionId) {
+                await LocalChatService.addMessage(
                     currentSessionId,
-                    currentUser.id,
                     'user',
                     trimmed,
-                    aiContext?.currentEmotion ? {
-                        dominantEmotion: aiContext.currentEmotion.emotion,
-                        valence: aiContext.currentEmotion.valence,
-                        arousal: aiContext.currentEmotion.arousal,
-                        confidence: aiContext.currentEmotion.confidence,
-                    } : undefined
+                    {
+                        emotionContext: aiContext?.currentEmotion ? JSON.stringify({
+                            dominantEmotion: aiContext.currentEmotion.emotion,
+                            valence: aiContext.currentEmotion.valence
+                        }) : undefined
+                    }
                 );
             }
 
@@ -427,11 +427,10 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
 
             setMessages(prev => [...prev, aiMessage]);
 
-            // Save AI message
-            if (currentUser && currentSessionId) {
-                await ChatService.saveChatMessage(
+            // Save AI message (Local)
+            if (currentSessionId) {
+                await LocalChatService.addMessage(
                     currentSessionId,
-                    currentUser.id,
                     'assistant',
                     reply
                 );
@@ -609,7 +608,7 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
         // Placeholder for wellness activity
     }, []);
 
-    const handleClearChat = () => {
+    const handleClearChat = async () => {
         Alert.alert(
             t('chat.clearChat.title') || 'Cancella conversazione',
             t('chat.clearChat.message') || 'Vuoi cancellare tutti i messaggi?',
@@ -618,13 +617,23 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                 {
                     text: t('common.delete') || 'Cancella',
                     style: 'destructive',
-                    onPress: () => {
+                    onPress: async () => {
                         setMessages([{
                             id: 'welcome',
                             text: getInitialMessage(),
                             sender: 'ai',
                             timestamp: new Date(),
                         }]);
+
+                        // Clear current session messages
+                        if (currentSessionId) {
+                            // If we want to really clear, we might want to just start a new session
+                            // But for now, we'll just soft reset the UI. 
+                            // Or we could delete the session:
+                            // await LocalChatService.deleteSession(currentSessionId);
+                            // create new one
+                        }
+
                         setShowChatMenu(false);
                         Alert.alert(t('common.success') || 'Successo', t('chat.clearChat.success'));
                     },
@@ -649,14 +658,12 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                     <Text style={[styles.headerTitle, { color: colors.text }]}>{t('chat.title')}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {chatHistory.length > 0 && (
-                        <TouchableOpacity
-                            style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}
-                            onPress={() => setShowChatHistory(!showChatHistory)}
-                        >
-                            <FontAwesome name="history" size={18} color={colors.text} />
-                        </TouchableOpacity>
-                    )}
+                    <TouchableOpacity
+                        style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}
+                        onPress={() => setShowChatHistory(!showChatHistory)}
+                    >
+                        <FontAwesome name="history" size={18} color={colors.text} />
+                    </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.headerButton, { backgroundColor: surfaceSecondary }]}
                         onPress={() => setShowChatMenu(true)}
@@ -665,6 +672,140 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                     </TouchableOpacity>
                 </View>
             </View>
+
+            {/* Chat History Modal (Drawer-like) */}
+            <Modal
+                visible={showChatHistory}
+                animationType="fade"
+                transparent={true}
+                onRequestClose={() => setShowChatHistory(false)}
+            >
+                <View style={{ flex: 1, flexDirection: 'row' }}>
+                    {/* Sidebar */}
+                    <Animated.View style={{
+                        width: '80%',
+                        height: '100%',
+                        backgroundColor: colors.background,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 2, height: 0 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 10,
+                        elevation: 10,
+                    }}>
+                        <SafeAreaView style={{ flex: 1 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                                <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>{t('chat.history.title') || 'Cronologia'}</Text>
+                                <TouchableOpacity onPress={() => setShowChatHistory(false)} style={{ padding: 8 }}>
+                                    <FontAwesome name="times" size={20} color={colors.text} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <TouchableOpacity
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    backgroundColor: colors.primary,
+                                    marginHorizontal: 16,
+                                    marginTop: 16,
+                                    marginBottom: 12,
+                                    paddingVertical: 12,
+                                    paddingHorizontal: 16,
+                                    borderRadius: 10,
+                                    gap: 10,
+                                }}
+                                onPress={async () => {
+                                    const dateLocale = language === 'it' ? 'it-IT' : 'en-US';
+                                    const sessionDate = new Date().toLocaleDateString(dateLocale);
+                                    const newSession = await LocalChatService.createSession(t('chat.sessionName', { date: sessionDate }));
+
+                                    const welcomeMessage = getInitialMessage();
+                                    setMessages([{
+                                        id: 'welcome',
+                                        text: welcomeMessage,
+                                        sender: 'ai',
+                                        timestamp: new Date(),
+                                    }]);
+                                    if (newSession) setCurrentSessionId(newSession.id);
+                                    setShowChatHistory(false);
+                                }}
+                            >
+                                <FontAwesome name="plus" size={16} color="#fff" />
+                                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600' }}>{t('chat.history.newChat') || 'Nuova Chat'}</Text>
+                            </TouchableOpacity>
+
+                            <FlatList
+                                data={chatHistory}
+                                keyExtractor={(item) => item.id}
+                                contentContainerStyle={{ paddingHorizontal: 16 }}
+                                renderItem={({ item: session }) => {
+                                    const dateString = new Date(session.created_at).toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                                    const isSelected = currentSessionId === session.id;
+
+                                    return (
+                                        <TouchableOpacity
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                backgroundColor: isSelected ? colors.primaryMuted : surfaceSecondary,
+                                                paddingVertical: 12,
+                                                paddingHorizontal: 14,
+                                                borderRadius: 10,
+                                                marginBottom: 8,
+                                                borderLeftWidth: isSelected ? 3 : 0,
+                                                borderLeftColor: colors.primary,
+                                            }}
+                                            onPress={async () => {
+                                                const msgs = await LocalChatService.getMessages(session.id);
+                                                const formatted: Message[] = msgs.map(m => ({
+                                                    id: m.id,
+                                                    text: m.content,
+                                                    sender: m.role === 'user' ? 'user' : 'ai',
+                                                    timestamp: new Date(m.created_at),
+                                                    sessionId: session.id
+                                                }));
+
+                                                if (formatted.length > 0) {
+                                                    setMessages(formatted);
+                                                } else {
+                                                    setMessages([{
+                                                        id: 'welcome',
+                                                        text: getInitialMessage(),
+                                                        sender: 'ai',
+                                                        timestamp: new Date(),
+                                                    }]);
+                                                }
+                                                setCurrentSessionId(session.id);
+                                                setShowChatHistory(false);
+                                            }}
+                                        >
+                                            <FontAwesome name="comment-o" size={16} color={colors.textSecondary} style={{ marginRight: 12 }} />
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={{ fontSize: 14, fontWeight: '500', color: colors.text }} numberOfLines={1}>
+                                                    {session.name || t('chat.history.unnamed') || 'Chat senza nome'}
+                                                </Text>
+                                                <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>{dateString}</Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    );
+                                }}
+                                ListEmptyComponent={
+                                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                                        <FontAwesome name="comments-o" size={36} color={colors.textSecondary} />
+                                        <Text style={{ color: colors.textSecondary, marginTop: 12, fontSize: 14 }}>{t('chat.history.empty') || 'Nessuna chat'}</Text>
+                                    </View>
+                                }
+                            />
+                        </SafeAreaView>
+                    </Animated.View>
+
+                    {/* Overlay */}
+                    <TouchableOpacity
+                        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
+                        activeOpacity={1}
+                        onPress={() => setShowChatHistory(false)}
+                    />
+                </View>
+            </Modal>
 
             {/* Main Content */}
             <View style={styles.flex}>

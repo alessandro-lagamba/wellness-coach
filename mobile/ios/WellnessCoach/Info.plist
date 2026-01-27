@@ -28,7 +28,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>wellnesscoach</string>
-				<string>com.neurotracer.wellnesscoach</string>
+				<string>com.labellapartners.wellnesscoach</string>
 			</array>
 		</dict>
 		<dict>
@@ -81,6 +81,10 @@
 	</array>
 	<key>RCTNewArchEnabled</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>SplashScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>

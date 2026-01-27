@@ -15,7 +15,9 @@ let HealthConnect: any = null;
 
 try {
   if (Platform.OS === 'ios') {
-    AppleHealthKit = require('react-native-health').default;
+    // 🔥 FIX: Non usare .default - il modulo patchato esporta direttamente via module.exports
+    AppleHealthKit = require('react-native-health');
+    console.log('[HealthKit] ✅ AppleHealthKit module loaded successfully');
   } else if (Platform.OS === 'android') {
     // CORRETTO: Import come in health-permissions.service.ts
     HealthConnect = require('react-native-health-connect');
@@ -56,8 +58,8 @@ export class HealthDataService {
       enableHealthConnect: Platform.OS === 'android',
       syncInterval: 15, // 15 minutes
       maxRetries: 3,
-      // Su Android con Health Connect disponibile non usare mock
-      fallbackToMock: Platform.OS === 'ios',
+      // 🔥 FIX: DISABILITATO mock data - vogliamo solo dati reali da HealthKit/Health Connect
+      fallbackToMock: false,
     };
   }
 
@@ -105,6 +107,14 @@ export class HealthDataService {
       console.error('❌ Failed to initialize health data service:', error);
       return false;
     }
+  }
+
+  /**
+   * 🔥 NUOVO: Getter per l'ultimo dato salute sincronizzato
+   * Usato per verificare se i permessi iOS funzionano realmente
+   */
+  getLastHealthData(): HealthData | null {
+    return this.lastHealthData;
   }
 
   /**
@@ -471,10 +481,17 @@ export class HealthDataService {
       let isMock = false;
 
       console.time('HealthConnect_Fetch');
-      if (Platform.OS === 'ios' && AppleHealthKit && this.permissions.steps) {
+      // 🔥 FIX: Su iOS, NON controllare this.permissions.steps perché non possiamo sapere lo stato reale
+      // Proviamo sempre a leggere - se funziona abbiamo i permessi, se fallisce no
+      if (Platform.OS === 'ios' && AppleHealthKit) {
         const result = await this.syncHealthKitData();
         if (result.success && result.data) {
           healthData = result.data;
+          // Se abbiamo ottenuto dati, aggiorniamo i permessi locali
+          if (result.data.steps > 0) this.permissions.steps = true;
+          if (result.data.heartRate > 0) this.permissions.heartRate = true;
+          if (result.data.hrv > 0) this.permissions.hrv = true;
+          if (result.data.sleepHours > 0) this.permissions.sleep = true;
         } else {
           if (this.lastHealthData && this.lastHealthData.steps && this.lastHealthData.steps > 0) {
             healthData = this.lastHealthData;
@@ -587,51 +604,104 @@ export class HealthDataService {
    * Sync data from HealthKit
    */
   private async syncHealthKitData(): Promise<HealthDataSyncResult> {
+    console.log('[HealthKit] 🔄 syncHealthKitData called...');
+
+    // 🔥 FIX CRITICO: Bisogna inizializzare HealthKit con le permissions PRIMA di leggere i dati
+    // react-native-health richiede una chiamata a initHealthKit prima di poter usare getStepCount
+    // 🔥 FIX: Use Constants to avoid typo issues
+    const PERMS = AppleHealthKit.Constants.Permissions;
+
+    const permissions = {
+      permissions: {
+        // 🔥 FIX: Alcune versioni preferiscono 'Steps', altre 'StepCount'. Chiediamo entrambi.
+        read: [PERMS.StepCount, PERMS.Steps, PERMS.HeartRate, PERMS.HeartRateVariability, PERMS.SleepAnalysis],
+        write: [] as any[],
+      },
+    };
+
     return new Promise((resolve) => {
-      const today = new Date();
-      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-
-      const options = {
-        startDate: yesterday.toISOString(),
-        endDate: today.toISOString(),
-      };
-
-      // Get steps
-      AppleHealthKit.getStepCount(options, (error: any, results: any) => {
-        if (error) {
-          console.error('❌ HealthKit steps error:', error);
-          resolve({
-            success: false,
-            error: 'Failed to get steps data',
-          });
+      // 1. Inizializza HealthKit
+      AppleHealthKit.initHealthKit(permissions, async (initError: string) => {
+        if (initError) {
+          console.error('[HealthKit] ❌ initHealthKit failed:', initError);
+          resolve({ success: false, error: 'HealthKit initialization failed: ' + initError });
           return;
         }
 
-        const healthData: HealthData = {
-          steps: results.value || 0,
-          distance: 0, // Will be calculated
-          calories: 0, // Will be fetched separately
-          activeMinutes: 0, // Will be fetched separately
-          heartRate: 0, // Will be fetched separately
-          restingHeartRate: 0, // Will be fetched separately
-          hrv: 0, // Will be fetched separately
-          sleepHours: 0, // Will be fetched separately
-          sleepQuality: 0, // Will be calculated
-          deepSleepMinutes: 0, // Will be fetched separately
-          remSleepMinutes: 0, // Will be fetched separately
-          lightSleepMinutes: 0, // Will be fetched separately
-          hydration: 0, // Not available in HealthKit
-          mindfulnessMinutes: 0, // Will be fetched separately
+        console.log('[HealthKit] ✅ HealthKit initialized successfully');
+
+        const today = new Date();
+        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+        const options = {
+          startDate: startOfToday.toISOString(),
+          endDate: today.toISOString(),
+          includeManuallyAdded: true,
         };
 
-        // Calculate distance from steps (approximate)
-        healthData.distance = healthData.steps * 0.0008; // meters
+        try {
+          // 2. Fetch dei vari dati
 
-        resolve({
-          success: true,
-          data: healthData,
-          lastSyncDate: new Date(),
-        });
+          // Steps
+          const stepResults = await new Promise<any>((res) => {
+            AppleHealthKit.getStepCount({ ...options, unit: 'count' }, (err, results) => res(results));
+          });
+          const steps = stepResults?.value || 0;
+
+          // Heart Rate (Latest)
+          const hrResults = await new Promise<any[]>((res) => {
+            AppleHealthKit.getHeartRateSamples(options, (err, results) => res(results || []));
+          });
+          const heartRate = hrResults.length > 0 ? hrResults[0].value : 0;
+
+          // HRV
+          const hrvResults = await new Promise<any[]>((res) => {
+            AppleHealthKit.getHeartRateVariabilitySamples(options, (err, results) => res(results || []));
+          });
+          const hrv = hrvResults.length > 0 ? hrvResults[0].value * 1000 : 0; // Convert to ms if needed
+
+          // Sleep (samples from last 24h)
+          const sleepStartDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+          const sleepResults = await new Promise<any[]>((res) => {
+            AppleHealthKit.getSleepSamples({ startDate: sleepStartDate.toISOString(), endDate: today.toISOString() }, (err, results) => res(results || []));
+          });
+
+          let sleepMinutes = 0;
+          sleepResults.forEach(sample => {
+            if (sample.value === 'ASLEEP' || sample.value === 'INBED') {
+              const start = new Date(sample.startDate).getTime();
+              const end = new Date(sample.endDate).getTime();
+              sleepMinutes += (end - start) / (1000 * 60);
+            }
+          });
+
+          const healthData: HealthData = {
+            steps,
+            distance: steps * 0.0008,
+            calories: 0,
+            activeMinutes: 0,
+            heartRate,
+            restingHeartRate: 0,
+            hrv,
+            sleepHours: sleepMinutes / 60,
+            sleepQuality: 0,
+            deepSleepMinutes: 0,
+            remSleepMinutes: 0,
+            lightSleepMinutes: 0,
+            hydration: 0,
+            mindfulnessMinutes: 0,
+          };
+
+          console.log('[HealthKit] ✅ Sync complete. Steps:', steps, 'HR:', heartRate, 'Sleep hours:', (sleepMinutes / 60).toFixed(1));
+
+          resolve({
+            success: true,
+            data: healthData,
+            lastSyncDate: new Date(),
+          });
+        } catch (fetchError) {
+          console.error('[HealthKit] ❌ Error fetching data:', fetchError);
+          resolve({ success: false, error: 'Error fetching HealthKit data' });
+        }
       });
     });
   }

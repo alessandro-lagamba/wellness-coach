@@ -39,6 +39,7 @@ export class ChatService {
 
   /**
    * Salva un messaggio nella chat
+   * @deprecated Content is no longer saved to Supabase. Use LocalChatService for content storage.
    */
   static async saveChatMessage(
     sessionId: string,
@@ -49,22 +50,8 @@ export class ChatService {
     wellnessSuggestionId?: string
   ): Promise<ChatMessage | null> {
     try {
-      // Cifra il contenuto prima di salvare (solo per messaggi utente e assistant)
-      let encryptedContent: string | null = null;
-      if (role === 'user' || role === 'assistant') {
-        try {
-          encryptedContent = await encryptText(content, userId);
-          if (encryptedContent) {
-            await logEncryptionEvent('chat');
-          }
-        } catch (encError) {
-          console.warn('[Chat] ⚠️ Encryption failed, saving as plaintext (fallback):', encError);
-          encryptedContent = content; // Fallback
-        }
-      } else {
-        // I messaggi di sistema non vengono cifrati
-        encryptedContent = content;
-      }
+      // Content encryption/storage is disabled for Supabase
+      // We only log metadata that a message occurred
 
       const { data, error } = await supabase
         .from(Tables.CHAT_MESSAGES)
@@ -72,9 +59,9 @@ export class ChatService {
           session_id: sessionId,
           user_id: userId,
           role,
-          content: encryptedContent || content,
+          // content: null, // REMOVED
           emotion_context: emotionContext || {},
-          wellness_suggestion_id: wellnessSuggestionId,
+          // wellness_suggestion_id: wellnessSuggestionId, // REMOVED
         })
         .select()
         .single();
@@ -84,15 +71,10 @@ export class ChatService {
         return null;
       }
 
-      // Decifra il contenuto prima di restituire
       const message = data as ChatMessage;
-      if (message.content && (role === 'user' || role === 'assistant')) {
-        const decrypted = await decryptText(message.content, userId);
-        if (decrypted !== null) {
-          message.content = decrypted;
-          await logDecryptionEvent('chat', message.id);
-        }
-      }
+      // We populate content back for the return value so the UI doesn't break immediately
+      // if it relies on the return value, although persistence is gone.
+      message.content = content;
 
       // Log scrittura
       await logWriteEvent('chat', message.id);
@@ -106,6 +88,7 @@ export class ChatService {
 
   /**
    * Ottiene i messaggi di una sessione di chat
+   * @deprecated Content is no longer fetched from Supabase. Use LocalChatService.
    */
   static async getChatMessages(sessionId: string): Promise<ChatMessage[]> {
     try {
@@ -120,19 +103,8 @@ export class ChatService {
         return [];
       }
 
-      // Decifra i contenuti dei messaggi
+      // No content decryption needed as we don't store content
       const messages = (data || []) as ChatMessage[];
-      for (const message of messages) {
-        if (message.content && (message.role === 'user' || message.role === 'assistant')) {
-          const decrypted = await decryptText(message.content, message.user_id || '');
-          if (decrypted !== null) {
-            message.content = decrypted;
-            await logDecryptionEvent('chat', message.id);
-          }
-        }
-        // Log accesso in lettura per ogni messaggio
-        await logReadEvent('chat', message.id);
-      }
 
       return messages;
     } catch (error) {
@@ -153,7 +125,7 @@ export class ChatService {
         .select('*')
         .eq('user_id', userId)
         .order('started_at', { ascending: false })
-        .limit(limit * 2); // Prendi più sessioni per compensare il filtro
+        .limit(limit);
 
       if (sessionsError) {
         console.error('Error getting user chat sessions:', sessionsError);
@@ -164,49 +136,11 @@ export class ChatService {
         return [];
       }
 
-      // Per ogni sessione, verifica se ha messaggi utente e ottieni il primo
-      const sessionsWithMessages: (ChatSession & { firstUserMessage?: string })[] = [];
+      // We no longer strip content from DB directly for preview as it's not there.
+      // We return sessions as is.
+      // If names are set, they will be used.
 
-      for (const session of sessions) {
-        const { data: messages, error: messagesError } = await supabase
-          .from(Tables.CHAT_MESSAGES)
-          .select('content, role, created_at')
-          .eq('session_id', session.id)
-          .eq('role', 'user')
-          .order('created_at', { ascending: true })
-          .limit(1);
-
-        if (messagesError) {
-          console.error('Error getting messages for session:', session.id, messagesError);
-          continue;
-        }
-
-        // Solo se c'è almeno un messaggio utente
-        if (messages && messages.length > 0) {
-          // Decifra il primo messaggio utente
-          let firstMessage = messages[0].content;
-          try {
-            const decrypted = await decryptText(firstMessage, userId);
-            if (decrypted !== null) {
-              firstMessage = decrypted;
-            }
-          } catch (err) {
-            // Se fallisce la decifratura, usa il testo originale (backward compatibility)
-          }
-
-          sessionsWithMessages.push({
-            ...session,
-            firstUserMessage: firstMessage
-          });
-        }
-
-        // Limita il numero di sessioni restituite
-        if (sessionsWithMessages.length >= limit) {
-          break;
-        }
-      }
-
-      return sessionsWithMessages;
+      return sessions.map(s => ({ ...s, firstUserMessage: '' }));
     } catch (error) {
       console.error('Error in getUserChatSessions:', error);
       return [];
@@ -670,12 +604,15 @@ export class WellnessSuggestionService {
       const totalCompleted = suggestions.filter(s => s.interaction_type === 'completed').length;
       const totalDismissed = suggestions.filter(s => s.is_dismissed).length;
 
-      const ratings = suggestions.filter(s => s.feedback_rating).map(s => s.feedback_rating);
+      const ratings = suggestions
+        .filter(s => typeof s.feedback_rating === 'number')
+        .map(s => s.feedback_rating as number);
+
       const averageRating = ratings.length > 0 ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0;
 
       // Calcola categorie più efficaci (con rating alto)
       const categoryStats = suggestions
-        .filter(s => s.feedback_rating && s.feedback_rating >= 4)
+        .filter(s => typeof s.feedback_rating === 'number' && s.feedback_rating >= 4)
         .reduce((acc, s) => {
           const category = s.wellness_suggestions_catalog?.category || 'unknown';
           acc[category] = (acc[category] || 0) + 1;
@@ -683,7 +620,7 @@ export class WellnessSuggestionService {
         }, {} as Record<string, number>);
 
       const mostEffectiveCategories = Object.entries(categoryStats)
-        .sort(([, a], [, b]) => b - a)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
         .slice(0, 3)
         .map(([category]) => category);
 

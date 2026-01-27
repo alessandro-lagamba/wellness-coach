@@ -8,28 +8,30 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		387AE91A415A4E79760C1E90 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F2A9A75991DDD12B94AEF656 /* PrivacyInfo.xcprivacy */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		6978279ED99D3B1AEF18853F /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 133F4DDD4C89F271C8C43BAC /* ExpoModulesProvider.swift */; };
-		AAC8F5AFADBDCB657C2026B2 /* libPods-WellnessCoach.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4AD5180F48A344F2D0752900 /* libPods-WellnessCoach.a */; };
+		431F47EAE16346F4921D0F50 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = AE9B4239C1C449B1A259F4D3 /* GoogleService-Info.plist */; };
+		4FABA6FF256A53D53EA1E442 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11327ECA17775D8C66867F9 /* ExpoModulesProvider.swift */; };
+		B19179A079EED0834A8C91DB /* libPods-WellnessCoach.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23773E9B8558A70CD2DF010F /* libPods-WellnessCoach.a */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		F2AB0FF816CDA7D391414A37 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A82D79CA8A3D6DBDE6A63554 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		123C71BEEA7420B14EB50AEB /* Pods-WellnessCoach.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WellnessCoach.debug.xcconfig"; path = "Target Support Files/Pods-WellnessCoach/Pods-WellnessCoach.debug.xcconfig"; sourceTree = "<group>"; };
-		133F4DDD4C89F271C8C43BAC /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-WellnessCoach/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* WellnessCoach.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WellnessCoach.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = WellnessCoach/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = WellnessCoach/Info.plist; sourceTree = "<group>"; };
-		4AD5180F48A344F2D0752900 /* libPods-WellnessCoach.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-WellnessCoach.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		23773E9B8558A70CD2DF010F /* libPods-WellnessCoach.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-WellnessCoach.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		4ED88C98DF37AB047105760D /* Pods-WellnessCoach.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WellnessCoach.release.xcconfig"; path = "Target Support Files/Pods-WellnessCoach/Pods-WellnessCoach.release.xcconfig"; sourceTree = "<group>"; };
+		A82D79CA8A3D6DBDE6A63554 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = WellnessCoach/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = WellnessCoach/SplashScreen.storyboard; sourceTree = "<group>"; };
+		AE9B4239C1C449B1A259F4D3 /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "WellnessCoach/GoogleService-Info.plist"; sourceTree = "<group>"; };
+		B11327ECA17775D8C66867F9 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-WellnessCoach/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		E2C82A7A891D57FABB8F5E98 /* Pods-WellnessCoach.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WellnessCoach.debug.xcconfig"; path = "Target Support Files/Pods-WellnessCoach/Pods-WellnessCoach.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = WellnessCoach/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* WellnessCoach-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "WellnessCoach-Bridging-Header.h"; path = "WellnessCoach/WellnessCoach-Bridging-Header.h"; sourceTree = "<group>"; };
-		F2A9A75991DDD12B94AEF656 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = WellnessCoach/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		F5483993560DC246188EE3B2 /* Pods-WellnessCoach.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WellnessCoach.release.xcconfig"; path = "Target Support Files/Pods-WellnessCoach/Pods-WellnessCoach.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,7 +39,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AAC8F5AFADBDCB657C2026B2 /* libPods-WellnessCoach.a in Frameworks */,
+				B19179A079EED0834A8C91DB /* libPods-WellnessCoach.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,7 +55,8 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				F2A9A75991DDD12B94AEF656 /* PrivacyInfo.xcprivacy */,
+				AE9B4239C1C449B1A259F4D3 /* GoogleService-Info.plist */,
+				A82D79CA8A3D6DBDE6A63554 /* PrivacyInfo.xcprivacy */,
 			);
 			name = WellnessCoach;
 			sourceTree = "<group>";
@@ -62,26 +65,26 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				4AD5180F48A344F2D0752900 /* libPods-WellnessCoach.a */,
+				23773E9B8558A70CD2DF010F /* libPods-WellnessCoach.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		4B2F4CEA6B59FF87E5C916C6 /* Pods */ = {
+		4BFAD9FCFC8E15038207F3B5 /* WellnessCoach */ = {
 			isa = PBXGroup;
 			children = (
-				123C71BEEA7420B14EB50AEB /* Pods-WellnessCoach.debug.xcconfig */,
-				F5483993560DC246188EE3B2 /* Pods-WellnessCoach.release.xcconfig */,
+				B11327ECA17775D8C66867F9 /* ExpoModulesProvider.swift */,
 			);
-			path = Pods;
+			name = WellnessCoach;
 			sourceTree = "<group>";
 		};
-		5FE1B92375027BA0D83E0639 /* ExpoModulesProviders */ = {
+		5F739A148C86F0CF863E6F69 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				D0CD9F1876132A667399E08B /* WellnessCoach */,
+				E2C82A7A891D57FABB8F5E98 /* Pods-WellnessCoach.debug.xcconfig */,
+				4ED88C98DF37AB047105760D /* Pods-WellnessCoach.release.xcconfig */,
 			);
-			name = ExpoModulesProviders;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -98,8 +101,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				4B2F4CEA6B59FF87E5C916C6 /* Pods */,
-				5FE1B92375027BA0D83E0639 /* ExpoModulesProviders */,
+				5F739A148C86F0CF863E6F69 /* Pods */,
+				BB7D052DA3428A6F962D209C /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -123,12 +126,12 @@
 			path = WellnessCoach/Supporting;
 			sourceTree = "<group>";
 		};
-		D0CD9F1876132A667399E08B /* WellnessCoach */ = {
+		BB7D052DA3428A6F962D209C /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				133F4DDD4C89F271C8C43BAC /* ExpoModulesProvider.swift */,
+				4BFAD9FCFC8E15038207F3B5 /* WellnessCoach */,
 			);
-			name = WellnessCoach;
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -139,13 +142,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "WellnessCoach" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				937241B460E0422CBBA14161 /* [Expo] Configure project */,
+				BF6CA9E5730EF218C8761588 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				5EBD02909EF26084CA18202E /* [CP] Embed Pods Frameworks */,
+				91B0EDF431BEB9E92EDF0671 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -166,7 +169,6 @@
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1250;
-						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -196,7 +198,8 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				387AE91A415A4E79760C1E90 /* PrivacyInfo.xcprivacy in Resources */,
+				431F47EAE16346F4921D0F50 /* GoogleService-Info.plist in Resources */,
+				F2AB0FF816CDA7D391414A37 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -240,30 +243,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		5EBD02909EF26084CA18202E /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-WellnessCoach/Pods-WellnessCoach-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/WebRTC-SDK/WebRTC.framework/WebRTC",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/WebRTC.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WellnessCoach/Pods-WellnessCoach-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
@@ -314,7 +293,31 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WellnessCoach/Pods-WellnessCoach-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		937241B460E0422CBBA14161 /* [Expo] Configure project */ = {
+		91B0EDF431BEB9E92EDF0671 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-WellnessCoach/Pods-WellnessCoach-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/WebRTC-SDK/WebRTC.framework/WebRTC",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/WebRTC.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WellnessCoach/Pods-WellnessCoach-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		BF6CA9E5730EF218C8761588 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -346,7 +349,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				6978279ED99D3B1AEF18853F /* ExpoModulesProvider.swift in Sources */,
+				4FABA6FF256A53D53EA1E442 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -355,15 +358,13 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 123C71BEEA7420B14EB50AEB /* Pods-WellnessCoach.debug.xcconfig */;
+			baseConfigurationReference = E2C82A7A891D57FABB8F5E98 /* Pods-WellnessCoach.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = WellnessCoach/WellnessCoach.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = J4SJDAGB2E;
+				DEVELOPMENT_TEAM = V4VB38G95T;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -375,14 +376,14 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.neurotracer.wellnesscoach;
+				PRODUCT_BUNDLE_IDENTIFIER = com.labellapartners.wellnesscoach;
 				PRODUCT_NAME = WellnessCoach;
 				SWIFT_OBJC_BRIDGING_HEADER = "WellnessCoach/WellnessCoach-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -394,15 +395,13 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = F5483993560DC246188EE3B2 /* Pods-WellnessCoach.release.xcconfig */;
+			baseConfigurationReference = 4ED88C98DF37AB047105760D /* Pods-WellnessCoach.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = WellnessCoach/WellnessCoach.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = J4SJDAGB2E;
+				DEVELOPMENT_TEAM = V4VB38G95T;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = WellnessCoach/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -410,14 +409,14 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.neurotracer.wellnesscoach;
+				PRODUCT_BUNDLE_IDENTIFIER = com.labellapartners.wellnesscoach;
 				PRODUCT_NAME = WellnessCoach;
 				SWIFT_OBJC_BRIDGING_HEADER = "WellnessCoach/WellnessCoach-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
@@ -482,7 +481,7 @@
 				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../node_modules/.pnpm/react-native@0.81.5_@babel+core@7.28.4_@types+react@19.1.17_react@19.1.0/node_modules/react-native";
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
@@ -538,7 +537,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
 				MTL_ENABLE_DEBUG_INFO = NO;
-				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../node_modules/.pnpm/react-native@0.81.5_@babel+core@7.28.4_@types+react@19.1.17_react@19.1.0/node_modules/react-native";
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				USE_HERMES = true;

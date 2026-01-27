@@ -215,7 +215,69 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
         await HealthPermissionsService.markSetupCompleted();
         // haptic disabilitato
 
-        // 🔥 Sincronizza i dati dopo aver ottenuto i permessi
+        // 🔥 iOS FIX: iOS non dice quali permessi sono concessi
+        // Proviamo a leggere i dati per verificare se funziona
+        if (Platform.OS === 'ios' && result.granted.length === 0 && result.denied.length === 0) {
+          console.log('[iOS] Permission status unknown - attempting to verify by reading data...');
+
+          // Tenta di sincronizzare i dati per verificare se abbiamo davvero i permessi
+          await syncHealthDataAfterPermissions();
+
+          // 🔥 FIX: Verifica se il componente è ancora montato
+          if (!isMountedRef.current) return;
+
+          // Prova a leggere lo stato aggiornato
+          const { HealthDataService } = await import('../services/health-data.service');
+          const healthService = HealthDataService.getInstance();
+          const healthData = healthService.getLastHealthData();
+
+          // Se abbiamo ottenuto dati, i permessi funzionano
+          const hasRealData = healthData && (
+            (healthData.steps && healthData.steps > 0) ||
+            (healthData.heartRate && healthData.heartRate > 0) ||
+            (healthData.sleepHours && healthData.sleepHours > 0)
+          );
+
+          if (hasRealData) {
+            // ✅ Permessi funzionanti - abbiamo dati reali
+            Alert.alert(
+              t('common.success'),
+              t('modals.healthPermissions.iosPermissionsWorking', 'Permessi HealthKit attivi! I tuoi dati salute sono stati sincronizzati.'),
+              [{
+                text: t('modals.healthPermissions.perfect'),
+                onPress: () => { onSuccess(); onClose(); }
+              }]
+            );
+          } else {
+            // ❌ Nessun dato - guida l'utente alle impostazioni
+            Alert.alert(
+              t('modals.healthPermissions.iosPermissionsNeeded', 'Attiva i permessi manualmente'),
+              t('modals.healthPermissions.iosManualInstructions',
+                'iOS non permette di sapere quali permessi hai concesso.\n\n' +
+                'Se hai già concesso i permessi ma i dati non appaiono, vai in:\n\n' +
+                '📱 Impostazioni → Privacy e sicurezza → Salute → Wellness Coach\n\n' +
+                'E assicurati che tutte le categorie siano attive.'),
+              [
+                {
+                  text: t('common.cancel'),
+                  style: 'cancel',
+                  onPress: () => { onSuccess(); onClose(); }
+                },
+                {
+                  text: t('modals.healthPermissions.openSettings'),
+                  onPress: () => {
+                    HealthPermissionsService.openHealthSettings();
+                    onSuccess();
+                    onClose();
+                  }
+                },
+              ]
+            );
+          }
+          return; // Uscita anticipata per iOS
+        }
+
+        // 🔥 Sincronizza i dati dopo aver ottenuto i permessi (Android path)
         await syncHealthDataAfterPermissions();
 
         // 🔥 FIX: Verifica se il componente è ancora montato prima di mostrare Alert

@@ -24,6 +24,7 @@ export interface WeeklyProgressCardProps {
     editMode?: boolean;
     onDisable?: () => void;
     disabled?: boolean;
+    onDisabledPress?: () => void; // 🔥 New prop for handling clicks when disabled
     width?: number;
 }
 
@@ -43,6 +44,7 @@ export const WeeklyProgressCard: React.FC<WeeklyProgressCardProps> = ({
     editMode = false,
     onDisable,
     disabled = false,
+    onDisabledPress,
     width: manualWidth,
 }) => {
     const { colors: themeColors } = useTheme();
@@ -52,9 +54,16 @@ export const WeeklyProgressCard: React.FC<WeeklyProgressCardProps> = ({
         <TouchableOpacity
             key={id}
             style={[styles.progressCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-            onPress={() => !editMode && !disabled && onPress?.()}
+            onPress={() => {
+                if (editMode) return;
+                if (!disabled) {
+                    onPress?.();
+                } else {
+                    onDisabledPress?.(); // 🔥 Trigger disable handler if provided
+                }
+            }}
             activeOpacity={editMode ? 1 : 0.7}
-            disabled={editMode || disabled}
+            disabled={editMode} // Only disable touch if in edit mode
         >
             <View style={styles.progressCardHeader}>
                 {iconImage ? (

@@ -248,6 +248,28 @@ class LocalChatServiceClass {
         await db.runAsync('DELETE FROM chat_messages');
         await db.runAsync('DELETE FROM chat_sessions');
     }
+
+    /**
+     * Prune messages older than specified days
+     */
+    async pruneOldMessages(days: number = 7): Promise<void> {
+        await this.ensureInit();
+        const db = getDatabase();
+
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+        const cutoffISO = cutoffDate.toISOString();
+
+        await db.runAsync(
+            'DELETE FROM chat_messages WHERE created_at < ?',
+            [cutoffISO]
+        );
+
+        // Optionally clean up empty sessions (sessions with no messages)
+        // await db.runAsync(
+        //    'DELETE FROM chat_sessions WHERE id NOT IN (SELECT DISTINCT session_id FROM chat_messages)'
+        // );
+    }
 }
 
 export const LocalChatService = new LocalChatServiceClass();

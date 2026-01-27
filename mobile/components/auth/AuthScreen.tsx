@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   ActivityIndicator,
@@ -30,6 +29,12 @@ import Svg, {
   Circle,
   G
 } from 'react-native-svg';
+import Reanimated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming
+} from 'react-native-reanimated';
+import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import { AuthService } from '../../services/auth.service';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -184,6 +189,23 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     };
     checkExistingUser();
   }, []);
+
+  // Keyboard handling (reanimated)
+  const keyboardHeight = useSharedValue(0);
+
+  useKeyboardHandler(
+    {
+      onMove: (event) => {
+        'worklet';
+        keyboardHeight.value = event.height;
+      },
+    },
+    []
+  );
+
+  const fakeViewStyle = useAnimatedStyle(() => ({
+    height: Math.abs(keyboardHeight.value),
+  }));
 
   const switchMode = (newMode: AuthMode) => {
     if (mode === newMode) return;
@@ -407,8 +429,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
             {mode === 'login' && (
               <View style={styles.optionsRow}>
-                <TouchableOpacity style={styles.checkboxRow} onPress={() => setRememberMe(!rememberMe)}>
-                  <View style={[styles.checkbox, rememberMe && styles.checkboxActive, { borderColor: inputBorder, backgroundColor: inputBg }]}>
+                <TouchableOpacity
+                  style={styles.checkboxRow}
+                  onPress={() => setRememberMe(!rememberMe)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <View style={[
+                    styles.checkbox,
+                    { borderColor: inputBorder, backgroundColor: inputBg },
+                    rememberMe && styles.checkboxActive
+                  ]}>
                     {rememberMe && <FontAwesome name="check" size={10} color="#fff" />}
                   </View>
                   <Text style={[styles.checkboxLabel, { color: iconColor }]}>Ricordami</Text>
@@ -457,6 +487,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
 
         </ScrollView>
+        {/* Keyboard spacer */}
+        <Reanimated.View style={fakeViewStyle} />
       </SafeAreaView>
     </View>
   );

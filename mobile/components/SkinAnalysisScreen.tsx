@@ -68,7 +68,7 @@ import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 import { getTodayISODate, toLocalISODate } from '../utils/locale-formatters';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 // Removed useInsights - now using IntelligentInsightsSection directly
 
 const { width } = Dimensions.get('window');
@@ -95,6 +95,7 @@ const heroVideoUri = require('../assets/videos/skin-analysis-video.mp4');
 // Guide dettagliate per ogni modulo - Contenuto in italiano
 const skincareGuides = {
   smoothness: {
+    id: 'smoothness', // Added ID for logic
     title: 'Guida miglioramento texture',
     subtitle: 'Suggerimenti per una pelle più uniforme',
     image: 'https://images.unsplash.com/photo-1654781350550-0dc72ecb6fae?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=998',
@@ -131,6 +132,7 @@ const skincareGuides = {
     }
   },
   redness: {
+    id: 'redness',
     title: 'Guida riduzione rossore',
     subtitle: 'Come calmare pelle irritata e sensibile',
     image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80',
@@ -167,6 +169,7 @@ const skincareGuides = {
     }
   },
   oiliness: {
+    id: 'oiliness',
     title: 'Guida bilanciamento sebo',
     subtitle: 'Controlla la produzione di sebo in eccesso',
     image: 'https://images.unsplash.com/photo-1718490953028-021d352b14fd?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1699',
@@ -203,6 +206,7 @@ const skincareGuides = {
     }
   },
   hydration: {
+    id: 'hydration',
     title: 'Guida miglioramento idratazione',
     subtitle: 'Aumenta e mantieni l\'idratazione della pelle',
     image: 'https://images.unsplash.com/photo-1676755029584-5650586944d0?q=80&w=800&h=450&auto=format&fit=crop&crop=top&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
@@ -318,10 +322,12 @@ const SkinAnalysisScreen: React.FC = () => {
 const SkinAnalysisScreenContent: React.FC = () => {
   const { start: startCopilot } = useCopilot();
   const { t, i18n } = useTranslation(); // 🆕 i18n hook
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
   const { hideTabBar, showTabBar } = useTabBarVisibility();
   const [currentImageUri, setCurrentImageUri] = useState(heroImageUri);
+  const { guide: guideParam } = useLocalSearchParams(); // Handle deep link
+
 
   const [analyzing, setAnalyzing] = useState(false);
   // Removed capturing state - no more capture overlay
@@ -496,6 +502,19 @@ const SkinAnalysisScreenContent: React.FC = () => {
       console.warn('⚠️ copilotEvents not available, walkthrough completion tracking disabled');
     }
   }, []);
+
+
+
+  // 🆕 Deep link detection for skincare guides
+  useEffect(() => {
+    if (guideParam && skincareGuides[guideParam as keyof typeof skincareGuides]) {
+      // Small delay to ensure everything is ready
+      const timer = setTimeout(() => {
+        openSkincareGuide(guideParam as string);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [guideParam]);
 
   // Reload data when screen comes into focus - background refresh only
   useFocusEffect(
@@ -1848,7 +1867,11 @@ const SkinAnalysisScreenContent: React.FC = () => {
                     <View key={key} style={[
                       styles.sectionCard,
                       {
-                        backgroundColor: key === 'avoid' ? '#fff5f5' : key === 'timing' ? '#f0f9ff' : (index % 2 === 0 ? colors.surface : colors.surfaceMuted),
+                        backgroundColor: key === 'avoid'
+                          ? (mode === 'dark' ? '#3d1212' : '#fff5f5')
+                          : key === 'timing'
+                            ? (mode === 'dark' ? '#0a2a44' : '#f0f9ff')
+                            : (index % 2 === 0 ? colors.surface : colors.surfaceMuted),
                         borderLeftWidth: 4,
                         borderLeftColor: getSectionColor(key),
                         borderColor: colors.border,
@@ -1939,7 +1962,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
                       // Salva l'attività nel database wellness_activities
                       const guideData = skincareGuides[selectedGuide as keyof typeof skincareGuides];
                       const guideTitle = t(`analysis.skin.guides.${selectedGuide}.title`, { defaultValue: guideData?.title || '' });
-                      const guideDescription = t(`analysis.skin.guides.${selectedGuide}.description`, { defaultValue: guideData?.subtitle || '' });
+                      const guideDescription = t('analysis.skin.advancedModules.tapForGuide') || 'Vai alla routine';
 
                       const result = await wellnessActivitiesService.saveActivity({
                         title: guideTitle,
