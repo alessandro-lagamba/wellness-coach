@@ -40,6 +40,7 @@ export function useHealthData(): UseHealthDataReturn {
     bodyFat: false,
     hydration: false,
     mindfulness: false,
+    menstruation: false, // 🔥 FIX: Added menstruation permission
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -62,7 +63,7 @@ export function useHealthData(): UseHealthDataReturn {
           // Snapshot permessi
           const currentPerms = healthService.getPermissions();
           setPermissions(currentPerms);
-          
+
           // 🔥 Forza SEMPRE una sync all'avvio, anche senza permessi
           // Questo serve per creare il record giornaliero in health_data
           // e mantenere lo streak (login giornaliero)
@@ -269,7 +270,20 @@ export function useHealthData(): UseHealthDataReturn {
   const hasAnyPermission = Object.values(permissions).some(Boolean);
 
   const status: HealthDataStatus = useMemo(() => {
-    if (!isInitialized || (isLoading && !hasAnyPermission && !healthData)) {
+    // 🔥 FIX: Prioritize data presence over loading state
+    // If we have meaningful data, return 'ready' regardless of loading state
+    // This prevents widgets from showing 0 when data is being refreshed
+    if (hasMeaningfulData(healthData)) {
+      return 'ready';
+    }
+
+    // 🔥 FIX: If we have permissions and healthData exists (even with all 0s), return 'empty'
+    // This allows widgets to display 0 values instead of staying in loading state forever
+    if (hasAnyPermission && healthData !== null) {
+      return 'empty';
+    }
+
+    if (!isInitialized) {
       return 'loading';
     }
 
@@ -277,15 +291,11 @@ export function useHealthData(): UseHealthDataReturn {
       return 'waiting-permission';
     }
 
-    if (hasMeaningfulData(healthData)) {
-      return 'ready';
-    }
-
     if (error && !healthData) {
       return 'error';
     }
 
-    if (isLoading && !healthData) {
+    if (isLoading) {
       return 'loading';
     }
 

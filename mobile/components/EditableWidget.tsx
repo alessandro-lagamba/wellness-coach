@@ -312,7 +312,9 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     borderColor: '#818cf8',
     borderStyle: 'dashed',
-    borderRadius: 22,
+    // 🔥 FIX iOS: Removed fixed borderRadius to prevent clipping during resize animations
+    // The child widget already has its own borderRadius which will be respected
+    overflow: 'visible', // 🔥 FIX: Prevent clipping on iOS during layout animations
   },
 });
 

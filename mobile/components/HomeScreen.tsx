@@ -71,8 +71,11 @@ import { AvatarService } from '../services/avatar.service';
 import AvatarCommunityModal from './AvatarCommunityModal';
 import { ChartDetailModal } from './ChartDetailModal';
 import { WeeklyProgressSection } from './WeeklyProgressSection';
-import { CycleData } from '../services/menstrual-cycle.service';
+import { CycleData, menstrualCycleService } from '../services/menstrual-cycle.service';
 import { HeroSection } from './HeroSection';
+import { hydrationUnitService } from '../services/hydration-unit.service'; // 🔥 PERF: Static import for faster widget loading
+import { widgetConfigService } from '../services/widget-config.service'; // 🔥 PERF: Static import
+import { supabase } from '../lib/supabase'; // 🔥 PERF: Static import for database operations
 
 const { width } = Dimensions.get('window');
 // 🔥 FIX: Calcola larghezza dinamica per il grafico.
@@ -424,9 +427,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     dailyIntake?: { calories: number; carbohydrates: number; proteins: number; fats: number } | null,
     currentUserGender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null // 🔥 FIX: Pass userGender as parameter
   ): Promise<WidgetData[]> => {
-    // 🔥 FIX: Converti goal e valore corrente all'unità preferita per la visualizzazione
-    const { hydrationUnitService } = await import('../services/hydration-unit.service');
-    const { widgetGoalsService } = await import('../services/widget-goals.service');
+    // 🔥 PERF: Using static imports instead of dynamic imports for faster widget loading
     const goals = await widgetGoalsService.getGoals();
 
     // 🔥 FIX: Fetch nutritional goals from profile for accurate calorie target
@@ -610,8 +611,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
         // Carica i dati del ciclo solo se l'utente è di genere femminile
         if (gender === 'female') {
-          // 🔥 FIX: Abilita automaticamente il widget del ciclo per utenti di genere femminile
-          const { widgetConfigService } = await import('../services/widget-config.service');
+          // 🔥 PERF: Using static import instead of dynamic
           const config = await widgetConfigService.getWidgetConfig();
           const cycleWidget = config.find(w => w.id === 'cycle');
           // 🔥 PERF: Removed verbose logging
@@ -625,8 +625,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             // 🔥 PERF: Removed verbose logging
           }
 
-          // 🔥 IMPORTANTE: Carica i dati del ciclo DOPO aver abilitato il widget
-          const { menstrualCycleService } = await import('../services/menstrual-cycle.service');
+          // 🔥 PERF: Using static import instead of dynamic
           const cycle = await menstrualCycleService.getCycleData();
           // 🔥 PERF: Removed verbose logging
           setCycleData(cycle);
@@ -680,9 +679,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     // 🔥 CRITICO: Usa i dati passati come override se disponibili, altrimenti usa healthData dal hook
     const dataToUse = overrideHealthData || healthData;
 
-    if (healthStatus !== 'ready' && !overrideHealthData) {
-      // 🔥 FIX: Per placeholder, converti goal all'unità preferita per la visualizzazione
-      const { hydrationUnitService } = await import('../services/hydration-unit.service');
+    // 🔥 FIX: Accetta sia 'ready' che 'empty' come stati validi per caricare i widget
+    // 'loading' e 'waiting-permission' mostrano placeholder, 'ready' e 'empty' mostrano dati reali (anche se 0)
+    if (healthStatus !== 'ready' && healthStatus !== 'empty' && !overrideHealthData) {
+      // 🔥 PERF: Using static import instead of dynamic
       const preferredUnit = await hydrationUnitService.getPreferredUnit();
       const hydrationGoalForDisplay = hydrationUnitService.mlToUnit(hydrationGoalInGlasses * 250, preferredUnit);
 
@@ -773,7 +773,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         return;
       }
 
-      const { supabase } = await import('../lib/supabase');
+      // 🔥 PERF: Using static import instead of dynamic
       const today = new Date().toISOString().split('T')[0];
 
       // Recupera i dati di salute dal database
@@ -858,14 +858,14 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   // Aggiorna i widget quando i dati di salute cambiano
   // 🔥 FIX: Rimuoviamo dipendenze ridondanti - se healthData cambia, anche healthData?.steps cambia
 
-  // 🔥 FIX: Safety timeout to prevent loader from being stuck forever
+  // 🔥 FIX: Safety timeout to prevent loader from being stuck forever (increased to 30s since 'empty' is now valid)
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (widgetsLoading) {
         console.warn('⚠️ Widget loading timeout - forcing load completion');
         setWidgetsLoading(false);
       }
-    }, 10000); // 10 second safety timeout
+    }, 30000); // 30 second safety timeout (increased from 10s)
     return () => clearTimeout(timeout);
   }, [widgetsLoading]);
 
@@ -881,20 +881,36 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     }
 
     (async () => {
+      // 🔥 DEBUG: Trace widget loading flow
+      console.log('[WIDGET DEBUG] useEffect triggered:', {
+        healthStatus,
+        hasAnyHealthPermission,
+        healthDataExists: healthData !== null,
+        steps: healthData?.steps,
+        isInitialized
+      });
+
       // 🔥 FIX: Show loading state while fetching data
-      if (healthStatus !== 'ready') {
-        // Don't show anything until health is ready - keep showing loader
+      // 🔥 FIX: Accetta sia 'ready' che 'empty' - i widget devono caricare anche con dati a 0
+      if (healthStatus !== 'ready' && healthStatus !== 'empty') {
+        console.log('[WIDGET DEBUG] Early return: healthStatus is', healthStatus);
+        // Don't show anything until health is ready or empty - keep showing loader
         return;
       }
 
-      // 🔥 Aggiorna sempre i widget se abbiamo dati di salute reali (anche se sono 0)
-      // Verifica se healthData è disponibile (non null/undefined) e se ci sono permessi
-      if (healthData !== null && healthData !== undefined && hasAnyHealthPermission) {
-        // 🔥 CRITICO: Verifica che i dati siano reali (non mock) prima di aggiornare i widget
-        const hasRealData = (healthData.steps && healthData.steps > 0) ||
-          (healthData.heartRate && healthData.heartRate > 0) ||
-          (healthData.sleepHours && healthData.sleepHours > 0) ||
-          (healthData.hrv && healthData.hrv > 0);
+      // 🔥 FIX: Se abbiamo dati reali (steps > 0), significa che abbiamo i permessi
+      // La presenza di dati reali DIMOSTRA che abbiamo i permessi, quindi ignorare hasAnyHealthPermission
+      // Questo risolve il bug dove hasAnyHealthPermission rimaneva false nonostante HealthKit funzionasse
+      const hasRealData = healthData !== null && healthData !== undefined && (
+        (healthData.steps && healthData.steps > 0) ||
+        (healthData.heartRate && healthData.heartRate > 0) ||
+        (healthData.sleepHours && healthData.sleepHours > 0) ||
+        (healthData.hrv && healthData.hrv > 0)
+      );
+
+      // 🔥 FIX: Usa hasRealData OPPURE hasAnyHealthPermission (non entrambi richiesti)
+      if (healthData !== null && healthData !== undefined && (hasRealData || hasAnyHealthPermission)) {
+        console.log('[WIDGET DEBUG] Building widget data:', { hasRealData, hasAnyHealthPermission, steps: healthData?.steps });
 
         // 🔥 Aggiorna i widget SOLO se i dati sono reali o se non abbiamo ancora dati
         // Questo previene che i widget vengano aggiornati con dati mock
@@ -905,6 +921,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             lastProcessedHealthDataRef.current = healthDataKey;
             setWidgetData(data);
             setWidgetsLoading(false); // 🔥 FIX: Mark widgets as loaded
+            console.log('[WIDGET DEBUG] ✅ Widgets loaded successfully with steps:', healthData?.steps);
             // Aggiorna anche la sezione Today At a Glance
             loadTodayGlanceData();
           } catch (error) {
