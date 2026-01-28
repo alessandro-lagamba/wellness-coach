@@ -391,30 +391,9 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     healthPermissions.heartRate ||
     healthPermissions.sleep ||
     healthPermissions.hrv;
-  const initialHealthSyncAttempted = useRef(false);
-
-  useEffect(() => {
-    if (!isInitialized) return;
-    if (!hasAnyHealthPermission) return;
-    if (healthData && Object.keys(healthData).length > 0) return;
-    if (initialHealthSyncAttempted.current) return;
-
-    initialHealthSyncAttempted.current = true;
-    syncData().catch((error) => {
-      console.error('❌ Failed to sync health data for widgets:', error);
-    });
-  }, [
-    isInitialized,
-    hasAnyHealthPermission,
-    healthData,
-    syncData,
-  ]);
-
-  useEffect(() => {
-    if (!hasAnyHealthPermission) {
-      initialHealthSyncAttempted.current = false;
-    }
-  }, [hasAnyHealthPermission]);
+  // 🔥 PERF: Removed redundant sync useEffect - useHealthData already syncs on mount (line 70)
+  // The previous useEffect here was causing duplicate HealthKit sync calls
+  // Health sync is now centralized in useHealthData.ts for better control
 
   // 🔥 Helper function per costruire i widget dati da healthData
   const buildWidgetDataFromHealthDataHelper = async (
