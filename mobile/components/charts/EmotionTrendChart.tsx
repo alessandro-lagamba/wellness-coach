@@ -36,18 +36,9 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
   const showValence = activeMetrics.includes('valence');
   const showArousal = activeMetrics.includes('arousal');
 
-  const chartData = data.length > 0 ? data : [
-    { date: '13/1', valence: 0.2, arousal: 0.6, emotion: 'neutral' },
-    { date: '14/1', valence: 0.4, arousal: 0.5, emotion: 'happy' },
-    { date: '15/1', valence: 0.6, arousal: 0.4, emotion: 'happy' },
-    { date: '16/1', valence: 0.3, arousal: 0.7, emotion: 'excited' },
-    { date: '17/1', valence: 0.5, arousal: 0.3, emotion: 'calm' },
-    { date: '18/1', valence: 0.1, arousal: 0.8, emotion: 'stressed' },
-    { date: '19/1', valence: 0.7, arousal: 0.2, emotion: 'content' },
-  ];
+  const chartData = data;
 
   const hasData = data.length > 0;
-  // 🆕 FIX: Data is sorted descending (newest first), so [0] is the most recent
   const latestDataPoint = chartData[chartData.length - 1];
   const latestValence = latestDataPoint?.valence || 0;
   const latestArousal = latestDataPoint?.arousal || 0;
@@ -223,7 +214,7 @@ export const EmotionTrendChart: React.FC<EmotionTrendChartProps> = ({
         <View style={styles.placeholderContainer}>
           <FontAwesome name="heart" size={24} color={colors.textTertiary} />
           <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
-            {t('analysis.emotion.trends.emptyState') || 'Inizia a registrare sessioni per vedere l’andamento emotivo'}
+            {t('analysis.emotion.trends.emptyState') || 'Inizia a registrare sessioni per vedere l\'andamento emotivo'}
           </Text>
         </View>
       )}
@@ -308,3 +299,5 @@ const styles = StyleSheet.create({
     fontFamily: 'Figtree_500Medium',
   },
 });
+
+export default EmotionTrendChart;

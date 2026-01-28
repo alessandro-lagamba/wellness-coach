@@ -2241,81 +2241,6 @@ const FoodAnalysisScreenContent: React.FC = () => {
             />
           )}
 
-          {/* Recent Analysis Section - Only show if there are analyses */}
-          {latestFoodSession && (
-            <>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.recent.title')}</Text>
-                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.recent.subtitle')}</Text>
-              </View>
-
-              {(() => {
-                try {
-                  // ✅ FIX: Usa la variabile reattiva latestFoodSession invece di getState()
-                  // Always show the card, with fallback data if no session exists
-                  const fallbackSession = {
-                    id: 'fallback',
-                    timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
-                    macronutrients: {
-                      carbohydrates: 150,
-                      proteins: 50,
-                      fats: 30,
-                      calories: 1000,
-                    },
-                    meal_type: 'breakfast',
-                    health_score: 65,
-                    identified_foods: [],
-                  };
-
-                  return (
-                    <FoodCaptureCard
-                      session={latestFoodSession || fallbackSession}
-                      dailyCaloriesGoal={dailyGoals.calories}
-                    />
-                  );
-                } catch (error) {
-                  // 🔥 FIX: Solo errori critici in console
-                  console.error('❌ Failed to load latest food session:', error);
-                  // Fallback session in case of error
-                  const fallbackSession = {
-                    id: 'error-fallback',
-                    timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
-                    macronutrients: {
-                      carbohydrates: 150,
-                      proteins: 50,
-                      fats: 30,
-                      calories: 1000,
-                    },
-                    meal_type: 'breakfast',
-                    health_score: 65,
-                    identified_foods: [],
-                  };
-                  return <FoodCaptureCard session={fallbackSession} />;
-                }
-              })()}
-
-              {/* Meal Improvement Suggestions Button */}
-              <TouchableOpacity
-                style={styles.detailedAnalysisButton}
-                onPress={() => setShowDetailedAnalysis(true)}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#10b981', '#059669']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.detailedAnalysisButtonGradient}
-                >
-                  <MaterialCommunityIcons name="lightbulb-on" size={20} color="#ffffff" />
-                  <Text style={[styles.detailedAnalysisButtonText, { color: '#ffffff' }]}>
-                    {t('analysis.food.mealImprovement.title') || 'Suggerimenti per migliorare questo pasto'}
-                  </Text>
-                  <MaterialCommunityIcons name="chevron-right" size={20} color="#ffffff" />
-                </LinearGradient>
-              </TouchableOpacity>
-            </>
-          )}
-
           {/* Nutritional Goals Configuration Section */}
           <LinearGradient
             colors={[colors.surface, colors.surfaceElevated]}
@@ -2501,6 +2426,61 @@ const FoodAnalysisScreenContent: React.FC = () => {
               </TouchableOpacity>
             </WalkthroughableView>
           </CopilotStep>
+
+          {/* Recent Analysis Section - Moved below Recipe Hub as requested */}
+          {latestFoodSession && (
+            <>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.recent.title')}</Text>
+                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.recent.subtitle')}</Text>
+              </View>
+
+              {(() => {
+                try {
+                  // ✅ FIX: Usa la variabile reattiva latestFoodSession invece di getState()
+                  // Always show the card, with fallback data if no session exists
+                  const fallbackSession = {
+                    id: 'fallback',
+                    timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
+                    macronutrients: {
+                      carbohydrates: 150,
+                      proteins: 50,
+                      fats: 30,
+                      calories: 1000,
+                    },
+                    meal_type: 'breakfast',
+                    health_score: 65,
+                    identified_foods: [],
+                  };
+
+                  return (
+                    <FoodCaptureCard
+                      session={latestFoodSession || fallbackSession}
+                      dailyCaloriesGoal={dailyGoals.calories}
+                    />
+                  );
+                } catch (error) {
+                  // 🔥 FIX: Solo errori critici in console
+                  console.error('❌ Failed to load latest food session:', error);
+                  // Fallback session in case of error
+                  const fallbackSession = {
+                    id: 'error-fallback',
+                    timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
+                    macronutrients: {
+                      carbohydrates: 150,
+                      proteins: 50,
+                      fats: 30,
+                      calories: 1000,
+                    },
+                    meal_type: 'breakfast',
+                    health_score: 65,
+                    identified_foods: [],
+                  };
+                  return <FoodCaptureCard session={fallbackSession} />;
+                }
+              })()}
+            </>
+          )}
 
           {/* Meal Planner - Redesigned */}
           <View style={styles.sectionHeader}>
