@@ -19,6 +19,7 @@
     "continue": "Continue",
     "back": "Back",
     "update": "Update",
+    "refresh": "Refresh",
     "reset": "Reset",
     "status": "Status",
     "trend": "Trend",
@@ -484,6 +485,22 @@
       "title": "What to do today",
       "subtitle": "Your daily insight, tailored for you.",
       "todayScore": "Today's Score:",
+      "notifyMe": "Notify Me",
+      "schedule": {
+        "title": "Recommendation Time",
+        "intro": "Choose when you want to receive your daily plan.",
+        "updated": "Time Updated",
+        "updatedDesc": "You will receive your daily recommendations at {{time}}:00.",
+        "error": "Error",
+        "errorDesc": "Could not update time."
+      },
+      "info": {
+        "title": "Score Information",
+        "scoreCalculation": "How is it calculated?",
+        "scoreDescription": "The score is a weighted average of your health data today (Mood, Sleep, Steps, Hydration, HRV, and Calories). The more data you provide, the more accurate your daily profile becomes.",
+        "recommendationsTitle": "Why recommendations?",
+        "recommendationsDescription": "The recommendations generated today are designed to help you plan better for tomorrow. They interpret your current data to help you be as efficient as possible tomorrow."
+      },
       "scoreModal": {
         "title": "How is the score calculated?",
         "description": "The overall score (0-100) is calculated by combining different factors of your daily well-being. Each factor contributes with a specific weight to the final score.",
@@ -1129,6 +1146,7 @@
         "noData": "Run an analysis to see your skin trends",
         "emptyState": "Start a skin analysis to visualize your chart",
         "improving": "Improving",
+        "worsening": "Worsening",
         "declining": "Declining",
         "stable": "Stable",
         "summary": "Summary",

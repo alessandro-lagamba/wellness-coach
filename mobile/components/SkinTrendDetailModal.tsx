@@ -337,17 +337,33 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
             {selectedMetrics.map((metric) => {
               const stats = metricStats(metric);
               if (!stats) return null;
+              // Per oiliness e redness, invertiamo la logica: calo = miglioramento, aumento = peggioramento
+              const isInvertedMetric = metric === 'oiliness' || metric === 'redness';
               const trendIcon = stats.trend === 'up'
                 ? 'trending-up'
                 : stats.trend === 'down'
                   ? 'trending-down'
                   : 'trending-neutral';
+              // Invertiamo i colori per oiliness e redness
               const trendColor = stats.trend === 'up'
-                ? '#10b981'
+                ? (isInvertedMetric ? '#ef4444' : '#10b981')  // rosso se invertito, verde altrimenti
                 : stats.trend === 'down'
-                  ? '#ef4444'
+                  ? (isInvertedMetric ? '#10b981' : '#ef4444')  // verde se invertito, rosso altrimenti
                   : themeColors.textSecondary;
 
+              // Invertiamo i testi per oiliness e redness
+              let trendText = '';
+              if (stats.trend === 'up') {
+                trendText = isInvertedMetric
+                  ? (t('analysis.skin.trends.worsening') || 'In peggioramento')
+                  : (t('analysis.skin.trends.improving') || 'In miglioramento');
+              } else if (stats.trend === 'down') {
+                trendText = isInvertedMetric
+                  ? (t('analysis.skin.trends.improving') || 'In miglioramento')
+                  : (t('analysis.skin.trends.declining') || 'In calo');
+              } else {
+                trendText = t('analysis.skin.trends.stable') || 'Stabile';
+              }
               return (
                 <View key={`stat-${metric}`} style={styles.metricSection}>
                   <View style={styles.metricHeader}>
@@ -379,11 +395,7 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
                   <View style={styles.trendIndicator}>
                     <MaterialCommunityIcons name={trendIcon as any} size={16} color={trendColor} />
                     <Text style={[styles.trendText, { color: trendColor }]}>
-                      {stats.trend === 'up'
-                        ? t('analysis.skin.trends.improving') || 'In miglioramento'
-                        : stats.trend === 'down'
-                          ? t('analysis.skin.trends.declining') || 'In calo'
-                          : t('analysis.skin.trends.stable') || 'Stabile'}
+                      {trendText}
                     </Text>
                   </View>
                 </View>

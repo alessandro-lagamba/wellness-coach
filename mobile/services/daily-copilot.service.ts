@@ -69,15 +69,22 @@ export interface DailyCopilotData {
   themeIndicators: ThemeIndicator[];
 }
 
+// Activity level enum from user_profiles
+export type ActivityLevel = 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extremely_active';
+
 export interface CopilotAnalysisRequest {
   mood: number | null;
   sleep: { hours: number; quality: number; } | null;
+  // Nullable health metrics - null means no real data available
   healthMetrics: {
-    steps: number;
-    hrv: number;
-    hydration: number;
-    restingHR?: number;
+    steps: number | null;
+    hrv: number | null;
+    hydration: number | null;
+    calories: number | null;
+    meditationMinutes: number | null;
+    restingHR: number | null;
   };
+  activityLevel?: ActivityLevel;  // Context for AI recommendations, not used in score
   timestamp: string;
 }
 
@@ -97,6 +104,7 @@ class DailyCopilotService {
 
   /**
    * Genera l'analisi completa del Daily Copilot
+   * Ora recupera le raccomandazioni del giorno precedente come "guida"
    */
   async generateDailyCopilotAnalysis(): Promise<DailyCopilotData | null> {
     try {
@@ -109,6 +117,7 @@ class DailyCopilotService {
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const cacheKey = `copilot_${currentUser.id}_${today}`;
 
+      // Check if today's recommendations have been generated
       const dbResult = await this.dbService.getDailyCopilotData(currentUser.id, today);
       if (dbResult.success && dbResult.data) {
         const savedData = this.convertDBRecordToCopilotData(dbResult.data);
@@ -122,22 +131,122 @@ class DailyCopilotService {
         return cached;
       }
 
+      // Get real-time score (always calculated fresh)
+      const scoreData = await this.getCurrentDailyScore();
+
+      // If no score available, try to return yesterday's recommendations as guide
+      if (!scoreData || scoreData.score === null) {
+        console.warn('⚠️ Daily Copilot: Insufficient data for score calculation (< 3 factors)');
+        return await this.getYesterdayRecommendationsAsGuide(currentUser.id);
+      }
+
+      // Check if it's time to generate new recommendations (after 18:00)
+      const currentHour = now.getHours();
+      const recommendationTime = await this.getRecommendationTime(currentUser.id);
+
+      if (currentHour >= recommendationTime) {
+        // Generate new recommendations
+        return await this.generateDailyRecommendations();
+      }
+
+      // Before recommendation time: return yesterday's recommendations with today's score
+      const yesterdayData = await this.getYesterdayRecommendationsAsGuide(currentUser.id);
+      if (yesterdayData) {
+        // Merge today's score with yesterday's recommendations
+        return {
+          ...yesterdayData,
+          overallScore: scoreData.score,
+          scoreDetails: scoreData,
+          healthMetrics: {
+            steps: scoreData.healthMetrics.steps ?? 0,
+            hrv: scoreData.healthMetrics.hrv ?? 0,
+            hydration: scoreData.healthMetrics.hydration ?? 0,
+            restingHR: scoreData.healthMetrics.restingHR ?? undefined,
+            meditationMinutes: scoreData.healthMetrics.meditationMinutes ?? undefined
+          }
+        };
+      }
+
+      // No yesterday data and before recommendation time - return score-only data
+      return await this.buildScoreOnlyResult(scoreData);
+
+    } catch (error) {
+      console.error('Error generating Daily Copilot analysis:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get the current daily score in real-time (NO DB SAVE)
+   * Called by UI whenever it needs to display the current score
+   */
+  async getCurrentDailyScore(): Promise<{
+    score: number | null;
+    breakdown: Record<string, ScoreItem>;
+    missingData: string[];
+    availableCategories: string[];
+    healthMetrics: CopilotAnalysisRequest['healthMetrics'];
+    mood: number | null;
+    sleep: { hours: number; quality: number; } | null;
+  } | null> {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) return null;
+
+      const aiContext = await AIContextService.getCompleteContext(currentUser.id);
+      const mood = await this.getTodayMood();
+      const sleep = await this.getTodaySleep();
+      const healthMetrics = await this.getHealthMetrics(aiContext);
+
+      const data: CopilotAnalysisRequest = {
+        mood,
+        sleep,
+        healthMetrics,
+        timestamp: new Date().toISOString()
+      };
+
+      const scoreResult = await this.calculateDeterministicScore(data);
+
+      return {
+        ...scoreResult,
+        healthMetrics: data.healthMetrics,
+        mood: data.mood,
+        sleep: data.sleep
+      };
+    } catch (error) {
+      console.error('Error getting current daily score:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Generate daily recommendations at the user's configured time
+   * This is the ONLY function that saves to the database
+   */
+  async generateDailyRecommendations(): Promise<DailyCopilotData | null> {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser?.id) return null;
+
+      // Collect all data for the day
       const analysisData = await this.collectAnalysisData(currentUser.id);
       if (!analysisData) {
         console.warn('⚠️ Daily Copilot: No analysis data collected');
         return null;
       }
 
-      // Calcola il punteggio PRIMA di generare l'analisi
-      // Il punteggio è calcolabile solo se ci sono almeno 3 fattori
+      // Calculate final score
       const scoreResult = await this.calculateDeterministicScore(analysisData);
+
+      // Only save if we have sufficient data (at least 3 factors)
       if (scoreResult.score === null) {
-        console.warn('⚠️ Daily Copilot: Insufficient data for score calculation (< 3 factors)');
+        console.warn('⚠️ Daily Copilot: Insufficient data for daily recommendations');
         return null;
       }
 
-      // Genera l'analisi tramite AI, passando il punteggio calcolato
+      // Generate AI analysis with full context (including activity level)
       const copilotData = await this.generateAIAnalysis(analysisData, currentUser.id, scoreResult.score);
+
       if (!copilotData) {
         console.warn('⚠️ Daily Copilot: AI analysis failed, using fallback');
         const fallbackAnalysis = await this.generateFallbackAnalysis(analysisData);
@@ -145,21 +254,116 @@ class DailyCopilotService {
         return fallbackAnalysis;
       }
 
-      // Save to database
+      // Save to database (ONLY when generating recommendations)
       const saveResult = await this.dbService.saveDailyCopilotData(currentUser.id, copilotData);
       if (!saveResult.success) {
         console.warn('⚠️ Failed to save Daily Copilot data to database:', saveResult.error);
       }
 
-      // Cache the result
+      // Update cache
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const cacheKey = `copilot_${currentUser.id}_${today}`;
       this.setCachedAnalysis(cacheKey, copilotData);
 
       return copilotData;
-
     } catch (error) {
-      console.error('Error generating Daily Copilot analysis:', error);
+      console.error('Error generating daily recommendations:', error);
       return null;
     }
+  }
+
+  /**
+   * Get yesterday's recommendations to use as today's "guide"
+   */
+  private async getYesterdayRecommendationsAsGuide(userId: string): Promise<DailyCopilotData | null> {
+    try {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+      const dbResult = await this.dbService.getDailyCopilotData(userId, yesterdayStr);
+      if (dbResult.success && dbResult.data) {
+        return this.convertDBRecordToCopilotData(dbResult.data);
+      }
+
+      return null;
+    } catch (error) {
+      console.warn('⚠️ Could not get yesterday\'s recommendations:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get the user's preferred recommendation time (default 18:00)
+   */
+  /**
+   * Get the user's preferred recommendation time (default 18:00)
+   */
+  async getRecommendationTime(userId: string): Promise<number> {
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('recommendation_time')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      // Default to 18:00 if not set
+      return data?.recommendation_time ?? 18;
+    } catch {
+      return 18;
+    }
+  }
+
+  /**
+   * Update the user's preferred recommendation time
+   */
+  async updateRecommendationTime(userId: string, time: number): Promise<boolean> {
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ recommendation_time: time })
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error updating recommendation time:', error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error in updateRecommendationTime:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Build a score-only result when no recommendations exist yet
+   */
+  private async buildScoreOnlyResult(scoreData: NonNullable<Awaited<ReturnType<typeof this.getCurrentDailyScore>>>): Promise<DailyCopilotData> {
+    return {
+      overallScore: scoreData.score!,
+      scoreDetails: scoreData,
+      mood: scoreData.mood ?? 0,
+      sleep: scoreData.sleep ?? { hours: 0, quality: 0 },
+      healthMetrics: {
+        steps: scoreData.healthMetrics.steps ?? 0,
+        hrv: scoreData.healthMetrics.hrv ?? 0,
+        hydration: scoreData.healthMetrics.hydration ?? 0,
+        restingHR: scoreData.healthMetrics.restingHR ?? undefined,
+        meditationMinutes: scoreData.healthMetrics.meditationMinutes ?? undefined
+      },
+      recommendations: [],
+      summary: {
+        focus: 'In attesa di analisi',
+        focusEn: 'Awaiting analysis',
+        energy: 'medium',
+        recovery: 'good',
+        mood: 'neutral'
+      },
+      themeIndicators: []
+    };
   }
 
   /**
@@ -174,22 +378,27 @@ class DailyCopilotService {
       const mood = await this.getTodayMood();
       const sleep = await this.getTodaySleep();
 
-      // Dati HealthKit/metriche
+      // Dati HealthKit/metriche (ora nullable, no mock data)
       const healthMetrics = await this.getHealthMetrics(aiContext);
+
+      // Get user activity level for AI context
+      const activityLevel = await this.getUserActivityLevel(userId);
 
       return {
         mood,
         sleep,
         healthMetrics,
+        activityLevel,
         timestamp: new Date().toISOString()
       };
 
     } catch (error) {
       console.error('Error collecting analysis data:', error);
+      // Return all null - NO MOCK DATA
       return {
         mood: null,
         sleep: null,
-        healthMetrics: { steps: 0, hrv: 0, hydration: 0 },
+        healthMetrics: { steps: null, hrv: null, hydration: null, calories: null, meditationMinutes: null, restingHR: null },
         timestamp: new Date().toISOString()
       };
     }
@@ -289,19 +498,22 @@ class DailyCopilotService {
   }
 
   /**
-   * Ottiene le metriche di salute
+   * Ottiene le metriche di salute - SOLO DATI REALI, NO MOCK DATA
+   * Returns null for any metric that doesn't have real data
    */
   private async getHealthMetrics(aiContext: any): Promise<{
-    steps: number;
-    hrv: number;
-    hydration: number;
-    meditationMinutes: number;
-    restingHR?: number;
+    steps: number | null;
+    hrv: number | null;
+    hydration: number | null;
+    calories: number | null;
+    meditationMinutes: number | null;
+    restingHR: number | null;
   }> {
     try {
       const currentUser = await AuthService.getCurrentUser();
       if (!currentUser?.id) {
-        return { steps: 5000, hrv: 35, hydration: 6, meditationMinutes: 0, restingHR: 65 };
+        // NO MOCK DATA - return all null
+        return { steps: null, hrv: null, hydration: null, calories: null, meditationMinutes: null, restingHR: null };
       }
 
       const { supabase } = await import('../lib/supabase');
@@ -309,29 +521,27 @@ class DailyCopilotService {
 
       const { data: healthData } = await supabase
         .from('health_data')
-        .select('steps, hrv, hydration, resting_heart_rate, mindfulness_minutes')
+        .select('steps, hrv, hydration, calories, resting_heart_rate, mindfulness_minutes')
         .eq('user_id', currentUser.id)
         .eq('date', today)
         .maybeSingle();
 
       if (healthData) {
-        console.log('✅ Daily Copilot: Using real health data from database:', {
-          steps: healthData.steps,
-          hrv: healthData.hrv,
-          hydration: healthData.hydration ? Math.round(healthData.hydration / 250) : 6,
-          meditationMinutes: healthData.mindfulness_minutes || 0,
-          restingHR: healthData.resting_heart_rate
-        });
-
-        return {
-          steps: healthData.steps || 5000,
-          hrv: healthData.hrv || 35,
-          hydration: healthData.hydration ? Math.round(healthData.hydration / 250) : 6,
-          meditationMinutes: healthData.mindfulness_minutes || 0,
-          restingHR: healthData.resting_heart_rate || 65
+        // Use nullish coalescing (??) to preserve 0 values, return null only if truly absent
+        const result = {
+          steps: healthData.steps ?? null,
+          hrv: healthData.hrv ?? null,
+          hydration: healthData.hydration != null ? Math.round(healthData.hydration / 250) : null,
+          calories: healthData.calories ?? null,
+          meditationMinutes: healthData.mindfulness_minutes ?? null,
+          restingHR: healthData.resting_heart_rate ?? null
         };
+
+        console.log('✅ Daily Copilot: Using real health data from database:', result);
+        return result;
       }
 
+      // Try HealthDataService as fallback source for real data
       try {
         const { HealthDataService } = await import('./health-data.service');
         const healthService = HealthDataService.getInstance();
@@ -339,40 +549,41 @@ class DailyCopilotService {
 
         if (syncResult.success && syncResult.data) {
           const data = syncResult.data;
-          console.log('✅ Daily Copilot: Using real health data from HealthDataService:', {
-            steps: data.steps,
-            hrv: data.hrv,
-            hydration: data.hydration ? Math.round(data.hydration / 250) : 6,
-            meditationMinutes: data.mindfulnessMinutes || 0,
-            restingHR: data.restingHeartRate
-          });
-
-          return {
-            steps: data.steps || 5000,
-            hrv: data.hrv || 35,
-            hydration: data.hydration ? Math.round(data.hydration / 250) : 6,
-            meditationMinutes: data.mindfulnessMinutes || 0,
-            restingHR: data.restingHeartRate || 65
+          const result = {
+            steps: data.steps ?? null,
+            hrv: data.hrv ?? null,
+            hydration: data.hydration != null ? Math.round(data.hydration / 250) : null,
+            calories: data.calories ?? null,
+            meditationMinutes: data.mindfulnessMinutes ?? null,
+            restingHR: data.restingHeartRate ?? null
           };
+
+          console.log('✅ Daily Copilot: Using real health data from HealthDataService:', result);
+          return result;
         }
       } catch (healthServiceError) {
         console.warn('⚠️ Daily Copilot: HealthDataService sync failed');
       }
 
+      // Try aiContext as last resort for real data
       if (aiContext?.currentHealth) {
         return {
-          steps: aiContext.currentHealth.steps || 5000,
-          hrv: aiContext.currentHealth.hrv || 35,
-          hydration: aiContext.currentHealth.hydration || 6,
-          meditationMinutes: aiContext.currentHealth.mindfulnessMinutes || 0,
-          restingHR: aiContext.currentHealth.restingHR || 65
+          steps: aiContext.currentHealth.steps ?? null,
+          hrv: aiContext.currentHealth.hrv ?? null,
+          hydration: aiContext.currentHealth.hydration ?? null,
+          calories: aiContext.currentHealth.calories ?? null,
+          meditationMinutes: aiContext.currentHealth.mindfulnessMinutes ?? null,
+          restingHR: aiContext.currentHealth.restingHR ?? null
         };
       }
 
-      return { steps: 5000, hrv: 35, hydration: 6, meditationMinutes: 0, restingHR: 65 };
+      // NO MOCK DATA - return all null
+      console.log('⚠️ Daily Copilot: No health data available for today');
+      return { steps: null, hrv: null, hydration: null, calories: null, meditationMinutes: null, restingHR: null };
     } catch (error) {
       console.error('❌ Error getting health metrics:', error);
-      return { steps: 5000, hrv: 35, hydration: 6, meditationMinutes: 0, restingHR: 65 };
+      // NO MOCK DATA - return all null on error
+      return { steps: null, hrv: null, hydration: null, calories: null, meditationMinutes: null, restingHR: null };
     }
   }
 
@@ -381,7 +592,41 @@ class DailyCopilotService {
    */
   private async getTodayMeditationMinutes(): Promise<number> {
     const healthMetrics = await this.getHealthMetrics({});
-    return healthMetrics.meditationMinutes;
+    return healthMetrics.meditationMinutes ?? 0;
+  }
+
+  /**
+   * Ottiene il livello di attività dell'utente dal profilo
+   * Usato come contesto per l'AI, non nel calcolo del punteggio
+   */
+  private async getUserActivityLevel(userId: string): Promise<ActivityLevel | undefined> {
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('activity_level')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      return data?.activity_level as ActivityLevel | undefined;
+    } catch (error) {
+      console.warn('⚠️ Could not get user activity level:', error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Converte il livello di attività in una label leggibile
+   */
+  private getActivityLevelLabel(level: ActivityLevel): string {
+    const labels: Record<ActivityLevel, string> = {
+      'sedentary': 'Sedentary (little to no exercise)',
+      'lightly_active': 'Lightly Active (light exercise 1-3 days/week)',
+      'moderately_active': 'Moderately Active (moderate exercise 3-5 days/week)',
+      'very_active': 'Very Active (hard exercise 6-7 days/week)',
+      'extremely_active': 'Extremely Active (very hard exercise, physical job)'
+    };
+    return labels[level] || level;
   }
 
   /**
@@ -422,9 +667,12 @@ class DailyCopilotService {
 CURRENT HEALTH DATA:
 - Mood: ${data.mood !== null ? data.mood : 'N/A'}/5
 - Sleep: ${data.sleep ? `${data.sleep.hours.toFixed(1)}h (quality: ${data.sleep.quality}%)` : 'N/A'}
-- Steps: ${data.healthMetrics.steps}
-- HRV: ${data.healthMetrics.hrv} ms
-- Hydration: ${data.healthMetrics.hydration}/8 glasses
+- Steps: ${data.healthMetrics.steps ?? 'N/A'}
+- HRV: ${data.healthMetrics.hrv ?? 'N/A'} ms
+- Hydration: ${data.healthMetrics.hydration ?? 'N/A'}/8 glasses
+- Calories burned: ${data.healthMetrics.calories ?? 'N/A'} kcal
+- Meditation: ${data.healthMetrics.meditationMinutes ?? 'N/A'} min
+- User Activity Level: ${data.activityLevel ? this.getActivityLevelLabel(data.activityLevel) : 'Not specified'}
 - Calculated Wellness Score: ${preCalculatedScore}/100
 ${contextInfo ? `\nADDITIONAL CONTEXT:${contextInfo}` : ''}
 
@@ -712,7 +960,7 @@ OUTPUT FORMAT(return ONLY valid JSON):
 
   private async generateFallbackAnalysis(data: CopilotAnalysisRequest): Promise<DailyCopilotData> {
     const scoreResult = await this.calculateDeterministicScore(data);
-    const overallScore = scoreResult.score || 50;
+    const overallScore = scoreResult.score ?? 50;
     const recommendations = this.generateRecommendations(data);
     const summary = this.generateSummary(data, recommendations);
     const themeIndicators = this.extractThemeIndicators(recommendations);
@@ -720,10 +968,13 @@ OUTPUT FORMAT(return ONLY valid JSON):
     return {
       overallScore,
       scoreDetails: scoreResult,
-      mood: data.mood,
-      sleep: data.sleep,
+      mood: data.mood ?? 0,
+      sleep: data.sleep ?? { hours: 0, quality: 0 },
       healthMetrics: {
-        ...data.healthMetrics,
+        steps: data.healthMetrics.steps ?? 0,
+        hrv: data.healthMetrics.hrv ?? 0,
+        hydration: data.healthMetrics.hydration ?? 0,
+        restingHR: data.healthMetrics.restingHR ?? undefined,
         meditationMinutes: await this.getTodayMeditationMinutes()
       },
       recommendations,
@@ -736,11 +987,23 @@ OUTPUT FORMAT(return ONLY valid JSON):
 
   /**
    * Calcolo punteggio deterministico
+   * WEIGHTS: mood:15, sleep:15, steps:15, hydration:15, hrv:15, calories:15, meditation:10 = 100
    */
   async calculateDeterministicScore(data: CopilotAnalysisRequest): Promise<ScoreCalculationResult> {
     const config = await widgetConfigService.getWidgetConfig();
     const goals = await widgetGoalsService.getGoals();
     const enabledWidgetIds = new Set(config.filter(w => w.enabled).map(w => w.id));
+
+    // Pesi approvati dall'utente
+    const WEIGHTS = {
+      mood: 15,
+      sleep: 15,
+      steps: 15,
+      hydration: 15,
+      hrv: 15,
+      calories: 15,
+      meditation: 10
+    };
 
     const breakdown: Record<string, ScoreItem> = {};
     const missingData: string[] = [];
@@ -748,55 +1011,89 @@ OUTPUT FORMAT(return ONLY valid JSON):
     let totalPoints = 0;
     let totalWeight = 0;
 
-    // Mood (25%)
-    if (data.mood !== null) {
+    // Mood (15%) - only if not null AND > 0
+    if (data.mood !== null && data.mood > 0) {
       const score = (data.mood / 5) * 100;
-      breakdown['mood'] = { score, weight: 25, value: data.mood };
-      totalPoints += (score * 25) / 100;
-      totalWeight += 25;
+      breakdown['mood'] = { score, weight: WEIGHTS.mood, value: data.mood };
+      totalPoints += (score * WEIGHTS.mood) / 100;
+      totalWeight += WEIGHTS.mood;
       availableCategories.push('mood');
-    } else missingData.push('mood');
+    } else {
+      missingData.push('mood');
+    }
 
-    // Sleep (25%)
-    if (data.sleep !== null) {
+    // Sleep (15%) - only if not null AND hours > 0
+    if (data.sleep !== null && data.sleep.hours > 0) {
       const goal = goals.sleep || 8;
       const score = (this.clamp01(data.sleep.hours / goal) * 70) + (data.sleep.quality * 0.3);
-      breakdown['sleep'] = { score, weight: 25, value: data.sleep.hours, goal };
-      totalPoints += (score * 25) / 100;
-      totalWeight += 25;
+      breakdown['sleep'] = { score, weight: WEIGHTS.sleep, value: data.sleep.hours, goal };
+      totalPoints += (score * WEIGHTS.sleep) / 100;
+      totalWeight += WEIGHTS.sleep;
       availableCategories.push('sleep');
-    } else missingData.push('sleep');
+    } else {
+      missingData.push('sleep');
+    }
 
-    // Steps (20%)
-    if (enabledWidgetIds.has('steps')) {
+    // Steps (15%) - only if enabled AND not null AND > 0
+    if (enabledWidgetIds.has('steps') && data.healthMetrics.steps !== null && data.healthMetrics.steps > 0) {
       const goal = goals.steps || 10000;
       const score = this.clamp01(data.healthMetrics.steps / goal) * 100;
-      breakdown['steps'] = { score, weight: 20, value: data.healthMetrics.steps, goal };
-      totalPoints += (score * 20) / 100;
-      totalWeight += 20;
+      breakdown['steps'] = { score, weight: WEIGHTS.steps, value: data.healthMetrics.steps, goal };
+      totalPoints += (score * WEIGHTS.steps) / 100;
+      totalWeight += WEIGHTS.steps;
       availableCategories.push('steps');
     }
 
-    // Hydration (20%)
-    if (enabledWidgetIds.has('hydration')) {
+    // Hydration (15%) - only if enabled AND not null AND > 0
+    if (enabledWidgetIds.has('hydration') && data.healthMetrics.hydration !== null && data.healthMetrics.hydration > 0) {
       const goal = goals.hydration || 8;
       const score = this.clamp01(data.healthMetrics.hydration / goal) * 100;
-      breakdown['hydration'] = { score, weight: 20, value: data.healthMetrics.hydration, goal };
-      totalPoints += (score * 20) / 100;
-      totalWeight += 20;
+      breakdown['hydration'] = { score, weight: WEIGHTS.hydration, value: data.healthMetrics.hydration, goal };
+      totalPoints += (score * WEIGHTS.hydration) / 100;
+      totalWeight += WEIGHTS.hydration;
       availableCategories.push('hydration');
     }
 
-    // HRV (10%)
-    if (enabledWidgetIds.has('hrv')) {
+    // HRV (15%) - only if enabled AND not null AND > 0
+    if (enabledWidgetIds.has('hrv') && data.healthMetrics.hrv !== null && data.healthMetrics.hrv > 0) {
       const score = this.clamp01(data.healthMetrics.hrv / 50) * 100;
-      breakdown['hrv'] = { score, weight: 10, value: data.healthMetrics.hrv, goal: 50 };
-      totalPoints += (score * 10) / 100;
-      totalWeight += 10;
+      breakdown['hrv'] = { score, weight: WEIGHTS.hrv, value: data.healthMetrics.hrv, goal: 50 };
+      totalPoints += (score * WEIGHTS.hrv) / 100;
+      totalWeight += WEIGHTS.hrv;
       availableCategories.push('hrv');
     }
 
-    // 🔥 FIX: Il punteggio è calcolabile solo se ci sono almeno 3 fattori presenti
+    // Calories (15%) - only if enabled AND not null AND > 0
+    if (enabledWidgetIds.has('calories') && data.healthMetrics.calories !== null && data.healthMetrics.calories > 0) {
+      const goal = goals.calories || 2000;
+      // Score based on achieving ~80-100% of calorie goal
+      const ratio = data.healthMetrics.calories / goal;
+      let score: number;
+      if (ratio >= 0.8 && ratio <= 1.0) {
+        score = 100; // Optimal range
+      } else if (ratio < 0.8) {
+        score = (ratio / 0.8) * 100; // Under-eating
+      } else {
+        // Over 100% - slight penalty for over-eating
+        score = Math.max(60, 100 - ((ratio - 1.0) * 50));
+      }
+      breakdown['calories'] = { score, weight: WEIGHTS.calories, value: data.healthMetrics.calories, goal };
+      totalPoints += (score * WEIGHTS.calories) / 100;
+      totalWeight += WEIGHTS.calories;
+      availableCategories.push('calories');
+    }
+
+    // Meditation (10%) - only if enabled AND not null AND > 0
+    if (enabledWidgetIds.has('meditation') && data.healthMetrics.meditationMinutes !== null && data.healthMetrics.meditationMinutes > 0) {
+      const goal = goals.meditation || 10; // Default 10 minutes meditation goal
+      const score = Math.min(this.clamp01(data.healthMetrics.meditationMinutes / goal), 1) * 100;
+      breakdown['meditation'] = { score, weight: WEIGHTS.meditation, value: data.healthMetrics.meditationMinutes, goal };
+      totalPoints += (score * WEIGHTS.meditation) / 100;
+      totalWeight += WEIGHTS.meditation;
+      availableCategories.push('meditation');
+    }
+
+    // Require at least 3 factors for a valid score
     if (availableCategories.length < 3) {
       return {
         score: null,
@@ -821,8 +1118,16 @@ OUTPUT FORMAT(return ONLY valid JSON):
     // Fallback: generazione basata sui dati
     console.log('🔄 Using fallback recommendations');
 
-    // Mood basso
-    if (data.mood <= 2) {
+    // Helper to get safe values
+    const safeMood = data.mood ?? 3;  // Default to neutral mood
+    const safeSleepHours = data.sleep?.hours ?? 7;  // Default to adequate sleep
+    const safeSleepQuality = data.sleep?.quality ?? 70;
+    const safeSteps = data.healthMetrics.steps ?? 0;
+    const safeHrv = data.healthMetrics.hrv ?? 50;
+    const safeHydration = data.healthMetrics.hydration ?? 0;
+
+    // Mood basso (only if mood data is actually provided)
+    if (data.mood !== null && data.mood <= 2) {
       recommendations.push({
         id: 'mood-boost',
         priority: 'high' as const,
@@ -832,11 +1137,11 @@ OUTPUT FORMAT(return ONLY valid JSON):
         icon: '🌬️',
         estimatedTime: '10 min',
         actionable: true,
-        detailedExplanation: `Il tuo umore attuale(${data.mood} / 5) indica uno stato di stress o affaticamento.La respirazione profonda attiva il sistema nervoso parasimpatico, riducendo i livelli di cortisolo e aumentando la produzione di endorfine.Questo esercizio può migliorare immediatamente il tuo stato d'animo e ridurre la tensione muscolare.`,
+        detailedExplanation: `Il tuo umore attuale (${safeMood}/5) indica uno stato di stress o affaticamento. La respirazione profonda attiva il sistema nervoso parasimpatico, riducendo i livelli di cortisolo e aumentando la produzione di endorfine. Questo esercizio può migliorare immediatamente il tuo stato d'animo e ridurre la tensione muscolare.`,
         correlations: [
-          `Mood basso (${data.mood}/5) correlato con stress elevato`,
-          `HRV ${data.healthMetrics.hrv}ms indica sistema nervoso in tensione`,
-          `Sonno ${data.sleep.hours}h può influenzare l'umore mattutino`
+          `Mood basso (${safeMood}/5) correlato con stress elevato`,
+          `HRV ${safeHrv}ms indica sistema nervoso in tensione`,
+          `Sonno ${safeSleepHours}h può influenzare l'umore mattutino`
         ],
         expectedBenefits: [
           'Riduzione immediata dello stress',
@@ -847,22 +1152,22 @@ OUTPUT FORMAT(return ONLY valid JSON):
       });
     }
 
-    // Sonno insufficiente
-    if (data.sleep.hours < 7) {
+    // Sonno insufficiente (only if sleep data is provided)
+    if (data.sleep !== null && data.sleep.hours < 7) {
       recommendations.push({
         id: 'sleep-recovery',
         priority: 'high' as const,
         category: 'recovery' as const,
         action: 'Fai un pisolino di 20 minuti o vai a letto prima stasera',
-        reason: 'Hai dormito solo ' + data.sleep.hours + 'h, il recupero è importante',
+        reason: 'Hai dormito solo ' + safeSleepHours + 'h, il recupero è importante',
         icon: '😴',
         estimatedTime: '20 min',
         actionable: true,
-        detailedExplanation: `Il sonno di ${data.sleep.hours}h è insufficiente per un recupero ottimale. La privazione del sonno influisce negativamente su HRV (${data.healthMetrics.hrv}ms), umore (${data.mood}/5) e performance cognitive. Un pisolino di 20 minuti può migliorare l'attenzione e ridurre la sonnolenza senza interferire con il sonno notturno.`,
+        detailedExplanation: `Il sonno di ${safeSleepHours}h è insufficiente per un recupero ottimale. La privazione del sonno influisce negativamente su HRV (${safeHrv}ms), umore (${safeMood}/5) e performance cognitive. Un pisolino di 20 minuti può migliorare l'attenzione e ridurre la sonnolenza senza interferire con il sonno notturno.`,
         correlations: [
-          `Sonno insufficiente (${data.sleep.hours}h) correlato con HRV basso`,
-          `Qualità sonno ${data.sleep.quality}% influisce sul recupero`,
-          `Mood ${data.mood}/5 può essere influenzato dalla privazione del sonno`
+          `Sonno insufficiente (${safeSleepHours}h) correlato con HRV basso`,
+          `Qualità sonno ${safeSleepQuality}% influisce sul recupero`,
+          `Mood ${safeMood}/5 può essere influenzato dalla privazione del sonno`
         ],
         expectedBenefits: [
           'Miglioramento dell\'attenzione e concentrazione',
@@ -872,20 +1177,22 @@ OUTPUT FORMAT(return ONLY valid JSON):
         ]
       });
     }
-    if (data.healthMetrics.steps < 300) {
+
+    // Passi bassi (only if steps data is provided)
+    if (data.healthMetrics.steps !== null && data.healthMetrics.steps < 300) {
       recommendations.push({
         id: 'movement-boost',
         priority: 'medium' as const,
         category: 'movement' as const,
         action: 'Fai una camminata di 15 minuti',
-        reason: 'Solo ' + data.healthMetrics.steps + ' passi oggi, muoviti di più',
+        reason: 'Solo ' + safeSteps + ' passi oggi, muoviti di più',
         icon: '🚶',
         estimatedTime: '15 min',
         actionable: true,
-        detailedExplanation: `Con solo ${data.healthMetrics.steps} passi oggi, sei ben al di sotto della raccomandazione di 10.000 passi giornalieri. Una camminata di 15 minuti può aumentare significativamente la circolazione sanguigna, migliorare l'umore attraverso il rilascio di endorfine, e aiutare a mantenere la massa muscolare. Il movimento regolare è essenziale per la salute cardiovascolare e il metabolismo.`,
+        detailedExplanation: `Con solo ${safeSteps} passi oggi, sei ben al di sotto della raccomandazione di 10.000 passi giornalieri. Una camminata di 15 minuti può aumentare significativamente la circolazione sanguigna, migliorare l'umore attraverso il rilascio di endorfine, e aiutare a mantenere la massa muscolare. Il movimento regolare è essenziale per la salute cardiovascolare e il metabolismo.`,
         correlations: [
-          `Bassi passi (${data.healthMetrics.steps}) correlati con minore energia diurna`,
-          `Mancanza di movimento può influenzare negativamente l'HRV (${data.healthMetrics.hrv}ms)`,
+          `Bassi passi (${safeSteps}) correlati con minore energia diurna`,
+          `Mancanza di movimento può influenzare negativamente l'HRV (${safeHrv}ms)`,
           `Attività fisica regolare migliora la qualità del sonno`
         ],
         expectedBenefits: [
@@ -897,22 +1204,22 @@ OUTPUT FORMAT(return ONLY valid JSON):
       });
     }
 
-    // HRV basso
-    if (data.healthMetrics.hrv < 30) {
+    // HRV basso (only if hrv data is provided)
+    if (data.healthMetrics.hrv !== null && data.healthMetrics.hrv < 30) {
       recommendations.push({
         id: 'stress-reduction',
         priority: 'high' as const,
         category: 'recovery' as const,
         action: 'Pratica meditazione o yoga per ridurre lo stress',
-        reason: 'HRV basso (' + data.healthMetrics.hrv + 'ms) indica stress elevato',
+        reason: 'HRV basso (' + safeHrv + 'ms) indica stress elevato',
         icon: '🧘',
         estimatedTime: '15 min',
         actionable: true,
-        detailedExplanation: `Il tuo HRV di ${data.healthMetrics.hrv}ms è al di sotto della media, indicando un sistema nervoso simpatico iperattivo e stress elevato. La meditazione e lo yoga attivano il sistema nervoso parasimpatico, aumentando la variabilità della frequenza cardiaca. Queste pratiche riducono i livelli di cortisolo e promuovono il recupero fisiologico.`,
+        detailedExplanation: `Il tuo HRV di ${safeHrv}ms è al di sotto della media, indicando un sistema nervoso simpatico iperattivo e stress elevato. La meditazione e lo yoga attivano il sistema nervoso parasimpatico, aumentando la variabilità della frequenza cardiaca. Queste pratiche riducono i livelli di cortisolo e promuovono il recupero fisiologico.`,
         correlations: [
-          `HRV basso (${data.healthMetrics.hrv}ms) correlato con stress cronico`,
-          `Sonno insufficiente (${data.sleep.hours}h) può contribuire a HRV basso`,
-          `Mood ${data.mood}/5 può essere influenzato dallo stress elevato`
+          `HRV basso (${safeHrv}ms) correlato con stress cronico`,
+          `Sonno insufficiente (${safeSleepHours}h) può contribuire a HRV basso`,
+          `Mood ${safeMood}/5 può essere influenzato dallo stress elevato`
         ],
         expectedBenefits: [
           'Riduzione dei livelli di cortisolo',
@@ -922,20 +1229,22 @@ OUTPUT FORMAT(return ONLY valid JSON):
         ]
       });
     }
-    if (data.healthMetrics.hydration < 2) {
+
+    // Idratazione bassa (only if hydration data is provided)
+    if (data.healthMetrics.hydration !== null && data.healthMetrics.hydration < 2) {
       recommendations.push({
         id: 'hydration',
         priority: 'medium' as const,
         category: 'nutrition' as const,
         action: 'Bevi 2 bicchieri d\'acqua ora',
-        reason: 'Solo ' + data.healthMetrics.hydration + '/8 bicchieri, idratati di più',
+        reason: 'Solo ' + safeHydration + '/8 bicchieri, idratati di più',
         icon: '💧',
         estimatedTime: '2 min',
         actionable: true,
-        detailedExplanation: `Con solo ${data.healthMetrics.hydration}/8 bicchieri d'acqua consumati oggi, sei al di sotto della raccomandazione giornaliera. L'idratazione adeguata è essenziale per il funzionamento ottimale di tutti i sistemi corporei, inclusi la circolazione, la digestione, la termoregolazione e la funzione cognitiva. Una disidratazione anche lieve può influenzare negativamente l'umore, l'energia e le performance fisiche.`,
+        detailedExplanation: `Con solo ${safeHydration}/8 bicchieri d'acqua consumati oggi, sei al di sotto della raccomandazione giornaliera. L'idratazione adeguata è essenziale per il funzionamento ottimale di tutti i sistemi corporei, inclusi la circolazione, la digestione, la termoregolazione e la funzione cognitiva. Una disidratazione anche lieve può influenzare negativamente l'umore, l'energia e le performance fisiche.`,
         correlations: [
-          `Bassa idratazione (${data.healthMetrics.hydration}/8) può influenzare l'energia diurna`,
-          `Disidratazione può contribuire a HRV basso (${data.healthMetrics.hrv}ms)`,
+          `Bassa idratazione (${safeHydration}/8) può influenzare l'energia diurna`,
+          `Disidratazione può contribuire a HRV basso (${safeHrv}ms)`,
           `Adeguata idratazione migliora la qualità della pelle e la funzione renale`
         ],
         expectedBenefits: [
@@ -1157,13 +1466,20 @@ OUTPUT FORMAT(return ONLY valid JSON):
     recovery: 'excellent' | 'good' | 'needs_attention';
     mood: 'positive' | 'neutral' | 'low';
   } {
-    const energy: 'high' | 'medium' | 'low' = data.mood >= 4 && data.healthMetrics.hrv >= 35 ? 'high' :
-      data.mood >= 3 && data.healthMetrics.hrv >= 25 ? 'medium' : 'low';
+    // Safe access to nullable values
+    const safeMood = data.mood ?? 3;
+    const safeHrv = data.healthMetrics.hrv ?? 35;
+    const safeSleepHours = data.sleep?.hours ?? 6;
+    const safeSleepQuality = data.sleep?.quality ?? 50;
+    const safeSteps = data.healthMetrics.steps ?? 0;
 
-    const recovery: 'excellent' | 'good' | 'needs_attention' = data.sleep.hours >= 7 && data.sleep.quality >= 80 ? 'excellent' :
-      data.sleep.hours >= 6 && data.sleep.quality >= 60 ? 'good' : 'needs_attention';
+    const energy: 'high' | 'medium' | 'low' = safeMood >= 4 && safeHrv >= 35 ? 'high' :
+      safeMood >= 3 && safeHrv >= 25 ? 'medium' : 'low';
 
-    const mood: 'positive' | 'neutral' | 'low' = data.mood >= 4 ? 'positive' : data.mood >= 3 ? 'neutral' : 'low';
+    const recovery: 'excellent' | 'good' | 'needs_attention' = safeSleepHours >= 7 && safeSleepQuality >= 80 ? 'excellent' :
+      safeSleepHours >= 6 && safeSleepQuality >= 60 ? 'good' : 'needs_attention';
+
+    const mood: 'positive' | 'neutral' | 'low' = safeMood >= 4 ? 'positive' : safeMood >= 3 ? 'neutral' : 'low';
 
     // Use dynamic focus based on recommendations if available
     const { focus, focusEn } = recommendations && recommendations.length > 0
@@ -1171,11 +1487,11 @@ OUTPUT FORMAT(return ONLY valid JSON):
       : {
         focus: energy === 'low' ? 'Energia & Recupero' :
           recovery === 'needs_attention' ? 'Riposo & Benessere' :
-            data.healthMetrics.steps < 5000 ? 'Movimento & Vitalità' :
+            safeSteps < 5000 ? 'Movimento & Vitalità' :
               'Mantenimento & Crescita',
         focusEn: energy === 'low' ? 'Energy & Recovery' :
           recovery === 'needs_attention' ? 'Rest & Wellness' :
-            data.healthMetrics.steps < 5000 ? 'Movement & Vitality' :
+            safeSteps < 5000 ? 'Movement & Vitality' :
               'Maintenance & Growth',
       };
 

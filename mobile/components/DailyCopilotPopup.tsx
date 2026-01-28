@@ -14,7 +14,6 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
-import DailyCopilot from './DailyCopilot';
 import { useTranslation } from '../hooks/useTranslation';
 
 const { width, height } = Dimensions.get('window');
@@ -29,6 +28,7 @@ export const DailyCopilotPopup: React.FC<DailyCopilotPopupProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
+
   // Animation styles
   const backdropStyle = useAnimatedStyle(() => {
     return {
@@ -75,6 +75,7 @@ export const DailyCopilotPopup: React.FC<DailyCopilotPopupProps> = ({
                   <Text style={styles.subtitle}>{t('home.dailyCopilot.subtitle')}</Text>
                 </View>
               </View>
+
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <MaterialCommunityIcons name="close" size={24} color="#ffffff" />
               </TouchableOpacity>
@@ -83,13 +84,33 @@ export const DailyCopilotPopup: React.FC<DailyCopilotPopupProps> = ({
 
           {/* Content */}
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            <DailyCopilot
-              compact={false}
-              onRecommendationPress={(recommendation) => {
-                console.log('Full copilot recommendation pressed:', recommendation.action);
-                // Qui potresti aprire un modal con dettagli specifici
-              }}
-            />
+            {/* Score Calculation Section */}
+            <View style={styles.infoSection}>
+              <View style={styles.sectionHeader}>
+                <MaterialCommunityIcons name="calculator" size={24} color="#8b5cf6" />
+                <Text style={styles.sectionTitle}>{t('home.dailyCopilot.info.scoreCalculation')}</Text>
+              </View>
+              <Text style={styles.sectionDescription}>
+                {t('home.dailyCopilot.info.scoreDescription')}
+              </Text>
+            </View>
+
+            {/* Recommendations Section */}
+            <View style={styles.infoSection}>
+              <View style={styles.sectionHeader}>
+                <MaterialCommunityIcons name="rocket-launch" size={24} color="#a855f7" />
+                <Text style={styles.sectionTitle}>{t('home.dailyCopilot.info.recommendationsTitle')}</Text>
+              </View>
+              <Text style={styles.sectionDescription}>
+                {t('home.dailyCopilot.info.recommendationsDescription')}
+              </Text>
+            </View>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                {t('home.dailyCopilot.subtitle')}
+              </Text>
+            </View>
           </ScrollView>
         </Animated.View>
       </Animated.View>
@@ -112,8 +133,8 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   popupContainer: {
-    width: width * 0.95,
-    height: height * 0.85,
+    width: width * 0.9,
+    maxHeight: height * 0.7,
     backgroundColor: '#ffffff',
     borderRadius: 24,
     shadowColor: '#000',
@@ -139,37 +160,68 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   emoji: {
-    fontSize: 32,
+    fontSize: 28,
     marginRight: 12,
   },
   titleTextContainer: {
-    flex: 1,
+    flexShrink: 1,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#ffffff',
     marginBottom: 2,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: 'rgba(255, 255, 255, 0.8)',
     fontWeight: '500',
   },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 12,
   },
   content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    padding: 24,
+  },
+  infoSection: {
+    marginBottom: 28,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: 'Figtree_700Bold',
+    color: '#1e293b',
+    marginLeft: 10,
+  },
+  sectionDescription: {
+    fontSize: 15,
+    fontFamily: 'Figtree_400Regular',
+    color: '#475569',
+    lineHeight: 22,
+  },
+  footer: {
+    marginTop: 8,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: '#94a3b8',
+    textAlign: 'center',
   },
 });
 
 export default DailyCopilotPopup;
-

@@ -31,6 +31,7 @@ interface DailyCopilotProps {
   onRecommendationPress?: (recommendation: any) => void;
   onViewDetails?: () => void;
   onViewHistory?: () => void;
+  onShowInfo?: () => void;
   compact?: boolean;
 }
 
@@ -39,9 +40,19 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
   onRecommendationPress,
   onViewDetails,
   onViewHistory,
+  onShowInfo,
   compact = false,
 }) => {
-  const { copilotData, loading, error, reload } = useDailyCopilot();
+  const {
+    copilotData,
+    scoreData,
+    loading,
+    scoreLoading,
+    error,
+    insufficientData,
+    reload,
+    refreshScore
+  } = useDailyCopilot();
   const { colors: themeColors } = useTheme();
   const { t, language } = useTranslation();
   const [showScoreModal, setShowScoreModal] = useState(false);
@@ -53,12 +64,16 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
   // Animation values
   const fadeInValue = useSharedValue(0);
 
+  // Get the current score - prefer scoreData (real-time) over copilotData
+  const currentScore = scoreData?.score ?? copilotData?.overallScore ?? null;
+  const hasValidScore = currentScore !== null;
+
   useEffect(() => {
-    if (copilotData) {
+    if (hasValidScore || copilotData) {
       // Anima il fade in
       fadeInValue.value = withTiming(1, { duration: 600 });
     }
-  }, [copilotData]);
+  }, [hasValidScore, copilotData]);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return ['#10b981', '#34d399'];
@@ -164,7 +179,8 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
     );
   }
 
-  if (!copilotData) {
+  // Handle insufficient data state (less than 3 factors available)
+  if (insufficientData && !hasValidScore) {
     if (compact) {
       return (
         <View style={[styles.compactContainer, styles.compactEmptyState]}>
@@ -173,6 +189,9 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
           <Text style={styles.compactEmptySubtitle}>
             {t('home.dailyCopilot.insufficientData')}
           </Text>
+          <TouchableOpacity style={styles.compactRetryButton} onPress={refreshScore}>
+            <Text style={styles.compactRetryText}>{t('common.refresh')}</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -183,6 +202,34 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
           type="copilot"
           customTitle={t('home.dailyCopilot.title')}
           customSubtitle={t('home.dailyCopilot.insufficientData')}
+          customActionText={t('common.refresh')}
+          onAction={refreshScore}
+          showLearnMore={false}
+        />
+      </View>
+    );
+  }
+
+  // Handle case where we don't have any data at all
+  if (!copilotData && !hasValidScore) {
+    if (compact) {
+      return (
+        <View style={[styles.compactContainer, styles.compactEmptyState]}>
+          <MaterialCommunityIcons name="head-cog" size={28} color="#8b5cf6" />
+          <Text style={styles.compactEmptyTitle}>{t('home.dailyCopilot.title')}</Text>
+          <Text style={styles.compactEmptySubtitle}>
+            {language === 'it' ? 'Caricamento dati in corso...' : 'Loading data...'}
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={[styles.container, compact && styles.compactContainer]}>
+        <EmptyStateCard
+          type="copilot"
+          customTitle={t('home.dailyCopilot.title')}
+          customSubtitle={language === 'it' ? 'In attesa di dati' : 'Waiting for data'}
           showLearnMore={false}
         />
       </View>
@@ -190,12 +237,12 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
   }
 
   // 🔥 FIX: Assicurati che recommendations sia sempre un array
-  const recommendations = Array.isArray(copilotData.recommendations)
-    ? copilotData.recommendations
+  const recommendations = copilotData?.recommendations
+    ? (Array.isArray(copilotData.recommendations) ? copilotData.recommendations : [])
     : [];
 
   // 🔥 FIX: Assicurati che summary abbia tutti i campi necessari
-  const summary = copilotData.summary || {
+  const summary = copilotData?.summary || {
     focus: 'Benessere generale',
     focusEn: 'General Wellness',
     energy: 'medium' as const,
@@ -203,8 +250,10 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
     mood: 'neutral' as const,
   };
 
-  const scoreColors = getScoreColor(copilotData.overallScore);
-  const scoreLabel = getScoreLabel(copilotData.overallScore);
+  // Use currentScore (real-time) for display
+  const displayScore = currentScore ?? 0;
+  const scoreColors = getScoreColor(displayScore);
+  const scoreLabel = getScoreLabel(displayScore);
 
   if (compact) {
     return (
@@ -220,7 +269,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
               <Text style={styles.compactEmoji}>🧠</Text>
               <View style={styles.compactTitleContainer}>
                 <Text style={styles.compactTitle}>AI Daily Copilot</Text>
-                <Text style={styles.compactSubtitle}>Score: {copilotData.overallScore}/100</Text>
+                <Text style={styles.compactSubtitle}>Score: {displayScore}/100</Text>
               </View>
             </View>
             <View style={[styles.compactScoreBadge, { backgroundColor: scoreColors[0] + '20' }]}>
@@ -234,12 +283,12 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
             <Text style={styles.compactFocus}>
               {language === 'it' ? 'Oggi focus su: ' : 'Today focus on: '}
               <Text style={styles.compactFocusBold}>
-                {language === 'it' ? copilotData.summary.focus : (copilotData.summary.focusEn || copilotData.summary.focus)}
+                {language === 'it' ? summary.focus : (summary.focusEn || summary.focus)}
               </Text>
             </Text>
 
             <View style={styles.compactRecommendations}>
-              {copilotData.recommendations.slice(0, 2).map((rec, index) => (
+              {recommendations.slice(0, 2).map((rec, index) => (
                 <View
                   key={rec.id}
                   style={styles.compactRecommendation}
@@ -314,12 +363,21 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
         >
           {/* Left Column: Typography & Status */}
           <View style={styles.headerLeft}>
-            <Text
-              allowFontScaling={false}
-              style={[styles.headerTitleMain, { color: themeColors.text }]}
-            >
-              Il Punteggio
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text
+                allowFontScaling={false}
+                style={[styles.headerTitleMain, { color: themeColors.text }]}
+              >
+                Il Punteggio
+              </Text>
+              <TouchableOpacity
+                onPress={onShowInfo}
+                style={{ marginLeft: 8, padding: 4 }}
+                activeOpacity={0.6}
+              >
+                <MaterialCommunityIcons name="information-outline" size={18} color={themeColors.textSecondary} />
+              </TouchableOpacity>
+            </View>
             <Text
               allowFontScaling={false}
               style={[styles.headerSubtitleHighlight, { color: scoreColors[0] }]}
@@ -384,7 +442,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                     strokeWidth="6"
                     fill="none"
                     strokeDasharray={`${2 * Math.PI * 36}`}
-                    strokeDashoffset={`${2 * Math.PI * 36 * (1 - copilotData.overallScore / 100)}`}
+                    strokeDashoffset={`${2 * Math.PI * 36 * (1 - displayScore / 100)}`}
                     strokeLinecap="round"
                     transform="rotate(-90 40 40)"
                   />
@@ -397,7 +455,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                   allowFontScaling={false}
                   style={[styles.scoreValue, { color: themeColors.text }]}
                 >
-                  {Math.round(copilotData.overallScore)}
+                  {Math.round(displayScore)}
                 </Text>
                 <Text
                   allowFontScaling={false}

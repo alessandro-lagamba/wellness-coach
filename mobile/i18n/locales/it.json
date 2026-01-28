@@ -19,6 +19,7 @@
     "continue": "Continua",
     "back": "Indietro",
     "update": "Aggiorna",
+    "refresh": "Aggiorna",
     "reset": "Reset",
     "status": "Stato",
     "trend": "Trend",
@@ -494,6 +495,22 @@
       "title": "Cosa fare oggi",
       "subtitle": "Il tuo spunto del giorno, pensato per te.",
       "todayScore": "Il Punteggio di Oggi",
+      "notifyMe": "Avvisami",
+      "schedule": {
+        "title": "Orario Raccomandazioni",
+        "intro": "Scegli a che ora vuoi ricevere il tuo piano giornaliero.",
+        "updated": "Orario Aggiornato",
+        "updatedDesc": "Riceverai le tue raccomandazioni giornaliere alle {{time}}:00.",
+        "error": "Errore",
+        "errorDesc": "Impossibile aggiornare l'orario."
+      },
+      "info": {
+        "title": "Informazioni sul Punteggio",
+        "scoreCalculation": "Come viene calcolato?",
+        "scoreDescription": "Il punteggio è una media pesata dei tuoi dati di salute odierni (Mood, Sonno, Passi, Idratazione, HRV e Calorie). Più dati inserisci, più è accurato il tuo profilo quotidiano.",
+        "recommendationsTitle": "Perché le raccomandazioni?",
+        "recommendationsDescription": "Le raccomandazioni generate oggi servono ad aiutarti a pianificare meglio la giornata di domani. Interpretano i tuoi dati odierni per permetterti di essere il più efficiente possibile domani."
+      },
       "scoreModal": {
         "title": "Come viene calcolato il punteggio?",
         "description": "Il punteggio complessivo (0-100) è calcolato combinando diversi fattori del tuo benessere quotidiano. Ogni fattore contribuisce con un peso specifico al punteggio finale.",
@@ -1139,6 +1156,7 @@
         "noData": "Registra un'analisi per vedere il trend della pelle",
         "emptyState": "Inizia un’analisi della pelle per visualizzare il grafico",
         "improving": "In miglioramento",
+        "worsening": "In peggioramento",
         "declining": "In calo",
         "stable": "Stabile",
         "summary": "Riepilogo",

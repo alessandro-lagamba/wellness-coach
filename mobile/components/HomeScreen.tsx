@@ -11,6 +11,7 @@ import {
   Pressable,
   Platform,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -45,7 +46,9 @@ import { TutorialTooltip } from './TutorialTooltip';
 import { OnboardingService } from '../services/onboarding.service';
 // Removed useInsights - now using DailyCopilot for insights
 import DailyCopilot from './DailyCopilot';
+import DailyCopilotPopup from './DailyCopilotPopup';
 import RecommendationDetailModal from './RecommendationDetailModal';
+import DailyCopilotService from '../services/daily-copilot.service';
 
 import PushNotificationService from '../services/push-notification.service';
 import DailyCopilotHistory from './DailyCopilotHistory';
@@ -371,6 +374,60 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     currentValue: undefined,
     color: '#10b981',
   });
+
+  const [showTimeModal, setShowTimeModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [selectedTime, setSelectedTime] = useState<number>(18);
+  const [savingTime, setSavingTime] = useState(false);
+
+  // Carica orario raccomandazioni preferito
+  useEffect(() => {
+    const loadRecTime = async () => {
+      try {
+        const current = await AuthService.getCurrentUser();
+        if (current?.id) {
+          const time = await DailyCopilotService.getInstance().getRecommendationTime(current.id);
+          setSelectedTime(time);
+        }
+      } catch (err) {
+        console.error('Error loading recommendation time:', err);
+      }
+    };
+    loadRecTime();
+  }, []);
+
+  const handleSaveTime = async (time: number) => {
+    try {
+      setSavingTime(true);
+      const user = await AuthService.getCurrentUser();
+      if (user?.id) {
+        const success = await DailyCopilotService.getInstance().updateRecommendationTime(user.id, time);
+        if (success) {
+          setSelectedTime(time);
+          setShowTimeModal(false);
+          Alert.alert(
+            t('home.dailyCopilot.schedule.updated'),
+            t('home.dailyCopilot.schedule.updatedDesc', { time })
+          );
+        } else {
+          Alert.alert(
+            t('home.dailyCopilot.schedule.error'),
+            t('home.dailyCopilot.schedule.errorDesc')
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error saving time:', error);
+      Alert.alert(
+        t('home.dailyCopilot.schedule.error'),
+        t('home.dailyCopilot.schedule.errorDesc')
+      );
+    } finally {
+      setSavingTime(false);
+    }
+  };
+
+  const availableHours = Array.from({ length: 17 }, (_, i) => i + 6); // 6:00 to 22:00
 
   // Chart configuration
   const { enabledCharts, toggleChart, config: chartConfig, enableChart, getAvailableCharts } = useChartConfig();
@@ -2532,7 +2589,15 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                   <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('home.dailyCopilot.title')}</Text>
                   <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>{t('home.dailyCopilot.subtitle')}</Text>
                 </View>
-                {/* History button rimosso su richiesta utente */}
+                {/* Daily Copilot Notification/Schedule Button */}
+                <TouchableOpacity
+                  style={styles.scheduleButton}
+                  onPress={() => setShowTimeModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="bell-ring-outline" size={14} color="#ffffff" />
+                  <Text style={styles.scheduleButtonText}>{t('home.dailyCopilot.notifyMe')}</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -2541,6 +2606,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               onRecommendationPress={(recommendation) => {
                 setRecommendationModal({ visible: true, recommendation });
               }}
+              onShowInfo={() => setShowInfoModal(true)}
             />
           </WalkthroughableView>
         </CopilotStep>
@@ -2917,6 +2983,64 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           setWidgetData(updatedWidgetData);
         }}
         currentData={cycleData}
+      />
+
+      {/* Time Selection Modal */}
+      <Modal
+        visible={showTimeModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowTimeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {t('home.dailyCopilot.schedule.title')}
+              </Text>
+              <TouchableOpacity onPress={() => setShowTimeModal(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalDescription}>
+              {t('home.dailyCopilot.schedule.intro')}
+            </Text>
+
+            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+              {availableHours.map((hour) => (
+                <TouchableOpacity
+                  key={hour}
+                  style={[
+                    styles.modalTimeOption,
+                    selectedTime === hour && styles.modalSelectedTimeOption
+                  ]}
+                  onPress={() => handleSaveTime(hour)}
+                  disabled={savingTime}
+                >
+                  <Text style={[
+                    styles.modalTimeText,
+                    selectedTime === hour && styles.modalSelectedTimeText
+                  ]}>
+                    {hour}:00
+                  </Text>
+                  {selectedTime === hour && !savingTime && (
+                    <MaterialCommunityIcons name="check" size={20} color="#8b5cf6" />
+                  )}
+                  {selectedTime === hour && savingTime && (
+                    <ActivityIndicator size="small" color="#8b5cf6" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Daily Copilot Info Modal */}
+      <DailyCopilotPopup
+        visible={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
       />
 
     </SafeAreaWrapper>
@@ -4362,9 +4486,9 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   progressCardValue: {
-    fontSize: 22, // Leggermente ridotto per risparmiare spazio
+    fontSize: 22,
     fontWeight: '700',
-    marginBottom: 2, // Ridotto da 4 a 2
+    marginBottom: 2,
   },
   progressCardUnit: {
     fontSize: 14,
@@ -4372,9 +4496,86 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   progressCardSubtitle: {
-    fontSize: 11, // Ridotto da 12 a 11
-    lineHeight: 14, // Aggiunto per supportare 2 righe
+    fontSize: 11,
+    lineHeight: 14,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    zIndex: 1000,
+  },
+  modalContent: {
+    width: '100%',
+    maxHeight: '80%',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Figtree_700Bold',
+    color: '#0f172a',
+  },
+  modalDescription: {
+    fontSize: 14,
+    fontFamily: 'Figtree_400Regular',
+    color: '#6b7280',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  modalTimeOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 8,
+  },
+  modalSelectedTimeOption: {
+    borderColor: '#8b5cf6',
+    backgroundColor: '#f5f3ff',
+  },
+  modalTimeText: {
+    fontSize: 16,
+    fontFamily: 'Figtree_500Medium',
+    color: '#334155',
+  },
+  modalSelectedTimeText: {
+    color: '#7c3aed',
+    fontFamily: 'Figtree_700Bold',
+  },
+  scheduleButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#6366f1', // Indigo 500
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+  },
+  scheduleButtonText: {
+    fontSize: 12,
+    fontFamily: 'Figtree_700Bold',
+    color: '#ffffff',
+  },
+
 });
 
 // Removed export default since we export named component above
