@@ -490,6 +490,7 @@
       "subtitle": "Uno sguardo a come si sentono corpo e mente"
     },
     "dailyCopilot": {
+      "insufficientData": "Il punteggio verrà calcolato non appena ci saranno più dati per oggi.",
       "title": "Cosa fare oggi",
       "subtitle": "Il tuo spunto del giorno, pensato per te.",
       "todayScore": "Il Punteggio di Oggi",

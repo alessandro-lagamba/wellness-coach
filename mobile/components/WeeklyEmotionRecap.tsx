@@ -229,18 +229,6 @@ const WeeklyEmotionRecapComponent: React.FC = () => {
 
                 {/* Balance Bar */}
                 <View style={styles.balanceSection}>
-                    <View style={styles.balanceLabels}>
-                        <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
-                            {language === 'it' ? 'Positivo' : 'Positive'}
-                        </Text>
-                        <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
-                            {language === 'it' ? 'Neutro' : 'Neutral'}
-                        </Text>
-                        <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
-                            {language === 'it' ? 'Negativo' : 'Negative'}
-                        </Text>
-                    </View>
-
                     <View
                         style={[
                             styles.balanceBar,
@@ -275,6 +263,27 @@ const WeeklyEmotionRecapComponent: React.FC = () => {
                                 ]}
                             />
                         )}
+                    </View>
+                    {/* 🆕 Mini Legend with colored circles */}
+                    <View style={styles.legendContainer}>
+                        <View style={styles.legendItem}>
+                            <View style={[styles.legendCircle, { backgroundColor: '#389c3fff' }]} />
+                            <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>
+                                {language === 'it' ? 'Positivo' : 'Positive'}
+                            </Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                            <View style={[styles.legendCircle, { backgroundColor: '#ffd12bff' }]} />
+                            <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>
+                                {language === 'it' ? 'Neutro' : 'Neutral'}
+                            </Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                            <View style={[styles.legendCircle, { backgroundColor: '#ff4e4eff' }]} />
+                            <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>
+                                {language === 'it' ? 'Negativo' : 'Negative'}
+                            </Text>
+                        </View>
                     </View>
                 </View>
             </View>
@@ -377,6 +386,27 @@ const styles = StyleSheet.create({
     balanceSegmentLast: {
         borderTopRightRadius: 5,
         borderBottomRightRadius: 5,
+    },
+    legendContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 16,
+        marginTop: 12,
+    },
+    legendItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    legendCircle: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+    },
+    legendLabel: {
+        fontSize: 11,
+        fontFamily: 'Figtree_500Medium',
     },
 });
 

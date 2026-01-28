@@ -70,8 +70,8 @@ export interface DailyCopilotData {
 }
 
 export interface CopilotAnalysisRequest {
-  mood: number;
-  sleep: { hours: number; quality: number; };
+  mood: number | null;
+  sleep: { hours: number; quality: number; } | null;
   healthMetrics: {
     steps: number;
     hrv: number;
@@ -102,7 +102,6 @@ class DailyCopilotService {
     try {
       const currentUser = await AuthService.getCurrentUser();
       if (!currentUser?.id) {
-        // 🔥 PERF: Removed verbose logging
         return null;
       }
 
@@ -112,13 +111,9 @@ class DailyCopilotService {
 
       const dbResult = await this.dbService.getDailyCopilotData(currentUser.id, today);
       if (dbResult.success && dbResult.data) {
-        // 🔥 PERF: Removed verbose logging
         const savedData = this.convertDBRecordToCopilotData(dbResult.data);
-        // 🔥 PERF: Removed verbose logging
         this.setCachedAnalysis(cacheKey, savedData);
         return savedData;
-      } else {
-        // 🔥 PERF: Removed verbose logging
       }
 
       // Check cache as fallback
@@ -127,43 +122,28 @@ class DailyCopilotService {
         return cached;
       }
 
-      // 🔥 PERF: Removed verbose logging
       const analysisData = await this.collectAnalysisData(currentUser.id);
       if (!analysisData) {
-        // 🔥 PERF: Keep only warning
-        console.warn('⚠️ Daily Copilot: No data available for analysis, using fallback');
-        const fallbackData: CopilotAnalysisRequest = {
-          mood: 3,
-          sleep: { hours: 7.5, quality: 80 },
-          healthMetrics: {
-            steps: 5000,
-            hrv: 35,
-            hydration: 6,
-            restingHR: 65
-          },
-          timestamp: new Date().toISOString()
-        };
-        const fallbackAnalysis = await this.generateFallbackAnalysis(fallbackData);
-        // Salva comunque nel database
-        await this.dbService.saveDailyCopilotData(currentUser.id, fallbackAnalysis);
-        return fallbackAnalysis;
+        console.warn('⚠️ Daily Copilot: No analysis data collected');
+        return null;
       }
 
-      // 🔥 PERF: Removed verbose logging
+      // Calcola il punteggio PRIMA di generare l'analisi
+      // Il punteggio è calcolabile solo se ci sono almeno 3 fattori
+      const scoreResult = await this.calculateDeterministicScore(analysisData);
+      if (scoreResult.score === null) {
+        console.warn('⚠️ Daily Copilot: Insufficient data for score calculation (< 3 factors)');
+        return null;
+      }
 
-      // Genera l'analisi tramite AI
-      // 🔥 PERF: Removed verbose logging
-      const copilotData = await this.generateAIAnalysis(analysisData, currentUser.id);
+      // Genera l'analisi tramite AI, passando il punteggio calcolato
+      const copilotData = await this.generateAIAnalysis(analysisData, currentUser.id, scoreResult.score);
       if (!copilotData) {
         console.warn('⚠️ Daily Copilot: AI analysis failed, using fallback');
-        // 🔥 FIX: Usa fallback invece di ritornare null
         const fallbackAnalysis = await this.generateFallbackAnalysis(analysisData);
-        // Salva comunque nel database
         await this.dbService.saveDailyCopilotData(currentUser.id, fallbackAnalysis);
         return fallbackAnalysis;
       }
-
-      // 🔥 PERF: Removed verbose logging
 
       // Save to database
       const saveResult = await this.dbService.saveDailyCopilotData(currentUser.id, copilotData);
@@ -206,27 +186,30 @@ class DailyCopilotService {
 
     } catch (error) {
       console.error('Error collecting analysis data:', error);
-      return null;
+      return {
+        mood: null,
+        sleep: null,
+        healthMetrics: { steps: 0, hrv: 0, hydration: 0 },
+        timestamp: new Date().toISOString()
+      };
     }
   }
 
   /**
-   * Ottiene il mood per l'analisi (oggi se disponibile, altrimenti ieri)
-   * 🔥 LOGICA: All'apertura dell'app al mattino, usa i dati di ieri (sera prima)
+   * Ottiene il mood per l'analisi (SOLO oggi)
    */
-  private async getTodayMood(): Promise<number> {
+  private async getTodayMood(): Promise<number | null> {
     try {
       const currentUser = await AuthService.getCurrentUser();
       if (!currentUser?.id) {
-        return 3; // Default neutro
+        return null;
       }
 
       const { supabase } = await import('../lib/supabase');
-      // ✅ FIX: Use local timezone for "today" to avoid timezone issues
       const now = new Date();
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-      // 🔥 FIX: Prima prova a leggere i dati di OGGI
+      // 🔥 FIX: Leggi SOLO i dati di OGGI
       const { data: todayCheckin } = await supabase
         .from('daily_copilot_analyses')
         .select('mood')
@@ -239,54 +222,35 @@ class DailyCopilotService {
         return todayCheckin.mood;
       }
 
-      // 🔥 FIX: Se non ci sono dati di oggi, usa i dati di IERI (sera prima)
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-
-      const { data: yesterdayCheckin } = await supabase
-        .from('daily_copilot_analyses')
-        .select('mood')
-        .eq('user_id', currentUser.id)
-        .eq('date', yesterdayKey)
-        .maybeSingle();
-
-      if (yesterdayCheckin?.mood !== null && yesterdayCheckin?.mood !== undefined) {
-        console.log('ℹ️ Daily Copilot: Using yesterday\'s mood (evening before):', yesterdayCheckin.mood);
-        return yesterdayCheckin.mood;
-      }
-
-      // Fallback ad AsyncStorage per retrocompatibilità
+      // Fallback ad AsyncStorage per retrocompatibilità (solo se di oggi)
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const savedMood = await AsyncStorage.getItem(`checkin:mood:${today}`);
       if (savedMood) {
         return parseInt(savedMood, 10);
       }
 
-      // Fallback finale: default neutro
-      console.log('⚠️ Daily Copilot: No mood data found, using default (3)');
-      return 3;
+      console.log('⚠️ Daily Copilot: No mood data found for today');
+      return null;
     } catch (error) {
       console.error('❌ Error getting mood:', error);
-      return 3;
+      return null;
     }
   }
 
   /**
-   * Ottiene i dati del sonno per l'analisi (oggi se disponibile, altrimenti ieri)
-   * 🔥 LOGICA: All'apertura dell'app al mattino, usa i dati di ieri (sera prima)
+   * Ottiene i dati del sonno per l'analisi (SOLO oggi)
    */
-  private async getTodaySleep(): Promise<{ hours: number; quality: number; }> {
+  private async getTodaySleep(): Promise<{ hours: number; quality: number; } | null> {
     try {
       const currentUser = await AuthService.getCurrentUser();
       if (!currentUser?.id) {
-        return { hours: 7.5, quality: 80 }; // Default
+        return null;
       }
 
       const { supabase } = await import('../lib/supabase');
       const today = new Date().toISOString().slice(0, 10);
 
-      // 🔥 FIX: Prima prova a leggere i dati di OGGI
+      // 🔥 FIX: Leggi SOLO i dati di OGGI
       const { data: todayCheckin } = await supabase
         .from('daily_copilot_analyses')
         .select('sleep_hours, sleep_quality')
@@ -305,30 +269,7 @@ class DailyCopilotService {
         };
       }
 
-      // 🔥 FIX: Se non ci sono dati di oggi, usa i dati di IERI (sera prima)
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayKey = yesterday.toISOString().slice(0, 10);
-
-      const { data: yesterdayCheckin } = await supabase
-        .from('daily_copilot_analyses')
-        .select('sleep_hours, sleep_quality')
-        .eq('user_id', currentUser.id)
-        .eq('date', yesterdayKey)
-        .maybeSingle();
-
-      if (yesterdayCheckin && (yesterdayCheckin.sleep_hours || yesterdayCheckin.sleep_quality)) {
-        console.log('ℹ️ Daily Copilot: Using yesterday\'s sleep (evening before):', {
-          hours: yesterdayCheckin.sleep_hours,
-          quality: yesterdayCheckin.sleep_quality
-        });
-        return {
-          hours: yesterdayCheckin.sleep_hours || 7.5,
-          quality: yesterdayCheckin.sleep_quality || 80
-        };
-      }
-
-      // Fallback ad AsyncStorage per retrocompatibilità
+      // Fallback ad AsyncStorage per retrocompatibilità (solo se di oggi)
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const savedSleep = await AsyncStorage.getItem(`checkin:sleep:${today}`);
 
@@ -339,17 +280,16 @@ class DailyCopilotService {
         };
       }
 
-      // Fallback finale: default
-      console.log('⚠️ Daily Copilot: No sleep data found, using default (7.5h, 80%)');
-      return { hours: 7.5, quality: 80 };
+      console.log('⚠️ Daily Copilot: No sleep data found for today');
+      return null;
     } catch (error) {
       console.error('❌ Error getting sleep:', error);
-      return { hours: 7.5, quality: 80 };
+      return null;
     }
   }
 
   /**
-   * Ottiene le metriche di salute - 🔥 FIX: Prende i dati reali dal database o HealthDataService
+   * Ottiene le metriche di salute
    */
   private async getHealthMetrics(aiContext: any): Promise<{
     steps: number;
@@ -364,7 +304,6 @@ class DailyCopilotService {
         return { steps: 5000, hrv: 35, hydration: 6, meditationMinutes: 0, restingHR: 65 };
       }
 
-      // 🔥 FIX: Prova prima a prendere i dati dal database (più aggiornati)
       const { supabase } = await import('../lib/supabase');
       const today = new Date().toISOString().split('T')[0];
 
@@ -387,13 +326,12 @@ class DailyCopilotService {
         return {
           steps: healthData.steps || 5000,
           hrv: healthData.hrv || 35,
-          hydration: healthData.hydration ? Math.round(healthData.hydration / 250) : 6, // Converti ml in bicchieri
+          hydration: healthData.hydration ? Math.round(healthData.hydration / 250) : 6,
           meditationMinutes: healthData.mindfulness_minutes || 0,
           restingHR: healthData.resting_heart_rate || 65
         };
       }
 
-      // 🔥 FIX: Fallback a HealthDataService per dati in tempo reale
       try {
         const { HealthDataService } = await import('./health-data.service');
         const healthService = HealthDataService.getInstance();
@@ -418,10 +356,9 @@ class DailyCopilotService {
           };
         }
       } catch (healthServiceError) {
-        console.warn('⚠️ Daily Copilot: HealthDataService sync failed, using defaults');
+        console.warn('⚠️ Daily Copilot: HealthDataService sync failed');
       }
 
-      // 🔥 FIX: Ultimo fallback: usa i dati dal contesto AI se disponibili
       if (aiContext?.currentHealth) {
         return {
           steps: aiContext.currentHealth.steps || 5000,
@@ -432,8 +369,6 @@ class DailyCopilotService {
         };
       }
 
-      // Fallback finale: valori di default
-      console.warn('⚠️ Daily Copilot: No health data available, using defaults');
       return { steps: 5000, hrv: 35, hydration: 6, meditationMinutes: 0, restingHR: 65 };
     } catch (error) {
       console.error('❌ Error getting health metrics:', error);
@@ -451,25 +386,19 @@ class DailyCopilotService {
 
   /**
    * Genera l'analisi tramite AI
-   * ✅ Include: timeout, retry logic, gestione errori robusta
    */
   private async generateAIAnalysis(
     data: CopilotAnalysisRequest,
-    userId: string
+    userId: string,
+    preCalculatedScore: number
   ): Promise<DailyCopilotData | null> {
-    // 🔥 FIX: Ottieni la lingua corrente dell'utente
     const userLanguage = await getUserLanguage();
     const languageInstruction = getLanguageInstruction(userLanguage);
 
-    // 🔥 FIX: Ottieni contesto aggiuntivo per arricchire il prompt
     let contextInfo = '';
-    let menstrualCycleContext = null;
-    let nutritionContext = null;
     try {
-      // 🔥 FIX: Force refresh to ensure food/nutrition data is current
       const aiContext = await AIContextService.getCompleteContext(userId, true);
 
-      // Aggiungi informazioni sul contesto emotivo e della pelle se disponibili
       if (aiContext.currentEmotion) {
         contextInfo += `\n- Emotional state: ${aiContext.currentEmotion.emotion} (valence: ${aiContext.currentEmotion.valence.toFixed(2)}, arousal: ${aiContext.currentEmotion.arousal.toFixed(2)})\n`;
       }
@@ -478,100 +407,26 @@ class DailyCopilotService {
         contextInfo += `- Skin status score: ${aiContext.currentSkin.overallScore}/100\n`;
       }
 
-      if (aiContext.emotionTrend) {
-        const trendText = aiContext.emotionTrend === 'improving' ? 'improving' : aiContext.emotionTrend === 'declining' ? 'worsening' : 'stable';
-        contextInfo += `- Emotional trend: ${trendText}\n`;
-      }
-
-      if (aiContext.insights && aiContext.insights.length > 0) {
-        contextInfo += `\n- Recent insights:\n${aiContext.insights.slice(0, 3).map(i => `  - ${i}`).join('\n')}\n`;
-      }
-
-      if (aiContext.behavioralInsights?.improvementAreas && aiContext.behavioralInsights.improvementAreas.length > 0) {
-        contextInfo += `\n- Areas of improvement:\n${aiContext.behavioralInsights.improvementAreas.slice(0, 2).map(a => `  - ${a}`).join('\n')}\n`;
-      }
-
-      // 🔥 FIX: Aggiungi contesto ciclo mestruale se disponibile
       if (aiContext.menstrualCycleContext) {
-        menstrualCycleContext = aiContext.menstrualCycleContext;
-        contextInfo += `\n🩸 MENSTRUAL CYCLE:\n`;
-        if (aiContext.menstrualCycleContext.phase) {
-          contextInfo += `- Current phase: ${aiContext.menstrualCycleContext.phase}\n`;
-        }
-        if (aiContext.menstrualCycleContext.day) {
-          contextInfo += `- Cycle day: ${aiContext.menstrualCycleContext.day}\n`;
-        }
-        if (aiContext.menstrualCycleContext.nextPeriodDays !== undefined) {
-          contextInfo += `- Days until next period: ${aiContext.menstrualCycleContext.nextPeriodDays}\n`;
-        }
-        if (aiContext.menstrualCycleContext.recentNotes) {
-          contextInfo += `- Recent notes: ${aiContext.menstrualCycleContext.recentNotes}\n`;
-        }
-        contextInfo += `\n💡 Use this information to personalize recommendations based on cycle phase (e.g., more rest during menstrual phase, more energy during ovulatory phase).\n`;
+        contextInfo += `\n🩸 MENSTRUAL CYCLE:\n- Phase: ${aiContext.menstrualCycleContext.phase}\n- Day: ${aiContext.menstrualCycleContext.day}\n`;
       }
 
-      // 🔥 FIX: Aggiungi contesto nutrizionale se disponibile
       if (aiContext.nutritionContext) {
-        nutritionContext = aiContext.nutritionContext;
-        contextInfo += `\n🍽️ NUTRITION TODAY:\n`;
-        if (aiContext.nutritionContext.todayCalories !== undefined) {
-          contextInfo += `- Calories consumed: ${aiContext.nutritionContext.todayCalories} kcal\n`;
-        }
-        if (aiContext.nutritionContext.todayMacros) {
-          const macros = aiContext.nutritionContext.todayMacros;
-          contextInfo += `- Macros: Protein ${macros.protein || 0}g, Carbs ${macros.carbs || 0}g, Fat ${macros.fat || 0}g\n`;
-        }
-        if (aiContext.nutritionContext.recentMeals && aiContext.nutritionContext.recentMeals.length > 0) {
-          contextInfo += `- Foods eaten today: ${aiContext.nutritionContext.recentMeals.join(', ')}\n`;
-        }
-        // 🔥 NEW: Add dietary goals
-        const goals = (aiContext.nutritionContext as any).dietaryGoals;
-        if (goals) {
-          contextInfo += `\n🎯 DIETARY GOALS:\n`;
-          if (goals.dailyCalories) contextInfo += `- Daily calorie target: ${goals.dailyCalories} kcal\n`;
-          if (goals.carbsPercentage) contextInfo += `- Target carbs: ${goals.carbsPercentage}%\n`;
-          if (goals.proteinsPercentage) contextInfo += `- Target protein: ${goals.proteinsPercentage}%\n`;
-          if (goals.fatsPercentage) contextInfo += `- Target fat: ${goals.fatsPercentage}%\n`;
-        }
-        // 🔥 NEW: Add today's meal plan
-        const mealPlan = (aiContext.nutritionContext as any).mealPlanToday;
-        if (mealPlan && mealPlan.length > 0) {
-          contextInfo += `\n📅 TODAY'S MEAL PLAN:\n`;
-          mealPlan.forEach((meal: any) => {
-            contextInfo += `- ${meal.mealType}: ${meal.recipeName}${meal.plannedCalories ? ` (${meal.plannedCalories} kcal)` : ''}\n`;
-          });
-        }
-        // 🔥 NEW: Add food history
-        const foodHistory = (aiContext.nutritionContext as any).foodHistory;
-        if (foodHistory && foodHistory.length > 0) {
-          contextInfo += `\n📊 RECENT EATING HISTORY:\n`;
-          foodHistory.slice(0, 3).forEach((entry: any) => {
-            if (entry.foods && entry.foods.length > 0) {
-              contextInfo += `- ${entry.date}: ${entry.foods.join(', ')} (${entry.totalCalories} kcal)\n`;
-            }
-          });
-        }
-        contextInfo += `\n💡 Use this information to give personalized nutrition recommendations considering goals vs actual intake.\n`;
+        contextInfo += `\n🍽️ NUTRITION TODAY:\n- Calories: ${aiContext.nutritionContext.todayCalories} kcal\n- Foods: ${aiContext.nutritionContext.recentMeals?.join(', ')}\n`;
       }
     } catch (contextError) {
       console.warn('⚠️ Could not load additional context:', contextError);
     }
 
-    const userMessage = `Analyze the user's daily health data and generate personalized, practical recommendations to help them navigate today effectively.
-
+    const userMessage = `Analyze the user's daily health data and generate personalized recommendations.
 CURRENT HEALTH DATA:
-
-- Mood: ${data.mood}/5 ${data.mood >= 4 ? '(positive)' : data.mood >= 3 ? '(neutral)' : '(low)'}
-
-- Sleep: ${data.sleep.hours.toFixed(1)}h (quality: ${data.sleep.quality}%)
-
-- Steps: ${data.healthMetrics.steps.toLocaleString()}
-
+- Mood: ${data.mood !== null ? data.mood : 'N/A'}/5
+- Sleep: ${data.sleep ? `${data.sleep.hours.toFixed(1)}h (quality: ${data.sleep.quality}%)` : 'N/A'}
+- Steps: ${data.healthMetrics.steps}
 - HRV: ${data.healthMetrics.hrv} ms
-
 - Hydration: ${data.healthMetrics.hydration}/8 glasses
-
-- Resting heart rate: ${data.healthMetrics.restingHR || 65} bpm${contextInfo ? `\n\nADDITIONAL CONTEXT (if available):${contextInfo}` : ''}
+- Calculated Wellness Score: ${preCalculatedScore}/100
+${contextInfo ? `\nADDITIONAL CONTEXT:${contextInfo}` : ''}
 
 TASK:
 
@@ -580,9 +435,7 @@ TASK:
 2. Provide **3 personalized recommendations** that are:
 
    - actionable and specific
-
    - aligned with today's data
-
    - realistic for daily life
 
    Each recommendation must include:
@@ -595,20 +448,20 @@ TASK:
 
      • reason: why this recommendation matters today  
 
-     • estimatedTime: how long it takes (minutes or hours)
+     • estimatedTime: how long it takes(minutes or hours)
 
 
-3. Provide three daily indicators:
+        3. Provide three daily indicators:
 
-   - energy: high / medium / low  
+        - energy: high / medium / low
 
-   - recovery: excellent / good / needs_attention  
+          - recovery: excellent / good / needs_attention
 
-   - mood: positive / neutral / low  
+            - mood: positive / neutral / low  
 
 IMPORTANT RULES:
 
-- Tailor every insight strictly to the specific data provided.
+        - Tailor every insight strictly to the specific data provided.
 
 - Use realistic physiology and behavior.
 
@@ -618,57 +471,47 @@ IMPORTANT RULES:
 
 - DO NOT add disclaimers, warnings, or medical advice language.
 
-- The JSON template below is ONLY an example of the structure. Generate completely new content each day and never reuse the sample action text verbatim.
+- The JSON template below is ONLY an example of the structure.Generate completely new content each day and never reuse the sample action text verbatim.
 
-${languageInstruction}
+          ${languageInstruction}
+OUTPUT FORMAT(return ONLY valid JSON):
+        {
+          "overallScore": ${preCalculatedScore},
+          "focus": "Energy & Momentum",
+            "energy": "medium",
+              "recovery": "good",
+                "mood": "positive",
+                  "recommendations": [
+                    {
+                      "id": "morning-activation",
+                      "priority": "high",
+                      "category": "movement",
+                      "action": "[Replace with a personalized movement action derived from today's data]",
+                      "reason": "Your sleep quality is lower than usual and steps are behind your normal pattern.",
+                      "estimatedTime": "15 min",
+                    }
+                  ]
+        } `;
 
-OUTPUT FORMAT (return ONLY valid JSON):
-
-{
-  "overallScore": 75,
-  "focus": "Energy & Momentum",
-  "energy": "medium",
-  "recovery": "good",
-  "mood": "positive",
-  "recommendations": [
-    {
-      "id": "morning-activation",
-      "priority": "high",
-      "category": "movement",
-      "action": "[Replace with a personalized movement action derived from today's data]",
-      "reason": "Your sleep quality is lower than usual and steps are behind your normal pattern.",
-      "estimatedTime": "15 min",
-        }
-  ]
-}`;
-
-    // Usa retry logic per gestire errori transienti (rete, timeout, 5xx)
     try {
       return await RetryService.withRetry(
         async () => {
           const backendURL = await getBackendURL();
-
-          // Timeout per la chiamata API (30 secondi - analisi AI può richiedere tempo)
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => {
-            controller.abort();
-          }, 30000);
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
 
           try {
-            const response = await fetch(`${backendURL}/api/chat/respond`, {
+            const response = await fetch(`${backendURL} /api/chat / respond`, {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 message: userMessage,
-                sessionId: `daily-copilot-${Date.now()}`,
+                sessionId: `daily - copilot - ${Date.now()} `,
                 userId: userId,
                 userContext: {
                   userName: 'Utente',
                   isDailyCopilot: true,
-                  language: userLanguage, // 🔥 FIX: Includi la lingua per il backend
-                  // 🔥 FIX: Includi i dati strutturati nel contesto per aiutare l'AI
+                  language: userLanguage,
                   healthData: {
                     mood: data.mood,
                     sleep: data.sleep,
@@ -684,20 +527,17 @@ OUTPUT FORMAT (return ONLY valid JSON):
             if (!response.ok) {
               // Errori non retryable (4xx client errors)
               if (response.status >= 400 && response.status < 500) {
-                throw new Error(`Client error: ${response.status}`);
+                throw new Error(`Client error: ${response.status} `);
               }
               // Errori retryable (5xx server errors)
-              throw new Error(`Server error: ${response.status}`);
+              throw new Error(`Server error: ${response.status} `);
             }
 
             const aiResponse = await response.json();
             const analysisText = aiResponse.response || aiResponse.message || aiResponse.text;
 
-            if (!analysisText) {
-              throw new Error('Empty response from AI');
-            }
+            if (!analysisText) throw new Error('Empty response from AI');
 
-            // Parsing dell'analisi AI
             return await this.parseAIAnalysis(analysisText, data);
           } catch (error: any) {
             clearTimeout(timeoutId);
@@ -729,8 +569,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
         }
       );
     } catch (error) {
-      console.error('Error generating AI analysis after retries:', error);
-      // Fallback con analisi basica - sempre disponibile
+      console.error('Error generating AI analysis:', error);
       return await this.generateFallbackAnalysis(data);
     }
   }
@@ -740,10 +579,9 @@ OUTPUT FORMAT (return ONLY valid JSON):
    */
   private async parseAIAnalysis(analysisText: string, data: CopilotAnalysisRequest): Promise<DailyCopilotData> {
     try {
-      // Calcoliamo il punteggio deterministico come "verità" o base
       const scoreResult = await this.calculateDeterministicScore(data);
       const deterministicScore = scoreResult.score || 50;
-      // Try to parse the entire response as JSON first
+
       let parsedData = null;
       try {
         parsedData = JSON.parse(analysisText);
@@ -781,9 +619,8 @@ OUTPUT FORMAT (return ONLY valid JSON):
       }
 
       if (parsedData && parsedData.recommendations) {
-        // Map AI recommendations
         let recommendations = parsedData.recommendations.map((rec: any, index: number) => ({
-          id: rec.id || `ai-rec-${index}`,
+          id: rec.id || `ai - rec - ${index} `,
           priority: rec.priority || 'medium',
           category: rec.category || 'energy',
           action: rec.action || 'Azione generica',
@@ -791,12 +628,11 @@ OUTPUT FORMAT (return ONLY valid JSON):
           icon: rec.icon || '💡',
           estimatedTime: rec.estimatedTime || '5 min',
           actionable: true,
-          detailedExplanation: rec.detailedExplanation || (rec.reason ? `${rec.reason} Questa raccomandazione è basata sui tuoi dati attuali e può aiutarti a migliorare il tuo benessere generale.` : ''),
-          correlations: Array.isArray(rec.correlations) && rec.correlations.length > 0 ? rec.correlations : (rec.reason ? [`Questa raccomandazione è basata sui tuoi dati attuali`] : []),
-          expectedBenefits: Array.isArray(rec.expectedBenefits) && rec.expectedBenefits.length > 0 ? rec.expectedBenefits : (rec.reason ? [`Miglioramento del benessere generale`, `Supporto ai tuoi obiettivi di salute`] : [])
+          detailedExplanation: rec.detailedExplanation || rec.reason || '',
+          correlations: Array.isArray(rec.correlations) ? rec.correlations : [],
+          expectedBenefits: Array.isArray(rec.expectedBenefits) ? rec.expectedBenefits : []
         }));
 
-        // 🔥 NEW: Ensure at least 3 recommendations by supplementing with fallbacks
         if (recommendations.length < 3) {
           const fallbackRecs = this.generateRecommendations(data);
           const usedCategories = new Set(recommendations.map(r => r.category));
@@ -840,53 +676,40 @@ OUTPUT FORMAT (return ONLY valid JSON):
         };
       }
     } catch (error) {
-      // Fallback to basic recommendations on parse error
+      console.error('Error parsing AI analysis:', error);
     }
 
-    // Fallback to basic analysis
     return this.generateFallbackAnalysis(data);
   }
 
-  /**
-   * Estrae raccomandazioni parziali da JSON incompleto
-   */
   private extractPartialRecommendations(text: string): any {
-    try {
-      // Try to find individual recommendation objects
-      const recommendationMatches = text.match(/\{[^}]*"id"[^}]*\}/g);
-      if (recommendationMatches && recommendationMatches.length > 0) {
-        const recommendations = recommendationMatches.map((match, index) => {
-          try {
-            return JSON.parse(match);
-          } catch {
-            // Create a basic recommendation from the text
-            const idMatch = match.match(/"id":\s*"([^"]*)"/);
-            const actionMatch = match.match(/"action":\s*"([^"]*)"/);
-            const reasonMatch = match.match(/"reason":\s*"([^"]*)"/);
-            return {
-              id: idMatch ? idMatch[1] : `partial-rec-${index}`,
-              action: actionMatch ? actionMatch[1] : 'Azione generica',
-              reason: reasonMatch ? reasonMatch[1] : 'Motivo generico',
-              priority: 'medium',
-              category: 'energy',
-              icon: '💡',
-              estimatedTime: '5 min'
-            };
-          }
-        });
+    const recommendationMatches = text.match(/\{[^}]*"id"[^}]*\}/g);
+    if (recommendationMatches && recommendationMatches.length > 0) {
+      const recommendations = recommendationMatches.map((match, index) => {
+        try {
+          return JSON.parse(match);
+        } catch {
+          // Create a basic recommendation from the text
+          const idMatch = match.match(/"id":\s*"([^"]*)"/);
+          const actionMatch = match.match(/"action":\s*"([^"]*)"/);
+          const reasonMatch = match.match(/"reason":\s*"([^"]*)"/);
+          return {
+            id: idMatch ? idMatch[1] : `partial - rec - ${index} `,
+            action: actionMatch ? actionMatch[1] : 'Azione generica',
+            reason: reasonMatch ? reasonMatch[1] : 'Motivo generico',
+            priority: 'medium',
+            category: 'energy',
+            icon: '💡',
+            estimatedTime: '5 min'
+          };
+        }
+      });
 
-        return { recommendations };
-      }
-    } catch (error) {
-      console.log('⚠️ Could not extract partial recommendations:', error);
+      return { recommendations };
     }
-
     return null;
   }
 
-  /**
-   * Genera un'analisi di fallback basata sui dati
-   */
   private async generateFallbackAnalysis(data: CopilotAnalysisRequest): Promise<DailyCopilotData> {
     const scoreResult = await this.calculateDeterministicScore(data);
     const overallScore = scoreResult.score || 50;
@@ -909,102 +732,81 @@ OUTPUT FORMAT (return ONLY valid JSON):
     };
   }
 
-  /**
-   * Calcola il punteggio generale (Legacy wrapper around deterministic score)
-   */
-  private async calculateOverallScore(data: CopilotAnalysisRequest): Promise<number> {
-    const result = await this.calculateDeterministicScore(data);
-    return result.score || 50;
-  }
-
   private clamp01 = (n: number) => Math.max(0, Math.min(1, n));
-  private round2 = (n: number) => Math.round(n * 100) / 100;
 
   /**
-   * New Deterministic Score Logic
-   * Calcola il punteggio pesato in base ai widget abilitati e ai goals
+   * Calcolo punteggio deterministico
    */
   async calculateDeterministicScore(data: CopilotAnalysisRequest): Promise<ScoreCalculationResult> {
-    // 1. Get enabled widgets
     const config = await widgetConfigService.getWidgetConfig();
     const goals = await widgetGoalsService.getGoals();
-
     const enabledWidgetIds = new Set(config.filter(w => w.enabled).map(w => w.id));
 
     const breakdown: Record<string, ScoreItem> = {};
     const missingData: string[] = [];
     const availableCategories: string[] = [];
-
     let totalPoints = 0;
     let totalWeight = 0;
 
-    // --- A. MOOD (Mandatory, Weight 25) ---
-    // User logic: Mood is always enabled
-    const moodScore = (data.mood / 5) * 100;
-    breakdown['mood'] = { score: moodScore, weight: 25, value: data.mood };
-    totalPoints += (moodScore * 25) / 100;
-    totalWeight += 25;
-    availableCategories.push('mood');
+    // Mood (25%)
+    if (data.mood !== null) {
+      const score = (data.mood / 5) * 100;
+      breakdown['mood'] = { score, weight: 25, value: data.mood };
+      totalPoints += (score * 25) / 100;
+      totalWeight += 25;
+      availableCategories.push('mood');
+    } else missingData.push('mood');
 
-    // --- B. SLEEP (Mandatory, Weight 30) ---
-    // 70% hours, 30% quality vs goal
-    const sleepGoal = goals.sleep || 8;
-    const sleepHoursScore = this.clamp01(data.sleep.hours / sleepGoal) * 100;
-    const sleepQualityScore = data.sleep.quality; // quality è già 0-100
-    const combinedSleepScore = (sleepHoursScore * 0.7) + (sleepQualityScore * 0.3);
+    // Sleep (25%)
+    if (data.sleep !== null) {
+      const goal = goals.sleep || 8;
+      const score = (this.clamp01(data.sleep.hours / goal) * 70) + (data.sleep.quality * 0.3);
+      breakdown['sleep'] = { score, weight: 25, value: data.sleep.hours, goal };
+      totalPoints += (score * 25) / 100;
+      totalWeight += 25;
+      availableCategories.push('sleep');
+    } else missingData.push('sleep');
 
-    breakdown['sleep'] = { score: combinedSleepScore, weight: 30, value: data.sleep.hours, goal: sleepGoal };
-    totalPoints += (combinedSleepScore * 30) / 100;
-    totalWeight += 30;
-    availableCategories.push('sleep');
-
-    // --- C. STEPS (Optional, Weight 20) ---
+    // Steps (20%)
     if (enabledWidgetIds.has('steps')) {
-      const stepsGoal = goals.steps || 10000;
-      const stepsScore = this.clamp01(data.healthMetrics.steps / stepsGoal) * 100;
-      breakdown['steps'] = { score: stepsScore, weight: 20, value: data.healthMetrics.steps, goal: stepsGoal };
-      totalPoints += (stepsScore * 20) / 100;
+      const goal = goals.steps || 10000;
+      const score = this.clamp01(data.healthMetrics.steps / goal) * 100;
+      breakdown['steps'] = { score, weight: 20, value: data.healthMetrics.steps, goal };
+      totalPoints += (score * 20) / 100;
       totalWeight += 20;
       availableCategories.push('steps');
     }
 
-    // --- D. HYDRATION (Optional, Weight 15) ---
+    // Hydration (20%)
     if (enabledWidgetIds.has('hydration')) {
-      const hydroGoal = goals.hydration || 8;
-      const hydroScore = this.clamp01(data.healthMetrics.hydration / hydroGoal) * 100;
-      breakdown['hydration'] = { score: hydroScore, weight: 15, value: data.healthMetrics.hydration, goal: hydroGoal };
-      totalPoints += (hydroScore * 15) / 100;
-      totalWeight += 15;
+      const goal = goals.hydration || 8;
+      const score = this.clamp01(data.healthMetrics.hydration / goal) * 100;
+      breakdown['hydration'] = { score, weight: 20, value: data.healthMetrics.hydration, goal };
+      totalPoints += (score * 20) / 100;
+      totalWeight += 20;
       availableCategories.push('hydration');
     }
 
-    // --- E. HRV (Optional, Weight 10) ---
+    // HRV (10%)
     if (enabledWidgetIds.has('hrv')) {
-      const hrvTarget = 50; // Valore indicativo di "buona salute"
-      const hrvScore = this.clamp01(data.healthMetrics.hrv / hrvTarget) * 100;
-      breakdown['hrv'] = { score: hrvScore, weight: 10, value: data.healthMetrics.hrv, goal: hrvTarget };
-      totalPoints += (hrvScore * 10) / 100;
+      const score = this.clamp01(data.healthMetrics.hrv / 50) * 100;
+      breakdown['hrv'] = { score, weight: 10, value: data.healthMetrics.hrv, goal: 50 };
+      totalPoints += (score * 10) / 100;
       totalWeight += 10;
       availableCategories.push('hrv');
     }
 
-    // --- F. MEDITATION (Optional, Weight 10) ---
-    if (enabledWidgetIds.has('meditation')) {
-      const medGoal = goals.meditation || 20;
-      const medValue = await this.getTodayMeditationMinutes();
-      const medScore = this.clamp01(medValue / medGoal) * 100;
-      breakdown['meditation'] = { score: medScore, weight: 10, value: medValue, goal: medGoal };
-      totalPoints += (medScore * 10) / 100;
-      totalWeight += 10;
-      availableCategories.push('meditation');
+    // 🔥 FIX: Il punteggio è calcolabile solo se ci sono almeno 3 fattori presenti
+    if (availableCategories.length < 3) {
+      return {
+        score: null,
+        breakdown,
+        missingData,
+        availableCategories
+      };
     }
 
-    // 3. Final Normalized Score
-    // Se totalWeight è ad esempio 100, moltiplichiamo totalPoints per (100/110) se avessimo pesi extra...
-    // Ma qui facciamo una normalizzazione pura: (punti acquisiti / peso totale possibile) * 100
-    // Poiché totalPoints è già basato sui pesi, facciamo:
     const finalScore = totalWeight > 0 ? (totalPoints / totalWeight) * 100 : null;
-
     return {
       score: finalScore !== null ? Math.round(finalScore) : null,
       breakdown,
@@ -1013,29 +815,8 @@ OUTPUT FORMAT (return ONLY valid JSON):
     };
   }
 
-  /**
-   * Genera raccomandazioni basate sui dati
-   */
-  private generateRecommendations(data: CopilotAnalysisRequest, aiData?: any) {
+  private generateRecommendations(data: CopilotAnalysisRequest) {
     const recommendations = [];
-
-    // Se abbiamo dati AI, usali per arricchire le raccomandazioni
-    if (aiData && aiData.recommendations) {
-      // Using AI-generated recommendations
-      return aiData.recommendations.map((rec: any, index: number) => ({
-        id: rec.id || `ai-rec-${index}`,
-        priority: rec.priority || 'medium',
-        category: rec.category || 'energy',
-        action: rec.action || 'Azione generica',
-        reason: rec.reason || 'Motivo generico',
-        icon: rec.icon || '💡',
-        estimatedTime: rec.estimatedTime || '5 min',
-        actionable: true,
-        detailedExplanation: rec.detailedExplanation || (rec.reason ? `${rec.reason} Questa raccomandazione è basata sui tuoi dati attuali e può aiutarti a migliorare il tuo benessere generale.` : ''),
-        correlations: Array.isArray(rec.correlations) && rec.correlations.length > 0 ? rec.correlations : (rec.reason ? [`Questa raccomandazione è basata sui tuoi dati attuali`] : []),
-        expectedBenefits: Array.isArray(rec.expectedBenefits) && rec.expectedBenefits.length > 0 ? rec.expectedBenefits : (rec.reason ? [`Miglioramento del benessere generale`, `Supporto ai tuoi obiettivi di salute`] : [])
-      }));
-    }
 
     // Fallback: generazione basata sui dati
     console.log('🔄 Using fallback recommendations');
@@ -1051,7 +832,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
         icon: '🌬️',
         estimatedTime: '10 min',
         actionable: true,
-        detailedExplanation: `Il tuo umore attuale (${data.mood}/5) indica uno stato di stress o affaticamento. La respirazione profonda attiva il sistema nervoso parasimpatico, riducendo i livelli di cortisolo e aumentando la produzione di endorfine. Questo esercizio può migliorare immediatamente il tuo stato d'animo e ridurre la tensione muscolare.`,
+        detailedExplanation: `Il tuo umore attuale(${data.mood} / 5) indica uno stato di stress o affaticamento.La respirazione profonda attiva il sistema nervoso parasimpatico, riducendo i livelli di cortisolo e aumentando la produzione di endorfine.Questo esercizio può migliorare immediatamente il tuo stato d'animo e ridurre la tensione muscolare.`,
         correlations: [
           `Mood basso (${data.mood}/5) correlato con stress elevato`,
           `HRV ${data.healthMetrics.hrv}ms indica sistema nervoso in tensione`,
@@ -1091,9 +872,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
         ]
       });
     }
-
-    // Steps bassi
-    if (data.healthMetrics.steps < 5000) {
+    if (data.healthMetrics.steps < 300) {
       recommendations.push({
         id: 'movement-boost',
         priority: 'medium' as const,
@@ -1143,9 +922,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
         ]
       });
     }
-
-    // Idratazione bassa
-    if (data.healthMetrics.hydration < 6) {
+    if (data.healthMetrics.hydration < 2) {
       recommendations.push({
         id: 'hydration',
         priority: 'medium' as const,
@@ -1273,12 +1050,9 @@ OUTPUT FORMAT (return ONLY valid JSON):
       }
     }
 
-    return recommendations.slice(0, 4); // Max 4 raccomandazioni
+    return recommendations.slice(0, 3);
   }
 
-  /**
-   * Category configuration for theme indicators
-   */
   private readonly CATEGORY_CONFIG: Record<string, { icon: string; labelIt: string; labelEn: string; color: string }> = {
     nutrition: { icon: 'food-apple', labelIt: 'Nutrizione', labelEn: 'Nutrition', color: '#f59e0b' },
     movement: { icon: 'run', labelIt: 'Movimento', labelEn: 'Movement', color: '#10b981' },
@@ -1287,19 +1061,11 @@ OUTPUT FORMAT (return ONLY valid JSON):
     energy: { icon: 'lightning-bolt', labelIt: 'Energia', labelEn: 'Energy', color: '#f97316' },
   };
 
-  /**
-   * Extracts theme indicators from recommendations
-   * ALWAYS returns exactly 3 indicators for consistent UI
-   * Fills with smart defaults if not enough recommendations
-   */
   private extractThemeIndicators(recommendations: DailyCopilotData['recommendations']): ThemeIndicator[] {
-    // Default indicators for common wellness areas (always available)
     const defaultIndicators: ThemeIndicator[] = [
       { icon: 'lightning-bolt', label: 'Energia', labelEn: 'Energy', color: '#f97316', category: 'energy' },
       { icon: 'food-apple', label: 'Nutrizione', labelEn: 'Nutrition', color: '#f59e0b', category: 'nutrition' },
       { icon: 'run', label: 'Movimento', labelEn: 'Movement', color: '#10b981', category: 'movement' },
-      { icon: 'bed', label: 'Recupero', labelEn: 'Recovery', color: '#3b82f6', category: 'recovery' },
-      { icon: 'meditation', label: 'Mindfulness', labelEn: 'Mindfulness', color: '#8b5cf6', category: 'mindfulness' },
     ];
 
     if (!recommendations || recommendations.length === 0) {
@@ -1331,18 +1097,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
         category: category as ThemeIndicator['category'],
       };
     });
-
-    // ALWAYS fill to 3 indicators with defaults not already used
-    const usedCategories = new Set(result.map(r => r.category));
-    for (const defaultInd of defaultIndicators) {
-      if (result.length >= 3) break;
-      if (!usedCategories.has(defaultInd.category)) {
-        result.push(defaultInd);
-        usedCategories.add(defaultInd.category);
-      }
-    }
-
-    return result.slice(0, 3);
+    return [...result, ...defaultIndicators].slice(0, 3);
   }
 
   /**
@@ -1427,14 +1182,9 @@ OUTPUT FORMAT (return ONLY valid JSON):
     return { focus, focusEn, energy, recovery, mood };
   }
 
-  /**
-   * Gestione cache
-   */
   private getCachedAnalysis(key: string): DailyCopilotData | null {
     const expiry = this.cacheExpiry.get(key);
-    if (expiry && Date.now() < expiry) {
-      return this.cache.get(key) || null;
-    }
+    if (expiry && Date.now() < expiry) return this.cache.get(key) || null;
     return null;
   }
 
@@ -1443,9 +1193,6 @@ OUTPUT FORMAT (return ONLY valid JSON):
     this.cacheExpiry.set(key, Date.now() + this.CACHE_DURATION);
   }
 
-  /**
-   * Converte un record del database in DailyCopilotData
-   */
   private convertDBRecordToCopilotData(dbRecord: any): DailyCopilotData {
     try {
       // 🔥 FIX: Gestisci i casi in cui i dati potrebbero essere stringhe JSON invece di oggetti
@@ -1493,75 +1240,30 @@ OUTPUT FORMAT (return ONLY valid JSON):
       return {
         overallScore: dbRecord.overall_score || 50,
         mood: dbRecord.mood || 3,
-        sleep: {
-          hours: dbRecord.sleep_hours || 7.5,
-          quality: dbRecord.sleep_quality || 80,
-          bedtime: healthMetrics?.bedtime,
-          wakeTime: healthMetrics?.wakeTime,
-        },
-        healthMetrics: healthMetrics,
+        sleep: { hours: dbRecord.sleep_hours || 7.5, quality: dbRecord.sleep_quality || 80 },
+        healthMetrics,
         recommendations: recommendationsArray,
         summary: summaryData,
         themeIndicators,
       };
     } catch (error) {
-      console.error('❌ Error converting DB record to CopilotData:', error);
-      console.error('❌ DB Record:', dbRecord);
-      // 🔥 FIX: Ritorna dati di fallback invece di null per evitare che il componente mostri errore
+      console.error('Error converting DB record:', error);
       return {
-        overallScore: dbRecord.overall_score || 50,
-        mood: dbRecord.mood || 3,
-        sleep: {
-          hours: dbRecord.sleep_hours || 7.5,
-          quality: dbRecord.sleep_quality || 80,
-        },
-        healthMetrics: {
-          steps: 5000,
-          hrv: 35,
-          hydration: 6,
-          restingHR: 65
-        },
+        overallScore: 50,
+        mood: 3,
+        sleep: { hours: 7.5, quality: 80 },
+        healthMetrics: { steps: 5000, hrv: 35, hydration: 6, meditationMinutes: 0 },
         recommendations: [],
-        summary: {
-          focus: 'Mantenimento & Crescita',
-          focusEn: 'Maintenance & Growth',
-          energy: 'medium',
-          recovery: 'good',
-          mood: 'neutral',
-        },
-        themeIndicators: this.extractThemeIndicators([]),
+        summary: { focus: 'Benessere', focusEn: 'Wellness', energy: 'medium', recovery: 'good', mood: 'neutral' },
+        themeIndicators: []
       };
     }
   }
 
-  /**
-   * Invalida la cache
-   */
-  invalidateCache(): void {
-    this.cache.clear();
-    this.cacheExpiry.clear();
-  }
-
-  /**
-   * Ottiene le statistiche del Daily Copilot
-   */
-  async getCopilotStats(userId: string, days: number = 30) {
-    return await this.dbService.getDailyCopilotStats(userId, days);
-  }
-
-  /**
-   * Ottiene la cronologia del Daily Copilot
-   */
-  async getCopilotHistory(userId: string, limit: number = 30) {
-    return await this.dbService.getDailyCopilotHistory(userId, limit);
-  }
-
-  /**
-   * Recupera i dati per il grafico dei trend
-   */
-  async getTrendData(userId: string, days: number = 14) {
-    return await this.dbService.getTrendData(userId, days);
-  }
+  invalidateCache(): void { this.cache.clear(); this.cacheExpiry.clear(); }
+  async getCopilotStats(userId: string, days: number = 30) { return await this.dbService.getDailyCopilotStats(userId, days); }
+  async getCopilotHistory(userId: string, limit: number = 30) { return await this.dbService.getDailyCopilotHistory(userId, limit); }
+  async getTrendData(userId: string, days: number = 14) { return await this.dbService.getTrendData(userId, days); }
 }
 
 export default DailyCopilotService;

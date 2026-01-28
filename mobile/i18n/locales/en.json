@@ -480,6 +480,7 @@
       "subtitle": "A glance at how your body and mind feel"
     },
     "dailyCopilot": {
+      "insufficientData": "The score will be calculated as soon as there is more data for today.",
       "title": "What to do today",
       "subtitle": "Your daily insight, tailored for you.",
       "todayScore": "Today's Score:",

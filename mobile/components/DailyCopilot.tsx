@@ -45,7 +45,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
   const { colors: themeColors } = useTheme();
   const { t, language } = useTranslation();
   const [showScoreModal, setShowScoreModal] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   // 🔥 PERF: Removed debug useEffect that logged on every state change
   // This was causing unnecessary logging and potential performance impact
@@ -169,9 +169,9 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
       return (
         <View style={[styles.compactContainer, styles.compactEmptyState]}>
           <MaterialCommunityIcons name="head-cog" size={28} color="#8b5cf6" />
-          <Text style={styles.compactEmptyTitle}>{t('emptyStates.copilot.title')}</Text>
+          <Text style={styles.compactEmptyTitle}>{t('home.dailyCopilot.title')}</Text>
           <Text style={styles.compactEmptySubtitle}>
-            {t('emptyStates.copilot.subtitle')}
+            {t('home.dailyCopilot.insufficientData')}
           </Text>
         </View>
       );
@@ -181,6 +181,8 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
       <View style={[styles.container, compact && styles.compactContainer]}>
         <EmptyStateCard
           type="copilot"
+          customTitle={t('home.dailyCopilot.title')}
+          customSubtitle={t('home.dailyCopilot.insufficientData')}
           showLearnMore={false}
         />
       </View>

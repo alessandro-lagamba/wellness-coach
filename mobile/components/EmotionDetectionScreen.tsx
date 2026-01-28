@@ -1364,16 +1364,33 @@ export const EmotionDetectionScreen: React.FC = () => {
                 const date = new Date(timestamp);
                 return `${date.getDate()}/${date.getMonth() + 1}`;
               };
+              // 🆕 Group by date and calculate daily averages
+              const dailyData = new Map<string, { valence: number[], arousal: number[], emotions: string[] }>();
+              emotionHistory.forEach((session) => {
+                const dateKey = formatDate(session.timestamp);
+                if (!dailyData.has(dateKey)) {
+                  dailyData.set(dateKey, { valence: [], arousal: [], emotions: [] });
+                }
+                const dayData = dailyData.get(dateKey)!;
+                dayData.valence.push(session.avg_valence || 0);
+                dayData.arousal.push(session.avg_arousal || 0);
+                dayData.emotions.push(session.dominant || 'neutral');
+              });
+              // Calculate averages for each day
+              const aggregatedData = Array.from(dailyData.entries())
+                .map(([date, data]) => ({
+                  date,
+                  valence: data.valence.reduce((sum, v) => sum + v, 0) / data.valence.length,
+                  arousal: data.arousal.reduce((sum, a) => sum + a, 0) / data.arousal.length,
+                  emotion: data.emotions[0], // Use first emotion of the day
+                  timestamp: emotionHistory.find(s => formatDate(s.timestamp) === date)!.timestamp
+                }))
+                .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
               return (
                 <EmotionTrendChart
-                  data={[...emotionHistory]
-                    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Ordina dal più vecchio al più nuovo
-                    .map((session) => ({
-                      date: formatDate(session.timestamp),
-                      valence: session.avg_valence || 0,
-                      arousal: session.avg_arousal || 0,
-                      emotion: session.dominant || 'neutral',
-                    }))}
+
+                  data={aggregatedData}
+
                   title={t('analysis.emotion.trends.title')}
                   onPress={() => setShowTrendDetailModal(true)}
                 />
