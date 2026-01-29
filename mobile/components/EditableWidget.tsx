@@ -211,6 +211,8 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
       shadowOffset: isDraggingSV.value ? { width: 0, height: 8 } : { width: 0, height: 0 },
       shadowOpacity: isDraggingSV.value ? 0.15 : 0,
       shadowRadius: isDraggingSV.value ? 12 : 0,
+      // 🔥 FIX: Remove conflicting structural styles from animated style
+      // BorderRadius and overflow are now handled by static styles/TouchableOpacity
     } as any;
   });
 
@@ -241,7 +243,7 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
       activeOffsetY={[-10, 10]}
       shouldCancelWhenOutside={true}
     >
-      <Animated.View style={animatedStyle}>
+      <Animated.View style={[animatedStyle, styles.widgetShadowContainer]}>
         <TouchableOpacity
           activeOpacity={editMode ? 1 : 0.9}
           onPress={handleTap}
@@ -249,11 +251,16 @@ export const EditableWidget: React.FC<EditableWidgetProps> = ({
           delayLongPress={450}
           disabled={editMode && isDragging}
           style={[
-            { opacity: isEnabled ? 1 : 0.5 },
-            editMode && styles.editModeIndicator,
+            // 🔥 FIX: Render content with clipping to ensure rounded corners inner content
+            { opacity: isEnabled ? 1 : 0.5, borderRadius: 18, overflow: 'hidden' },
           ]}
         >
           {children}
+
+          {/* 🔥 FIX: Render dashed border as absolute overlay to avoid layout clipping issues on iOS */}
+          {editMode && (
+            <Animated.View style={styles.editModeOverlay} pointerEvents="none" />
+          )}
 
           {editMode && (
             <>
@@ -308,14 +315,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#c7d2fe',
   },
-  editModeIndicator: {
+  // 🔥 FIX: Absolute overlay for dashed border
+  editModeOverlay: {
+    ...StyleSheet.absoluteFillObject,
     borderWidth: 2.5,
     borderColor: '#818cf8',
     borderStyle: 'dashed',
-    // 🔥 FIX iOS: Removed fixed borderRadius to prevent clipping during resize animations
-    // The child widget already has its own borderRadius which will be respected
-    overflow: 'visible', // 🔥 FIX: Prevent clipping on iOS during layout animations
+    borderRadius: 18,
+    zIndex: 10,
   },
+  // 🔥 FIX: New container for shadows only
+  widgetShadowContainer: {
+    borderRadius: 18,
+    // overflow: 'visible', // Ensure shadows are visible outside
+    backgroundColor: 'transparent', // Avoid background interrupting shadow
+  }
 });
 
 export default EditableWidget;

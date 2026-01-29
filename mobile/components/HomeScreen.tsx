@@ -76,6 +76,7 @@ import { ChartDetailModal } from './ChartDetailModal';
 import { WeeklyProgressSection } from './WeeklyProgressSection';
 import { CycleData, menstrualCycleService } from '../services/menstrual-cycle.service';
 import { HeroSection } from './HeroSection';
+import WellnessActivitiesService from '../services/wellness-activities.service';
 import { hydrationUnitService } from '../services/hydration-unit.service'; // 🔥 PERF: Static import for faster widget loading
 import { widgetConfigService } from '../services/widget-config.service'; // 🔥 PERF: Static import
 import { supabase } from '../lib/supabase'; // 🔥 PERF: Static import for database operations
@@ -427,7 +428,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     }
   };
 
-  const availableHours = Array.from({ length: 17 }, (_, i) => i + 6); // 6:00 to 22:00
+  const availableHours = Array.from({ length: 8 }, (_, i) => i + 16); // 16:00 to 23:00
 
   // Chart configuration
   const { enabledCharts, toggleChart, config: chartConfig, enableChart, getAvailableCharts } = useChartConfig();
@@ -809,8 +810,13 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         return;
       }
 
-      // 🔥 PERF: Using static import instead of dynamic
-      const today = new Date().toISOString().split('T')[0];
+      // 🔥 FIX: Use local date to avoid fetching yesterday's data due to UTC
+      const now = new Date();
+      const today = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0')
+      ].join('-');
 
       // Recupera i dati di salute dal database
       const { data: dbHealthData, error } = await supabase
@@ -824,28 +830,50 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         console.error('❌ reloadWidgetDataFromDatabase: Database error:', error);
       }
 
-      // 🔥 FIX: Prepara i dati combinati anche se il database non ha record
-      // Usa i valori dal database se disponibili, altrimenti dalle sorgenti esistenti
+      // 🔥 FIX: Improved merging logic to prevent stale DB data from overwriting live HealthKit data
+      // Manual data (hydr/meditation): Always use DB (authoritative source)
+      // Sensor data (steps/HR/sleep): Prefer Live HealthKit data, fallback to DB only if Live is missing/empty
       const combinedData = {
-        steps: dbHealthData?.steps || healthData?.steps || 0,
-        distance: dbHealthData?.distance || healthData?.distance || 0,
-        calories: dbHealthData?.calories || healthData?.calories || 0,
-        activeMinutes: dbHealthData?.active_minutes || healthData?.activeMinutes || 0,
-        heartRate: dbHealthData?.heart_rate || healthData?.heartRate || 0,
-        restingHeartRate: dbHealthData?.resting_heart_rate || healthData?.restingHeartRate || 0,
-        hrv: dbHealthData?.hrv || healthData?.hrv || 0,
-        sleepHours: dbHealthData?.sleep_hours || healthData?.sleepHours || 0,
-        sleepQuality: dbHealthData?.sleep_quality || healthData?.sleepQuality || 0,
-        deepSleepMinutes: dbHealthData?.deep_sleep_minutes || healthData?.deepSleepMinutes || 0,
-        remSleepMinutes: dbHealthData?.rem_sleep_minutes || healthData?.remSleepMinutes || 0,
-        lightSleepMinutes: dbHealthData?.light_sleep_minutes || healthData?.lightSleepMinutes || 0,
-        hydration: dbHealthData?.hydration || 0, // 🔥 Sempre dal database
-        mindfulnessMinutes: dbHealthData?.mindfulness_minutes || 0, // 🔥 Sempre dal database
+        // Cumulative metrics: Use max to strictly avoid regression if DB is lagging
+        steps: Math.max(healthData?.steps || 0, dbHealthData?.steps || 0),
+        distance: Math.max(healthData?.distance || 0, dbHealthData?.distance || 0),
+        calories: Math.max(healthData?.calories || 0, dbHealthData?.calories || 0),
+        activeMinutes: Math.max(healthData?.activeMinutes || 0, dbHealthData?.active_minutes || 0),
+
+        // Current metrics: Use Live if available (>0), else DB
+        heartRate: (healthData?.heartRate && healthData.heartRate > 0) ? healthData.heartRate : (dbHealthData?.heart_rate || 0),
+        restingHeartRate: (healthData?.restingHeartRate && healthData.restingHeartRate > 0) ? healthData.restingHeartRate : (dbHealthData?.resting_heart_rate || 0),
+        hrv: (healthData?.hrv && healthData.hrv > 0) ? healthData.hrv : (dbHealthData?.hrv || 0),
+
+        // Sleep: Use Live if available, else DB
+        sleepHours: (healthData?.sleepHours && healthData.sleepHours > 0) ? healthData.sleepHours : (dbHealthData?.sleep_hours || 0),
+        sleepQuality: (healthData?.sleepQuality && healthData.sleepQuality > 0) ? healthData.sleepQuality : (dbHealthData?.sleep_quality || 0),
+
+        // Detailed sleep metrics: Fallback to DB if Live is missing
+        deepSleepMinutes: healthData?.deepSleepMinutes || dbHealthData?.deep_sleep_minutes || 0,
+        remSleepMinutes: healthData?.remSleepMinutes || dbHealthData?.rem_sleep_minutes || 0,
+        lightSleepMinutes: healthData?.lightSleepMinutes || dbHealthData?.light_sleep_minutes || 0,
+
+        // Manual inputs: ALWAYS from DB
+        hydration: dbHealthData?.hydration || 0,
+        mindfulnessMinutes: dbHealthData?.mindfulness_minutes || 0,
       };
 
       // Aggiorna i widget con i dati combinati
       const updatedWidgetData = await buildWidgetDataFromHealth(combinedData);
-      setWidgetData(updatedWidgetData);
+
+      // 🔥 FIX: Preserve existing cycle widget to ensure independence from hydration/meditation reloads
+      // The user wants cycle data to be strictly from user_profiles and not affected by this reload logic
+      setWidgetData(currentWidgets => {
+        const existingCycleWidget = currentWidgets.find(w => w.id === 'cycle');
+        if (existingCycleWidget && userGender === 'female') {
+          const cycleIndex = updatedWidgetData.findIndex(w => w.id === 'cycle');
+          if (cycleIndex !== -1) {
+            updatedWidgetData[cycleIndex] = existingCycleWidget;
+          }
+        }
+        return [...updatedWidgetData];
+      });
 
       // 🔥 FIX: Aggiorna anche i dati del trend settimanale per i grafici
       // Questo assicura che i grafici di idratazione e meditazione si aggiornino immediatamente
@@ -860,7 +888,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     } catch (error) {
       console.error('❌ Error reloading widget data from database:', error);
     }
-  }, [healthData, buildWidgetDataFromHealth]);
+  }, [healthData, buildWidgetDataFromHealth, userGender]);
 
   // Load today glance data
   // 🔥 FIX: Memoizziamo la funzione con useCallback per evitare ricreazioni ad ogni render
@@ -952,12 +980,15 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         // Questo previene che i widget vengano aggiornati con dati mock
         if (hasRealData || !lastProcessedHealthDataRef.current || lastProcessedHealthDataRef.current.startsWith('placeholder-')) {
           try {
-            const data = await buildWidgetDataFromHealth(healthData);
+            // 🔥 FIX: Usa sempre reloadWidgetDataFromDatabase per assicurare il merge con i dati manuali del DB
+            // Precedentemente, buildWidgetDataFromHealth usava solo i dati dal hook (healthData),
+            // sovrascrivendo con 0 i dati manuali (meditazione, idratazione) se non presenti in HealthKit.
+            await reloadWidgetDataFromDatabase();
+
             // 🔥 FIX: Aggiorna il ref solo dopo aver costruito i dati con successo
             lastProcessedHealthDataRef.current = healthDataKey;
-            setWidgetData(data);
             setWidgetsLoading(false); // 🔥 FIX: Mark widgets as loaded
-            console.log('[WIDGET DEBUG] ✅ Widgets loaded successfully with steps:', healthData?.steps);
+            console.log('[WIDGET DEBUG] ✅ Widgets loaded, merged with DB data');
             // Aggiorna anche la sezione Today At a Glance
             loadTodayGlanceData();
           } catch (error) {
@@ -1516,7 +1547,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       case 'sleep':
       case 'calories':
         // 🔥 Questi widget hanno bisogno dei permessi salute
-        if (healthStatus !== 'ready') {
+        // 🔥 FIX: Permetti interazione anche se status è 'empty' (dati a 0 ma permessi ok/gestiti)
+        if (healthStatus !== 'ready' && healthStatus !== 'empty') {
           // 🔥 FIX: Apri sempre il modal permessi se HealthKit non è pronto
           setHealthPermissionsModal(true);
           return;
@@ -1840,9 +1872,9 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   }, []); // 🔥 FIX: Rimuoviamo translateWidgetTitle dalle dipendenze - viene caricato solo al mount
 
   // 🆕 Funzione per caricare le attività (esportata per essere riutilizzata)
-  const loadWellnessActivities = useCallback(async () => {
+  const loadWellnessActivities = useCallback(async (silent = false) => {
     try {
-      setIsLoadingActivities(true);
+      if (!silent) setIsLoadingActivities(true);
       const currentUser = await AuthService.getCurrentUser();
       if (!currentUser?.id) {
         setIsLoadingActivities(false);
@@ -1900,7 +1932,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
     useCallback(() => {
 
-      loadWellnessActivities();
+      loadWellnessActivities(true);
 
     }, [loadWellnessActivities])
 
@@ -1917,7 +1949,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       if (!currentUser?.id) return;
 
       // Carica inizialmente
-      loadWellnessActivities();
+      loadWellnessActivities(true);
 
       // Configura subscription
       const { supabase } = await import('../lib/supabase');
@@ -1933,7 +1965,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           },
           () => {
             // Ricarica quando ci sono modifiche
-            loadWellnessActivities();
+            loadWellnessActivities(true);
           }
         )
         .subscribe();
@@ -2574,7 +2606,12 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                 index={index}
                 onSync={syncActivityToCalendar}
                 permissions={permissions}
-                onActivityUpdated={loadWellnessActivities}
+                onActivityUpdated={(id, completed) => {
+                  // Optimistic update local state
+                  setWellnessActivities(prev =>
+                    prev.map(a => a.id === id ? { ...a, completed } : a)
+                  );
+                }}
               />
             ))
           )}
@@ -2603,6 +2640,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
             <DailyCopilot
               compact={false}
+              recommendationTime={selectedTime}
               onRecommendationPress={(recommendation) => {
                 setRecommendationModal({ visible: true, recommendation });
               }}
@@ -2682,10 +2720,9 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             // salva il nuovo goal
             await widgetGoalsService.setGoal(goalModal.widgetId!, valueToSave);
 
-            // 🔥 FIX: Usa buildWidgetDataFromHealth per ricaricare correttamente i widget 
-            // con l'unità di idratazione preferita e tutti i dati reali
-            const updatedWidgetData = await buildWidgetDataFromHealth();
-            setWidgetData(updatedWidgetData);
+            // 🔥 FIX: Usa reloadWidgetDataFromDatabase per ricaricare correttamente i widget 
+            // con l'unità di idratazione preferita e tutti i dati reali (DB + Health)
+            await reloadWidgetDataFromDatabase();
             setGoalModal({ visible: false, widgetId: null });
           }}
         />
@@ -2861,6 +2898,26 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         currentGlasses={widgetData.find(w => w.id === 'hydration')?.hydration?.glasses || 0}
         goalGlasses={widgetData.find(w => w.id === 'hydration')?.hydration?.goal || 8}
         onAdd={async (quantity: number) => {
+          // 1. Optimistic Update
+          const GLASS_SIZE = 1; // Assuming 1 unit/glass in logic
+          setWidgetData(currentData => {
+            return currentData.map(w => {
+              if (w.id === 'hydration' && w.hydration) {
+                const currentGlasses = w.hydration.glasses || 0;
+                return {
+                  ...w,
+                  hydration: {
+                    ...w.hydration,
+                    glasses: currentGlasses + quantity, // Optimistic add
+                    ml: (w.hydration.ml || 0) + (quantity * 250)
+                  },
+                  value: `${currentGlasses + quantity}`
+                };
+              }
+              return w;
+            });
+          });
+
           const currentUser = await AuthService.getCurrentUser();
           if (!currentUser?.id) return;
 
@@ -2878,9 +2935,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               t('home.hydrationActions.addedTitle') || 'Acqua aggiunta'
             );
 
-            // 🔥 FIX: Ricarica i dati dal database invece di Health Connect
             await reloadWidgetDataFromDatabase();
           } else {
+            // Revert on error
+            await reloadWidgetDataFromDatabase();
             UserFeedbackService.showError(
               result.error || t('home.hydrationActions.addError') || 'Errore durante l\'aggiunta dell\'acqua',
               t('common.error') || 'Errore'
@@ -2888,6 +2946,26 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           }
         }}
         onRemove={async (quantity: number) => {
+          // 1. Optimistic Update
+          setWidgetData(currentData => {
+            return currentData.map(w => {
+              if (w.id === 'hydration' && w.hydration) {
+                const currentGlasses = w.hydration.glasses || 0;
+                const newGlasses = Math.max(0, currentGlasses - quantity);
+                return {
+                  ...w,
+                  hydration: {
+                    ...w.hydration,
+                    glasses: newGlasses, // Optimistic remove
+                    ml: Math.max(0, (w.hydration.ml || 0) - (quantity * 250))
+                  },
+                  value: `${newGlasses}`
+                };
+              }
+              return w;
+            });
+          });
+
           const currentUser = await AuthService.getCurrentUser();
           if (!currentUser?.id) return;
 
@@ -2905,9 +2983,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               t('home.hydrationActions.removedTitle') || 'Acqua rimossa'
             );
 
-            // 🔥 FIX: Ricarica i dati dal database
             await reloadWidgetDataFromDatabase();
           } else {
+            // Revert on error
+            await reloadWidgetDataFromDatabase();
             UserFeedbackService.showError(
               result.error || t('home.hydrationActions.removeError') || 'Errore durante la rimozione dell\'acqua',
               t('common.error') || 'Errore'
@@ -2923,6 +3002,24 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         currentMinutes={widgetData.find(w => w.id === 'meditation')?.meditation?.minutes || 0}
         goalMinutes={widgetData.find(w => w.id === 'meditation')?.meditation?.goal || 30}
         onAdd={async (minutes: number) => {
+          // 1. Optimistic Update
+          setWidgetData(currentData => {
+            return currentData.map(w => {
+              if (w.id === 'meditation' && w.meditation) {
+                const currentMinutes = w.meditation.minutes || 0;
+                return {
+                  ...w,
+                  meditation: {
+                    ...w.meditation,
+                    minutes: currentMinutes + minutes // Optimistic add
+                  },
+                  value: `${currentMinutes + minutes}m`
+                };
+              }
+              return w;
+            });
+          });
+
           const currentUser = await AuthService.getCurrentUser();
           if (!currentUser?.id) return;
 
@@ -2936,10 +3033,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               t('home.meditationActions.addedTitle') || 'Meditazione aggiunta'
             );
 
-            // 🔥 FIX: Ricarica i dati dal database invece di Health Connect
-            // perché i dati di meditazione sono salvati direttamente nel database
             await reloadWidgetDataFromDatabase();
           } else {
+            // Revert on error
+            await reloadWidgetDataFromDatabase();
             UserFeedbackService.showError(
               result.error || t('home.meditationActions.addError') || 'Errore durante l\'aggiunta della meditazione',
               t('common.error') || 'Errore'
@@ -2947,6 +3044,25 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           }
         }}
         onRemove={async (minutes: number) => {
+          // 1. Optimistic Update
+          setWidgetData((currentData) => {
+            return currentData.map(w => {
+              if (w.id === 'meditation' && w.meditation) {
+                const currentMinutes = w.meditation.minutes || 0;
+                const newMinutes = Math.max(0, currentMinutes - minutes);
+                return {
+                  ...w,
+                  meditation: {
+                    ...w.meditation,
+                    minutes: newMinutes // Optimistic remove
+                  },
+                  value: `${newMinutes}m`
+                };
+              }
+              return w;
+            });
+          });
+
           const currentUser = await AuthService.getCurrentUser();
           if (!currentUser?.id) return;
 
@@ -2960,15 +3076,17 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               t('home.meditationActions.removedTitle') || 'Meditazione rimossa'
             );
 
-            // 🔥 FIX: Ricarica i dati dal database invece di Health Connect
             await reloadWidgetDataFromDatabase();
           } else {
+            // Revert on error
+            await reloadWidgetDataFromDatabase();
             UserFeedbackService.showError(
               result.error || t('home.meditationActions.removeError') || 'Errore durante la rimozione della meditazione',
               t('common.error') || 'Errore'
             );
           }
         }}
+
       />
 
       {/* Menstrual Cycle Modal */}
@@ -3141,7 +3259,7 @@ const ActivityItem: React.FC<{
   index: number;
   onSync: (a: DailyActivity) => void;
   permissions: { calendar: boolean; notifications: boolean };
-  onActivityUpdated?: () => void;
+  onActivityUpdated?: (id: string, completed: boolean) => void;
 }> = ({ activity, index, onSync, permissions, onActivityUpdated }) => {
   const { colors: themeColors, mode } = useTheme();
   const [isCompleting, setIsCompleting] = React.useState(false);
@@ -3176,14 +3294,15 @@ const ActivityItem: React.FC<{
     });
 
     try {
-      const WellnessActivitiesService = (await import('../services/wellness-activities.service')).default;
+      // Optimistic update
+      onActivityUpdated?.(activity.id, !activity.completed);
+
       const result = await WellnessActivitiesService.markActivityCompleted(activity.id, !activity.completed);
 
-      if (result.success) {
-        // Ricarica le attività dopo un breve delay per permettere l'animazione
-        setTimeout(() => {
-          onActivityUpdated?.();
-        }, 300);
+      if (!result.success) {
+        // Revert optimistic update if failed
+        onActivityUpdated?.(activity.id, activity.completed);
+        console.error('Failed to mark activity completed:', result.error);
       }
     } catch (error) {
       console.error('Error toggling activity completion:', error);

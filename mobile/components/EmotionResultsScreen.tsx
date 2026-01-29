@@ -375,7 +375,11 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
       return language === 'it'
         ? 'Livello di attivazione elevato, indicando energia e vigilanza nell\'espressione.'
         : 'High activation level, indicating energy and alertness in the expression.';
-    } else if (arousal < -0.3) {
+    } else if (arousal < -0.2) {
+      return language === 'it'
+        ? 'Livello di attivazione ridotto, con segnali di pesantezza o ritiro emotivo.'
+        : 'Reduced activation level, with signs of heaviness or emotional withdrawal.';
+    } else if (arousal < 0.1) {
       return language === 'it'
         ? 'Livello di attivazione basso, suggerendo calma e rilassatezza.'
         : 'Low activation level, suggesting calmness and relaxation.';
@@ -441,7 +445,7 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         wellnessScore: 40
       },
       neutral: {
-        gradient: ['#6b7280', '#4b5563', '#374151'],
+        gradient: ['#5e8f98ff', '#4a6d84ff', '#375879ff'],
         icon: 'emoticon-neutral-outline',
         title: t('analysis.emotion.results.emotions.neutral.title'),
         description: t('analysis.emotion.results.emotions.neutral.description'),
@@ -626,10 +630,11 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
                 )}
 
                 {/* Key Cues List - filtered to remove AU codes */}
+                {/* Key Cues List - Single Paragraph Mode */}
                 {fullAnalysisResult?.observations && filterObservations(fullAnalysisResult.observations).map((obs: string, index: number) => (
-                  <View key={index} style={styles.observationItem}>
-                    <View style={styles.bulletPoint} />
-                    <Text style={[styles.observationText, { color: colors.text }]}>
+                  <View key={index} style={[styles.observationItem, { marginBottom: 8 }]}>
+                    {/* 🆕 Rimosso bulletPoint per stile paragrafo */}
+                    <Text style={[styles.observationText, { color: colors.text, lineHeight: 24 }]}>
                       {capitalizeFirst(translateAIText(obs))}
                     </Text>
                   </View>

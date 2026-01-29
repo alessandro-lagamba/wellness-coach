@@ -26,6 +26,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { CameraView } from 'expo-camera';
 import CameraCapture from './CameraCapture';
 import { useCameraController } from '../hooks/useCameraController';
@@ -797,10 +798,24 @@ export const EmotionDetectionScreen: React.FC = () => {
         throw new Error('Camera returned null photo');
       }
 
+      // 🔥 FIX: Normalize image orientation using ImageManipulator
+      // This is crucial for iOS where EXIF orientation is often ignored by backends
+      const width = photo.width > 1080 ? 1080 : photo.width;
+      const manipulated = await ImageManipulator.manipulateAsync(
+        photo.uri,
+        [{ resize: { width } }], // Resize triggers context redraw, baking orientation
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      // Use manipulated URI instead of original
+      const finalUri = manipulated.uri;
+
+
       if (!photo?.base64 && photo?.uri) {
         try {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
-          const base64 = await FileSystem.readAsStringAsync(photo.uri, {
+          // Use finalUri (manipulated) to read base64
+          const base64 = await FileSystem.readAsStringAsync(finalUri, {
             encoding: FileSystem.EncodingType.Base64,
           });
           photo.base64 = base64;
@@ -1253,51 +1268,6 @@ export const EmotionDetectionScreen: React.FC = () => {
               </ImageBackground>
             </TouchableOpacity>
           </View>
-          {latestEmotionSession && (
-            <>
-              {/* 🆕 FIX: Restored section header without refresh button */}
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: themeColors.text }, { marginTop: 24 }]}>{t('analysis.emotion.recent.title')}</Text>
-              </View>
-
-              <View style={{ paddingHorizontal: 0 }}>
-                {(() => {
-                  try {
-                    // Always show the card, with fallback data if no session exists
-                    const fallbackSession = {
-                      id: 'fallback',
-                      timestamp: new Date(),
-                      dominant: 'neutral',
-                      avg_valence: 0,
-                      avg_arousal: 0.5,
-                      confidence: 0.5,
-                      duration: 0,
-                    };
-
-                    return (
-                      <EmotionSessionCard
-                        session={latestEmotionSession || fallbackSession}
-                      />
-                    );
-                  } catch (error) {
-                    // 🔥 FIX: Solo errori critici in console
-                    console.error('❌ Failed to load latest emotion session:', error);
-                    // Fallback session in case of error
-                    const fallbackSession = {
-                      id: 'error-fallback',
-                      timestamp: new Date(),
-                      dominant: 'neutral',
-                      avg_valence: 0,
-                      avg_arousal: 0.5,
-                      confidence: 0.5,
-                      duration: 0,
-                    };
-                    return <EmotionSessionCard session={fallbackSession} />;
-                  }
-                })()}
-              </View>
-            </>
-          )}
 
           {/* 🆕 Time Machine Card - Coming Soon */}
           <View style={{ paddingHorizontal: 16, marginTop: 20, marginBottom: 8 }}>
@@ -1343,6 +1313,52 @@ export const EmotionDetectionScreen: React.FC = () => {
               </ImageBackground>
             </TouchableOpacity>
           </View>
+
+          {latestEmotionSession && (
+            <>
+              {/* 🆕 FIX: Restored section header without refresh button */}
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: themeColors.text }, { marginTop: 24 }]}>{t('analysis.emotion.recent.title')}</Text>
+              </View>
+
+              <View style={{ paddingHorizontal: 0 }}>
+                {(() => {
+                  try {
+                    // Always show the card, with fallback data if no session exists
+                    const fallbackSession = {
+                      id: 'fallback',
+                      timestamp: new Date(),
+                      dominant: 'neutral',
+                      avg_valence: 0,
+                      avg_arousal: 0.5,
+                      confidence: 0.5,
+                      duration: 0,
+                    };
+
+                    return (
+                      <EmotionSessionCard
+                        session={latestEmotionSession || fallbackSession}
+                      />
+                    );
+                  } catch (error) {
+                    // 🔥 FIX: Solo errori critici in console
+                    console.error('❌ Failed to load latest emotion session:', error);
+                    // Fallback session in case of error
+                    const fallbackSession = {
+                      id: 'error-fallback',
+                      timestamp: new Date(),
+                      dominant: 'neutral',
+                      avg_valence: 0,
+                      avg_arousal: 0.5,
+                      confidence: 0.5,
+                      duration: 0,
+                    };
+                    return <EmotionSessionCard session={fallbackSession} />;
+                  }
+                })()}
+              </View>
+            </>
+          )}
 
           {/* Weekly Recap Section */}
           <View style={styles.sectionHeader}>

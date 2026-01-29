@@ -313,7 +313,12 @@ export class TodayGlanceService {
       const { HealthDataSyncService } = await import('./health-data-sync.service');
       const { HealthDataService } = await import('./health-data.service');
 
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const now = new Date();
+      const today = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0')
+      ].join('-'); // YYYY-MM-DD (Local)
       const GLASS_SIZE_ML = 250; // Un bicchiere standard è 250ml
 
       // Recupera i dati di salute attuali per oggi
@@ -402,7 +407,12 @@ export class TodayGlanceService {
       const { HealthDataSyncService } = await import('./health-data-sync.service');
       const { HealthDataService } = await import('./health-data.service');
 
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const now = new Date();
+      const today = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0')
+      ].join('-'); // YYYY-MM-DD (Local)
       const GLASS_SIZE_ML = 250; // Un bicchiere standard è 250ml
 
       // Recupera i dati di salute attuali per oggi
@@ -468,7 +478,12 @@ export class TodayGlanceService {
    */
   static async addMeditationMinutes(userId: string, minutes: number): Promise<{ success: boolean; error?: string; newMinutes?: number }> {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const today = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0')
+      ].join('-'); // YYYY-MM-DD (Local)
 
       // Recupera i dati esistenti per oggi
       const { data: existingData, error: fetchError } = await supabase
@@ -542,7 +557,12 @@ export class TodayGlanceService {
    */
   static async removeMeditationMinutes(userId: string, minutes: number): Promise<{ success: boolean; error?: string; newMinutes?: number }> {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const today = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0')
+      ].join('-'); // YYYY-MM-DD (Local)
 
       // Recupera i dati esistenti per oggi
       const { data: existingData, error: fetchError } = await supabase

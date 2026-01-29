@@ -33,6 +33,7 @@ interface DailyCopilotProps {
   onViewHistory?: () => void;
   onShowInfo?: () => void;
   compact?: boolean;
+  recommendationTime?: number;
 }
 
 // 🔥 PERF: Memoized component to prevent unnecessary re-renders
@@ -41,7 +42,9 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
   onViewDetails,
   onViewHistory,
   onShowInfo,
+
   compact = false,
+  recommendationTime = 18,
 }) => {
   const {
     copilotData,
@@ -475,15 +478,15 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
               allowFontScaling={false}
               style={[styles.recommendationsTitle, { color: themeColors.text }]}
             >
-              {language === 'it' ? 'Raccomandazioni per oggi:' : 'Today\'s Recommendations:'}
+              {language === 'it' ? 'Raccomandazioni per te:' : 'Your Recommendations:'}
             </Text>
 
             <View style={styles.recommendationsList}>
               {recommendations.length === 0 ? (
                 <View style={[styles.emptyRecommendations, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
                   <MaterialCommunityIcons name="information-outline" size={24} color={themeColors.textSecondary} />
-                  <Text style={[styles.emptyRecommendationsText, { color: themeColors.textSecondary }]}>
-                    {language === 'it' ? 'Nessuna raccomandazione disponibile al momento' : 'No recommendations available at the moment'}
+                  <Text style={[styles.emptyRecommendationsText, { color: themeColors.textSecondary }, { fontFamily: 'Figtree_500Medium' }]}>
+                    {language === 'it' ? `Attendi le ore ${recommendationTime}:00 per ricevere le raccomandazioni sulla base dei tuoi dati della giornata` : `Wait until ${recommendationTime}:00 to receive recommendations based on your data for the day.`}
                   </Text>
                 </View>
               ) : (

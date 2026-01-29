@@ -18,6 +18,7 @@ import CameraCapture from './CameraCapture';
 import { useCameraController } from '../hooks/useCameraController';
 import { AvatarService } from '../services/avatar.service';
 import { AuthService } from '../services/auth.service';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 export const AvatarCaptureScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -73,6 +74,17 @@ export const AvatarCaptureScreen: React.FC = () => {
         throw new Error('Failed to capture photo');
       }
 
+      // 🔥 FIX: Normalize image orientation using ImageManipulator
+      // This reads the EXIF orientation and "bakes" it into the pixel data,
+      // fixing the rotation issue on iOS when uploading to backends that ignore EXIF.
+      // We also verify width to ensure it's not massive.
+      const width = photo.width > 1080 ? 1080 : photo.width;
+      const manipulated = await ImageManipulator.manipulateAsync(
+        photo.uri,
+        [{ resize: { width } }], // Resize triggers context redraw, fixing orientation
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
       setCapturing(false);
       setGenerating(true);
 
@@ -82,8 +94,8 @@ export const AvatarCaptureScreen: React.FC = () => {
         throw new Error('User not authenticated');
       }
 
-      // Genera l'avatar dal backend
-      const result = await AvatarService.generateFromPhoto(photo.uri, {
+      // Genera l'avatar dal backend usando l'immagine processata
+      const result = await AvatarService.generateFromPhoto(manipulated.uri, {
         userId: currentUser.id,
         mimeType: 'image/jpeg',
       });

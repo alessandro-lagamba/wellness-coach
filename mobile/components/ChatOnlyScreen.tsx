@@ -577,7 +577,7 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
     const closeVoiceInterface = useCallback(() => {
         setVoiceModeDismissed(true);
         if (voiceMode === 'true') {
-            router.replace('/(tabs)/coach');
+            router.replace('/(tabs)');
         }
         voiceInterfaceOpacity.value = withTiming(0, { duration: 300 }, () => {
             runOnJS(setShowVoiceInterface)(false);

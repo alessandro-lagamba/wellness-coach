@@ -137,14 +137,20 @@ const MiniGaugeChart: React.FC<Props> = memo(({
     }
     if ("calories" in additionalData) {
       const d = additionalData.calories
-      // For Large size, show only current calories. For Medium, show current/goal.
-      const valueDisplay = size === "large" ? `${d.current}` : `${d.current}/${d.goal}`
+      // For Large size, show ONLY macros (Carbs, Prot, Fat) since total is in title
+      // For Medium, show Calorie breakdown + macros if space permits
 
-      const chips = [{ icon: "fire", label: t('home.widgets.details.calories'), value: valueDisplay }]
+      const chips = []
+
+      if (size !== "large") {
+        const valueDisplay = `${d.current}/${d.goal}`
+        chips.push({ icon: "fire", label: t('home.widgets.details.calories'), value: valueDisplay })
+      }
+
       if (size === "large" || size === "medium") {
         chips.push({ icon: "barley", label: t('home.widgets.details.carbs'), value: `${d.carbs}g` })
         chips.push({ icon: "food-drumstick", label: t('home.widgets.details.protein'), value: `${d.protein}g` })
-        // Only show fat if we have space (Large size usually fits 3 chips comfortably)
+        // Always show fat in large view (now we have space since we removed total calories)
         if (size === "large") {
           chips.push({ icon: "oil", label: t('home.widgets.details.fat'), value: `${d.fat}g` })
         }

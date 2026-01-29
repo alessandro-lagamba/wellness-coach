@@ -378,17 +378,21 @@ export class HealthDataService {
 
         // 🔥 FIX: Rimuoviamo console.log eccessivi
 
-        // Map HealthKit permissions to our interface
+        // 🔥 FIX: On iOS, we cannot distinguish between "denied" and "no data" for privacy reasons.
+        // If initHealthKit didn't error, we assume the user has been prompted.
+        // We optimistically set permissions to TRUE to avoid the "phantom permission" loop
+        // where the app keeps asking for permissions because it sees 'false'.
+        // If the user actually denied them, queries will just return 0, which is handled as 'empty' data.
         this.permissions = {
-          steps: results.steps === 'granted',
-          heartRate: results.heartRate === 'granted',
-          sleep: results.sleepAnalysis === 'granted',
-          hrv: results.heartRateVariability === 'granted',
-          bloodPressure: results.bloodPressure === 'granted',
-          weight: results.bodyMass === 'granted',
-          bodyFat: results.bodyFatPercentage === 'granted',
+          steps: true,
+          heartRate: true,
+          sleep: true,
+          hrv: true,
+          bloodPressure: true,
+          weight: true,
+          bodyFat: true,
           hydration: false, // Not directly available in HealthKit
-          mindfulness: results.mindfulSession === 'granted',
+          mindfulness: true,
           menstruation: false, // TODO: Add iOS support
         };
 
@@ -521,9 +525,6 @@ export class HealthDataService {
             throw new Error(result.error || 'Health Connect sync failed');
           }
         }
-      } else if (this.config.fallbackToMock && !shouldUseRealData) {
-        healthData = this.generateMockHealthData();
-        isMock = true;
       } else {
         console.timeEnd('HealthConnect_Fetch');
 
@@ -666,12 +667,14 @@ export class HealthDataService {
           });
 
           let sleepMinutes = 0;
-          sleepResults.forEach(sample => {
-            if (sample.value === 'ASLEEP' || sample.value === 'INBED') {
-              const start = new Date(sample.startDate).getTime();
-              const end = new Date(sample.endDate).getTime();
-              sleepMinutes += (end - start) / (1000 * 60);
-            }
+          // 🔥 FIX: Prioritize ASLEEP to avoid double counting (INBED + ASLEEP)
+          const asleepSamples = sleepResults.filter(s => s.value === 'ASLEEP');
+          const samplesToUse = asleepSamples.length > 0 ? asleepSamples : sleepResults.filter(s => s.value === 'INBED');
+
+          samplesToUse.forEach(sample => {
+            const start = new Date(sample.startDate).getTime();
+            const end = new Date(sample.endDate).getTime();
+            sleepMinutes += (end - start) / (1000 * 60);
           });
 
           const healthData: HealthData = {
@@ -1187,30 +1190,7 @@ export class HealthDataService {
     }
   }
 
-  /**
-   * Generate mock health data for testing
-   */
-  private generateMockHealthData(): HealthData {
-    const baseSteps = 7500 + Math.random() * 5000;
-    const baseSleep = 7 + Math.random() * 2;
 
-    return {
-      steps: Math.round(baseSteps),
-      distance: Math.round(baseSteps * 0.0008 * 100) / 100,
-      calories: Math.round(baseSteps * 0.04),
-      activeMinutes: Math.round(30 + Math.random() * 60),
-      heartRate: Math.round(65 + Math.random() * 20),
-      restingHeartRate: Math.round(55 + Math.random() * 15),
-      hrv: Math.round(25 + Math.random() * 20),
-      sleepHours: Math.round(baseSleep * 10) / 10,
-      sleepQuality: Math.round(70 + Math.random() * 25),
-      deepSleepMinutes: Math.round(90 + Math.random() * 60),
-      remSleepMinutes: Math.round(60 + Math.random() * 40),
-      lightSleepMinutes: Math.round(180 + Math.random() * 120),
-      hydration: Math.round(1500 + Math.random() * 1000),
-      mindfulnessMinutes: Math.round(5 + Math.random() * 25),
-    };
-  }
 
   /**
    * Load latest health data previously synced to Supabase

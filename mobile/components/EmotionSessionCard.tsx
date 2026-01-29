@@ -83,8 +83,8 @@ const EMOTION_THEMES: Record<string, EmotionTheme> = {
     icon: 'weather-cloudy',
     stateIT: 'Emozione Dominante',
     stateEN: 'Dominant Emotion',
-    descIT: 'Riflessione profonda e introspezione',
-    descEN: 'Deep reflection and introspection',
+    descIT: 'Riflessione profonda e raccoglimento interiore',
+    descEN: 'Deep reflection and inner gathering',
   },
   sad: {
     color: '#f43f5e',
@@ -92,8 +92,8 @@ const EMOTION_THEMES: Record<string, EmotionTheme> = {
     icon: 'weather-cloudy',
     stateIT: 'Emozione Dominante',
     stateEN: 'Dominant Emotion',
-    descIT: 'Riflessione profonda e introspezione',
-    descEN: 'Deep reflection and introspection',
+    descIT: 'Riflessione profonda e raccoglimento interiore',
+    descEN: 'Deep reflection and inner gathering',
   },
   anger: {
     color: '#ef4444',

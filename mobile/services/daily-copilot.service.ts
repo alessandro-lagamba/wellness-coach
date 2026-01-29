@@ -306,7 +306,7 @@ class DailyCopilotService {
       const { data } = await supabase
         .from('user_profiles')
         .select('recommendation_time')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .maybeSingle();
 
       // Default to 18:00 if not set
@@ -325,7 +325,7 @@ class DailyCopilotService {
       const { error } = await supabase
         .from('user_profiles')
         .update({ recommendation_time: time })
-        .eq('user_id', userId);
+        .eq('id', userId);
 
       if (error) {
         console.error('Error updating recommendation time:', error);
@@ -1568,7 +1568,7 @@ OUTPUT FORMAT(return ONLY valid JSON):
         overallScore: 50,
         mood: 3,
         sleep: { hours: 7.5, quality: 80 },
-        healthMetrics: { steps: 5000, hrv: 35, hydration: 6, meditationMinutes: 0 },
+        healthMetrics: { steps: 0, hrv: 0, hydration: 0, meditationMinutes: 0 },
         recommendations: [],
         summary: { focus: 'Benessere', focusEn: 'Wellness', energy: 'medium', recovery: 'good', mood: 'neutral' },
         themeIndicators: []

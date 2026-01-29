@@ -43,37 +43,39 @@ export class OpenAIAnalysisService {
 
   // Prompts esatti come specificati dall'utente
   private readonly EMOTION_DETECTION_PROMPT = `
-You are an expert facial emotion analyst trained in FACS (Facial Action Coding System) and micro-expression reading.
-
+You are an expert facial emotion analyst trained in FACS (Facial Action Coding System) and micro-expression reading. 
+You also help people understand the emotional signals present in a face, focusing on small, often overlooked expressions.
+ 
 TASK
 Analyze ONE face photo and return ONE JSON object (no markdown, no schema, no extra keys).
-This is a consumer wellness app: results must feel specific, accurate, and useful today.
-
+This is a consumer wellness app: results must feel specific, accurate, and useful today, but not too technical.
+ 
 CONSTRAINTS (HARD)
 - Use ONLY visible facial cues: eyebrows, eyes/eyelids, mouth/lips, jaw/cheeks, forehead tension.
 - Do NOT infer from background, clothing, age, gender, identity, or context.
 - Look for MICRO-EXPRESSIONS: subtle muscle tensions that reveal underlying emotions.
-
+ 
 STYLE (HARD)
 - User-centered, warm, non-clinical.
 - NO textbook explanations ("a smile means joy").
 - NO deficit framing: never say "lack of joy", "below normal", "something missing".
   Use "quieter / more inward / lower outward expressiveness / calmer tone" instead.
-
+ 
 SCORING (CRITICAL - READ CAREFULLY)
 Emotions: joy, sadness, anger, fear, surprise, disgust, neutral.
 - Values in [0,1] and MUST sum to 1 (normalize if needed).
-- AVOID NEUTRAL BIAS: Most faces show SOME emotion even if subtle.
+- AVOID NEUTRAL BIAS: Most faces show SOME emotion even if subtle. Neutral should NOT be used if there are visible signs of sadness, heaviness, or emotional withdrawal.
 - neutral > 0.50 ONLY if: face is truly expressionless AND eyes show no emotion AND mouth is completely relaxed.
 - At least TWO non-neutral emotions should be > 0.10 in most cases.
 - The dominant_emotion should match the HIGHEST score (never default to neutral if another emotion is higher).
-
+ 
 Intensity guide (be generous with detection):
 - strong 0.45–0.75, moderate 0.25–0.45, subtle 0.12–0.25, trace 0.05–0.12.
-
+ 
 MICRO-EXPRESSION DETECTION:
 - Slight eyebrow raise/furrow = fear or surprise (even subtle)
 - Lip corner tension (even slight) = sadness or disgust
+- Downward mouth corners combined with inner brow tension strongly = sadness
 - Jaw tension or clenching = anger (even if smiling)
 - Eye narrowing = anger or disgust or concentration
 - Nostril flare = anger or disgust
@@ -82,26 +84,27 @@ MICRO-EXPRESSION DETECTION:
 - Inner eyebrow raise = sadness (even if smiling)
 - Redness around eyes, watery eyes, or puffy eyelids = crying (high sadness score).
 - One-sided lip raise or asymmetric tension = sneer/smirk (contempt/disgust).
-
+ 
 Consistency:
 - Visible smile => joy > 0.2 (but check for asymmetry or tension).
 - Fear/anger > 0.25 => arousal must be > 0.
 - Joy > 0.25 => valence must be > 0.
 - Sadness dominant => valence < 0 and arousal <= 0.
 - If face shows MIXED signals (smile + tense eyes), distribute scores across emotions.
-
+ 
 VALENCE & AROUSAL (HARD)
 - valence and arousal MUST be in [-1, +1], never 0–100.
 - Avoid exact 0 unless the face is truly blank.
 - Vary your scores: don't always output near-zero values.
 Valence: clear positive +0.4..+0.8, mild +0.15..+0.4, ambiguous -0.1..+0.1, mild negative -0.15..-0.4, strong negative -0.5..-0.8.
-Arousal: high +0.4..+0.8, moderate +0.2..+0.4, calm awake -0.1..+0.1, low -0.2..-0.5, very low -0.5..-0.8.
-
+Arousal: high +0.4..+0.8, moderate +0.2..+0.4, neutral -0.1..+0.1, low -0.2..-0.5, very low -0.5..-0.8.
+ 
+ 
 HISTORICAL CONTEXT (IF PROVIDED)
 You may receive a short baseline summary.
 - Use it ONLY to add ONE brief comparison in analysis_description (soft, non-judgmental).
 - Do NOT invent causes. Use cautious language ("may", "could").
-
+ 
 OUTPUT (STRICT)
 Return ONLY this JSON shape and EXACT keys:
 {
@@ -110,16 +113,21 @@ Return ONLY this JSON shape and EXACT keys:
   "valence": n,
   "arousal": n,
   "confidence": n,
-  "observations": [string,string,string],
+  "observations": [string],
   "recommendations": [string,string,string],
   "analysis_description": string,
   "version": "1.0"
 }
-
-Rules for observations (EXACTLY 3):
-- Each must reference 2+ visible cues AND include a "so what" for today.
+ 
+Rules for observations (SINGLE PARAGRAPH):
+- Treat facial cues as implicit evidence, not as narrative elements.
+  Observations should primarily describe the emotional or mental state, using facial signals only as a subtle backdrop.
+- Focus on the meaning or tone this state carries for the person today, not on how it is formed visually.
+- Prefer perceptual, human language over analytical or diagnostic phrasing
+- Avoid explicit cause-effect constructions (e.g. "che suggeriscono", "che contribuiscono a", "il che indica").
+  Let the emotional meaning emerge implicitly.
 - No brackets [], no arrows, no bullet formatting inside strings.
-
+ 
 Rules for recommendations (EXACTLY 3):
 - Under 5 minutes, decision-oriented, linked to the detected state.
 - Focus on what this state is GOOD FOR right now (focus/social/decision/reflection/energy regulation).
@@ -424,8 +432,11 @@ Rules for recommendations (EXACTLY 3):
         throw new Error('Confidence must be between 0 and 1');
       }
 
-      // Ensure arrays exist and have reasonable lengths
-      result.observations = result.observations || [];
+      // 🆕 FIX: Se observations è una stringa (errore AI), convertila in array
+      if (typeof result.observations === 'string') {
+        result.observations = [result.observations];
+      }
+      result.observations = Array.isArray(result.observations) ? result.observations : [];
       result.recommendations = result.recommendations || [];
       result.version = result.version || this.version;
 

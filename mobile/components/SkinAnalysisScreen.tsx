@@ -25,6 +25,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 import CameraCapture from './CameraCapture';
 import AnalysisCaptureLayout from './shared/AnalysisCaptureLayout';
 import { useCameraController } from '../hooks/useCameraController';
@@ -1052,10 +1053,24 @@ const SkinAnalysisScreenContent: React.FC = () => {
         throw new Error('Camera returned null photo');
       }
 
+      // 🔥 FIX: Normalize image orientation using ImageManipulator
+      // This is crucial for iOS where EXIF orientation is often ignored by backends
+      const width = photo.width > 1080 ? 1080 : photo.width;
+      const manipulated = await ImageManipulator.manipulateAsync(
+        photo.uri,
+        [{ resize: { width } }], // Resize triggers context redraw, baking orientation
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      // Use manipulated URI instead of original
+      const finalUri = manipulated.uri;
+
+
       if (!photo?.base64 && photo?.uri) {
         try {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
-          const base64 = await FileSystem.readAsStringAsync(photo.uri, {
+          // Use finalUri (manipulated) to read base64
+          const base64 = await FileSystem.readAsStringAsync(finalUri, {
             encoding: FileSystem.EncodingType.Base64,
           });
           photo.base64 = base64;

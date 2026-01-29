@@ -25,7 +25,7 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Feather, Ionicons } from '@expo/vector-icons';
 import Animated, {
     FadeIn,
     FadeInDown,
@@ -61,15 +61,23 @@ interface EmotionalHoroscopeScreenProps {
 // ROLE EMOJI MAPPING (Placeholder for actual images)
 // =============================================================================
 
-const ROLE_EMOJIS: Record<string, string> = {
-    il_regista_con_il_budget: '🎬',
-    l_equilibrista: '⚖️',
-    in_modalita_risparmio: '🔋',
-    il_silente: '🌫️',
-    un_concerto_metal: '🎸',
-    segnale_infrasuono: '📡',
-    motore_a_propulsione: '🚀',
-    l_attore_senza_oscar: '🎭',
+// =============================================================================
+// ROLE ICON MAPPING
+// =============================================================================
+
+type RoleIcon =
+    | { type: 'emoji'; value: string }
+    | { type: 'icon'; library: 'Feather' | 'MaterialCommunityIcons' | 'Ionicons'; name: string };
+
+const ROLE_ICONS: Record<string, RoleIcon> = {
+    il_regista_con_il_budget: { type: 'emoji', value: '🎬' },
+    l_equilibrista: { type: 'emoji', value: '⚖️' },
+    in_modalita_risparmio: { type: 'emoji', value: '🔋' },
+    il_silente: { type: 'icon', library: 'Ionicons', name: 'rainy-outline' },
+    un_concerto_metal: { type: 'emoji', value: '🎸' },
+    segnale_infrasuono: { type: 'emoji', value: '📡' },
+    motore_a_propulsione: { type: 'emoji', value: '🚀' },
+    l_attore_senza_oscar: { type: 'emoji', value: '🎭' },
 };
 
 // =============================================================================
@@ -168,7 +176,7 @@ export const EmotionalHoroscopeScreen: React.FC<EmotionalHoroscopeScreenProps> =
                             </TouchableOpacity>
 
                             <Text style={styles.headerTitle}>
-                                {language === 'en' ? 'HOROSCOPE (NOT REQUESTED)' : 'OROSCOPO (NON RICHIESTO)'}
+                                {language === 'en' ? 'HOROSCOPE (NOT REQUESTED)' : 'L\'OROSCOPO (NON RICHIESTO)'}
                             </Text>
 
                             {/* Spacer for centering */}
@@ -213,9 +221,21 @@ export const EmotionalHoroscopeScreen: React.FC<EmotionalHoroscopeScreenProps> =
                                         style={styles.emojiContainer}
                                     >
                                         <View style={styles.emojiCircle}>
-                                            <Text style={styles.emoji}>
-                                                {ROLE_EMOJIS[horoscopeResult.role] || '✨'}
-                                            </Text>
+                                            {(() => {
+                                                const iconConfig = ROLE_ICONS[horoscopeResult.role];
+                                                if (!iconConfig) return <Text style={styles.emoji}>✨</Text>;
+
+                                                if (iconConfig.type === 'emoji') {
+                                                    return <Text style={styles.emoji}>{iconConfig.value}</Text>;
+                                                } else {
+                                                    let IconLib: any = MaterialCommunityIcons;
+                                                    if (iconConfig.library === 'Feather') IconLib = Feather;
+                                                    if (iconConfig.library === 'Ionicons') IconLib = Ionicons;
+
+                                                    // @ts-ignore
+                                                    return <IconLib name={iconConfig.name} size={64} color="#d8b4fe" />;
+                                                }
+                                            })()}
                                         </View>
                                     </Animated.View>
 
@@ -389,7 +409,7 @@ const styles = StyleSheet.create({
     // Emoji
     emojiContainer: {
         alignItems: 'center',
-        marginTop: 80,
+        marginTop: 40,
         marginBottom: 24,
     },
     emojiCircle: {

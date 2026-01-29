@@ -63,7 +63,13 @@ export class HealthDataSyncService {
         return parseFloat(value.toFixed(precision));
       };
 
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      // 🔥 FIX: Use local date string (YYYY-MM-DD) instead of UTC to match user's calendar day
+      const now = new Date();
+      const today = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0')
+      ].join('-');
 
       // 1. Recupera prima il record esistente per oggi
       const { data: existingRecord } = await supabase
@@ -104,9 +110,11 @@ export class HealthDataSyncService {
         weight: (typeof healthData.weight === 'number' ? parseFloat(healthData.weight.toFixed(2)) : null) || existingRecord?.weight,
         body_fat: (typeof healthData.bodyFat === 'number' ? parseFloat(healthData.bodyFat.toFixed(2)) : null) || existingRecord?.body_fat,
 
-        // 🔥 Hydration and meditation: always take max value to preserve manual entries
-        hydration: Math.max(roundInt(healthData.hydration), existingRecord?.hydration || 0),
-        mindfulness_minutes: Math.max(roundInt(healthData.mindfulnessMinutes), existingRecord?.mindfulness_minutes || 0),
+        // 🔥 Hydration and meditation: Allow overwriting if value is provided (to support removal)
+        // If the new value is explicitly provided (even 0), we use it. 
+        // We rely on the caller (TodayGlanceService) to pass the correct cumulative value.
+        hydration: healthData.hydration !== undefined ? roundInt(healthData.hydration) : (existingRecord?.hydration || 0),
+        mindfulness_minutes: healthData.mindfulnessMinutes !== undefined ? roundInt(healthData.mindfulnessMinutes) : (existingRecord?.mindfulness_minutes || 0),
 
         // 🔥 REMOVED: source column dropped from database
         updated_at: new Date().toISOString(),

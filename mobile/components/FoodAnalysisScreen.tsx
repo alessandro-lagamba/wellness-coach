@@ -27,6 +27,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 import CameraCapture from './CameraCapture';
 import { useCameraController } from '../hooks/useCameraController';
 import { Platform } from 'react-native';
@@ -457,7 +458,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
     analysisResult: any;
   } | null>(null); // 🆕 Dati dell'analisi in attesa di essere salvati
   // Removed showResultsCard state - now using FoodResultsScreen for all results
-  const [cameraType, setCameraType] = useState<'front' | 'back'>('front'); // Default to front camera for consistency
+  const [cameraType, setCameraType] = useState<'front' | 'back'>('back'); // Default to back camera for food analysis
   const [cameraSwitching, setCameraSwitching] = useState(false);
   const [permissionChecking, setPermissionChecking] = useState(false);
   const [isStarting, setIsStarting] = useState(false); // 🔥 FIX: Stato per feedback visivo del pulsante
@@ -1780,10 +1781,24 @@ const FoodAnalysisScreenContent: React.FC = () => {
         throw new Error('Camera returned null photo');
       }
 
+      // 🔥 FIX: Normalize image orientation using ImageManipulator
+      // This is crucial for iOS where EXIF orientation is often ignored by backends
+      const width = photo.width > 1080 ? 1080 : photo.width;
+      const manipulated = await ImageManipulator.manipulateAsync(
+        photo.uri,
+        [{ resize: { width } }], // Resize triggers context redraw, baking orientation
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      // Use manipulated URI instead of original
+      const finalUri = manipulated.uri;
+
+
       if (!photo?.base64 && photo?.uri) {
         try {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
-          const base64 = await FileSystem.readAsStringAsync(photo.uri, {
+          // Use finalUri (manipulated) to read base64
+          const base64 = await FileSystem.readAsStringAsync(finalUri, {
             encoding: FileSystem.EncodingType.Base64,
           });
           photo.base64 = base64;
@@ -1820,7 +1835,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
       // Il salvataggio effettivo avverrà quando l'utente preme "Aggiungi ai pasti"
       if (isMountedRef.current) {
         setPendingAnalysisData({
-          imageUri: photo.uri,
+          imageUri: finalUri, // Use manipulated URI
           analysisResult: result.data,
         });
       }
