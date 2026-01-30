@@ -150,7 +150,7 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
     const router = useRouter();
     const { voiceMode } = useLocalSearchParams();
     const insets = useSafeAreaInsets();
-    const surfaceSecondary = (colors as any).surfaceSecondary ?? colors.surface;
+    const surfaceSecondary = colors.surfaceSecondary;
 
     // Hide tab bar when screen is focused
     useFocusEffect(

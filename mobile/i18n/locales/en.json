@@ -330,7 +330,10 @@
       "bedtime": "Bedtime",
       "wakeTime": "Wake time",
       "quality": "Quality",
-      "hours": "{{hours}}h"
+      "hours": "{{hours}}h",
+      "restorative": "Restorative",
+      "fair": "Fair",
+      "poor": "Poor"
     },
     "hrv": {
       "currentHR": "Current HR",
@@ -536,7 +539,11 @@
       "oiliness": "Oiliness",
       "hydrationSkin": "Hydration (Skin)",
       "redness": "Redness",
-      "pigmentation": "Pigmentation"
+      "pigmentation": "Pigmentation",
+      "noMoodData": "You haven't performed any emotional analysis on this day",
+      "noSkinData": "You haven't performed any skin analysis on this day",
+      "moodCheckin": "Mood",
+      "sleepCheckin": "Sleep"
     },
     "widgets": {
       "steps": "Steps",
@@ -573,9 +580,11 @@
   "analysis": {
     "gauge": {
       "excellent": "Excellent",
+      "veryGood": "Very Good",
       "good": "Good",
       "fair": "Fair",
-      "poor": "Poor"
+      "poor": "Poor",
+      "needsCare": "Needs Care"
     },
     "emotion": {
       "card": {
@@ -1477,7 +1486,7 @@
       },
       "dailyIntake": {
         "title": "Daily Intake",
-        "subtitle": "Track your progress toward daily nutritional goals",
+        "subtitle": "Track your progress",
         "ofGoal": "{{value}}% of goal",
         "caloriesDesc": "Daily calorie intake progress. Helps maintain energy balance.",
         "carbsDesc": "Daily carbohydrate intake progress. Essential for energy.",
@@ -1495,7 +1504,7 @@
         "hubTitle": "Recipe Book",
         "hubSubtitle": "Manage your library, weekly planner, and AI suggestions from one place.",
         "openHubTitle": "Open Recipe Book",
-        "openHubSubtitle": "Filter, save, and schedule recipes tailored to your taste and nutrition goals.",
+        "openHubSubtitle": "Filter, save and schedule recipes tailored to your taste and nutrition goals.",
         "hubTag": "All-in-One",
         "tapForRecipe": "Tap for recipe >",
         "loading": "Loading recipe...",
@@ -1609,8 +1618,8 @@
       "fridge": {
         "title": "What's in Your Fridge?",
         "subtitle": "Get personalized recipe suggestions based on your ingredients",
-        "cardTitle": "Smart Recipe Finder",
-        "cardDesc": "Tell us what ingredients you have, and we'll suggest delicious recipes tailored to your preferences and nutritional goals.",
+        "cardTitle": "Generate a Recipe",
+        "cardDesc": "Start from your ingredients for recipes designed around your nutritional needs.",
         "openButton": "Open Fridge & Generate",
         "addIngredients": "Add Ingredients",
         "modalDesc": "Enter the ingredients you have available in your fridge or pantry. The AI will generate a personalized recipe for you!",
@@ -1685,6 +1694,7 @@
       },
       "goals": {
         "title": "Nutritional Goals",
+        "shortTitle": "Goals",
         "manual": "Manual Entry",
         "aiSuggestion": "AI Suggestion",
         "aiTitle": "AI-Powered Calculation",

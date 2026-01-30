@@ -111,6 +111,102 @@ const MetalConcertIcon = () => (
     </View>
 );
 
+const PowerSavingIcon = () => (
+    <View style={[iconStyles.container, { transform: [{ rotate: '-12deg' }] }]}>
+        <View style={iconStyles.batteryBody}>
+            <View style={iconStyles.batteryCap} />
+            <MaterialCommunityIcons name="flash" size={32} color="#d8b4fe" />
+        </View>
+
+        {/* Subtle energy particles around */}
+        <View style={[iconStyles.particle, { top: 30, right: 25 }]} />
+        <View style={[iconStyles.particle, { bottom: 40, left: 20, width: 4, height: 4, opacity: 0.4 }]} />
+    </View>
+);
+
+const InfraSignalIcon = () => (
+    <View style={iconStyles.container}>
+        {/* Outer Ring */}
+        <View style={iconStyles.outerRing} />
+
+
+        {/* Side Antenna Right (Smaller) */}
+        <View style={[iconStyles.antennaPole, { height: 20, right: 35, bottom: 38, opacity: 0.3 }]} />
+        <View style={[iconStyles.antennaDot, { width: 5, height: 5, right: 33, top: 62, opacity: 0.3 }]} />
+
+        {/* Central Antenna Pole & Base */}
+        <View style={iconStyles.antennaPole} />
+        <View style={iconStyles.antennaBase} />
+
+        {/* Radiating Arcs (Top segments) - Thinner and more spread out */}
+        <View style={[iconStyles.antennaArc, { width: 75, height: 75, top: 40, opacity: 0.8 }]} />
+        <View style={[iconStyles.antennaArc, { width: 50, height: 50, top: 46, opacity: 0.5 }]} />
+        <View style={[iconStyles.antennaArc, { width: 25, height: 25, top: 52, opacity: 0.25 }]} />
+
+        {/* Central Dot */}
+        <View style={iconStyles.antennaDot} />
+    </View>
+);
+
+const PropulsionIcon = () => (
+    <View style={iconStyles.container}>
+        {/* Outer Ring */}
+        <View style={iconStyles.outerRing} />
+
+        {/* Central Rocket Icon */}
+        <MaterialCommunityIcons
+            name="rocket-launch-outline"
+            size={66}
+            color="#d8b4fe"
+            style={{ marginTop: -12 }}
+        />
+
+        {/* Speed lines */}
+        <View style={[iconStyles.speedLine, { top: 35, left: 22, width: 12, opacity: 0.2 }]} />
+        <View style={[iconStyles.speedLine, { top: 50, right: 18, width: 16, opacity: 0.15 }]} />
+        <View style={[iconStyles.speedLine, { bottom: 45, left: 28, width: 10, opacity: 0.1 }]} />
+    </View>
+);
+
+const EquilibristaIcon = () => (
+    <View style={iconStyles.container}>
+
+        {/* Central Balance Scale */}
+        <MaterialCommunityIcons name="scale-balance" size={68} color="#d8b4fe" />
+
+        {/* Decorative balance points */}
+        <View style={[iconStyles.balanceDot, { left: 30, top: 48, opacity: 0.4 }]} />
+        <View style={[iconStyles.balanceDot, { right: 30, top: 48, opacity: 0.4 }]} />
+
+        {/* Subtle ground/line below */}
+        <View style={[iconStyles.speedLine, { width: 35, bottom: 35, opacity: 0.2, alignSelf: 'center' }]} />
+    </View>
+);
+
+const ActorNoOscarIcon = () => (
+    <View style={iconStyles.container}>
+        {/* Outer Ring */}
+        <View style={iconStyles.outerRing} />
+
+        {/* Theatrical Masks */}
+        <MaterialCommunityIcons
+            name="theater"
+            size={68}
+            color="#d8b4fe"
+            style={{ opacity: 0.85 }}
+        />
+
+        {/* Decorative detail: A faint star outline signifying the missing award */}
+        <View style={{ position: 'absolute', top: 22, right: 28 }}>
+            <MaterialCommunityIcons name="star-outline" size={18} color="#d8b4fe" style={{ opacity: 0.4 }} />
+        </View>
+
+        {/* Decorative dots for consistency */}
+        <View style={[iconStyles.balanceDot, { left: 30, bottom: 38, width: 3, height: 3, opacity: 0.2 }]} />
+        <View style={[iconStyles.balanceDot, { right: 35, top: 45, width: 2, height: 2, opacity: 0.3 }]} />
+    </View>
+);
+
 // =============================================================================
 // ROLE ICON MAPPING
 // =============================================================================
@@ -122,13 +218,13 @@ type RoleIcon =
 
 const ROLE_ICONS: Record<string, RoleIcon> = {
     il_regista_con_il_budget: { type: 'custom', component: <DirectorBudgetIcon /> },
-    l_equilibrista: { type: 'emoji', value: '⚖️' },
-    in_modalita_risparmio: { type: 'emoji', value: '🔋' },
+    l_equilibrista: { type: 'custom', component: <EquilibristaIcon /> },
+    in_modalita_risparmio: { type: 'custom', component: <PowerSavingIcon /> },
     il_silente: { type: 'icon', library: 'Ionicons', name: 'rainy-outline' },
     un_concerto_metal: { type: 'custom', component: <MetalConcertIcon /> },
-    segnale_infrasuono: { type: 'emoji', value: '📡' },
-    motore_a_propulsione: { type: 'emoji', value: '🚀' },
-    l_attore_senza_oscar: { type: 'emoji', value: '🎭' },
+    segnale_infrasuono: { type: 'custom', component: <InfraSignalIcon /> },
+    motore_a_propulsione: { type: 'custom', component: <PropulsionIcon /> },
+    l_attore_senza_oscar: { type: 'custom', component: <ActorNoOscarIcon /> },
 };
 
 // =============================================================================
@@ -312,7 +408,7 @@ export const EmotionalHoroscopeScreen: React.FC<EmotionalHoroscopeScreenProps> =
                                     {/* AI Generated Text Card */}
                                     <Animated.View entering={FadeInDown.delay(400)} style={styles.cardContainer}>
                                         <View style={styles.cardOuter}>
-                                            <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+                                            <BlurView intensity={35} tint="dark" style={StyleSheet.absoluteFill} />
 
                                             <View style={styles.cardContent}>
                                                 <Text style={styles.horoscopeText}>{horoscopeResult.horoscopeText}</Text>
@@ -524,7 +620,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         borderWidth: 0.8,
         borderColor: 'rgba(255, 255, 255, 0.06)',
-        backgroundColor: 'rgba(10, 10, 22, 0.4)', // Higher transparency
+        backgroundColor: 'rgba(10, 10, 22, 0.55)', // More opaque
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.3,
@@ -633,6 +729,89 @@ const iconStyles = StyleSheet.create({
         borderRadius: 55,
         borderWidth: 1,
         borderColor: 'rgba(216, 180, 254, 0.15)',
+    },
+    // Power Saving Icon Styles
+    batteryBody: {
+        width: 38,
+        height: 75,
+        borderRadius: 14,
+        borderWidth: 2.5,
+        borderColor: '#d8b4fe',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        backgroundColor: 'rgba(216, 180, 254, 0.05)',
+    },
+    batteryCap: {
+        position: 'absolute',
+        top: -7,
+        width: 18,
+        height: 5,
+        borderRadius: 2,
+        backgroundColor: '#d8b4fe',
+    },
+    particle: {
+        position: 'absolute',
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#d8b4fe',
+    },
+    // Infra Signal Icon Styles
+    antennaPole: {
+        position: 'absolute',
+        width: 1.2, // Thinner pole
+        height: 38,
+        backgroundColor: '#d8b4fe',
+        bottom: 38,
+    },
+    antennaBase: {
+        position: 'absolute',
+        width: 20,
+        height: 1.2,
+        backgroundColor: '#d8b4fe',
+        bottom: 38,
+        opacity: 0.4,
+    },
+    antennaDot: {
+        position: 'absolute',
+        width: 8, // Slightly smaller dot
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#d8b4fe',
+        top: 41,
+    },
+    antennaArc: {
+        position: 'absolute',
+        borderRadius: 1000,
+        borderWidth: 1.2, // Much thinner arcs
+        borderColor: '#d8b4fe',
+        borderBottomColor: 'transparent',
+        borderLeftColor: 'transparent',
+        borderRightColor: 'transparent',
+        transform: [{ rotate: '0deg' }],
+    },
+    // Propulsion Icon Styles
+    propulsionFlame: {
+        position: 'absolute',
+        backgroundColor: '#d8b4fe',
+        borderBottomLeftRadius: 20,
+        borderBottomRightRadius: 20,
+        borderTopLeftRadius: 4,
+        borderTopRightRadius: 4,
+    },
+    speedLine: {
+        position: 'absolute',
+        height: 1.2,
+        backgroundColor: '#d8b4fe',
+        borderRadius: 2,
+    },
+    balanceDot: {
+        position: 'absolute',
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#d8b4fe',
     },
 });
 

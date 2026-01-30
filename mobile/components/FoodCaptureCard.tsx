@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, FontAwesome6 } from '@expo/vector-icons';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -37,36 +37,41 @@ const METRIC_DEFINITIONS = {
     label: 'analysis.food.metrics.calories',
     whyItMatters: 'analysis.food.metricExplainers.calories.why',
     howItWorks: 'analysis.food.metricExplainers.calories.how',
-    color: '#10b981',
-    icon: 'local-fire-department' as const,
+    color: '#f59e0b',
+    icon: 'fire' as const,
+    iconLibrary: 'MaterialCommunityIcons' as const,
   },
   carbohydrates: {
     label: 'analysis.food.metrics.carbohydrates',
     whyItMatters: 'analysis.food.metricExplainers.carbohydrates.why',
     howItWorks: 'analysis.food.metricExplainers.carbohydrates.how',
-    color: '#f59e0b',
-    icon: 'grain' as const,
+    color: '#2a7f55',
+    icon: 'wheat-awn' as const,
+    iconLibrary: 'FontAwesome6' as const,
   },
   proteins: {
     label: 'analysis.food.metrics.proteins',
     whyItMatters: 'analysis.food.metricExplainers.proteins.why',
     howItWorks: 'analysis.food.metricExplainers.proteins.how',
-    color: '#ef4444',
-    icon: 'egg' as const,
+    color: '#d51616',
+    icon: 'food-steak' as const,
+    iconLibrary: 'MaterialCommunityIcons' as const,
   },
   fats: {
     label: 'analysis.food.metrics.fats',
     whyItMatters: 'analysis.food.metricExplainers.fats.why',
     howItWorks: 'analysis.food.metricExplainers.fats.how',
-    color: '#8b5cf6',
-    icon: 'oil-barrel' as const,
+    color: '#7F2CCB',
+    icon: 'water' as const,
+    iconLibrary: 'MaterialCommunityIcons' as const,
   },
   health_score: {
     label: 'analysis.food.metrics.healthScore',
     whyItMatters: 'analysis.food.metricExplainers.healthScore.why',
     howItWorks: 'analysis.food.metricExplainers.healthScore.how',
     color: '#06b6d4',
-    icon: 'medical-services' as const,
+    icon: 'medical-bag' as const,
+    iconLibrary: 'MaterialCommunityIcons' as const,
   },
 };
 
@@ -87,37 +92,8 @@ const getHealthScoreColor = (score: number) => {
   return '#ef4444'; // red
 };
 
+// ScoreTile (card singola con header breve)
 // -----------------------------------------------------
-// Collapsible verticale: misura contenuto invisibile + anima maxHeight (si apre sotto)
-// -----------------------------------------------------
-const BottomCollapsible: React.FC<{ expanded: boolean; children: React.ReactNode }> = ({ expanded, children }) => {
-  const measured = useSharedValue(0);
-
-  const onLayout = (e: any) => {
-    const h = e?.nativeEvent?.layout?.height ?? 0;
-    if (h > 0 && Math.abs(measured.value - h) > 1) {
-      measured.value = h;
-    }
-  };
-
-  const style = useAnimatedStyle(() => ({
-    maxHeight: withTiming(expanded ? measured.value : 0, { duration: 220 }),
-    opacity: withTiming(expanded ? 1 : 0, { duration: 160 }),
-  }));
-
-  return (
-    <>
-      {/* misuratore invisibile */}
-      <View style={{ position: 'absolute', opacity: 0, zIndex: -1, pointerEvents: 'none' }} onLayout={onLayout}>
-        <View style={{ paddingTop: 8 }}>{children}</View>
-      </View>
-      {/* contenuto visibile */}
-      <Animated.View style={style}>
-        <View style={{ paddingTop: 8 }}>{children}</View>
-      </Animated.View>
-    </>
-  );
-};
 
 // -----------------------------------------------------
 // ScoreTile (card singola con header breve + collapsible verticale)
@@ -133,40 +109,32 @@ const ScoreTile: React.FC<{
   const def = METRIC_DEFINITIONS[metricKey];
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const toggle = () => setIsExpanded((v) => !v);
-
-  // Usa il valore reale per il testo, senza clamp a maxValue,
-  // e usa maxValue solo per calcolare la percentuale della barra.
+  // ScoreTile simplified: no more collapsible info as requested.
   const rawValue = Number.isFinite(value) ? value : 0;
   const safeValue = Math.max(0, rawValue);
   const effectiveMax = maxValue && maxValue > 0 ? maxValue : safeValue || 1;
   const percentage = effectiveMax > 0 ? Math.min(100, (safeValue / effectiveMax) * 100) : 0;
 
-  const chevronStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: withTiming(isExpanded ? '90deg' : '0deg', { duration: 180 }) }],
-  }));
-
   return (
     <View style={[styles.scoreTileContainer, { borderColor: `${def.color}22`, backgroundColor: colors.surface }]}>
-      {/* Header compatto */}
-      <TouchableOpacity onPress={toggle} activeOpacity={0.9} style={[styles.scoreTile, { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 10 }]}>
+      {/* Header compatto - Non più cliccabile per info */}
+      <View style={[styles.scoreTile, { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12 }]}>
         <View style={[styles.titleRowLeft, { justifyContent: 'space-between' }]}>
           <View style={[styles.titleRowLeft, { gap: 8 }]}>
-            <MaterialIcons name={def.icon} size={18} color={def.color} />
+            {def.iconLibrary === 'FontAwesome6' ? (
+              <FontAwesome6 name={def.icon as any} size={15} color={def.color} />
+            ) : (
+              <MaterialCommunityIcons name={def.icon as any} size={18} color={def.color} />
+            )}
             <Text style={[styles.scoreLabel, { color: def.color }]} allowFontScaling={false}>{t(def.label).toUpperCase()}</Text>
           </View>
-          <Animated.View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }, chevronStyle]}>
-            <MaterialIcons name="chevron-right" size={18} color={colors.primary} />
-          </Animated.View>
         </View>
 
         {/* Valore + progress compatti */}
         <View style={[styles.scoreRow, { marginTop: 4 }]}>
           <Text style={[styles.scoreValue, { color: def.color }]} allowFontScaling={false}>{Math.round(safeValue)}</Text>
           {unit ? (
-            <Text style={[styles.scoreUnit, { color: colors.textSecondary }]} allowFontScaling={false}>{unit}</Text>
+            <Text style={[styles.scoreUnit, { color: def.color, opacity: 0.8 }]} allowFontScaling={false}>{unit}</Text>
           ) : maxValue > 0 ? (
             <>
               <Text style={[styles.scoreUnit, { color: colors.textSecondary }]} allowFontScaling={false}>/</Text>
@@ -175,22 +143,12 @@ const ScoreTile: React.FC<{
           ) : null}
         </View>
 
-        <View style={[styles.progressTrack, { backgroundColor: colors.borderLight, marginTop: 6 }]}>
+        <View style={[styles.progressTrack, { backgroundColor: colors.borderLight, marginTop: 8 }]}>
           <View style={[styles.progressFill, { width: `${Math.min(100, percentage)}%`, backgroundColor: def.color }]} />
         </View>
-      </TouchableOpacity>
+      </View>
 
-      {/* Contenuto esteso sotto */}
-      <BottomCollapsible expanded={isExpanded}>
-        <View style={[styles.definitionSection, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight }]}>
-          <Text style={[styles.definitionTitle, { color: colors.text }]} allowFontScaling={false}>{t('ui.whyItMatters')}</Text>
-          <Text style={[styles.definitionText, { color: colors.textSecondary }]}>{t(def.whyItMatters)}</Text>
-        </View>
-        <View style={styles.definitionSection}>
-          <Text style={[styles.definitionTitle, { color: colors.text }]} allowFontScaling={false}>{t('ui.howItWorks')}</Text>
-          <Text style={[styles.definitionText, { color: colors.textSecondary }]}>{t(def.howItWorks)}</Text>
-        </View>
-      </BottomCollapsible>
+      {/* Contenuto informativo rimosso come richiesto */}
     </View>
   );
 };
@@ -374,9 +332,9 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   scoreUnit: {
-    fontSize: 12,
-    fontFamily: 'Figtree_700Bold', // Was 700
-    marginLeft: 1,
+    fontSize: 14,
+    fontFamily: 'Figtree_700Bold',
+    marginLeft: 2,
   },
   progressTrack: {
     height: 4,
@@ -399,22 +357,6 @@ const styles = StyleSheet.create({
   tapHint: {
     fontSize: 11,
     fontFamily: 'Figtree_700Bold', // Was 700
-  },
-
-  definitionSection: {
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 8,
-  },
-  definitionTitle: {
-    fontSize: 13,
-    fontFamily: 'Figtree_700Bold', // Was 800
-    marginBottom: 4,
-  },
-  definitionText: {
-    fontSize: 12.5,
-    lineHeight: 18,
-    fontFamily: 'Figtree_500Medium',
   },
 });
 

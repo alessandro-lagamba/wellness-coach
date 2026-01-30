@@ -227,7 +227,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
   const router = useRouter();
   const { voiceMode } = useLocalSearchParams(); // 🆕 Rimossa t da qui (era in conflitto)
   const insets = useSafeAreaInsets();
-  const surfaceSecondary = (colors as any).surfaceSecondary ?? colors.surface;
+  const surfaceSecondary = colors.surfaceSecondary;
 
   useFocusEffect(
     useCallback(() => {
@@ -2820,7 +2820,7 @@ const ChatScreenContent: React.FC<ChatScreenProps> = ({ user, onLogout }) => {
                     setShowVoiceInterface(true);
                     setVoiceModeDismissed(false);
                   }}
-                  style={[styles.micButton, { backgroundColor: (colors as any).surfaceSecondary ?? colors.surface }]}
+                  style={[styles.micButton, { backgroundColor: colors.surfaceSecondary }]}
                 >
                   <MaterialCommunityIcons name="microphone" size={20} color={colors.text} />
                 </TouchableOpacity>

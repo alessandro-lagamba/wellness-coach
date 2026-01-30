@@ -256,9 +256,12 @@ const AnimatedCalorieBar: React.FC<{
   return (
     <View style={[styles.calorieBarContainer, { borderColor: colors.border, backgroundColor: colors.surface }]}>
       <View style={styles.calorieBarHeader}>
-        <Text style={[styles.calorieBarLabel, { color: colors.text }]} allowFontScaling={false}>
-          {label}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <MaterialCommunityIcons name="fire" size={16} color="#ea9400ff" />
+          <Text style={[styles.calorieBarLabel, { color: colors.text }]} allowFontScaling={false}>
+            {label}
+          </Text>
+        </View>
         <Text style={[styles.calorieBarValue, { color: colors.textSecondary }]} allowFontScaling={false}>
           {Math.round(current)} / {max} kcal ({caloriesPercent}%)
         </Text>
@@ -267,7 +270,7 @@ const AnimatedCalorieBar: React.FC<{
         <Animated.View
           style={[
             styles.calorieBarFill,
-            { backgroundColor: colors.accent },
+            { backgroundColor: '#ea9400ff' },
             animatedStyle
           ]}
         />
@@ -2178,7 +2181,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
         backgroundColor: colors.background,
         zIndex: 0,
       }} />
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["bottom"]}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.overviewContent}
@@ -2256,45 +2259,24 @@ const FoodAnalysisScreenContent: React.FC = () => {
             />
           )}
 
-          {/* Nutritional Goals Configuration Section */}
-          <LinearGradient
-            colors={[colors.surface, colors.surfaceElevated]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.goalsCard, { borderColor: colors.border }]}
-          >
-            <View style={styles.goalsHeader}>
-              <View style={[styles.goalsIcon, { backgroundColor: `${colors.accent}22` }]}>
-                <MaterialCommunityIcons name="target" size={24} color={colors.accent} />
-              </View>
-              <View style={styles.goalsContent}>
-                <Text style={[styles.goalsTitle, { color: colors.text }]}>
-                  {nutritionalGoals ? t('analysis.food.goals.currentGoals') : t('analysis.food.goals.noGoalsSet')}
-                </Text>
-                {nutritionalGoals && (
-                  <Text style={[styles.goalsSubtitle, { color: colors.textSecondary }]}>
-                    {nutritionalGoals.daily_calories} {t('analysis.food.goals.kcalPerDay')} • {nutritionalGoals.carbs_percentage}% • {nutritionalGoals.proteins_percentage}% • {nutritionalGoals.fats_percentage}%
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.goalsButton, { backgroundColor: colors.primary }]}
-              onPress={() => setShowGoalsModal(true)}
-              activeOpacity={0.8}
-            >
-              <FontAwesome name="cog" size={16} color={colors.textInverse} />
-              <Text style={[styles.goalsButtonText, { color: colors.textInverse }]}>
-                {t('analysis.food.goals.configureGoals')}
-              </Text>
-            </TouchableOpacity>
-          </LinearGradient>
+          {/* Nutritional Goals Card removed and replaced by quick action button below */}
 
           {/* Daily Intake Section - Always visible */}
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.dailyIntake.title')}</Text>
-            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.dailyIntake.subtitle')}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View style={{ flex: 1, gap: 6 }}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.dailyIntake.title')}</Text>
+                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.dailyIntake.subtitle')}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.goalsQuickButton}
+                onPress={() => setShowGoalsModal(true)}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="cog" size={14} color="#ffffff" />
+                <Text style={styles.goalsQuickButtonText}>{t('analysis.food.goals.shortTitle')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Daily Progress: Calories Bar + Macro Gauges */}
@@ -2326,63 +2308,65 @@ const FoodAnalysisScreenContent: React.FC = () => {
             return (
               <>
                 {/* Animated Calorie Horizontal Progress - Full Width */}
-                <TouchableOpacity onPress={() => setShowCalorieHistory(true)} activeOpacity={0.8}>
-                  <AnimatedCalorieBar
-                    current={dailyIntake.calories}
-                    max={nutritionalGoals?.daily_calories || 2000}
-                    label={t('analysis.food.metrics.calories')}
-                  />
-                </TouchableOpacity>
+                <View style={styles.intakeProgressContainer}>
+                  <TouchableOpacity onPress={() => setShowCalorieHistory(true)} activeOpacity={0.8}>
+                    <AnimatedCalorieBar
+                      current={dailyIntake.calories}
+                      max={nutritionalGoals?.daily_calories || 2000}
+                      label={t('analysis.food.metrics.calories')}
+                    />
+                  </TouchableOpacity>
 
-                {/* Macro Gauges: Carbs, Proteins, Fats - In Row */}
-                <View style={styles.gaugeRow}>
-                  <GaugeChart
-                    value={Math.round(todayTotals.carbohydrates)}
-                    maxValue={dailyGoals.carbohydrates}
-                    label={t('analysis.food.metrics.carbohydrates')}
-                    color={colors.success}
-                    trend={todayHistory.length > 1 ? 1 : 0}
-                    description={t('analysis.food.dailyIntake.carbsDesc')}
-                    historicalData={foodHistory.map((session, index) => ({
-                      date: `${index + 1}`,
-                      value: Math.round(session.macronutrients?.carbohydrates || 0),
-                    }))}
-                    metric="carbohydrates"
-                    icon="leaf"
-                    unit="g"
-                  />
+                  {/* Macro Gauges: Carbs, Proteins, Fats - In Row */}
+                  <View style={styles.gaugeRow}>
+                    <GaugeChart
+                      value={Math.round(todayTotals.carbohydrates)}
+                      maxValue={dailyGoals.carbohydrates}
+                      label={t('analysis.food.metrics.carbohydrates')}
+                      color="#2a7f55"
+                      trend={todayHistory.length > 1 ? 1 : 0}
+                      description={t('analysis.food.dailyIntake.carbsDesc')}
+                      historicalData={foodHistory.map((session, index) => ({
+                        date: `${index + 1}`,
+                        value: Math.round(session.macronutrients?.carbohydrates || 0),
+                      }))}
+                      metric="carbohydrates"
+                      icon="wheat-awn"
+                      unit="g"
+                    />
 
-                  <GaugeChart
-                    value={Math.round(todayTotals.proteins)}
-                    maxValue={dailyGoals.proteins}
-                    label={t('analysis.food.metrics.proteins')}
-                    color={colors.error}
-                    trend={todayHistory.length > 1 ? 1 : 0}
-                    description={t('analysis.food.dailyIntake.proteinsDesc')}
-                    historicalData={foodHistory.map((session, index) => ({
-                      date: `${index + 1}`,
-                      value: Math.round(session.macronutrients?.proteins || 0),
-                    }))}
-                    metric="proteins"
-                    icon="heart"
-                    unit="g"
-                  />
+                    <GaugeChart
+                      value={Math.round(todayTotals.proteins)}
+                      maxValue={dailyGoals.proteins}
+                      label={t('analysis.food.metrics.proteins')}
+                      color="#d51616"
+                      trend={todayHistory.length > 1 ? 1 : 0}
+                      description={t('analysis.food.dailyIntake.proteinsDesc')}
+                      historicalData={foodHistory.map((session, index) => ({
+                        date: `${index + 1}`,
+                        value: Math.round(session.macronutrients?.proteins || 0),
+                      }))}
+                      metric="proteins"
+                      icon="food-steak"
+                      unit="g"
+                    />
 
-                  <GaugeChart
-                    value={Math.round(todayTotals.fats)}
-                    maxValue={dailyGoals.fats}
-                    label={t('analysis.food.metrics.fats')}
-                    color={colors.accent}
-                    trend={todayHistory.length > 1 ? 1 : 0}
-                    description={t('analysis.food.dailyIntake.fatsDesc')}
-                    historicalData={foodHistory.map((session, index) => ({
-                      date: `${index + 1}`,
-                      value: Math.round(session.macronutrients?.fats || 0),
-                    }))}
-                    metric="fats"
-                    icon="circle"
-                    unit="g"
-                  />
+                    <GaugeChart
+                      value={Math.round(todayTotals.fats)}
+                      maxValue={dailyGoals.fats}
+                      label={t('analysis.food.metrics.fats')}
+                      color="#7F2CCB"
+                      trend={todayHistory.length > 1 ? 1 : 0}
+                      description={t('analysis.food.dailyIntake.fatsDesc')}
+                      historicalData={foodHistory.map((session, index) => ({
+                        date: `${index + 1}`,
+                        value: Math.round(session.macronutrients?.fats || 0),
+                      }))}
+                      metric="fats"
+                      icon="water"
+                      unit="g"
+                    />
+                  </View>
                 </View>
               </>
             );
@@ -2405,96 +2389,6 @@ const FoodAnalysisScreenContent: React.FC = () => {
                 // Handle action press
               }}
             />
-          )}
-
-          {/* Recipe Hub Preview - Redesigned */}
-          <CopilotStep text="Il tuo Hub Ricette" description="Scopri nuove ricette e pianifica i tuoi pasti settimanali." order={2} name="recipeHub">
-            <WalkthroughableView style={styles.recipeHubPreview}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => setRecipeHubVisible(true)}
-                style={styles.recipeHubTouchable}
-              >
-                <LinearGradient
-                  colors={['#8b5cf6', '#f97316']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.recipeHubGradient}
-                >
-                  <View style={styles.recipeHubTag}>
-                    <Text style={styles.recipeHubTagText}>{t('analysis.food.recipes.hubTag') || 'Tutto-in-Uno'}</Text>
-                  </View>
-                  <View style={styles.recipeHubContent}>
-                    <View style={styles.recipeHubTextContainer}>
-                      <Text style={styles.recipeHubTitle}>
-                        {t('analysis.food.recipes.openHubTitle') || t('food.recipeHub.title')}
-                      </Text>
-                      <Text style={styles.recipeHubSubtitle}>
-                        {t('analysis.food.recipes.openHubSubtitle') || t('food.recipeHub.subtitle')}
-                      </Text>
-                    </View>
-                    <View style={styles.recipeHubIconContainer}>
-                      <MaterialCommunityIcons name="chef-hat" size={48} color="rgba(255, 255, 255, 0.9)" />
-                    </View>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            </WalkthroughableView>
-          </CopilotStep>
-
-          {/* Recent Analysis Section - Moved below Recipe Hub as requested */}
-          {latestFoodSession && (
-            <>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.recent.title')}</Text>
-                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.recent.subtitle')}</Text>
-              </View>
-
-              {(() => {
-                try {
-                  // ✅ FIX: Usa la variabile reattiva latestFoodSession invece di getState()
-                  // Always show the card, with fallback data if no session exists
-                  const fallbackSession = {
-                    id: 'fallback',
-                    timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
-                    macronutrients: {
-                      carbohydrates: 150,
-                      proteins: 50,
-                      fats: 30,
-                      calories: 1000,
-                    },
-                    meal_type: 'breakfast',
-                    health_score: 65,
-                    identified_foods: [],
-                  };
-
-                  return (
-                    <FoodCaptureCard
-                      session={latestFoodSession || fallbackSession}
-                      dailyCaloriesGoal={dailyGoals.calories}
-                    />
-                  );
-                } catch (error) {
-                  // 🔥 FIX: Solo errori critici in console
-                  console.error('❌ Failed to load latest food session:', error);
-                  // Fallback session in case of error
-                  const fallbackSession = {
-                    id: 'error-fallback',
-                    timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
-                    macronutrients: {
-                      carbohydrates: 150,
-                      proteins: 50,
-                      fats: 30,
-                      calories: 1000,
-                    },
-                    meal_type: 'breakfast',
-                    health_score: 65,
-                    identified_foods: [],
-                  };
-                  return <FoodCaptureCard session={fallbackSession} />;
-                }
-              })()}
-            </>
           )}
 
           {/* Meal Planner - Redesigned */}
@@ -2728,41 +2622,133 @@ const FoodAnalysisScreenContent: React.FC = () => {
             })}
           </View>
 
-          {/* What's in Your Fridge Section */}
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.fridge.title')}</Text>
-            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.fridge.subtitle')}</Text>
-          </View>
-
-          <LinearGradient
-            colors={[colors.surface, colors.surfaceElevated]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.fridgeCard, { borderColor: colors.border }]}
-          >
-            <View style={styles.fridgeHeader}>
-              <View style={[styles.fridgeIcon, { backgroundColor: `${colors.accent}22` }]}>
-                <MaterialCommunityIcons name="fridge" size={24} color={colors.accent} />
-              </View>
-              <View style={styles.fridgeContent}>
-                <Text style={[styles.fridgeTitle, { color: colors.text }]}>{t('analysis.food.fridge.cardTitle')}</Text>
-                <Text style={[styles.fridgeDescription, { color: colors.textSecondary }]}>{t('analysis.food.fridge.cardDesc')}</Text>
-              </View>
+          {/* Two-Column Layout: Recipe Hub & Recipe Generator */}
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+            {/* Left: Recipe Hub */}
+            <View style={{ flex: 1 }}>
+              <CopilotStep text="Il tuo Hub Ricette" description="Scopri nuove ricette e pianifica i tuoi pasti settimanali." order={2} name="recipeHub">
+                <WalkthroughableView style={{ borderRadius: 20, overflow: 'hidden', height: 180 }}>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => setRecipeHubVisible(true)}
+                    style={{ flex: 1 }}
+                  >
+                    <LinearGradient
+                      colors={['#8b5cf6', '#f97316']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ padding: 16, flex: 1, gap: 10 }}
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <MaterialCommunityIcons name="chef-hat" size={24} color="rgba(255, 255, 255, 0.9)" />
+                        <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: 6, borderRadius: 16 }}>
+                          <MaterialCommunityIcons name="arrow-right" size={16} color="white" />
+                        </View>
+                      </View>
+                      <View>
+                        <Text allowFontScaling={false} style={{ fontSize: 16, fontFamily: 'Figtree_700Bold', color: 'white', lineHeight: 22, marginBottom: 4 }}>
+                          {t('analysis.food.recipes.openHubTitle') || t('food.recipeHub.title')}
+                        </Text>
+                        <Text allowFontScaling={false} style={{ fontSize: 12, fontFamily: 'Figtree_500Medium', color: 'rgba(255,255,255,0.8)', lineHeight: 18 }} numberOfLines={5}>
+                          {t('analysis.food.recipes.openHubSubtitle') || t('food.recipeHub.subtitle')}
+                        </Text>
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </WalkthroughableView>
+              </CopilotStep>
             </View>
 
-            <TouchableOpacity
-              style={[styles.fridgeButton, { backgroundColor: colors.accent }]}
-              onPress={() => setShowFridgeModal(true)}
-              activeOpacity={0.8}
-            >
-              <FontAwesome name="plus" size={16} color={colors.textInverse} />
-              <Text style={[styles.fridgeButtonText, { color: colors.textInverse }]}>{t('analysis.food.fridge.addIngredients')}</Text>
-            </TouchableOpacity>
-          </LinearGradient>
-        </ScrollView>
+            {/* Right: Recipe Generator (Fridge) */}
+            <View style={{ flex: 1 }}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setShowFridgeModal(true)}
+                style={{ height: 180, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}
+              >
+                <LinearGradient
+                  colors={['#6ab8dbff', '#3867ccff']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{ padding: 16, flex: 1, gap: 10 }}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <MaterialCommunityIcons name="fridge" size={24} color="rgba(255, 255, 255, 0.9)" />
+                    <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: 6, borderRadius: 16 }}>
+                      <MaterialCommunityIcons name="arrow-right" size={16} color="white" />
+                    </View>
+                  </View>
+                  <View>
+                    <Text allowFontScaling={false} style={{ fontSize: 16, fontFamily: 'Figtree_700Bold', color: 'white', lineHeight: 22, marginBottom: 4 }}>
+                      {t('analysis.food.fridge.cardTitle')}
+                    </Text>
+                    <Text allowFontScaling={false} style={{ fontSize: 12, fontFamily: 'Figtree_500Medium', color: 'rgba(255,255,255,0.8)', lineHeight: 18 }} numberOfLines={5}>
+                      {t('analysis.food.fridge.cardDesc')}
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Recent Analysis Section - Moved below Fridge as requested */}
+          {latestFoodSession && (
+            <>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('analysis.food.recent.title')}</Text>
+                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>{t('analysis.food.recent.subtitle')}</Text>
+              </View>
+
+              {(() => {
+                try {
+                  // ✅ FIX: Usa la variabile reattiva latestFoodSession invece di getState()
+                  // Always show the card, with fallback data if no session exists
+                  const fallbackSession = {
+                    id: 'fallback',
+                    timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
+                    macronutrients: {
+                      carbohydrates: 150,
+                      proteins: 50,
+                      fats: 30,
+                      calories: 1000,
+                    },
+                    meal_type: 'breakfast',
+                    health_score: 65,
+                    identified_foods: [],
+                  };
+
+                  return (
+                    <FoodCaptureCard
+                      session={latestFoodSession || fallbackSession}
+                      dailyCaloriesGoal={dailyGoals.calories}
+                    />
+                  );
+                } catch (error) {
+                  // 🔥 FIX: Solo errori critici in console
+                  console.error('❌ Failed to load latest food session:', error);
+                  // Fallback session in case of error
+                  const fallbackSession = {
+                    id: 'error-fallback',
+                    timestamp: new Date().toISOString(), // ✅ OK: timestamp ISO per compatibilità, non usato per date locali
+                    macronutrients: {
+                      carbohydrates: 150,
+                      proteins: 50,
+                      fats: 30,
+                      calories: 1000,
+                    },
+                    meal_type: 'breakfast',
+                    health_score: 65,
+                    identified_foods: [],
+                  };
+                  return <FoodCaptureCard session={fallbackSession} />;
+                }
+              })()}
+            </>
+          )}
+        </ScrollView >
 
         {/* Detailed Analysis Popup */}
-        <DetailedAnalysisPopup
+        < DetailedAnalysisPopup
           visible={showDetailedAnalysis}
           onClose={() => setShowDetailedAnalysis(false)}
           analysisType="food"
@@ -3026,7 +3012,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   overviewContent: {
-    paddingTop: 78, // Added padding top to align with SkinAnalysisScreen
+    paddingTop: 0,
     paddingBottom: 100, // Increased padding to account for bottom navigation bar
     paddingHorizontal: 20,
     gap: 24,
@@ -3072,7 +3058,7 @@ const styles = StyleSheet.create({
   },
   heroVideo: {
     width: '100%',
-    height: 240,
+    height: 180,
     borderRadius: 24,
     overflow: 'hidden',
   },
@@ -3787,7 +3773,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: '#f59e0b',
+    borderColor: '#ea9400ff',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -3855,7 +3841,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    marginBottom: 8,
+    marginBottom: 0,
+  },
+  intakeProgressContainer: {
+    gap: 12,
   },
   calorieBarHeader: {
     flexDirection: 'row',
@@ -4541,66 +4530,20 @@ const styles = StyleSheet.create({
     fontFamily: 'Figtree_700Bold', // Was 700
   },
 
-  // ✅ ADD: Nutritional Goals Card Styles
-  goalsCard: {
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 6,
-    borderWidth: 1,
-  },
-  goalsHeader: {
+  // ✅ ADD: Nutritional Goals styles
+  goalsQuickButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#8b5cf6', // Indigo 500 (matched to theme)
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  goalsIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    gap: 6,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
   },
-  goalsContent: {
-    flex: 1,
-  },
-  goalsTitle: {
-    fontSize: 18,
-    fontFamily: 'Figtree_700Bold', // Was 700
-    marginBottom: 6,
-  },
-  goalsSubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 4,
-    fontFamily: 'Figtree_500Medium',
-  },
-  goalsSource: {
+  goalsQuickButtonText: {
     fontSize: 12,
-    fontStyle: 'italic',
-  },
-  goalsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  goalsButtonText: {
-    fontSize: 15,
-    fontFamily: 'Figtree_700Bold', // Was 700
+    fontFamily: 'Figtree_700Bold',
+    color: '#ffffff',
   },
   // ✅ ADD: Recipe Hub Styles
   recipeHubPreview: {

@@ -12,6 +12,7 @@ export interface ThemeColors {
   surface: string;
   surfaceElevated: string;
   surfaceMuted: string;
+  surfaceSecondary: string;
 
   // Text
   text: string;
@@ -73,6 +74,7 @@ const lightTheme: ThemeColors = {
   surface: '#ffffff',
   surfaceElevated: '#ffffff',
   surfaceMuted: '#f1f5f9',
+  surfaceSecondary: '#f0f9ff',
 
   // Text
   text: '#0f172a',
@@ -136,6 +138,7 @@ const darkTheme: ThemeColors = {
   surface: '#2d2542',              // Viola scuro per card/surface
   surfaceElevated: '#3a2f4f',      // Viola scuro elevato per modali
   surfaceMuted: '#251f35',         // Viola scuro smorzato
+  surfaceSecondary: '#251f35',     // Viola scuro secondario
 
   // Text - Contrasti ottimizzati per leggibilità
   text: '#f5f3ff',                 // Bianco violaceo chiaro (massimo contrasto)

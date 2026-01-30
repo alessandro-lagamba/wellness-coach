@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, FontAwesome6 } from '@expo/vector-icons';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { MetricsService } from '../../services/metrics.service';
 import { ActionsService } from '../../services/actions.service';
@@ -42,6 +42,8 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
 }) => {
   const { t } = useTranslation(); // 🆕 i18n hook
   const { colors, mode } = useTheme();
+
+  const isNutritionMetric = metric === 'carbohydrates' || metric === 'proteins' || metric === 'fats' || metric === 'calories';
   // Calcola bucket e trend personalizzato
   const getBucketAndTrend = () => {
     if (!metric) return { bucket: null, trendInfo: null, action: null };
@@ -160,7 +162,11 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
               <View style={styles.titleRow}>
                 {icon && (
                   <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
-                    <MaterialCommunityIcons name={icon as any} size={24} color={color} />
+                    {icon === 'wheat-awn' ? (
+                      <FontAwesome6 name="wheat-awn" size={20} color={color} />
+                    ) : (
+                      <MaterialCommunityIcons name={icon as any} size={24} color={color} />
+                    )}
                   </View>
                 )}
                 <View style={styles.titleTextContainer}>
@@ -209,33 +215,37 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
                 </View>
               )}
 
-              {/* Why it matters */}
-              <View style={styles.infoSection}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]} maxFontSizeMultiplier={1.5}>{t('popups.gauge.whyImportant')}</Text>
-                <Text style={[styles.infoText, { color: colors.textSecondary }]}>{metricInfo.whyItMatters}</Text>
-              </View>
+              {!isNutritionMetric && (
+                <>
+                  {/* Why it matters */}
+                  <View style={styles.infoSection}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]} maxFontSizeMultiplier={1.5}>{t('popups.gauge.whyImportant')}</Text>
+                    <Text style={[styles.infoText, { color: colors.textSecondary }]}>{metricInfo.whyItMatters}</Text>
+                  </View>
 
-              {/* How it works */}
-              <View style={styles.infoSection}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]} maxFontSizeMultiplier={1.5}>{t('popups.gauge.howItWorks')}</Text>
-                <Text style={[styles.infoText, { color: colors.textSecondary }]}>{metricInfo.howItWorks}</Text>
-              </View>
+                  {/* How it works */}
+                  <View style={styles.infoSection}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]} maxFontSizeMultiplier={1.5}>{t('popups.gauge.howItWorks')}</Text>
+                    <Text style={[styles.infoText, { color: colors.textSecondary }]}>{metricInfo.howItWorks}</Text>
+                  </View>
 
-              {/* Examples */}
-              {Object.keys(metricInfo.examples).length > 0 && (
-                <View style={styles.infoSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]} maxFontSizeMultiplier={1.5}>{t('popups.gauge.examples')}</Text>
-                  {Object.entries(metricInfo.examples).map(([key, example], index) => (
-                    <View key={index} style={styles.exampleRow}>
-                      <Text style={styles.exampleIcon} maxFontSizeMultiplier={1.5}>{key === 'positive' || key === 'good' || key === 'balanced' ? '✓' : '⚠'}</Text>
-                      <Text style={[styles.exampleText, { color: colors.textSecondary }]}>{example}</Text>
+                  {/* Examples */}
+                  {Object.keys(metricInfo.examples).length > 0 && (
+                    <View style={styles.infoSection}>
+                      <Text style={[styles.sectionTitle, { color: colors.text }]} maxFontSizeMultiplier={1.5}>{t('popups.gauge.examples')}</Text>
+                      {Object.entries(metricInfo.examples).map(([key, example], index) => (
+                        <View key={index} style={styles.exampleRow}>
+                          <Text style={styles.exampleIcon} maxFontSizeMultiplier={1.5}>{key === 'positive' || key === 'good' || key === 'balanced' ? '✓' : '⚠'}</Text>
+                          <Text style={[styles.exampleText, { color: colors.textSecondary }]}>{example}</Text>
+                        </View>
+                      ))}
                     </View>
-                  ))}
-                </View>
+                  )}
+                </>
               )}
 
               {/* Action Section */}
-              {action && action.actionable && (
+              {!isNutritionMetric && action && action.actionable && (
                 <View style={styles.actionSection}>
                   <Text style={[styles.sectionTitle, { color: colors.text }]} maxFontSizeMultiplier={1.5}>{t('popups.gauge.recommendedAction')}</Text>
                   <View style={[styles.actionCard, { backgroundColor: colors.surfaceMuted, borderLeftColor: '#0ea5e9' }]}>
@@ -254,11 +264,13 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
               )}
 
               {/* Disclaimer */}
-              <View style={[styles.disclaimerSection, { backgroundColor: mode === 'dark' ? 'rgba(245, 158, 11, 0.15)' : '#fef3c7', borderLeftColor: '#f59e0b', marginBottom: 20 }]}>
-                <Text style={[styles.disclaimerText, { color: mode === 'dark' ? colors.textSecondary : '#92400e' }]}>
-                  {t('popups.gauge.disclaimer')}
-                </Text>
-              </View>
+              {!isNutritionMetric && (
+                <View style={[styles.disclaimerSection, { backgroundColor: mode === 'dark' ? 'rgba(245, 158, 11, 0.15)' : '#fef3c7', borderLeftColor: '#f59e0b', marginBottom: 20 }]}>
+                  <Text style={[styles.disclaimerText, { color: mode === 'dark' ? colors.textSecondary : '#92400e' }]}>
+                    {t('popups.gauge.disclaimer')}
+                  </Text>
+                </View>
+              )}
             </View>
           </ScrollView>
         </View>

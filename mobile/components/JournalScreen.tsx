@@ -670,41 +670,27 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ user }) => {
                     <View style={styles.historicalRecapContainer}>
 
                         {/* 1. Daily Snapshot Strip */}
-                        <TouchableOpacity style={styles.dailySnapshotStrip} onPress={() => setShowFullAnalysis(true)}>
+                        <TouchableOpacity
+                            style={[
+                                styles.dailySnapshotStrip,
+                                {
+                                    backgroundColor: colors.surfaceSecondary,
+                                    borderColor: isDark ? colors.border : '#bae6fd',
+                                    borderWidth: 1
+                                }
+                            ]}
+                            onPress={() => setShowFullAnalysis(true)}
+                        >
                             <View style={styles.dailySnapshotLeft}>
-                                <View style={styles.dailySnapshotIcon}>
+                                <View style={[styles.dailySnapshotIcon, { backgroundColor: isDark ? '#312e81' : '#e0e7ff' }]}>
                                     <MaterialCommunityIcons name="chart-pie" size={24} color="#6366f1" />
                                 </View>
                                 <View>
                                     <Text style={[styles.dailySnapshotTitle, { color: colors.text }]}>{t('home.dailySnapshot.title')}</Text>
-                                    <Text style={styles.dailySnapshotSubtitle}>Analisi completa</Text>
+                                    <Text style={[styles.dailySnapshotSubtitle, { color: colors.textSecondary }]}>Analisi completa</Text>
                                 </View>
                             </View>
-                            <View style={styles.dailySnapshotRight}>
-                                {/* Mood */}
-                                <View style={styles.snapshotMetricIcon}>
-                                    <MaterialCommunityIcons
-                                        name={dailyMetrics?.mood ? (dailyMetrics.mood >= 4 ? 'emoticon-happy-outline' : dailyMetrics.mood >= 3 ? 'emoticon-neutral-outline' : 'emoticon-sad-outline') : 'emoticon-outline'}
-                                        size={20}
-                                        color={dailyMetrics?.mood ? (dailyMetrics.mood >= 4 ? '#10b981' : dailyMetrics.mood >= 3 ? '#f59e0b' : '#ef4444') : colors.textTertiary}
-                                    />
-                                    {dailyMetrics?.mood && <View style={[styles.metricBar, { backgroundColor: dailyMetrics.mood >= 4 ? '#10b981' : dailyMetrics.mood >= 3 ? '#f59e0b' : '#ef4444', width: 8 + (dailyMetrics.mood * 3) }]} />}
-                                </View>
-
-                                {/* Sleep */}
-                                <View style={styles.snapshotMetricIcon}>
-                                    <MaterialCommunityIcons name="bed-outline" size={20} color={dailyMetrics?.sleep ? '#6366f1' : colors.textTertiary} />
-                                    {dailyMetrics?.sleep && <View style={[styles.metricBar, { backgroundColor: '#6366f1', width: Math.min(Math.max(dailyMetrics.sleep * 2, 8), 24) }]} />}
-                                </View>
-
-                                {/* Energy */}
-                                <View style={styles.snapshotMetricIcon}>
-                                    <MaterialCommunityIcons name="lightning-bolt-outline" size={20} color={dailyMetrics?.energy ? '#eab308' : colors.textTertiary} />
-                                    {dailyMetrics?.energy && <View style={[styles.metricBar, { backgroundColor: '#eab308', width: 16 }]} />}
-                                </View>
-
-                                <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textTertiary} />
-                            </View>
+                            <MaterialCommunityIcons name="chevron-right" size={24} color={colors.textTertiary} />
                         </TouchableOpacity>
 
                         {/* 2. Read-Only Journal Card */}

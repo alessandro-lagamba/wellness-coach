@@ -332,7 +332,10 @@
       "bedtime": "Addormentato",
       "wakeTime": "Sveglia",
       "quality": "Qualità",
-      "hours": "{{hours}}h"
+      "hours": "{{hours}}h",
+      "restorative": "Rigenerante",
+      "fair": "Discreto",
+      "poor": "Scarso"
     },
     "hrv": {
       "currentHR": "Attuale",
@@ -539,14 +542,18 @@
       "mindfulness": "Mindfulness",
       "skinHealth": "Salute Pelle",
       "goal": "Obiettivo",
-      "valence": "Valenza",
-      "arousal": "Attivazione",
+      "valence": "Valence",
+      "arousal": "Arousal",
       "noData": "Nessun dato",
       "texture": "Texture",
       "oiliness": "Oleosità",
       "hydrationSkin": "Idratazione (Pelle)",
       "redness": "Rossore",
-      "pigmentation": "Macchie"
+      "pigmentation": "Macchie",
+      "noMoodData": "Non hai effettuato analisi emotive in questa giornata",
+      "noSkinData": "Non hai effettuato analisi della pelle in questa giornata",
+      "moodCheckin": "Umore",
+      "sleepCheckin": "Sonno"
     },
     "widgets": {
       "steps": "Passi",
@@ -583,9 +590,11 @@
   "analysis": {
     "gauge": {
       "excellent": "Eccellente",
+      "veryGood": "Molto Buono",
       "good": "Buono",
       "fair": "Discreto",
-      "poor": "Scarso"
+      "poor": "Scarso",
+      "needsCare": "Richiede Cura"
     },
     "emotion": {
       "card": {
@@ -1492,7 +1501,7 @@
       },
       "dailyIntake": {
         "title": "Assunzione Giornaliera",
-        "subtitle": "Monitora i tuoi progressi verso gli obiettivi nutrizionali giornalieri",
+        "subtitle": "Monitora i tuoi progressi",
         "ofGoal": "{{value}}% dell'obiettivo",
         "caloriesDesc": "Progresso dell'assunzione calorica giornaliera. Aiuta a mantenere l'equilibrio energetico.",
         "carbsDesc": "Progresso dell'assunzione di carboidrati giornaliera. Essenziale per l'energia.",
@@ -1624,8 +1633,8 @@
       "fridge": {
         "title": "Cosa hai nel Frigo?",
         "subtitle": "Ottieni suggerimenti di ricette personalizzati in base ai tuoi ingredienti",
-        "cardTitle": "Ricerca Ricette Intelligente",
-        "cardDesc": "Indicaci quali ingredienti hai, e ti suggeriremo ricette deliziose personalizzate in base alle tue preferenze e obiettivi nutrizionali.",
+        "cardTitle": "Genera una ricetta",
+        "cardDesc": "Parti dai tuoi ingredienti per ricette pensate per le tue esigenze nutrizionali.",
         "openButton": "Apri il Frigo e genera",
         "addIngredients": "Aggiungi Ingredienti",
         "modalDesc": "Inserisci gli ingredienti che hai disponibili nel tuo frigo o nella dispensa. L'AI genererà una ricetta personalizzata per te!",
@@ -1702,6 +1711,7 @@
       },
       "goals": {
         "title": "Obiettivi Nutrizionali",
+        "shortTitle": "Obiettivi",
         "manual": "Inserimento Manuale",
         "aiSuggestion": "Suggerimento AI",
         "aiTitle": "Calcolo con AI",

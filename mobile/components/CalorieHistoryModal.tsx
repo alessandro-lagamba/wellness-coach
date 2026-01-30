@@ -159,7 +159,7 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
 
   // Prepare chart data
   const chartData = {
-    labels: historyData.map(d => d.label),
+    labels: historyData.map((d, i) => (i % 2 === 0 ? d.label : '')),
     datasets: [
       {
         data: historyData.map(d => d.calories || 1), // Avoid 0 for chart scaling
@@ -168,11 +168,11 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
       },
       {
         data: historyData.map(() => targetCalories), // Target line
-        color: (opacity = 1) => `rgba(156, 163, 175, ${opacity})`, // Gray for target
+        color: (opacity = 1) => `rgba(245, 158, 11, ${opacity})`, // Orange for target
         strokeWidth: 2,
       },
     ],
-    legend: [t('analysis.food.calorieHistory.consumed'), t('analysis.food.calorieHistory.target')],
+    // legend: [t('analysis.food.calorieHistory.consumed'), t('analysis.food.calorieHistory.target')],
   };
 
   const chartConfig = {
@@ -188,7 +188,7 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
     propsForDots: {
       r: '3',
       strokeWidth: '2',
-      stroke: '#ef4444',
+      stroke: '#f59e0b', // Orange for dots
     },
     propsForBackgroundLines: {
       strokeDasharray: '5, 5',
@@ -255,41 +255,29 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
               ) : (
                 <>
                   {/* Today's Status */}
-                  <View style={[styles.statusCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <View style={[styles.statusCard, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.08)' }]}>
                     <View style={styles.statusHeader}>
                       <Text style={[styles.statusTitle, { color: colors.text }]} allowFontScaling={false}>
                         {t('analysis.food.calorieHistory.todayStatus')}
                       </Text>
-                      <View style={{ flexDirection: 'row', gap: 8 }}>
-                        <View style={[styles.dietBadge, { backgroundColor: colors.accent + '20' }]}>
-                          <Text style={[styles.dietBadgeText, { color: colors.accent }]}>
-                            {getDietGoalLabel()}
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          onPress={() => setShowBMIInfo(true)}
-                          style={[styles.infoButton, { backgroundColor: colors.surfaceMuted }]}
-                        >
-                          <MaterialCommunityIcons name="information-variant" size={16} color={colors.textSecondary} />
-                        </TouchableOpacity>
-                      </View>
+                      <TouchableOpacity
+                        onPress={() => setShowBMIInfo(true)}
+                        style={[styles.infoButton, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)' }]}
+                      >
+                        <MaterialCommunityIcons name="information-variant" size={16} color="#f59e0b" />
+                      </TouchableOpacity>
                     </View>
 
                     <View style={styles.calorieDisplay}>
                       <Text style={[styles.calorieValue, { color: colors.text }]} allowFontScaling={false}>
                         {Math.round(currentCalories)}
                       </Text>
-                      <Text style={[styles.calorieTarget, { color: colors.textSecondary }]}>
+                      <Text style={[styles.calorieTarget, { color: colors.textSecondary }]} allowFontScaling={false}>
                         / {targetCalories} kcal
                       </Text>
                     </View>
 
-                    <View style={[styles.balanceRow, { backgroundColor: balanceStatus.color + '15' }]}>
-                      <MaterialCommunityIcons name={balanceStatus.icon as any} size={20} color={balanceStatus.color} />
-                      <Text style={[styles.balanceText, { color: balanceStatus.color }]}>
-                        {balanceStatus.label}
-                      </Text>
-                    </View>
+                    {/* Removed daily balance status (deficit/surplus) */}
                   </View>
 
                   {/* Chart */}
@@ -322,7 +310,7 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
                       </View>
                     )}
 
-                    {/* Legend */}
+                    {/* Legend - Restored manual version with dots for better control */}
                     <View style={styles.legend}>
                       <View style={styles.legendItem}>
                         <View style={[styles.legendDot, { backgroundColor: '#ef4444' }]} />
@@ -331,7 +319,7 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
                         </Text>
                       </View>
                       <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: '#9ca3af' }]} />
+                        <View style={[styles.legendDot, { backgroundColor: '#f59e0b' }]} />
                         <Text style={[styles.legendText, { color: colors.textSecondary }]}>
                           {t('analysis.food.calorieHistory.target')}
                         </Text>
@@ -381,47 +369,10 @@ export const CalorieHistoryModal: React.FC<CalorieHistoryModalProps> = ({
                       </View>
                     </View>
 
-                    {/* Balance Summary */}
-                    <View style={styles.balanceSummary}>
-                      {weeklyStats.totalDeficit > 0 && (
-                        <View style={[styles.balanceItem, { backgroundColor: '#3b82f6' + '15' }]}>
-                          <MaterialCommunityIcons name="arrow-down-circle" size={20} color="#3b82f6" />
-                          <Text style={[styles.balanceItemText, { color: colors.text }]}>
-                            <Text style={{ fontFamily: 'Figtree_700Bold', color: '#3b82f6' }}>{weeklyStats.totalDeficit} kcal</Text>
-                            {' '}{t('analysis.food.calorieHistory.weeklyDeficit')}
-                          </Text>
-                        </View>
-                      )}
-
-                      {weeklyStats.totalSurplus > 0 && (
-                        <View style={[styles.balanceItem, { backgroundColor: '#ef4444' + '15' }]}>
-                          <MaterialCommunityIcons name="arrow-up-circle" size={20} color="#ef4444" />
-                          <Text style={[styles.balanceItemText, { color: colors.text }]}>
-                            <Text style={{ fontFamily: 'Figtree_700Bold', color: '#ef4444' }}>{weeklyStats.totalSurplus} kcal</Text>
-                            {' '}{t('analysis.food.calorieHistory.weeklySurplus')}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
+                    {/* Removed balance summary as requested */}
                   </View>
 
-                  {/* Tips */}
-                  <View style={[styles.tipsSection, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.1)' : 'rgba(139, 92, 246, 0.05)' }]}>
-                    <MaterialCommunityIcons name="lightbulb-outline" size={24} color="#8b5cf6" />
-                    <View style={styles.tipsContent}>
-                      <Text style={[styles.tipsTitle, { color: colors.text }]}>
-                        {t('analysis.food.calorieHistory.tipTitle')}
-                      </Text>
-                      <Text style={[styles.tipsText, { color: colors.textSecondary }]}>
-                        {dietGoal === 'weight_loss'
-                          ? t('analysis.food.calorieHistory.tipWeightLoss')
-                          : dietGoal === 'bulk'
-                            ? t('analysis.food.calorieHistory.tipBulk')
-                            : t('analysis.food.calorieHistory.tipMaintenance')
-                        }
-                      </Text>
-                    </View>
-                  </View>
+                  {/* Removed tips section as requested */}
                 </>
               )}
             </ScrollView>
@@ -523,15 +474,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   statusCard: {
-    margin: 20,
-    padding: 20,
+    marginHorizontal: 20,
+    marginVertical: 8, // Further reduced
+    padding: 12, // Further reduced
     borderRadius: 16,
   },
   statusHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 8, // Reduced from 16
   },
   statusTitle: {
     fontSize: 16,
@@ -549,17 +501,17 @@ const styles = StyleSheet.create({
   calorieDisplay: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 16,
+    marginBottom: 0, // Removed bottom margin
   },
   calorieValue: {
-    fontSize: 48,
+    fontSize: 32, // Reduced from 38
     fontFamily: 'Figtree_700Bold', // Was 800
-    letterSpacing: -2,
+    letterSpacing: -1,
   },
   calorieTarget: {
-    fontSize: 20,
+    fontSize: 16, // Reduced from 18
     fontFamily: 'Figtree_500Medium', // Was 500
-    marginLeft: 8,
+    marginLeft: 6,
   },
   balanceRow: {
     flexDirection: 'row',
