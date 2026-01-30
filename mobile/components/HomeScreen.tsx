@@ -828,6 +828,10 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         console.error('❌ reloadWidgetDataFromDatabase: Database error:', error);
       }
 
+      console.log('🔄 [RELOAD DEBUG] Querying DB for date:', today);
+      console.log('🔄 [RELOAD DEBUG] DB Result:', dbHealthData ? `Found (Steps: ${dbHealthData.steps})` : 'Not Found');
+      console.log('🔄 [RELOAD DEBUG] Live HealthData:', healthData ? `Present (Steps: ${healthData.steps})` : 'Null/Undefined');
+
       // 🔥 FIX: Improved merging logic to prevent stale DB data from overwriting live HealthKit data
       // Manual data (hydr/meditation): Always use DB (authoritative source)
       // Sensor data (steps/HR/sleep): Prefer Live HealthKit data, fallback to DB only if Live is missing/empty

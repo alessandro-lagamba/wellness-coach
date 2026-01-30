@@ -55,6 +55,7 @@ interface EmotionalHoroscopeScreenProps {
     onClose: () => void;
     emotionResult: EmotionInput;
     analysisTimestamp: Date;
+    journalText?: string;
 }
 
 // =============================================================================
@@ -62,19 +63,69 @@ interface EmotionalHoroscopeScreenProps {
 // =============================================================================
 
 // =============================================================================
+// CUSTOM ROLE COMPONENTS
+// =============================================================================
+
+const DirectorBudgetIcon = () => (
+    <View style={iconStyles.container}>
+        {/* Main Clapperboard */}
+        <View style={iconStyles.clapperboardWrapper}>
+            <MaterialCommunityIcons name="movie-outline" size={70} color="#d8b4fe" />
+        </View>
+
+        {/* Stars/Sparkles */}
+        <MaterialCommunityIcons
+            name="star-four-points"
+            size={22}
+            color="#d8b4fe"
+            style={{ position: 'absolute', top: 15, right: 15 }}
+        />
+        <View style={{ position: 'absolute', bottom: 22, left: 18, flexDirection: 'row', alignItems: 'center' }}>
+            <MaterialCommunityIcons name="star-four-points" size={14} color="#d8b4fe" />
+            <MaterialCommunityIcons name="star-four-points" size={10} color="#d8b4fe" style={{ marginLeft: 2, marginBottom: 8 }} />
+        </View>
+    </View>
+);
+
+const MetalConcertIcon = () => (
+    <View style={iconStyles.container}>
+        {/* Outer Ring */}
+        <View style={iconStyles.outerRing} />
+
+        {/* Central Icon */}
+        <MaterialCommunityIcons name="guitar-electric" size={64} color="#d8b4fe" style={{ marginTop: 5 }} />
+
+        {/* Extra Musical Notes */}
+        <MaterialCommunityIcons
+            name="music-note"
+            size={20}
+            color="#d8b4fe"
+            style={{ position: 'absolute', top: 40, left: 30, transform: [{ rotate: '-15deg' }] }}
+        />
+        <MaterialCommunityIcons
+            name="music-note"
+            size={16}
+            color="#d8b4fe"
+            style={{ position: 'absolute', bottom: 35, right: 35, transform: [{ rotate: '15deg' }] }}
+        />
+    </View>
+);
+
+// =============================================================================
 // ROLE ICON MAPPING
 // =============================================================================
 
 type RoleIcon =
     | { type: 'emoji'; value: string }
-    | { type: 'icon'; library: 'Feather' | 'MaterialCommunityIcons' | 'Ionicons'; name: string };
+    | { type: 'icon'; library: 'Feather' | 'MaterialCommunityIcons' | 'Ionicons'; name: string }
+    | { type: 'custom'; component: React.ReactNode };
 
 const ROLE_ICONS: Record<string, RoleIcon> = {
-    il_regista_con_il_budget: { type: 'emoji', value: '🎬' },
+    il_regista_con_il_budget: { type: 'custom', component: <DirectorBudgetIcon /> },
     l_equilibrista: { type: 'emoji', value: '⚖️' },
     in_modalita_risparmio: { type: 'emoji', value: '🔋' },
     il_silente: { type: 'icon', library: 'Ionicons', name: 'rainy-outline' },
-    un_concerto_metal: { type: 'emoji', value: '🎸' },
+    un_concerto_metal: { type: 'custom', component: <MetalConcertIcon /> },
     segnale_infrasuono: { type: 'emoji', value: '📡' },
     motore_a_propulsione: { type: 'emoji', value: '🚀' },
     l_attore_senza_oscar: { type: 'emoji', value: '🎭' },
@@ -89,6 +140,7 @@ export const EmotionalHoroscopeScreen: React.FC<EmotionalHoroscopeScreenProps> =
     onClose,
     emotionResult,
     analysisTimestamp,
+    journalText,
 }) => {
     const { t, language } = useTranslation();
     const { colors } = useTheme();
@@ -125,7 +177,7 @@ export const EmotionalHoroscopeScreen: React.FC<EmotionalHoroscopeScreenProps> =
 
         try {
             const lang = language === 'en' ? 'en' : 'it';
-            const result = await generateEmotionalHoroscope(emotionResult, lang);
+            const result = await generateEmotionalHoroscope(emotionResult, lang, journalText);
             setHoroscopeResult(result);
 
             // Cache the result
@@ -215,7 +267,6 @@ export const EmotionalHoroscopeScreen: React.FC<EmotionalHoroscopeScreenProps> =
                                 </View>
                             ) : horoscopeResult && (
                                 <>
-                                    {/* Role Emoji Circle */}
                                     <Animated.View
                                         entering={FadeInUp.delay(200).springify()}
                                         style={styles.emojiContainer}
@@ -225,7 +276,9 @@ export const EmotionalHoroscopeScreen: React.FC<EmotionalHoroscopeScreenProps> =
                                                 const iconConfig = ROLE_ICONS[horoscopeResult.role];
                                                 if (!iconConfig) return <Text style={styles.emoji}>✨</Text>;
 
-                                                if (iconConfig.type === 'emoji') {
+                                                if (iconConfig.type === 'custom') {
+                                                    return iconConfig.component;
+                                                } else if (iconConfig.type === 'emoji') {
                                                     return <Text style={styles.emoji}>{iconConfig.value}</Text>;
                                                 } else {
                                                     let IconLib: any = MaterialCommunityIcons;
@@ -259,25 +312,11 @@ export const EmotionalHoroscopeScreen: React.FC<EmotionalHoroscopeScreenProps> =
                                     {/* AI Generated Text Card */}
                                     <Animated.View entering={FadeInDown.delay(400)} style={styles.cardContainer}>
                                         <View style={styles.cardOuter}>
-                                            <ImageBackground
-                                                source={GALAXY_BACKGROUND}
-                                                style={styles.cardBg}
-                                                imageStyle={styles.cardBgImage}
-                                                resizeMode="cover"
-                                            >
-                                                {/* tint opaco */}
-                                                <View style={styles.cardTint} />
+                                            <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
 
-                                                {/* highlight vetro */}
-                                                <LinearGradient
-                                                    colors={['rgba(255,255,255,0.18)', 'rgba(255,255,255,0.04)', 'transparent']}
-                                                    style={styles.cardHighlight}
-                                                />
-
-                                                <View style={styles.cardContent}>
-                                                    <Text style={styles.horoscopeText}>{horoscopeResult.horoscopeText}</Text>
-                                                </View>
-                                            </ImageBackground>
+                                            <View style={styles.cardContent}>
+                                                <Text style={styles.horoscopeText}>{horoscopeResult.horoscopeText}</Text>
+                                            </View>
                                         </View>
                                     </Animated.View>
 
@@ -409,13 +448,13 @@ const styles = StyleSheet.create({
     // Emoji
     emojiContainer: {
         alignItems: 'center',
-        marginTop: 40,
-        marginBottom: 24,
+        marginTop: 30,
+        marginBottom: 15,
     },
     emojiCircle: {
-        width: 140,
-        height: 140,
-        borderRadius: 70,
+        width: 120,
+        height: 120,
+        borderRadius: 60,
         backgroundColor: 'rgba(168, 85, 247, 0.15)',
         borderWidth: 2,
         borderColor: 'rgba(168, 85, 247, 0.3)',
@@ -460,7 +499,7 @@ const styles = StyleSheet.create({
         marginBottom: 28,
     },
     roleTitle: {
-        fontSize: 36,
+        fontSize: 33,
         fontWeight: '600',
         color: '#ffffff',
         textAlign: 'center',
@@ -471,7 +510,7 @@ const styles = StyleSheet.create({
         textShadowRadius: 4,
     },
     roleSubtitle: {
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '400',
         color: 'rgba(255, 255, 255, 0.7)',
         textAlign: 'center',
@@ -481,63 +520,42 @@ const styles = StyleSheet.create({
 
     // Card
     cardOuter: {
-        borderRadius: 24,
+        borderRadius: 32,
         overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.16)',
+        borderWidth: 0.8,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
+        backgroundColor: 'rgba(10, 10, 22, 0.4)', // Higher transparency
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.28,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
         shadowRadius: 20,
-        elevation: 14,
-    },
-    cardBg: {
-        width: '100%',
-    },
-    cardBgImage: {
-        borderRadius: 24,
-        // opzionale: “zoom” leggero per sembrare più blurred
-        transform: [{ scale: 1.35 }],
-        opacity: 0.9,
+        elevation: 10,
+        position: 'relative',
     },
     cardContainer: {
         paddingHorizontal: 28,
         marginBottom: 24,
     },
-    card: {
-        borderRadius: 24,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.16)',
-        position: 'relative',
-    },
-    cardTint: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(10, 10, 18, 0.75)', // più opaco = più “glass”
-    },
-    cardHighlight: {
+    cardGlow: {
         position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 90,
-    },
-    cardOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(25, 25, 25, 0.18)', // extra “tinta” sopra al blur
+        width: 140,
+        height: 140,
+        borderRadius: 70,
+        opacity: 0.35,
     },
     cardContent: {
-        padding: 26,
+        paddingVertical: 15,
+        paddingHorizontal: 28,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     horoscopeText: {
         fontSize: 18,
         fontWeight: '300',
         lineHeight: 35,
-        color: 'rgba(255,255,255,0.92)',
+        color: 'rgba(255,255,255,0.95)',
         textAlign: 'center',
-        textShadowColor: 'rgba(0,0,0,0.35)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 6,
+        letterSpacing: 0.35,
     },
     cardFooter: {
         flexDirection: 'row',
@@ -566,6 +584,55 @@ const styles = StyleSheet.create({
         color: 'rgba(255, 255, 255, 0.4)',
         textAlign: 'center',
         fontStyle: 'italic',
+    },
+});
+
+const iconStyles = StyleSheet.create({
+    container: {
+        width: 120,
+        height: 120,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    crossBar: {
+        position: 'absolute',
+        backgroundColor: 'rgba(168, 85, 247, 0.25)', // Lavender cross
+        borderRadius: 2,
+    },
+    clapperboardWrapper: {
+        position: 'relative',
+        padding: 5,
+    },
+    tagOverlay: {
+        position: 'absolute',
+        bottom: 8,
+        right: 0,
+        width: 32,
+        height: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    tagBackground: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(216, 180, 254, 0.1)', // Very faint lavender
+        borderRadius: 10,
+        borderWidth: 1.5,
+        borderColor: '#d8b4fe',
+        transform: [{ rotate: '45deg' }],
+    },
+    tagIcon: {
+        transform: [{ rotate: '-10deg' }],
+    },
+    // Metal Concert Icon Styles
+    outerRing: {
+        position: 'absolute',
+        width: 105,
+        height: 105,
+        borderRadius: 55,
+        borderWidth: 1,
+        borderColor: 'rgba(216, 180, 254, 0.15)',
     },
 });
 

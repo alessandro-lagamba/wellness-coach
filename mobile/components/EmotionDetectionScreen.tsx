@@ -41,6 +41,7 @@ import { AuthService } from '../services/auth.service';
 import { ChartDataService } from '../services/chart-data.service';
 import { EmotionSessionCard } from './EmotionSessionCard';
 import { useAnalysisStore } from '../stores/analysis.store';
+import { DailyJournalService } from '../services/daily-journal.service';
 import { LoadingScreen } from './LoadingScreen';
 import { EmotionTrendChart } from './charts/EmotionTrendChart';
 import { GaugeChart } from './charts/GaugeChart';
@@ -174,6 +175,7 @@ export const EmotionDetectionScreen: React.FC = () => {
 
   // 🆕 Emotional Horoscope
   const [showEmotionalHoroscope, setShowEmotionalHoroscope] = useState(false);
+  const [todayJournalText, setTodayJournalText] = useState<string>('');
 
   // Contextual permission modal
   // 🔥 FIX: Modal rimosso - non serve più
@@ -366,6 +368,25 @@ export const EmotionDetectionScreen: React.FC = () => {
       }
     };
   }, []);
+
+  // 🆕 Fetch today's journal text for the horoscope
+  useEffect(() => {
+    const fetchJournal = async () => {
+      try {
+        const todayKey = DailyJournalService.todayKey();
+        const entry = await DailyJournalService.getLocalEntry(todayKey);
+        if (entry && entry.content) {
+          setTodayJournalText(entry.content);
+        }
+      } catch (error) {
+        console.warn('[EmotionDetectionScreen] Error fetching journal for horoscope:', error);
+      }
+    };
+
+    if (showEmotionalHoroscope) {
+      fetchJournal();
+    }
+  }, [showEmotionalHoroscope]);
 
   // Calcola dati enhanced per i nuovi componenti
   useEffect(() => {
@@ -1489,6 +1510,7 @@ export const EmotionDetectionScreen: React.FC = () => {
             }
           })()}
           analysisTimestamp={latestEmotionSession?.timestamp ? new Date(latestEmotionSession.timestamp) : new Date()}
+          journalText={todayJournalText}
         />
       </SafeAreaView>
     </View>

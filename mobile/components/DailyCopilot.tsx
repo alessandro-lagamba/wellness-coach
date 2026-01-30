@@ -154,10 +154,6 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
     if (compact) {
       return (
         <View style={[styles.compactContainer, styles.compactEmptyState]}>
-          <MaterialCommunityIcons name="head-cog" size={28} color="#8b5cf6" />
-          <Text style={styles.compactEmptyTitle}>
-            {t('emptyStates.copilot.errorTitle') || 'Copilot non disponibile'}
-          </Text>
           <Text style={styles.compactEmptySubtitle}>
             {error || t('emptyStates.copilot.subtitle')}
           </Text>
@@ -177,6 +173,8 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
           customActionText={t('common.retry')}
           onAction={reload}
           showLearnMore={false}
+          showIllustration={false}
+          showTitle={false}
         />
       </View>
     );
@@ -187,14 +185,9 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
     if (compact) {
       return (
         <View style={[styles.compactContainer, styles.compactEmptyState]}>
-          <MaterialCommunityIcons name="head-cog" size={28} color="#8b5cf6" />
-          <Text style={styles.compactEmptyTitle}>{t('home.dailyCopilot.title')}</Text>
           <Text style={styles.compactEmptySubtitle}>
             {t('home.dailyCopilot.insufficientData')}
           </Text>
-          <TouchableOpacity style={styles.compactRetryButton} onPress={refreshScore}>
-            <Text style={styles.compactRetryText}>{t('common.refresh')}</Text>
-          </TouchableOpacity>
         </View>
       );
     }
@@ -203,11 +196,10 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
       <View style={[styles.container, compact && styles.compactContainer]}>
         <EmptyStateCard
           type="copilot"
-          customTitle={t('home.dailyCopilot.title')}
           customSubtitle={t('home.dailyCopilot.insufficientData')}
-          customActionText={t('common.refresh')}
-          onAction={refreshScore}
           showLearnMore={false}
+          showIllustration={false}
+          showTitle={false}
         />
       </View>
     );
@@ -218,8 +210,6 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
     if (compact) {
       return (
         <View style={[styles.compactContainer, styles.compactEmptyState]}>
-          <MaterialCommunityIcons name="head-cog" size={28} color="#8b5cf6" />
-          <Text style={styles.compactEmptyTitle}>{t('home.dailyCopilot.title')}</Text>
           <Text style={styles.compactEmptySubtitle}>
             {language === 'it' ? 'Caricamento dati in corso...' : 'Loading data...'}
           </Text>
@@ -231,9 +221,10 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
       <View style={[styles.container, compact && styles.compactContainer]}>
         <EmptyStateCard
           type="copilot"
-          customTitle={t('home.dailyCopilot.title')}
           customSubtitle={language === 'it' ? 'In attesa di dati' : 'Waiting for data'}
           showLearnMore={false}
+          showIllustration={false}
+          showTitle={false}
         />
       </View>
     );

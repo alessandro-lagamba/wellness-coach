@@ -126,6 +126,10 @@ export class HealthDataSyncService {
       };
 
       // 3. Esegui l'upsert finale
+      console.log('🔄 [SYNC DEBUG] Syncing health data for date:', today, '(Local)');
+      console.log('🔄 [SYNC DEBUG] Input Data (Steps):', healthData.steps);
+      console.log('🔄 [SYNC DEBUG] Existing DB Data (Steps):', existingRecord?.steps);
+
       const { data: upsertedData, error: upsertError } = await supabase
         .from('health_data')
         .upsert(upsertData, {
@@ -133,6 +137,10 @@ export class HealthDataSyncService {
         })
         .select()
         .single();
+
+      if (!upsertError) {
+        console.log('✅ [SYNC DEBUG] Upsert success. New Steps in DB:', upsertedData?.steps);
+      }
 
       if (upsertError) {
         console.error('❌ Error upserting health data:', upsertError);

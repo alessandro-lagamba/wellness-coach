@@ -632,14 +632,17 @@ export class HealthDataService {
         console.log('[HealthKit] ✅ HealthKit initialized successfully');
 
         const today = new Date();
-        // Invece di usare .toISOString() direttamente sull'oggetto Date (che converte in UTC)
-        // Dobbiamo assicurarci che la stringa inviata a HealthKit sia il "mezzanotte locale"
-        const now = new Date();
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-        // FIX: HealthKit su iOS interpreta meglio le date se passiamo la stringa ISO 
-        // ma senza lo sfasamento UTC che "mangia" ore del giorno prima.
+        const now = new Date(); // 🔥 FIX: Define 'now' explicitely for subsequent usage
+        // 🔥 FIX: Usa la stessa logica "Fake Z" usata per il ciclo per garantire coeranza
+        // Costruisci manualmente la stringa ISO per mezzanotte locale "come se fosse UTC"
+        // per evitare che .toISOString() sposti la data al giorno prima (e.g. 23:00 del 29 Gen)
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const startOfTodayEncoded = `${year}-${month}-${day}T00:00:00.000Z`;
+
         const options = {
-          startDate: startOfToday.toISOString(), // Assicurati che startOfToday sia mezzanotte LOCALE
+          startDate: startOfTodayEncoded,
           endDate: now.toISOString(),
           includeManuallyAdded: true,
         };
@@ -732,13 +735,21 @@ export class HealthDataService {
       }
 
       // Usa il giorno locale corrente per allineare a come Google Health traccia i passi
+      // Usa il giorno locale corrente per allineare a come Google Health traccia i passi
       const now = new Date();
-      const startOfDay = new Date(now);
-      startOfDay.setHours(0, 0, 0, 0);
+      // 🔥 FIX: Usa la logica "Fake Z" anche qui per consistenza
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const startOfDayEncoded = `${year}-${month}-${day}T00:00:00.000Z`;
+
+      // 🔥 FIX: Definisci startOfDay come oggetto Date per i confronti numerici successivi (es. sleep)
+      const startOfDay = new Date(startOfDayEncoded);
+
       // Per il sonno useremo una finestra più ampia più sotto
       const timeRangeFilter = {
         operator: 'BETWEEN' as const,
-        startTime: startOfDay.toISOString(),
+        startTime: startOfDayEncoded,
         endTime: now.toISOString(),
       };
 
@@ -971,16 +982,18 @@ export class HealthDataService {
             return 0;
           };
 
-          // 3) Range "oggi": mezzanotte -> adesso (in ora locale del device)
           const buildTodayRange = () => {
             const now = new Date();
-            const startOfDay = new Date(now);
-            startOfDay.setHours(0, 0, 0, 0);
-
+            // Mezzanotte locale senza conversione forzata in UTC
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const startTime = `${year}-${month}-${day}T00:00:00.000Z`; // Z fittizia o offset locale
+            const endTime = now.toISOString();
             return {
               operator: 'BETWEEN' as const,
-              startTime: startOfDay.toISOString(),
-              endTime: now.toISOString(),
+              startTime: startTime,
+              endTime: endTime,
             };
           };
 
@@ -1212,6 +1225,21 @@ export class HealthDataService {
       const syncService = HealthDataSyncService.getInstance();
       const record = await syncService.getLatestHealthData(currentUser.id);
       if (!record) {
+        return { data: null };
+      }
+
+      // 🔥 FIX: Verifica che il record sia di OGGI. 
+      // Se il record è vecchio (es. ieri), NON deve essere usato come fallback per oggi.
+      // Esempio: record.date è "2024-01-30", oggi è "2024-01-31" -> scarta il record.
+      const now = new Date();
+      const today = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0')
+      ].join('-');
+
+      if (record.date !== today) {
+        console.log('⚠️ [HealthDataService] Found stale record (date mismatch). Ignoring fallback.', { recordDate: record.date, today });
         return { data: null };
       }
 

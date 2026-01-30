@@ -247,20 +247,35 @@ export function determineEmotionalRole(input: EmotionInput): EmotionalRole {
 // =============================================================================
 
 const HOROSCOPE_PROMPT = `
-You are a playful, thoughtful wellness narrator. You create an "Emotional Horoscope" based on the user's emotion analysis.
-This is NOT astrology, NOT diagnosis, NOT therapy. It is a game of introspection.
+You are a playful, slightly ironic and thoughtful wellness narrator.
+You generate an Emotional Horoscope: not astrology, not diagnosis, not therapy, but a playful act of introspection — a reading of the emotional “stars” written on the face.
 
 INPUTS YOU WILL RECEIVE:
 - OUTPUT_LANGUAGE: "it" or "en"
-- ROLE: the predetermined role (do NOT change it)
-- EMOTION_RESULT: { dominant_emotion, valence[-1..1], arousal[-1..1], confidence[0..1] }
-
 TASK:
-Generate ONLY a short narrative text (the horoscope message). The role has already been determined.
+1. Select the most appropriate ROLE for the user from the 8 available roles below.
+2. Generate a short narrative text (the horoscope message) matching that role.
+
 Return a JSON object with EXACTLY this format:
 {
-  "horoscope_text": string
+  "role": "role_id",
+  "horoscope_text": "string"
 }
+
+ROLES AND VIBES:
+- il_regista_con_il_budget: High energy, positive/neutral valence, directed action, feeling in control.
+- l_equilibrista: Balanced state, harmony between feeling and doing, neutral/mild valence.
+- in_modalita_risparmio: Low energy, tiredness, needing rest, low arousal.
+- il_silente: Quiet, introspective, reflective, often associated with sadness or neutral state.
+- un_concerto_metal: High mental load, chaos, stress, overthinking, high arousal + negative/mixed valence.
+- segnale_infrasuono: High sensitivity, over-aware of surroundings, reactive, often fear-driven.
+- motore_a_propulsione: Strong inner drive, intense focus, high arousal, often anger or passion-driven.
+- l_attore_senza_oscar: Working hard without recognition, steady effort, determined but underappreciated.
+
+DECISION LOGIC:
+- Use EMOTION_RESULT as the biometric baseline (Valence/Arousal).
+- Use JOURNAL_CONTEXT (if provided) to resolve ambiguity (e.g., is high energy 'Regista' or 'Concerto Metal'?).
+- The role must be one of the 8 IDs listed above.
 
 HARD CONSTRAINTS:
 - Write strictly in OUTPUT_LANGUAGE.
@@ -275,10 +290,10 @@ CONFIDENCE USAGE (style only):
 - If confidence >= 0.55: you may be more specific in describing the "vibe", still non-deterministic.
 
 HOROSCOPE_TEXT RULES:
-- 3-4 sentences. Max 300 characters (hard limit).
+- 3-4 sentences. Max 340 characters (hard limit).
 - Must include:
   1) a vivid description of the internal climate (today's vibe)
-  2) ONE gentle micro-suggestion (under 2 minutes) embedded naturally
+  2) ONE gentle micro-suggestion embedded naturally
   3) one line that reframes it positively (what this state is good for)
 - Do NOT repeat the role name or description.
 - Start with an engaging opening like "Oggi..." or "Today..."
@@ -318,28 +333,32 @@ Example 3 (ROLE: segnale_infrasuono):
 END.
 `;
 
-export async function generateHoroscopeText(
-    role: EmotionalRole,
+export async function generateHoroscopeWithRole(
     emotionInput: EmotionInput,
-    language: 'it' | 'en' = 'it'
-): Promise<string> {
+    language: 'it' | 'en' = 'it',
+    journalText?: string
+): Promise<{ role: EmotionalRole; horoscopeText: string }> {
     try {
         const apiKey = API_CONFIG.OPENAI.API_KEY;
         if (!apiKey) {
-            console.log('[EmotionalHoroscope] No API key, using default text');
-            return ROLE_METADATA[role][language === 'it' ? 'descriptionIT' : 'descriptionEN'];
+            console.log('[EmotionalHoroscope] No API key, using fallback');
+            const fbRole = determineEmotionalRole(emotionInput);
+            return {
+                role: fbRole,
+                horoscopeText: ROLE_METADATA[fbRole][language === 'it' ? 'descriptionIT' : 'descriptionEN']
+            };
         }
 
         const systemPrompt = HOROSCOPE_PROMPT;
         const userPrompt = JSON.stringify({
             OUTPUT_LANGUAGE: language,
-            ROLE: role,
             EMOTION_RESULT: {
                 dominant_emotion: emotionInput.dominant_emotion,
                 valence: emotionInput.valence,
                 arousal: emotionInput.arousal,
                 confidence: emotionInput.confidence,
             },
+            JOURNAL_CONTEXT: journalText || null,
         });
 
         const response = await fetch(`${API_CONFIG.OPENAI.BASE_URL}/chat/completions`, {
@@ -363,7 +382,11 @@ export async function generateHoroscopeText(
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             console.error('[EmotionalHoroscope] API error:', response.status, errorData);
-            return ROLE_METADATA[role][language === 'it' ? 'descriptionIT' : 'descriptionEN'];
+            const fbRole = determineEmotionalRole(emotionInput);
+            return {
+                role: fbRole,
+                horoscopeText: ROLE_METADATA[fbRole][language === 'it' ? 'descriptionIT' : 'descriptionEN']
+            };
         }
 
         const data = await response.json();
@@ -372,23 +395,34 @@ export async function generateHoroscopeText(
         // Try to parse JSON response
         try {
             const parsed = JSON.parse(content);
-            if (parsed.horoscope_text) {
-                return parsed.horoscope_text;
+            if (parsed.role && parsed.horoscope_text) {
+                // Validate role
+                const finalRole = ROLE_METADATA[parsed.role as EmotionalRole]
+                    ? (parsed.role as EmotionalRole)
+                    : determineEmotionalRole(emotionInput);
+
+                return {
+                    role: finalRole,
+                    horoscopeText: parsed.horoscope_text
+                };
             }
         } catch (parseError) {
-            console.log('[EmotionalHoroscope] Could not parse JSON, using raw content');
+            console.log('[EmotionalHoroscope] Could not parse JSON, falling back');
         }
 
-        // If not JSON, use the raw content (cleaned)
-        if (content.length > 0 && content.length <= 400) {
-            return content.replace(/^["']|["']$/g, '').trim();
-        }
-
-        // Fallback to default description
-        return ROLE_METADATA[role][language === 'it' ? 'descriptionIT' : 'descriptionEN'];
+        // Fallback to deterministic role and default description
+        const fallbackRole = determineEmotionalRole(emotionInput);
+        return {
+            role: fallbackRole,
+            horoscopeText: ROLE_METADATA[fallbackRole][language === 'it' ? 'descriptionIT' : 'descriptionEN']
+        };
     } catch (error) {
-        console.error('[EmotionalHoroscope] Error generating text:', error);
-        return ROLE_METADATA[role][language === 'it' ? 'descriptionIT' : 'descriptionEN'];
+        console.error('[EmotionalHoroscope] Error generating horoscope:', error);
+        const fallbackRole = determineEmotionalRole(emotionInput);
+        return {
+            role: fallbackRole,
+            horoscopeText: ROLE_METADATA[fallbackRole][language === 'it' ? 'descriptionIT' : 'descriptionEN']
+        };
     }
 }
 
@@ -405,21 +439,20 @@ export async function generateHoroscopeText(
  */
 export async function generateEmotionalHoroscope(
     emotionInput: EmotionInput,
-    language?: 'it' | 'en'
+    language?: 'it' | 'en',
+    journalText?: string
 ): Promise<HoroscopeResult> {
     // Get language from parameter or detect from app settings
     const lang = language || await getUserLanguage();
 
-    // Step 1: Determine role (deterministic)
-    const role = determineEmotionalRole(emotionInput);
-    console.log('[EmotionalHoroscope] Determined role:', role);
+    // Step 1 & 2: Let AI determine role and generate text simultaneously
+    console.log('[EmotionalHoroscope] Requesting AI-selected role and text...');
+    const { role, horoscopeText } = await generateHoroscopeWithRole(emotionInput, lang, journalText);
 
-    // Step 2: Get role metadata
+    console.log('[EmotionalHoroscope] AI selected role:', role);
+
+    // Step 3: Get role metadata
     const metadata = ROLE_METADATA[role];
-
-    // Step 3: Generate horoscope text (OpenAI)
-    const horoscopeText = await generateHoroscopeText(role, emotionInput, lang);
-    console.log('[EmotionalHoroscope] Generated text:', horoscopeText.substring(0, 50) + '...');
 
     return {
         role,
@@ -432,7 +465,7 @@ export async function generateEmotionalHoroscope(
 // Export service as default
 export default {
     determineEmotionalRole,
-    generateHoroscopeText,
+    generateHoroscopeWithRole,
     generateEmotionalHoroscope,
     ROLE_METADATA,
 };

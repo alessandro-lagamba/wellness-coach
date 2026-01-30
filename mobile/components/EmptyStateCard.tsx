@@ -19,6 +19,7 @@ interface EmptyStateCardProps {
   customSubtitle?: string;
   customActionText?: string;
   showIllustration?: boolean;
+  showTitle?: boolean;
   showLearnMore?: boolean;
   onLearnMore?: () => void;
 }
@@ -30,6 +31,7 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({
   customSubtitle,
   customActionText,
   showIllustration = true,
+  showTitle = true,
   showLearnMore = true,
   onLearnMore,
 }) => {
@@ -117,7 +119,7 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({
           </View>
         )}
 
-        <Text style={styles.title} allowFontScaling={false}>{config.title}</Text>
+        {showTitle && <Text style={styles.title} allowFontScaling={false}>{config.title}</Text>}
         <Text style={styles.subtitle} allowFontScaling={false}>{config.subtitle}</Text>
 
         {config.description && (
