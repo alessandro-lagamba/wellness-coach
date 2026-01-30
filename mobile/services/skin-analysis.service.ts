@@ -57,13 +57,13 @@ export class SkinAnalysisService {
 
               // 🆕 Se esiste un'analisi recente con stesso imageUrl o punteggio molto simile, aggiornala
               if (recentAnalysis && !checkError) {
-                const isSimilar = 
+                const isSimilar =
                   (analysis.imageUrl && recentAnalysis.image_url === analysis.imageUrl) || // Stessa immagine
                   (Math.abs(recentAnalysis.overall_score - analysis.overallScore) < 5 && !analysis.imageUrl); // Punteggio simile e senza nuova immagine
 
                 if (isSimilar) {
                   EnhancedLoggingService.logDatabaseOperation('update', 'skin_analysis', true);
-                  
+
                   const { data: updated, error: updateError } = await supabase
                     .from(Tables.SKIN_ANALYSES)
                     .update({
@@ -90,11 +90,11 @@ export class SkinAnalysisService {
                   }
 
                   EnhancedLoggingService.logSaveOperation('skin_analysis', userId, true, undefined, updated.id);
-                  
+
                   // 🆕 Invalida cache quando si aggiorna un'analisi
                   await cacheService.invalidatePrefix(`skin:${userId}`);
                   await cacheService.invalidate(`ai_context:${userId}`);
-                  
+
                   // 🆕 Verifica post-salvataggio che i dati siano nel database
                   if (updated?.id) {
                     const verification = await DatabaseVerificationService.verifySkinAnalysis(userId, updated.id);
@@ -102,7 +102,7 @@ export class SkinAnalysisService {
                       EnhancedLoggingService.logVerification('skin_analysis', userId, false, new Error('Data not found after update'));
                     }
                   }
-                  
+
                   return updated;
                 }
               }
@@ -134,11 +134,11 @@ export class SkinAnalysisService {
               }
 
               EnhancedLoggingService.logSaveOperation('skin_analysis', userId, true, undefined, data.id);
-              
+
               // 🆕 Invalida cache quando si salva una nuova analisi
               await cacheService.invalidatePrefix(`skin:${userId}`);
               await cacheService.invalidate(`ai_context:${userId}`);
-              
+
               // 🆕 Verifica post-salvataggio che i dati siano nel database
               if (data?.id) {
                 const verification = await DatabaseVerificationService.verifySkinAnalysis(userId, data.id);
@@ -146,7 +146,7 @@ export class SkinAnalysisService {
                   EnhancedLoggingService.logVerification('skin_analysis', userId, false, new Error('Data not found after save'));
                 }
               }
-              
+
               return data;
             } catch (error) {
               const err = error instanceof Error ? error : new Error('Unknown error');
@@ -173,7 +173,7 @@ export class SkinAnalysisService {
   static async getLatestSkinAnalysis(userId: string, forceRefresh: boolean = false): Promise<SkinAnalysis | null> {
     try {
       const cacheKey = `skin:${userId}:latest`;
-      
+
       // 🆕 Prova cache prima
       if (!forceRefresh) {
         const cached = await cacheService.get<SkinAnalysis>(cacheKey);
@@ -181,7 +181,7 @@ export class SkinAnalysisService {
           return cached;
         }
       }
-      
+
       // 🔥 FIX: Usa maybeSingle() invece di single() per evitare errori quando non ci sono risultati
       const { data, error } = await supabase
         .from(Tables.SKIN_ANALYSES)
@@ -224,13 +224,21 @@ export class SkinAnalysisService {
         .limit(limit);
 
       if (error) {
-        console.error('Error getting skin history:', error);
+        if (error.message?.includes('Network request failed')) {
+          console.warn('[Skin] Network request failed (offline?)');
+        } else {
+          console.error('Error getting skin history:', error);
+        }
         return [];
       }
 
       return data || [];
-    } catch (error) {
-      console.error('Error in getSkinHistory:', error);
+    } catch (error: any) {
+      if (error?.message?.includes('Network request failed')) {
+        console.warn('[Skin] Network request failed (offline?)');
+      } else {
+        console.error('Error in getSkinHistory:', error);
+      }
       return [];
     }
   }
@@ -251,15 +259,15 @@ export class SkinAnalysisService {
 
       // Calcola il trend basato sul punteggio generale
       let trend: 'improving' | 'stable' | 'declining' = 'stable';
-      
+
       if (history.length >= 3) {
         const recent = history.slice(0, 3);
         const older = history.slice(3);
-        
+
         if (recent.length > 0 && older.length > 0) {
           const recentAvgScore = recent.reduce((sum, h) => sum + h.overall_score, 0) / recent.length;
           const olderAvgScore = older.reduce((sum, h) => sum + h.overall_score, 0) / older.length;
-          
+
           if (recentAvgScore > olderAvgScore + 5) {
             trend = 'improving';
           } else if (recentAvgScore < olderAvgScore - 5) {
@@ -287,7 +295,7 @@ export class SkinAnalysisService {
    * Ottiene statistiche della pelle per un periodo
    */
   static async getSkinStats(
-    userId: string, 
+    userId: string,
     days: number = 30
   ): Promise<{
     totalAnalyses: number;
@@ -326,7 +334,7 @@ export class SkinAnalysisService {
       const analyses = data || [];
       const commonStrengths: Record<string, number> = {};
       const commonImprovements: Record<string, number> = {};
-      
+
       let totalOverall = 0;
       let totalHydration = 0;
       let totalOiliness = 0;
@@ -339,7 +347,7 @@ export class SkinAnalysisService {
 
       analyses.forEach(analysis => {
         totalOverall += analysis.overall_score;
-        
+
         if (analysis.hydration_score !== null) {
           totalHydration += analysis.hydration_score;
           hydrationCount++;

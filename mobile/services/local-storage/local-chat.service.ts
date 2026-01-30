@@ -264,11 +264,20 @@ class LocalChatServiceClass {
             'DELETE FROM chat_messages WHERE created_at < ?',
             [cutoffISO]
         );
+    }
 
-        // Optionally clean up empty sessions (sessions with no messages)
-        // await db.runAsync(
-        //    'DELETE FROM chat_sessions WHERE id NOT IN (SELECT DISTINCT session_id FROM chat_messages)'
-        // );
+    /**
+     * Prune sessions that have no messages (empty sessions)
+     * This fixes the issue of "ghost" chats created by entering/exiting the screen
+     */
+    async pruneEmptySessions(): Promise<void> {
+        await this.ensureInit();
+        const db = getDatabase();
+
+        // Delete sessions that don't have any messages in chat_messages
+        await db.runAsync(
+            'DELETE FROM chat_sessions WHERE id NOT IN (SELECT DISTINCT session_id FROM chat_messages WHERE session_id IS NOT NULL)'
+        );
     }
 }
 

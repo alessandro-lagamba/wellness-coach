@@ -238,6 +238,8 @@ export class EmotionAnalysisService {
    * Ottiene le ultime N analisi emotive di un utente
    */
   static async getEmotionHistory(userId: string, limit: number = 5): Promise<EmotionAnalysis[]> {
+    if (!userId) return [];
+
     try {
       const { data, error } = await supabase
         .from(Tables.EMOTION_ANALYSES)
@@ -247,13 +249,21 @@ export class EmotionAnalysisService {
         .limit(limit);
 
       if (error) {
-        console.error('Error getting emotion history:', error);
+        if (error.message?.includes('Network request failed')) {
+          console.warn('[Emotion] Network request failed (offline?)');
+        } else {
+          console.error('Error getting emotion history:', error);
+        }
         return [];
       }
 
       return data || [];
-    } catch (error) {
-      console.error('Error in getEmotionHistory:', error);
+    } catch (error: any) {
+      if (error?.message?.includes('Network request failed')) {
+        console.warn('[Emotion] Network request failed (offline?)');
+      } else {
+        console.error('Error in getEmotionHistory:', error);
+      }
       return [];
     }
   }

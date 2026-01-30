@@ -24,7 +24,9 @@ export class AuthService {
         // ✅ FIX: Distingui tra errori normali (session missing) e errori critici
         const isNormalError = error.message?.includes('Auth session missing') ||
           error.message?.includes('Invalid Refresh Token') ||
-          error.message?.includes('Already Used');
+          error.message?.includes('Already Used') ||
+          error.message?.includes('Network request failed') ||
+          error.message?.includes('AuthRetryableFetchError');
 
         if (!isNormalError) {
           // Solo loggare errori inaspettati
@@ -361,7 +363,9 @@ export class AuthService {
         // ✅ FIX: Non loggare errori normali (session missing è normale quando l'utente non è loggato)
         const isNormalError = authError?.message?.includes('Auth session missing') ||
           authError?.message?.includes('Invalid Refresh Token') ||
-          authError?.message?.includes('Already Used');
+          authError?.message?.includes('Already Used') ||
+          authError?.message?.includes('Network request failed') ||
+          authError?.message?.includes('AuthRetryableFetchError');
 
         if (!isNormalError && authError) {
           console.error('Error getting authenticated user:', authError);
@@ -453,7 +457,9 @@ export class AuthService {
         // ✅ FIX: Non loggare errori normali (session missing è normale quando l'utente non è loggato)
         const isNormalError = authError?.message?.includes('Auth session missing') ||
           authError?.message?.includes('Invalid Refresh Token') ||
-          authError?.message?.includes('Already Used');
+          authError?.message?.includes('Already Used') ||
+          authError?.message?.includes('Network request failed') ||
+          authError?.message?.includes('AuthRetryableFetchError');
 
         if (!isNormalError && authError) {
           console.error('Error getting authenticated user:', authError);
@@ -494,7 +500,9 @@ export class AuthService {
         // ✅ FIX: Non loggare errori normali (session missing è normale quando l'utente non è loggato)
         const isNormalError = authError?.message?.includes('Auth session missing') ||
           authError?.message?.includes('Invalid Refresh Token') ||
-          authError?.message?.includes('Already Used');
+          authError?.message?.includes('Already Used') ||
+          authError?.message?.includes('Network request failed') ||
+          authError?.message?.includes('AuthRetryableFetchError');
 
         if (!isNormalError && authError) {
           console.error('Error getting authenticated user:', authError);

@@ -51,6 +51,10 @@ class MealPlanService {
       .order('plan_date', { ascending: true });
 
     if (error) {
+      if (error.message?.includes('Network request failed')) {
+        console.warn('[MealPlan] Network request failed (offline?)');
+        return []; // Return empty array on network error instead of throwing
+      }
       console.error('[MealPlan] getEntries error', error);
       throw error;
     }

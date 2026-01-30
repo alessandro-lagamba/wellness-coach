@@ -203,6 +203,8 @@ export class WellnessSuggestionService {
   static async getSuggestionsByCategory(
     category: 'emotion' | 'skin' | 'lifestyle' | 'stress' | 'sleep' | 'nutrition'
   ): Promise<WellnessSuggestion[]> {
+    if (!category) return [];
+
     try {
       const { data, error } = await supabase
         .from(Tables.WELLNESS_SUGGESTIONS_CATALOG)

@@ -24,13 +24,18 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
     withTiming,
     runOnJS,
+    SlideInLeft,
+    SlideOutLeft,
+    FadeIn,
+    FadeOut,
 } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
 
 // Components
@@ -144,6 +149,7 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
     const { hideTabBar, showTabBar } = useTabBarVisibility();
     const router = useRouter();
     const { voiceMode } = useLocalSearchParams();
+    const insets = useSafeAreaInsets();
     const surfaceSecondary = (colors as any).surfaceSecondary ?? colors.surface;
 
     // Hide tab bar when screen is focused
@@ -279,22 +285,50 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
             try {
                 await tts.initialize();
 
-                // Prune old messages (7 days)
+                // Prune old messages (7 days) and empty sessions
                 await LocalChatService.pruneOldMessages(7);
+                await LocalChatService.pruneEmptySessions();
 
                 if (currentUser?.id) {
                     const context = await AIContextService.getCompleteContext(currentUser.id, true);
                     setAiContext(context);
-
-                    const dateLocale = language === 'it' ? 'it-IT' : 'en-US';
-                    const sessionDate = new Date().toLocaleDateString(dateLocale);
-
-                    // Create local session
-                    const session = await LocalChatService.createSession(
-                        t('chat.sessionName', { date: sessionDate })
-                    );
-                    if (session) setCurrentSessionId(session.id);
                 }
+
+                // CHECK FOR EXISTING SESSION FOR TODAY
+                const sessions = await LocalChatService.listSessions();
+                const dateLocale = language === 'it' ? 'it-IT' : 'en-US';
+                const todayString = new Date().toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' }); // e.g., "30 gen" or "Jan 30"
+
+                // Find a session from today that already has messages (or just the most recent one from today)
+                // We'll trust pruneEmptySessions has run, so any session remaining is valid or we can reuse it.
+                // Simple logic: If the most recent session was updated today, use it.
+                const mostRecent = sessions[0];
+                if (mostRecent) {
+                    const sessionDate = new Date(mostRecent.updated_at).toDateString();
+                    const isToday = sessionDate === new Date().toDateString();
+
+                    if (isToday) {
+                        // Restore this session
+                        setCurrentSessionId(mostRecent.id);
+                        const msgs = await LocalChatService.getMessages(mostRecent.id);
+                        const formatted: Message[] = msgs.map(m => ({
+                            id: m.id,
+                            text: m.content,
+                            sender: m.role === 'user' ? 'user' : 'ai',
+                            timestamp: new Date(m.created_at),
+                            sessionId: mostRecent.id
+                        }));
+                        if (formatted.length > 0) {
+                            setMessages(formatted);
+                        }
+                    } else {
+                        // Start fresh (UI only), session created on first message
+                        setCurrentSessionId(null);
+                    }
+                } else {
+                    setCurrentSessionId(null);
+                }
+
             } catch (error) {
                 console.error('Failed to initialize services:', error);
             }
@@ -345,10 +379,22 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
         setShowLoadingCloud(true);
 
         try {
+            // Lazy create session if needed
+            let activeSessionId = currentSessionId;
+            if (!activeSessionId) {
+                const dateLocale = language === 'it' ? 'it-IT' : 'en-US';
+                const sessionDate = new Date().toLocaleDateString(dateLocale);
+                const newSession = await LocalChatService.createSession(
+                    t('chat.sessionName', { date: sessionDate })
+                );
+                activeSessionId = newSession.id;
+                setCurrentSessionId(activeSessionId);
+            }
+
             // Save user message (Local)
-            if (currentSessionId) {
+            if (activeSessionId) {
                 await LocalChatService.addMessage(
-                    currentSessionId,
+                    activeSessionId,
                     'user',
                     trimmed,
                     {
@@ -397,7 +443,7 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: trimmed,
-                    sessionId: currentSessionId,
+                    sessionId: activeSessionId,
                     userId: currentUser?.id,
                     emotionContext: aiContext?.currentEmotion,
                     userContext,
@@ -428,9 +474,9 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
             setMessages(prev => [...prev, aiMessage]);
 
             // Save AI message (Local)
-            if (currentSessionId) {
+            if (activeSessionId) {
                 await LocalChatService.addMessage(
-                    currentSessionId,
+                    activeSessionId,
                     'assistant',
                     reply
                 );
@@ -673,30 +719,77 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                 </View>
             </View>
 
-            {/* Chat History Modal (Drawer-like) */}
-            <Modal
-                visible={showChatHistory}
-                animationType="fade"
-                transparent={true}
-                onRequestClose={() => setShowChatHistory(false)}
-            >
-                <View style={{ flex: 1, flexDirection: 'row' }}>
-                    {/* Sidebar */}
-                    <Animated.View style={{
-                        width: '80%',
-                        height: '100%',
-                        backgroundColor: colors.background,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 2, height: 0 },
-                        shadowOpacity: 0.25,
-                        shadowRadius: 10,
-                        elevation: 10,
-                    }}>
-                        <SafeAreaView style={{ flex: 1 }}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                                <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>{t('chat.history.title') || 'Cronologia'}</Text>
-                                <TouchableOpacity onPress={() => setShowChatHistory(false)} style={{ padding: 8 }}>
-                                    <FontAwesome name="times" size={20} color={colors.text} />
+            {/* Chat History Overlay (Custom Implementation for better animation) */}
+            {showChatHistory && (
+                <View style={[StyleSheet.absoluteFill, { zIndex: 100 }]}>
+                    {/* Backdrop with Blur */}
+                    <Animated.View
+                        entering={FadeIn.duration(300)}
+                        exiting={FadeOut.duration(300)}
+                        style={StyleSheet.absoluteFill}
+                    >
+                        <TouchableOpacity
+                            style={StyleSheet.absoluteFill}
+                            activeOpacity={1}
+                            onPress={() => setShowChatHistory(false)}
+                        >
+                            <BlurView
+                                intensity={20}
+                                tint="dark"
+                                style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]}
+                            />
+                        </TouchableOpacity>
+                    </Animated.View>
+
+                    {/* Sidebar Panel */}
+                    <Animated.View
+                        entering={SlideInLeft.duration(300)}
+                        exiting={SlideOutLeft.duration(300)}
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: '85%',
+                            maxWidth: 340,
+                            marginTop: insets.top + 10,
+                            marginBottom: 20,
+                            marginLeft: 0, // Attached to left edge
+                            zIndex: 101,
+                            borderTopRightRadius: 24, // Only round right corners
+                            borderBottomRightRadius: 24,
+                            backgroundColor: colors.surface,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 4, height: 0 }, // Shadow to the right
+                            shadowOpacity: 0.3,
+                            shadowRadius: 16,
+                            elevation: 12,
+                            overflow: 'hidden',
+                        }}
+                    >
+                        <View style={{ flex: 1 }}>
+                            <View style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                paddingHorizontal: 20,
+                                paddingVertical: 18,
+                                borderBottomWidth: 1,
+                                borderBottomColor: colors.border,
+                                backgroundColor: colors.surface,
+                            }}>
+                                <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, fontFamily: 'Figtree_700Bold' }}>
+                                    {t('chat.history.title') || 'Cronologia'}
+                                </Text>
+                                <TouchableOpacity
+                                    onPress={() => setShowChatHistory(false)}
+                                    style={{
+                                        padding: 8,
+                                        backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                                        borderRadius: 20,
+                                    }}
+                                >
+                                    <FontAwesome name="times" size={16} color={colors.text} />
                                 </TouchableOpacity>
                             </View>
 
@@ -795,17 +888,10 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                                     </View>
                                 }
                             />
-                        </SafeAreaView>
+                        </View>
                     </Animated.View>
-
-                    {/* Overlay */}
-                    <TouchableOpacity
-                        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
-                        activeOpacity={1}
-                        onPress={() => setShowChatHistory(false)}
-                    />
                 </View>
-            </Modal>
+            )}
 
             {/* Main Content */}
             <View style={styles.flex}>
