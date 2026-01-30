@@ -80,6 +80,7 @@ import WellnessActivitiesService from '../services/wellness-activities.service';
 import { hydrationUnitService } from '../services/hydration-unit.service'; // 🔥 PERF: Static import for faster widget loading
 import { widgetConfigService } from '../services/widget-config.service'; // 🔥 PERF: Static import
 import { supabase } from '../lib/supabase'; // 🔥 PERF: Static import for database operations
+import { AppState, AppStateStatus } from 'react-native';
 
 const { width } = Dimensions.get('window');
 // 🔥 FIX: Calcola larghezza dinamica per il grafico.
@@ -449,9 +450,6 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     healthPermissions.heartRate ||
     healthPermissions.sleep ||
     healthPermissions.hrv;
-  // 🔥 PERF: Removed redundant sync useEffect - useHealthData already syncs on mount (line 70)
-  // The previous useEffect here was causing duplicate HealthKit sync calls
-  // Health sync is now centralized in useHealthData.ts for better control
 
   // 🔥 Helper function per costruire i widget dati da healthData
   const buildWidgetDataFromHealthDataHelper = async (
@@ -728,7 +726,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         hydration: Math.round(hydrationGoalForDisplay), // Usa unità preferita per placeholder
         meditation: meditationGoal,
         sleep: sleepGoal,
-      }).map((widget) => ({
+      }, cycleData).map((widget) => ({
         ...widget,
         title: translateWidgetTitle(widget.id),
         placeholder: {
@@ -911,6 +909,21 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     }
   }, []);
 
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        // Quando l'app torna attiva, forza una sincronizzazione
+        syncData();
+        loadTodayGlanceData();
+        loadDailyIntake();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [syncData, loadTodayGlanceData, loadDailyIntake]);
+
   const handleCreateAvatar = useCallback(() => {
     // Naviga alla schermata di cattura avatar
     router.push('/avatar-capture');
@@ -1010,7 +1023,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         // Se non ci sono dati E non ci sono permessi, usa i mock
         try {
           const goals = await widgetGoalsService.getGoals();
-          const widgetData = WidgetDataService.generateWidgetData(goals);
+          const widgetData = WidgetDataService.generateWidgetData(goals, userGender === 'female' ? cycleData : null);
           const translatedWidgetData = widgetData.map(w => ({
             ...w,
             title: translateWidgetTitle(w.id),
@@ -1297,9 +1310,16 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   // Show health permissions modal if no health data is available
   // 🔥 FIX: Solo se non ci sono permessi concessi E non è stato già mostrato durante onboarding
   useEffect(() => {
-    (async () => {
+    let timer: ReturnType<typeof setTimeout>;
+    let isMounted = true;
+
+    const checkPermissionsAndShowModal = async () => {
       if (!isInitialized || healthPermissionsModal) return;
-      if (hasHealthData) return;
+
+      // Se abbiamo dati, NON mostrare il modal
+      if (hasHealthData || (healthData && (healthData.steps > 0 || healthData.sleepHours > 0 || healthData.heartRate > 0 || healthData.hrv > 0))) {
+        return;
+      }
 
       try {
         const { HealthPermissionsService } = await import('../services/health-permissions.service');
@@ -1311,6 +1331,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           OnboardingService.isOnboardingCompleted(),
         ]);
 
+        if (!isMounted) return;
+
         // Verifica se tutti i permessi richiesti sono concessi
         const requiredPermissions = ['steps', 'heart_rate', 'sleep'];
         const allRequiredGranted = requiredPermissions.every(perm => grantedPermissions.includes(perm));
@@ -1318,17 +1340,30 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         // Mostra il modal solo se:
         // 1. Mancano permessi richiesti
         // 2. Il setup non è stato completato
-        // 3. L'onboarding è stato completato (per evitare doppia richiesta durante onboarding)
-        // 4. Non ci sono dati health (per evitare di mostrare se l'utente ha già dati)
+        // 3. L'onboarding è stato completato
+        // 4. Non ci sono dati health
         if (!allRequiredGranted && !setupCompleted && onboardingCompleted) {
-          const timer = setTimeout(() => {
-            setHealthPermissionsModal(true);
-          }, 2000); // Aumentato delay per dare tempo all'onboarding di completare
-          return () => clearTimeout(timer);
+          timer = setTimeout(() => {
+            if (isMounted) {
+              // Riconferma ancora una volta che non siano arrivati dati nel frattempo
+              if (!hasHealthData && (!healthData || (healthData.steps === 0 && healthData.sleepHours === 0 && healthData.heartRate === 0 && healthData.hrv === 0))) {
+                setHealthPermissionsModal(true);
+              }
+            }
+          }, 2000);
         }
-      } catch { }
-    })();
-  }, [isInitialized, hasHealthData, healthPermissionsModal, healthPermissions.steps, healthPermissions.heartRate, healthPermissions.sleep]);
+      } catch (e) {
+        console.warn('Error checking permissions:', e);
+      }
+    };
+
+    checkPermissionsAndShowModal();
+
+    return () => {
+      isMounted = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [isInitialized, hasHealthData, healthData, healthPermissionsModal, healthPermissions.steps, healthPermissions.heartRate, healthPermissions.sleep]);
 
   // carica eventuali check-in del giorno all'apertura
   useEffect(() => {

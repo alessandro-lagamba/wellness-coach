@@ -32,7 +32,7 @@ interface MenstrualCycleModalProps {
 const CYCLE_LENGTH_MIN = 21;
 const CYCLE_LENGTH_MAX = 40;
 const CYCLE_LENGTH_OPTIONS = Array.from(
-  { length: CYCLE_LENGTH_MAX - CYCLE_LENGTH_MIN + 1 }, 
+  { length: CYCLE_LENGTH_MAX - CYCLE_LENGTH_MIN + 1 },
   (_, i) => CYCLE_LENGTH_MIN + i
 );
 const PHASE_COLORS: Record<CyclePhase, string[]> = {
@@ -57,15 +57,15 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
 }) => {
   const { colors, mode: themeMode } = useTheme();
   const { t, language } = useTranslation();
-  
+
   // Animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
-  
+
   // 🆕 Ref per lo scroll picker della durata ciclo
   const cycleLengthScrollRef = useRef<ScrollView>(null);
   const ITEM_HEIGHT = 44; // Altezza di ogni item nello scroll picker
-  
+
   // State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [cycleLength, setCycleLength] = useState<number>(28);
@@ -74,7 +74,7 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [savedNotes, setSavedNotes] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Load existing data
   useEffect(() => {
     if (visible) {
@@ -97,7 +97,7 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
       slideAnim.setValue(50);
     }
   }, [visible]);
-  
+
   // 🆕 Funzione per scrollare allo cycle length selezionato
   const scrollToCycleLength = (length: number) => {
     const index = CYCLE_LENGTH_OPTIONS.indexOf(length);
@@ -128,10 +128,10 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
           setPeriodStarted(true);
         }
       }
-      
+
       // 🆕 Scroll allo cycle length caricato
       scrollToCycleLength(loadedLength);
-      
+
       // Load saved notes
       const { supabase } = await import('../lib/supabase');
       const { AuthService } = await import('../services/auth.service');
@@ -141,7 +141,7 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
           .from('menstrual_cycle_notes')
           .select('date, note')
           .eq('user_id', currentUser.id);
-        
+
         if (data) {
           const notesMap: Record<string, string> = {};
           data.forEach((item: any) => {
@@ -154,17 +154,22 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
       console.error('Error loading cycle data:', error);
     }
   };
-  
+
   const handleSave = async () => {
     try {
       setIsSaving(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
+
       // Save last period date
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const dateStr = [
+        selectedDate.getFullYear(),
+        String(selectedDate.getMonth() + 1).padStart(2, '0'),
+        String(selectedDate.getDate()).padStart(2, '0')
+      ].join('-');
+
       await menstrualCycleService.setLastPeriodDate(dateStr);
       await menstrualCycleService.setCycleLength(cycleLength);
-      
+
       // Save note if provided
       if (note.trim()) {
         const { supabase } = await import('../lib/supabase');
@@ -182,7 +187,7 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
             }, { onConflict: 'user_id,date' });
         }
       }
-      
+
       onSave();
       onClose();
     } catch (error) {
@@ -191,82 +196,90 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
       setIsSaving(false);
     }
   };
-  
+
   const handleDateSelect = (date: Date) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedDate(date);
     setPeriodStarted(true);
   };
-  
+
   const handleCycleLengthChange = (length: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setCycleLength(length);
   };
-  
+
   // Calculate cycle info for display
   const calculateCycleInfo = () => {
     if (!periodStarted) return null;
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const lastPeriod = new Date(selectedDate);
     lastPeriod.setHours(0, 0, 0, 0);
-    
+
     const diffTime = today.getTime() - lastPeriod.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 0) return { day: 1, phase: 'menstrual' as CyclePhase, nextPeriod: cycleLength };
-    
+
     const day = (diffDays % cycleLength) + 1;
     let phase: CyclePhase;
     if (day <= 5) phase = 'menstrual';
     else if (day <= 13) phase = 'follicular';
     else if (day <= 16) phase = 'ovulation';
     else phase = 'luteal';
-    
+
     const nextPeriod = cycleLength - day + 1;
-    
+
     return { day, phase, nextPeriod };
   };
-  
+
   const cycleInfo = calculateCycleInfo();
-  
+
   // Generate calendar days
   const generateCalendarDays = () => {
+    // 🔥 FIX: Use currentMonth for calendar generation, not selectedDate
     const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
+    const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+    const day = String(currentMonth.getDate()).padStart(2, '0');
+
+    // Parse back for Date constructor (month is 1-based string, Date needs 0-based number)
+    const monthIndex = parseInt(month, 10) - 1;
+
+    // const dateStr = `${year}-${month}-${day}`; // Not actively used but kept for logic structure
+
+    const firstDay = new Date(year, monthIndex, 1);
+    const lastDay = new Date(year, monthIndex + 1, 0); // Handles month overflow correctly
     const daysInMonth = lastDay.getDate();
     const startDayOfWeek = (firstDay.getDay() + 6) % 7; // Monday = 0
-    
+
     const days: (Date | null)[] = [];
-    
+
     // Empty slots for days before the first
     for (let i = 0; i < startDayOfWeek; i++) {
       days.push(null);
     }
-    
+
     // Days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(new Date(year, month, day));
+    for (let d = 1; d <= daysInMonth; d++) {
+      days.push(new Date(year, monthIndex, d));
     }
-    
+
     return days;
   };
-  
+
   const calendarDays = generateCalendarDays();
-  
+
   const isSelectedDate = (date: Date | null) => {
     if (!date) return false;
     return date.toDateString() === selectedDate.toDateString();
   };
-  
+
   const isToday = (date: Date | null) => {
     if (!date) return false;
     return date.toDateString() === new Date().toDateString();
   };
-  
+
   const isFutureDate = (date: Date | null) => {
     if (!date) return false;
     const today = new Date();
@@ -274,31 +287,31 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
     date.setHours(0, 0, 0, 0);
     return date > today;
   };
-  
+
   const hasNote = (date: Date | null) => {
     if (!date) return false;
     const dateStr = date.toISOString().split('T')[0];
     return !!savedNotes[dateStr];
   };
-  
+
   const phaseTranslations: Record<CyclePhase, string> = {
     menstrual: t('home.cycle.phases.menstrual') || 'Mestruale',
     follicular: t('home.cycle.phases.follicular') || 'Follicolare',
     ovulation: t('home.cycle.phases.ovulation') || 'Ovulazione',
     luteal: t('home.cycle.phases.luteal') || 'Luteale',
   };
-  
+
   const phaseDescriptions: Record<CyclePhase, string> = {
     menstrual: t('home.cycle.descriptions.menstrual') || 'Periodo mestruale. Riposo e cura di sé sono importanti.',
     follicular: t('home.cycle.descriptions.follicular') || 'Fase di crescita. Energia in aumento, ottimo momento per nuovi progetti.',
     ovulation: t('home.cycle.descriptions.ovulation') || 'Fase di ovulazione. Picco di energia e fertilità.',
     luteal: t('home.cycle.descriptions.luteal') || 'Fase luteale. Possibili sbalzi d\'umore, prenditi cura di te.',
   };
-  
-  const weekDays = language === 'it' 
+
+  const weekDays = language === 'it'
     ? ['L', 'M', 'M', 'G', 'V', 'S', 'D']
     : ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  
+
   return (
     <Modal
       visible={visible}
@@ -308,8 +321,8 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
     >
       <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
         <BlurView intensity={20} tint={themeMode === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
-        
-        <Animated.View 
+
+        <Animated.View
           style={[
             styles.modalContainer,
             { transform: [{ translateY: slideAnim }] }
@@ -318,17 +331,17 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
           <View style={[styles.modal, { backgroundColor: colors.surface }]}>
             {/* Header */}
             <LinearGradient
-              colors={cycleInfo ? PHASE_COLORS[cycleInfo.phase] : ['#ec4899', '#db2777']}
+              colors={(cycleInfo ? PHASE_COLORS[cycleInfo.phase] : ['#ec4899', '#db2777']) as any}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.header}
             >
               <View style={styles.headerContent}>
                 <View style={styles.headerIconContainer}>
-                  <MaterialCommunityIcons 
-                    name={cycleInfo ? PHASE_ICONS[cycleInfo.phase] : 'heart-pulse'} 
-                    size={32} 
-                    color="#fff" 
+                  <MaterialCommunityIcons
+                    name={(cycleInfo ? PHASE_ICONS[cycleInfo.phase] : 'heart-pulse') as any}
+                    size={32}
+                    color="#fff"
                   />
                 </View>
                 <View style={styles.headerTextContainer}>
@@ -346,7 +359,7 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
                 <MaterialCommunityIcons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </LinearGradient>
-            
+
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
               {/* Phase Info Card */}
               {cycleInfo && (
@@ -381,16 +394,16 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
                   </View>
                 </View>
               )}
-              
+
               {/* Calendar Section */}
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>
                   {t('home.cycle.lastPeriodStart') || 'Inizio ultimo ciclo'}
                 </Text>
-                
+
                 {/* Month Navigation */}
                 <View style={styles.monthNav}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
                     style={[styles.monthNavButton, { backgroundColor: colors.surfaceMuted }]}
                   >
@@ -399,14 +412,14 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
                   <Text style={[styles.monthTitle, { color: colors.text }]}>
                     {currentMonth.toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US', { month: 'long', year: 'numeric' })}
                   </Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
                     style={[styles.monthNavButton, { backgroundColor: colors.surfaceMuted }]}
                   >
                     <MaterialCommunityIcons name="chevron-right" size={24} color={colors.text} />
                   </TouchableOpacity>
                 </View>
-                
+
                 {/* Week Days Header */}
                 <View style={styles.weekDaysRow}>
                   {weekDays.map((day, index) => (
@@ -415,7 +428,7 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
                     </Text>
                   ))}
                 </View>
-                
+
                 {/* Calendar Grid */}
                 <View style={styles.calendarGrid}>
                   {calendarDays.map((date, index) => (
@@ -450,7 +463,7 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
                   ))}
                 </View>
               </View>
-              
+
               {/* Cycle Length Section - Vertical Scroll Picker */}
               <View style={styles.sectionCompact}>
                 <View style={styles.cycleLengthHeader}>
@@ -458,12 +471,12 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
                     {t('home.cycle.cycleLengthTitle') || 'Durata del ciclo'}
                   </Text>
                 </View>
-                
+
                 {/* 🆕 Scroll Picker verticale */}
                 <View style={[styles.cycleLengthPickerContainer, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}>
                   {/* Indicatore di selezione centrale */}
                   <View style={[styles.cycleLengthPickerHighlight, { backgroundColor: `${'#ec4899'}20`, borderColor: '#ec4899' }]} />
-                  
+
                   <ScrollView
                     ref={cycleLengthScrollRef}
                     style={styles.cycleLengthPicker}
@@ -483,7 +496,7 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
                   >
                     {/* Padding top per centrare il primo elemento */}
                     <View style={{ height: ITEM_HEIGHT }} />
-                    
+
                     {CYCLE_LENGTH_OPTIONS.map((length, index) => {
                       const isSelected = cycleLength === length;
                       return (
@@ -519,13 +532,13 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
                         </TouchableOpacity>
                       );
                     })}
-                    
+
                     {/* Padding bottom per centrare l'ultimo elemento */}
                     <View style={{ height: ITEM_HEIGHT }} />
                   </ScrollView>
                 </View>
               </View>
-              
+
               {/* Notes Section */}
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -534,12 +547,12 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
                 <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
                   {t('home.cycle.noteSubtitle') || 'Registra sintomi, umore o altri dettagli'}
                 </Text>
-                
+
                 <TextInput
                   style={[
                     styles.noteInput,
-                    { 
-                      backgroundColor: colors.surfaceMuted, 
+                    {
+                      backgroundColor: colors.surfaceMuted,
                       color: colors.text,
                       borderColor: colors.border,
                     }
@@ -553,7 +566,7 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
                   textAlignVertical="top"
                 />
               </View>
-              
+
               {/* Info Card */}
               <View style={[styles.infoCard, { backgroundColor: `${colors.primary}15` }]}>
                 <MaterialCommunityIcons name="information-outline" size={20} color={colors.primary} />
@@ -562,7 +575,7 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
                 </Text>
               </View>
             </ScrollView>
-            
+
             {/* Footer */}
             <View style={[styles.footer, { borderTopColor: colors.border }]}>
               <TouchableOpacity
@@ -573,7 +586,7 @@ export const MenstrualCycleModal: React.FC<MenstrualCycleModalProps> = ({
                   {t('common.cancel') || 'Annulla'}
                 </Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[
                   styles.saveButton,

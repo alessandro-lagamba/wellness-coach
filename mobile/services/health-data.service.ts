@@ -632,10 +632,15 @@ export class HealthDataService {
         console.log('[HealthKit] ✅ HealthKit initialized successfully');
 
         const today = new Date();
-        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+        // Invece di usare .toISOString() direttamente sull'oggetto Date (che converte in UTC)
+        // Dobbiamo assicurarci che la stringa inviata a HealthKit sia il "mezzanotte locale"
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        // FIX: HealthKit su iOS interpreta meglio le date se passiamo la stringa ISO 
+        // ma senza lo sfasamento UTC che "mangia" ore del giorno prima.
         const options = {
-          startDate: startOfToday.toISOString(),
-          endDate: today.toISOString(),
+          startDate: startOfToday.toISOString(), // Assicurati che startOfToday sia mezzanotte LOCALE
+          endDate: now.toISOString(),
           includeManuallyAdded: true,
         };
 
@@ -861,26 +866,6 @@ export class HealthDataService {
             }
           }
 
-          // Fallback: se 0, prova con finestra 24h
-          if (stepsTotal === 0 && HealthConnect.aggregateRecord) {
-            try {
-              const end = new Date();
-              const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
-              const range24h = {
-                operator: 'BETWEEN' as const,
-                startTime: start.toISOString(),
-                endTime: end.toISOString(),
-              };
-              const result24h = await HealthConnect.aggregateRecord({
-                recordType: 'Steps',
-                timeRangeFilter: range24h,
-              });
-              stepsTotal = Math.round(extractAggregateSteps(result24h));
-            } catch (fallbackError) {
-              console.error('❌ Steps 24h fallback failed:', fallbackError);
-            }
-          }
-
           healthData.steps = stepsTotal;
         } catch (error) {
           console.error('❌ Error reading Steps:', error);
@@ -931,41 +916,17 @@ export class HealthDataService {
               healthData.heartRate = latestBpm;
             }
           }
-
-          // Fallback: se 0 record o bpm nullo, estendi finestra a 24h
-          if ((healthData.heartRate || 0) === 0) {
-            const end = new Date();
-            const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
-            const range24h = {
-              operator: 'BETWEEN' as const,
-              startTime: start.toISOString(),
-              endTime: end.toISOString(),
-            };
-            try {
-              const hr24 = await readAllRecords('HeartRate', { timeRangeFilter: range24h });
-              if (hr24.length > 0) {
-                const sorted24 = hr24
-                  .slice()
-                  .sort((a, b) => getRecordTimestamp(a) - getRecordTimestamp(b));
-                const latest = sorted24[sorted24.length - 1];
-                const bpm = extractBpm(latest);
-                if (bpm > 0) {
-                  healthData.heartRate = bpm;
-                }
-              }
-            } catch (fallbackError) {
-              console.error('❌ Error reading HeartRate fallback:', fallbackError);
-            }
-          }
         } catch (error) {
           console.error('❌ Error reading HeartRate:', error);
         }
       }
 
-      // Leggi HRV se il permesso è stato concesso
+      // HRV - SOLO OGGI
       console.log('[DEBUG] HRV Permission Check:', this.permissions.hrv);
+
       if (this.permissions.hrv && HealthConnect.readRecords) {
         try {
+          // 1) Helper: timestamp robusto
           const getRecordTimestamp = (record: any): number => {
             const raw =
               record?.time ||
@@ -974,15 +935,17 @@ export class HealthDataService {
               record?.startTime ||
               record?.start ||
               record?.timestamp;
-            if (!raw) {
-              return 0;
-            }
+
+            if (!raw) return 0;
+
             const ms = new Date(raw).getTime();
             return Number.isNaN(ms) ? 0 : ms;
           };
 
+          // 2) Helper: estrazione valore HRV robusta (rmssd in ms)
           const extractHrvValue = (record: any): number => {
             if (!record) return 0;
+
             const candidates = [
               record.rmssd,
               record.rmssdMillis,
@@ -992,72 +955,116 @@ export class HealthDataService {
               record.heartRateVariabilityMillis,
               record.heartRateVariabilityMilliseconds,
             ];
-            for (const candidate of candidates) {
-              if (typeof candidate === 'number' && candidate > 0) {
-                return candidate;
-              }
+
+            for (const c of candidates) {
+              if (typeof c === 'number' && c > 0) return c;
             }
+
+            // Se arrivano samples: prendo l’ultimo
             if (Array.isArray(record.samples) && record.samples.length > 0) {
               const lastSample = record.samples[record.samples.length - 1];
               if (typeof lastSample?.value === 'number' && lastSample.value > 0) {
                 return lastSample.value;
               }
             }
+
             return 0;
           };
 
+          // 3) Range "oggi": mezzanotte -> adesso (in ora locale del device)
+          const buildTodayRange = () => {
+            const now = new Date();
+            const startOfDay = new Date(now);
+            startOfDay.setHours(0, 0, 0, 0);
+
+            return {
+              operator: 'BETWEEN' as const,
+              startTime: startOfDay.toISOString(),
+              endTime: now.toISOString(),
+            };
+          };
+
+          // 4) Filtro extra: garantisce che sia davvero "oggi" in locale
+          const isTodayLocal = (ms: number) => {
+            const d = new Date(ms);
+            const now = new Date();
+            return (
+              d.getFullYear() === now.getFullYear() &&
+              d.getMonth() === now.getMonth() &&
+              d.getDate() === now.getDate()
+            );
+          };
+
+          // 5) Tipi HRV da provare
           const hrvRecordTypes = ['HeartRateVariabilityRmssd'];
 
-          const collectHrvDataset = async (options: any) => {
+          // 6) Colleziona dataset per oggi
+          const collectHrvDatasetToday = async () => {
+            const timeRangeFilter = buildTodayRange();
+
             for (const type of hrvRecordTypes) {
-              const records = await readAllRecords(type, options);
-              console.log('[DEBUG] HRV Records found for type', type, ':', records.length);
-              if (records.length === 0) continue;
+              const records = await readAllRecords(type, { timeRangeFilter });
+
+              console.log(
+                '[DEBUG] HRV Records found for type',
+                type,
+                '(today only):',
+                records.length
+              );
+
+              if (!records || records.length === 0) continue;
 
               const dataset = records
-                .map(record => ({
-                  timestamp: getRecordTimestamp(record),
-                  value: extractHrvValue(record),
-                }))
-                .filter(item => item.timestamp && item.value > 0)
+                .map((record: any) => {
+                  const timestamp = getRecordTimestamp(record);
+                  const value = extractHrvValue(record);
+                  return { timestamp, value };
+                })
+                .filter(
+                  item =>
+                    item.timestamp > 0 &&
+                    item.value > 0 &&
+                    isTodayLocal(item.timestamp)
+                )
                 .sort((a, b) => a.timestamp - b.timestamp);
 
-              if (dataset.length > 0) {
-                return { type, dataset };
-              }
+              if (dataset.length > 0) return { type, dataset };
             }
+
             return null;
           };
 
-          let hrvResult = await collectHrvDataset({ timeRangeFilter });
-
-          if (!hrvResult) {
-            const end = new Date();
-            const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
-            const range24h = {
-              operator: 'BETWEEN' as const,
-              startTime: start.toISOString(),
-              endTime: end.toISOString(),
-            };
-            hrvResult = await collectHrvDataset({ timeRangeFilter: range24h });
-          }
+          // ✅ SOLO OGGI (senza fallback 24h)
+          const hrvResult = await collectHrvDatasetToday();
 
           if (hrvResult) {
             const values = hrvResult.dataset.map(item => item.value);
-            const latestHrv = values[values.length - 1] || 0;
-            const avgHrv = values.reduce((sum, value) => sum + value, 0) / values.length;
+
+            const latestHrv = values[values.length - 1] ?? 0;
+            const avgHrv =
+              values.reduce((sum, v) => sum + v, 0) / (values.length || 1);
 
             const latestRounded = latestHrv > 0 ? Math.round(latestHrv * 10) / 10 : 0;
             const averageRounded = avgHrv > 0 ? Math.round(avgHrv * 10) / 10 : 0;
 
+            // Preferisco latest, altrimenti media
             if (latestRounded > 0) {
               healthData.hrv = latestRounded;
             } else if (averageRounded > 0) {
               healthData.hrv = averageRounded;
             }
+
+            console.log('[DEBUG] HRV today:', {
+              type: hrvResult.type,
+              count: values.length,
+              latest: latestRounded,
+              average: averageRounded,
+            });
+          } else {
+            console.log('[DEBUG] HRV today: no records found');
           }
-        } catch (error) {
-          console.error('❌ Error reading HRV:', error);
+        } catch (err) {
+          console.log('[DEBUG] HRV read error:', err);
         }
       }
 

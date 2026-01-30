@@ -554,7 +554,7 @@ export class WidgetDataService {
     meditation?: number;
     sleep?: number;
     calories?: number;
-  }): WidgetData[] {
+  }, cycleData?: CycleData | null): WidgetData[] {
     // mock dei valori correnti (solo per la demo)
     const mock = {
       steps: 0, hydration: 0, mindfulness: 0,
@@ -609,7 +609,7 @@ export class WidgetDataService {
         id: 'cycle', title: 'Cycle', icon: '🌸',
         iconImage: require('../assets/images/widgets_logos/cycle.png'),
         color: '#ec4899', backgroundColor: 'rgba(236, 72, 153, 0.08)', borderColor: 'rgba(236, 72, 153, 0.25)', category: 'health',
-        cycle: { day: 5, phase: 'menstrual', phaseName: 'Menstrual', nextPeriodDays: 24, cycleLength: 28, lastPeriodDate: new Date().toISOString() }
+        cycle: cycleData || undefined
       },
     ];
   }
