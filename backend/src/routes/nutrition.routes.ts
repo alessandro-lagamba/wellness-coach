@@ -5,6 +5,7 @@
 import { Router } from "express";
 import {
   analyzeImage,
+  analyzeText,
   suggestMeal,
   generateRecipe,
   generateRestaurantRecipe,
@@ -17,6 +18,9 @@ const router: Router = Router();
 
 // POST /api/nutrition/analyze-image - Analyze food image
 router.post("/analyze-image", analyzeImage);
+
+// POST /api/nutrition/analyze-text - Analyze food description
+router.post("/analyze-text", analyzeText);
 
 // POST /api/nutrition/suggest-meal - Suggest meals to fill gaps
 router.post("/suggest-meal", suggestMeal);

@@ -1605,19 +1605,57 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
           {/* Skin Health Trend Chart */}
           <SkinHealthChart
-            data={[...skinHistory]
-              .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Ordina dal più vecchio al più nuovo
-              .map((capture) => {
+            data={(() => {
+              // Aggregate by date (DD/MM) and calculate average for multiple entries
+              const groups: Record<string, {
+                count: number;
+                texture: number;
+                redness: number;
+                hydration: number;
+                oiliness: number;
+                overall: number;
+                rawDate: Date;
+              }> = {};
+
+              skinHistory.forEach(capture => {
                 const d = new Date(capture.timestamp);
-                return {
-                  date: `${d.getDate()}/${d.getMonth() + 1}`,
-                  texture: capture.scores?.texture || 0,
-                  redness: capture.scores?.redness || 0,
-                  hydration: capture.scores?.hydration || 0,
-                  oiliness: capture.scores?.oiliness || 0,
-                  overall: capture.scores?.overall || 0,
-                };
-              })}
+                const dateKey = `${d.getDate()}/${d.getMonth() + 1}`;
+
+                if (!groups[dateKey]) {
+                  groups[dateKey] = {
+                    count: 0,
+                    texture: 0,
+                    redness: 0,
+                    hydration: 0,
+                    oiliness: 0,
+                    overall: 0,
+                    rawDate: d
+                  };
+                }
+
+                groups[dateKey].count++;
+                groups[dateKey].texture += (capture.scores?.texture || 0);
+                groups[dateKey].redness += (capture.scores?.redness || 0);
+                groups[dateKey].hydration += (capture.scores?.hydration || 0);
+                groups[dateKey].oiliness += (capture.scores?.oiliness || 0);
+                groups[dateKey].overall += (capture.scores?.overall || 0);
+              });
+
+              return Object.keys(groups)
+                .map(key => {
+                  const group = groups[key];
+                  return {
+                    date: key,
+                    sortTime: group.rawDate.getTime(),
+                    texture: Math.round(group.texture / group.count),
+                    redness: Math.round(group.redness / group.count),
+                    hydration: Math.round(group.hydration / group.count),
+                    oiliness: Math.round(group.oiliness / group.count),
+                    overall: Math.round(group.overall / group.count),
+                  };
+                })
+                .sort((a, b) => a.sortTime - b.sortTime); // Ordina dal più vecchio al più nuovo
+            })()}
             title={t('analysis.skin.trends.title')}
             subtitle={t('analysis.skin.trends.subtitle')}
             onPress={() => setShowSkinTrendModal(true)}

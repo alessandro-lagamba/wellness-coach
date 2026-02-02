@@ -298,6 +298,7 @@ Puoi riferirti a questi suggerimenti specifici quando lo ritieni appropriato in 
 - "Take a Walk" (15 min, facile): Camminata all'aperto per migliorare umore e circolazione
 - "Gentle Stretching" (10 min, facile): Allungamenti per collo e spalle per rilasciare tensione
 - "Yoga Flow" (20 min, medio): Sequenza yoga dolce per connettere mente e corpo
+- "Posture Reset" (3 min, facile): Allunga la schiena, apri il petto e riallinea la postura (perfetto da scrivania).
 - "Sunlight Break" (5 min, facile): Esporsi alla luce naturale per migliorare energia e ritmo circadiano.
 - "Mindful Eating" (10 min, facile): Mangiare con lentezza, senza telefono.
 - "Micro-Pause" (2 min): Smetti tutto, osserva 3 cose intorno a te, respira.

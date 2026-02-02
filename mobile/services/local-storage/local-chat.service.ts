@@ -46,12 +46,19 @@ class LocalChatServiceClass {
         const id = generateId();
         const now = nowISO();
 
-        await db.runAsync(
-            'INSERT INTO chat_sessions (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)',
-            [id, name ?? null, now, now]
-        );
+        try {
+            await db.runAsync(
+                'INSERT INTO chat_sessions (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)',
+                [id, name ?? null, now, now]
+            );
 
-        return { id, name: name ?? null, created_at: now, updated_at: now };
+            const newSession = { id, name: name ?? null, created_at: now, updated_at: now };
+
+            return newSession;
+        } catch (error) {
+            console.error('[LocalChatService] Error creating session:', error);
+            throw error;
+        }
     }
 
     /**
@@ -269,15 +276,28 @@ class LocalChatServiceClass {
     /**
      * Prune sessions that have no messages (empty sessions)
      * This fixes the issue of "ghost" chats created by entering/exiting the screen
+     * Includes a grace period to avoid deleting just-created sessions
      */
-    async pruneEmptySessions(): Promise<void> {
+    async pruneEmptySessions(excludeId?: string): Promise<void> {
         await this.ensureInit();
         const db = getDatabase();
 
+        // Only prune sessions older than 2 minutes to avoid deleting just-created empty sessions
+        const graceTime = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+
         // Delete sessions that don't have any messages in chat_messages
-        await db.runAsync(
-            'DELETE FROM chat_sessions WHERE id NOT IN (SELECT DISTINCT session_id FROM chat_messages WHERE session_id IS NOT NULL)'
-        );
+        // but keep the one currently active (even if empty) AND newly created ones
+        if (excludeId) {
+            await db.runAsync(
+                'DELETE FROM chat_sessions WHERE id NOT IN (SELECT DISTINCT session_id FROM chat_messages WHERE session_id IS NOT NULL) AND id != ? AND created_at < ?',
+                [excludeId, graceTime]
+            );
+        } else {
+            await db.runAsync(
+                'DELETE FROM chat_sessions WHERE id NOT IN (SELECT DISTINCT session_id FROM chat_messages WHERE session_id IS NOT NULL) AND created_at < ?',
+                [graceTime]
+            );
+        }
     }
 }
 

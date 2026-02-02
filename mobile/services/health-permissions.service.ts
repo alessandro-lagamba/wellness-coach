@@ -1,23 +1,33 @@
-import { Platform, Alert, Linking } from 'react-native';
+import { Platform, Alert, Linking, NativeModules } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import AppleHealthKit, { HealthValue, HealthKitPermissions, HealthPermission as HKPermission } from 'react-native-health';
 
-// Import Health Connect statico e semplice
+// 🔥 CRITICAL: Conditional imports based on platform
+// react-native-health has iOS-specific code, react-native-health-connect has Android-specific code
+let AppleHealthKit: any = null;
 let HealthConnect: any = null;
-if (Platform.OS === 'android') {
+
+if (Platform.OS === 'ios') {
   try {
-    HealthConnect = require('react-native-health-connect');
-    // Se esporta tramite default, usalo
-    if (HealthConnect && HealthConnect.default) {
-      HealthConnect = HealthConnect.default;
-    }
+    const HealthKitModule = require('react-native-health');
+    AppleHealthKit = HealthKitModule.default || HealthKitModule;
+    console.log('[HealthPermissions] ✅ AppleHealthKit module loaded');
   } catch (error) {
-    console.warn('Health Connect library not available:', error);
+    console.error('[HealthPermissions] ❌ Failed to load react-native-health:', error);
+  }
+} else if (Platform.OS === 'android') {
+  try {
+    const HealthConnectModule = require('react-native-health-connect');
+    HealthConnect = HealthConnectModule.default || HealthConnectModule;
+    console.log('[HealthPermissions] ✅ Health Connect module loaded');
+  } catch (error) {
+    console.error('[HealthPermissions] ❌ Failed to load react-native-health-connect:', error);
   }
 }
 
 // Verifica disponibilità semplice
 const hasHC = Platform.OS === 'android' && !!HealthConnect;
+
+
 
 export interface HealthPermission {
   id: string;
@@ -590,19 +600,19 @@ export class HealthPermissionsService {
 
       // 🔥 FIX: Formato corretto per initHealthKit
       // Deve essere { permissions: { read: [...], write: [...] } }
-      const readPermissions: HKPermission[] = [];
-      const writePermissions: HKPermission[] = [];
+      const readPermissions: any[] = [];
+      const writePermissions: any[] = [];
 
       // Mappa i permessi richiesti
       permissionIds.forEach(id => {
         const permissionType = this.getHealthKitPermissionType(id);
         if (permissionType) {
-          readPermissions.push(permissionType as HKPermission);
+          readPermissions.push(permissionType as any);
           // Aggiungi anche write per alcuni tipi se necessario
         }
       });
 
-      const permissions: HealthKitPermissions = {
+      const permissions: any = {
         permissions: {
           read: readPermissions,
           write: writePermissions,
@@ -613,7 +623,7 @@ export class HealthPermissionsService {
 
       return new Promise((resolve) => {
         try {
-          AppleHealthKit.initHealthKit(permissions, (error: string) => {
+          AppleHealthKit.initHealthKit(permissions, async (error: string) => {
             if (error) {
               console.error('Error requesting HealthKit permissions:', error);
               resolve({
@@ -621,20 +631,23 @@ export class HealthPermissionsService {
                 granted: [],
                 denied: permissionIds,
               });
-            } else {
-              // 🔥 FIX CRITICO: iOS NON dice quali permessi sono stati concessi!
-              // initHealthKit mostra la UI dei permessi ma non ritorna l'esito.
-              // NON possiamo salvare i permessi qui - dobbiamo verificarli provando a leggere i dati.
-              // Per ora NON salviamo nulla - la verifica reale avviene quando si tenta di leggere i dati.
-              console.log('[HealthKit] Permission request completed - actual grants cannot be determined from iOS API');
-
-              // Ritorniamo success ma con granted vuoto - il vero stato verrà verificato quando tentiamo di leggere
-              resolve({
-                success: true,
-                granted: [], // Non possiamo sapere cosa è stato concesso
-                denied: [], // Non possiamo sapere cosa è stato negato
-              });
+              return;
             }
+
+            console.log('[HealthKit] initHealthKit completed. iOS does not tell which permissions were granted.');
+
+            // ✅ UX FIX: salva comunque i permessi richiesti come "abilitati"
+            // (lo user potrà ancora negare qualcosa, ma almeno la UI non resta bloccata su "waiting-permission")
+            await this.saveGrantedPermissions(permissionIds);
+
+            // opzionale ma utile: marca setup completato
+            await this.markSetupCompleted();
+
+            resolve({
+              success: true,
+              granted: permissionIds,  // <- ora hasAnyHealthPermission diventa true
+              denied: [],
+            });
           });
         } catch (initError) {
           console.warn('[HealthPermissions] initHealthKit call failed:', initError);

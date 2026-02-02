@@ -17,6 +17,12 @@
       "**/*"
     ],
     "ios": {
+      "teamId": "V4VB38G95T",
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.background-delivery": true,
+        "aps-environment": "development"
+      },
       "supportsTablet": true,
       "bundleIdentifier": "com.labellapartners.wellnesscoach",
       "googleServicesFile": "./GoogleService-Info.plist",
@@ -29,7 +35,8 @@
         "NSCalendarsUsageDescription": "This app needs access to your calendar to sync wellness activities and reminders.",
         "NSRemindersUsageDescription": "This app needs access to your reminders to set wellness activity notifications."
       },
-      "bitcode": false
+      "bitcode": false,
+      "appleTeamId": "V4VB38G95T"
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",

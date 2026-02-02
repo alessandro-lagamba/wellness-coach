@@ -92,6 +92,17 @@ export const WELLNESS_SUGGESTIONS: Record<string, WellnessSuggestion> = {
         tags: ['stress', 'tension'],
         content: 'Pratica allungamenti dolci per 10 minuti per rilasciare la tensione accumulata nel corpo.',
     },
+    'posture-reset': {
+        id: 'posture-reset',
+        title: 'Posture Reset',
+        description: 'Riallinea la postura.',
+        icon: 'leaf',
+        category: WELLNESS_CATEGORIES.mind_body,
+        duration: '3 minutes',
+        difficulty: 'easy',
+        tags: ['stress', 'tension', 'circulation'],
+        content: 'Allunga la schiena, apri il petto e riallinea la postura (perfetto da scrivania).',
+    },
     'green-tea-break': {
         id: 'green-tea-break',
         title: 'Green Tea Break',

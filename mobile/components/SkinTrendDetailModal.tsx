@@ -62,19 +62,57 @@ export const SkinTrendDetailModal: React.FC<SkinTrendDetailModalProps> = ({ visi
     try {
       setLoading(true);
       const sessions = await ChartDataService.loadSkinDataForPeriod(days);
-      const formatted: SkinTrendPoint[] = [...sessions]
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-        .map((session) => {
-          const date = new Date(session.timestamp);
-          return {
-            date: `${date.getDate()}/${date.getMonth() + 1}`,
-            overall: session.overall || 0,
-            texture: session.texture || 0,
-            redness: session.redness || 0,
-            hydration: session.hydration || 0,
-            oiliness: session.oiliness || 0,
+
+      // Aggregate by date (DD/MM) and calculate average for multiple entries
+      const groups: Record<string, {
+        count: number;
+        texture: number;
+        redness: number;
+        hydration: number;
+        oiliness: number;
+        overall: number;
+        rawDate: Date;
+      }> = {};
+
+      sessions.forEach(session => {
+        const date = new Date(session.timestamp);
+        const dateKey = `${date.getDate()}/${date.getMonth() + 1}`;
+
+        if (!groups[dateKey]) {
+          groups[dateKey] = {
+            count: 0,
+            texture: 0,
+            redness: 0,
+            hydration: 0,
+            oiliness: 0,
+            overall: 0,
+            rawDate: date
           };
-        });
+        }
+
+        groups[dateKey].count++;
+        groups[dateKey].texture += (session.texture || 0);
+        groups[dateKey].redness += (session.redness || 0);
+        groups[dateKey].hydration += (session.hydration || 0);
+        groups[dateKey].oiliness += (session.oiliness || 0);
+        groups[dateKey].overall += (session.overall || 0);
+      });
+
+      const formatted: SkinTrendPoint[] = Object.keys(groups)
+        .map(key => {
+          const group = groups[key];
+          return {
+            date: key,
+            sortTime: group.rawDate.getTime(),
+            texture: Math.round(group.texture / group.count),
+            redness: Math.round(group.redness / group.count),
+            hydration: Math.round(group.hydration / group.count),
+            oiliness: Math.round(group.oiliness / group.count),
+            overall: Math.round(group.overall / group.count),
+          };
+        })
+        .sort((a, b) => a.sortTime - b.sortTime); // Older to newer
+
       setData(formatted);
     } catch (error) {
       console.error('Error loading skin trend data:', error);

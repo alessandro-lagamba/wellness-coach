@@ -204,6 +204,12 @@
       "newChat": "Nuova Chat",
       "empty": "Nessuna chat precedente"
     },
+    "deleteChat": {
+      "title": "Elimina Chat",
+      "message": "Sei sicuro di voler eliminare questa chat? Questa azione non può essere annullata."
+    },
+    "loadChatError": "Impossibile caricare questa chat",
+    "deleteChatError": "Impossibile eliminare questa chat",
     "suggestionFeedback": {
       "title": "Ottimo!",
       "message": "Suggerimento applicato. Come ti senti dopo averlo provato?",
@@ -1608,7 +1614,13 @@
         "moveTitle": "Sposta questo pasto",
         "moveSubtitle": "Seleziona il pasto della giornata a cui vuoi assegnarlo.",
         "analyzed": "Analizzato",
-        "deleteConfirm": "Sei sicuro di voler eliminare questo pasto dal piano?"
+        "deleteConfirm": "Sei sicuro di voler eliminare questo pasto dal piano?",
+        "describeMeal": "Descrivi il pasto",
+        "describeMealSubtitle": "Usa l'AI per stimare calorie da testo",
+        "quickAddTitle": "Aggiunta Rapida con AI",
+        "quickAddSubtitle": "Descrivi cosa hai mangiato",
+        "quickAddPlaceholder": "Esempio: Insalata di pollo con avocado e semi di zucca...",
+        "analyze": "Analizza"
       },
       "preferences": {
         "title": "Preferenze Alimentari",
@@ -2536,6 +2548,10 @@
       "stretching": {
         "title": "Stretching Dolce",
         "description": "Rilascia la tensione con movimenti dolci per collo e spalle"
+      },
+      "postureReset": {
+        "title": "Posture Reset",
+        "description": "Riallinea la postura."
       },
       "yogaFlow": {
         "title": "Yoga Flow",

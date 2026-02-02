@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "132681116558",
+    "project_id": "wellness-coach-73807",
+    "storage_bucket": "wellness-coach-73807.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:132681116558:android:7b0925d3395da7742c92df",
+        "android_client_info": {
+          "package_name": "com.wellnesscoach.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJk1PuYBjcNfmlW9EUFMfNTqf8wLh4sOM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -62,6 +62,13 @@ export class HealthDataSyncService {
         if (typeof value !== 'number' || Number.isNaN(value)) return 0;
         return parseFloat(value.toFixed(precision));
       };
+      const pickOrKeep = <T>(next: T | undefined, prev: T | undefined, fallback: T) =>
+        next !== undefined ? next : (prev ?? fallback);
+
+      // come sopra ma per number, con normalizzazione
+      const pickNumOrKeep = (next: number | undefined, prev: any, fallback = 0) =>
+        next !== undefined ? next : (typeof prev === 'number' ? prev : fallback);
+
 
       // 🔥 FIX: Use local date string (YYYY-MM-DD) instead of UTC to match user's calendar day
       const now = new Date();
@@ -93,36 +100,130 @@ export class HealthDataSyncService {
         active_minutes: Math.max(roundInt(healthData.activeMinutes), existingRecord?.active_minutes || 0),
 
         // Dati istantanei: usa il nuovo se disponibile (>0), altrimenti tieni il vecchio
-        heart_rate: roundInt(healthData.heartRate) || existingRecord?.heart_rate || 0,
-        resting_heart_rate: roundInt(healthData.restingHeartRate) || existingRecord?.resting_heart_rate || 0,
-        hrv: roundInt(healthData.hrv) || existingRecord?.hrv || 0,
+        heart_rate: pickOrKeep(
+          healthData.heartRate !== undefined ? roundInt(healthData.heartRate) : undefined,
+          existingRecord?.heart_rate,
+          0
+        ),
+        resting_heart_rate: pickOrKeep(
+          healthData.restingHeartRate !== undefined ? roundInt(healthData.restingHeartRate) : undefined,
+          existingRecord?.resting_heart_rate,
+          0
+        ),
+        hrv: pickOrKeep(
+          healthData.hrv !== undefined ? roundInt(healthData.hrv) : undefined,
+          existingRecord?.hrv,
+          0
+        ),
 
         // Sonno
-        sleep_hours: toDecimal(healthData.sleepHours ?? 0) || existingRecord?.sleep_hours || 0,
-        sleep_quality: roundInt(healthData.sleepQuality) || existingRecord?.sleep_quality || 0,
-        deep_sleep_minutes: roundInt(healthData.deepSleepMinutes) || existingRecord?.deep_sleep_minutes || 0,
-        rem_sleep_minutes: roundInt(healthData.remSleepMinutes) || existingRecord?.rem_sleep_minutes || 0,
-        light_sleep_minutes: roundInt(healthData.lightSleepMinutes) || existingRecord?.light_sleep_minutes || 0,
+        sleep_hours: pickOrKeep(
+          healthData.sleepHours !== undefined ? toDecimal(healthData.sleepHours) : undefined,
+          existingRecord?.sleep_hours,
+          0
+        ),
+        sleep_quality: pickOrKeep(
+          healthData.sleepQuality !== undefined ? roundInt(healthData.sleepQuality) : undefined,
+          existingRecord?.sleep_quality,
+          0
+        ),
+        deep_sleep_minutes: pickOrKeep(
+          healthData.deepSleepMinutes !== undefined ? roundInt(healthData.deepSleepMinutes) : undefined,
+          existingRecord?.deep_sleep_minutes,
+          0
+        ),
+        rem_sleep_minutes: pickOrKeep(
+          healthData.remSleepMinutes !== undefined ? roundInt(healthData.remSleepMinutes) : undefined,
+          existingRecord?.rem_sleep_minutes,
+          0
+        ),
+        light_sleep_minutes: pickOrKeep(
+          healthData.lightSleepMinutes !== undefined ? roundInt(healthData.lightSleepMinutes) : undefined,
+          existingRecord?.light_sleep_minutes,
+          0
+        ),
 
         // Parametri medici (Pressione, Peso, ecc.)
-        blood_pressure_systolic: (healthData.bloodPressure?.systolic ? roundInt(healthData.bloodPressure.systolic) : null) || existingRecord?.blood_pressure_systolic,
-        blood_pressure_diastolic: (healthData.bloodPressure?.diastolic ? roundInt(healthData.bloodPressure.diastolic) : null) || existingRecord?.blood_pressure_diastolic,
-        weight: (typeof healthData.weight === 'number' ? parseFloat(healthData.weight.toFixed(2)) : null) || existingRecord?.weight,
-        body_fat: (typeof healthData.bodyFat === 'number' ? parseFloat(healthData.bodyFat.toFixed(2)) : null) || existingRecord?.body_fat,
+        blood_pressure_systolic: pickOrKeep(
+          healthData.bloodPressure?.systolic !== undefined ? roundInt(healthData.bloodPressure.systolic) : undefined,
+          existingRecord?.blood_pressure_systolic,
+          null
+        ),
+        blood_pressure_diastolic: pickOrKeep(
+          healthData.bloodPressure?.diastolic !== undefined ? roundInt(healthData.bloodPressure.diastolic) : undefined,
+          existingRecord?.blood_pressure_diastolic,
+          null
+        ),
+        weight: pickOrKeep(
+          typeof healthData.weight === 'number' ? parseFloat(healthData.weight.toFixed(2)) : undefined,
+          existingRecord?.weight,
+          null
+        ),
+        body_fat: pickOrKeep(
+          typeof healthData.bodyFat === 'number' ? parseFloat(healthData.bodyFat.toFixed(2)) : undefined,
+          existingRecord?.body_fat,
+          null
+        ),
 
         // 🔥 Hydration and meditation: Allow overwriting if value is provided (to support removal)
         // If the new value is explicitly provided (even 0), we use it. 
         // We rely on the caller (TodayGlanceService) to pass the correct cumulative value.
         hydration: healthData.hydration !== undefined ? roundInt(healthData.hydration) : (existingRecord?.hydration || 0),
         mindfulness_minutes: healthData.mindfulnessMinutes !== undefined ? roundInt(healthData.mindfulnessMinutes) : (existingRecord?.mindfulness_minutes || 0),
-
-        // 🔥 REMOVED: source column dropped from database
-        updated_at: new Date().toISOString(),
       };
+
+      // ✅ OPTIM: se non cambia niente rispetto al record esistente, skip upsert
+      if (existingRecord) {
+        const next = {
+          steps: healthRecord.steps ?? 0,
+          distance: healthRecord.distance ?? 0,
+          calories: healthRecord.calories ?? 0,
+          active_minutes: healthRecord.active_minutes ?? 0,
+          heart_rate: healthRecord.heart_rate ?? 0,
+          resting_heart_rate: healthRecord.resting_heart_rate ?? 0,
+          hrv: healthRecord.hrv ?? 0,
+          sleep_hours: healthRecord.sleep_hours ?? 0,
+          sleep_quality: healthRecord.sleep_quality ?? 0,
+          deep_sleep_minutes: healthRecord.deep_sleep_minutes ?? 0,
+          rem_sleep_minutes: healthRecord.rem_sleep_minutes ?? 0,
+          light_sleep_minutes: healthRecord.light_sleep_minutes ?? 0,
+          hydration: healthRecord.hydration ?? 0,
+          mindfulness_minutes: healthRecord.mindfulness_minutes ?? 0,
+        };
+
+        const prev = {
+          steps: existingRecord.steps ?? 0,
+          distance: toDecimal(Number(existingRecord.distance ?? 0)),
+          calories: existingRecord.calories ?? 0,
+          active_minutes: existingRecord.active_minutes ?? 0,
+          heart_rate: existingRecord.heart_rate ?? 0,
+          resting_heart_rate: existingRecord.resting_heart_rate ?? 0,
+          hrv: existingRecord.hrv ?? 0,
+          sleep_hours: toDecimal(Number(existingRecord.sleep_hours ?? 0)),
+          sleep_quality: existingRecord.sleep_quality ?? 0,
+          deep_sleep_minutes: existingRecord.deep_sleep_minutes ?? 0,
+          rem_sleep_minutes: existingRecord.rem_sleep_minutes ?? 0,
+          light_sleep_minutes: existingRecord.light_sleep_minutes ?? 0,
+          hydration: existingRecord.hydration ?? 0,
+          mindfulness_minutes: existingRecord.mindfulness_minutes ?? 0,
+        };
+
+        const unchanged = Object.keys(next).every((k) => (next as any)[k] === (prev as any)[k]);
+
+        if (unchanged) {
+          console.log('✅ [SYNC DEBUG] No changes vs DB -> skip upsert');
+          return {
+            success: true,
+            recordsInserted: 0,
+            recordsUpdated: 0,
+          };
+        }
+      }
 
       const upsertData = {
         ...healthRecord,
         created_at: existingRecord?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       // 3. Esegui l'upsert finale

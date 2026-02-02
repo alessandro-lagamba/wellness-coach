@@ -496,11 +496,11 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       ? Math.round(hd.heartRate)
       : 0;
     const rawDistance = typeof hd.distance === 'number' && hd.distance > 0 ? hd.distance : 0;
+    // Fallback: estimate distance in km from steps (0.8m per step = 0.0008 km per step)
     const fallbackDistanceKm = Math.round(((hd.steps || 0) * 0.0008) * 100) / 100;
+    // distance is now consistently in METERS from health-data.service, convert to km
     const distanceKm = rawDistance > 0
-      ? rawDistance >= 100
-        ? Math.round((rawDistance / 1000) * 100) / 100
-        : Math.round(rawDistance * 100) / 100
+      ? Math.round((rawDistance / 1000) * 100) / 100  // meters -> km
       : fallbackDistanceKm;
     const resolvedDistanceKm = distanceKm > 0 ? distanceKm : fallbackDistanceKm;
     const estimatedCalories = typeof hd.calories === 'number' && hd.calories > 0

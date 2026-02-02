@@ -68,8 +68,53 @@ Locale: ${params.locale ?? "it-IT"}.
 `;
 
 /**
- * Suggest Meal User Prompt
+ * Analyze Text User Prompt
  */
+export const analyzeTextUserPrompt = (params: {
+  text: string;
+  mealType?: string;
+  prefs?: string[];
+  allergies?: string[];
+  locale?: string;
+}): string => `
+Descrizione di un pasto: "${params.text}"
+
+Estrai PIATTI/INGREDIENTI descritti con stima porzioni e calcola i valori nutrizionali.
+
+IMPORTANTE: Per ogni ingrediente identificato, devi:
+1. Stimare la quantità (in grammi, millilitri o porzioni)
+2. Calcolare i macronutrienti (proteine, carboidrati, grassi, fibre, zuccheri) per quella quantità
+3. Calcolare le calorie totali del pasto
+
+- Tipo pasto: ${params.mealType ?? "unknown"}
+- Preferenze: ${params.prefs?.join(", ") || "none"}
+- Allergie: ${params.allergies?.join(", ") || "none"}
+
+Nel JSON di output (schema "meal_draft") DEVI includere, in modo coerente con lo schema:
+- items: lista degli alimenti con quantità, unità e confidence
+- macrosEstimate: macronutrienti totali del pasto (proteine, carboidrati, grassi, fibre, zuccheri in grammi)
+- caloriesEstimate: calorie totali del pasto (kcal)
+- qualityTags: array di etichette sintetiche sulla qualità del pasto, scegli solo tra:
+  - "high_protein" (alto contenuto proteico)
+  - "whole_grain" (cereali integrali prevalenti)
+  - "vegetable_rich" (molte verdure)
+  - "ultra_processed" (cibi molto processati / industriali)
+  - "high_sugar" (molto zucchero semplice)
+  - "balanced" (profilo complessivamente equilibrato)
+  Usa solo le etichette che descrivono DAVVERO il piatto, senza inventare.
+- suggestions: 2–4 frasi brevi e pratiche (nella lingua dell'utente) su come:
+  - migliorare l'equilibrio del piatto,
+  - abbinarlo al resto della giornata,
+  - oppure confermare che è già ben bilanciato.
+
+Usa valori nutrizionali standard per alimenti comuni. Se la descrizione è vaga, usa porzioni standard medie e abbassa la confidence.
+
+${styleHints}
+
+Output JSON secondo schema. NIENTE testo extra, niente spiegazioni fuori dal JSON.
+
+Locale: ${params.locale ?? "it-IT"}.
+`;
 export const suggestMealUserPrompt = (body: {
   remainingCalories: number;
   remainingMacros: Partial<{
@@ -125,8 +170,8 @@ export const recipeFromIngredientsPrompt = (body: {
   avoidIngredients?: string[];
   maxReadyInMinutes?: number;
 }): string => {
-  const allergiesList = body.allergies && body.allergies.length > 0 
-    ? body.allergies.join(", ") 
+  const allergiesList = body.allergies && body.allergies.length > 0
+    ? body.allergies.join(", ")
     : "nessuna";
   const avoidList = body.avoidIngredients && body.avoidIngredients.length > 0
     ? body.avoidIngredients.join(", ")

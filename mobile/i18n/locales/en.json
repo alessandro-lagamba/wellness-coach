@@ -202,6 +202,12 @@
       "newChat": "New Chat",
       "empty": "No previous chats"
     },
+    "deleteChat": {
+      "title": "Delete Chat",
+      "message": "Are you sure you want to delete this chat? This action cannot be undone."
+    },
+    "loadChatError": "Unable to load this chat",
+    "deleteChatError": "Unable to delete this chat",
     "suggestionFeedback": {
       "title": "Great!",
       "message": "Suggestion applied. How do you feel after trying it?",
@@ -2484,6 +2490,10 @@
       "stretching": {
         "title": "Gentle Stretching",
         "description": "Release tension with gentle stretches for your neck and shoulders"
+      },
+      "postureReset": {
+        "title": "Posture Reset",
+        "description": "Rialigns your posture."
       },
       "yogaFlow": {
         "title": "Yoga Flow",

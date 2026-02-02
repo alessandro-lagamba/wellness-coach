@@ -119,6 +119,16 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     tags: ['tension', 'flexibility', 'relaxation']
   },
   {
+    id: 'posture-reset',
+    title: 'Posture Reset',
+    description: 'Riallinea la postura.',
+    icon: 'hand-paper-o',
+    category: WELLNESS_CATEGORIES[0], // Mind & Body
+    duration: '3 minutes',
+    difficulty: 'easy',
+    tags: ['posture', 'relaxation']
+  },
+  {
     id: 'yoga-flow',
     title: 'Yoga Flow',
     description: 'Connect mind and body with a gentle yoga sequence',
@@ -268,7 +278,7 @@ export const getSuggestionById = (id: string): WellnessSuggestion | undefined =>
 };
 
 export const getSuggestionsByTags = (tags: string[]): WellnessSuggestion[] => {
-  return WELLNESS_SUGGESTIONS.filter(suggestion => 
+  return WELLNESS_SUGGESTIONS.filter(suggestion =>
     tags.some(tag => suggestion.tags.includes(tag))
   );
 };

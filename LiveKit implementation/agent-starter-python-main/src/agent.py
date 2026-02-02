@@ -71,6 +71,7 @@ def build_dynamic_prompt(user_context: Optional[Dict[str, Any]] = None,
 - "Breathing Exercises" (5 min, facile): Pratica respirazione consapevole per ridurre stress
 - "Take a Walk" (15 min, facile): Camminata all'aperto per migliorare umore e circolazione
 - "Gentle Stretching" (10 min, facile): Allungamenti per collo e spalle per rilasciare tensione
+- "Posture Reset" (3 min, facile): Allunga la schiena, apri il petto e riallinea la postura (perfetto da scrivania).
 
 🥗 NUTRITION:
 - "Hydration" (continuo, facile): Bevi acqua costantemente per pelle luminosa

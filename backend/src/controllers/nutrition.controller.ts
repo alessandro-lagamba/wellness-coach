@@ -13,6 +13,7 @@ import {
 } from "../types/nutrition.types";
 import {
   analyzeImageHook,
+  analyzeTextHook,
   suggestMealHook,
   generateRecipeFromIngredientsHook,
   generateRestaurantRecipeHook,
@@ -50,6 +51,43 @@ export const analyzeImage = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error("[Nutrition] ❌ analyzeImage controller error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Internal server error",
+    });
+  }
+};
+
+/**
+ * POST /api/nutrition/analyze-text
+ * Analyze food description and extract meal draft
+ */
+export const analyzeText = async (req: Request, res: Response) => {
+  try {
+    const body: { text: string; mealType?: string; locale?: string } = req.body;
+
+    if (!body.text) {
+      return res.status(400).json({
+        success: false,
+        error: "Text description is required",
+      });
+    }
+
+    const result = await analyzeTextHook(body);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result.meal,
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+      });
+    }
+  } catch (error: any) {
+    console.error("[Nutrition] ❌ analyzeText controller error:", error);
     res.status(500).json({
       success: false,
       error: error.message || "Internal server error",

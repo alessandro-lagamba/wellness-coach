@@ -545,6 +545,10 @@ const FoodAnalysisScreenContent: React.FC = () => {
     date?: string;
     mealType?: MealPlanMealType;
   }>({ visible: false });
+  const [quickAddModalVisible, setQuickAddModalVisible] = useState(false);
+  const [quickAddText, setQuickAddText] = useState('');
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
+  const [isTextAnalyzing, setIsTextAnalyzing] = useState(false);
   const [slotSearch, setSlotSearch] = useState('');
   const [loadingRecipe, setLoadingRecipe] = useState(false);
   const [pendingAttachSlot, setPendingAttachSlot] = useState<{ date: string; mealType: MealPlanMealType } | null>(null);
@@ -1370,25 +1374,13 @@ const FoodAnalysisScreenContent: React.FC = () => {
   }, [cameraController.active, analyzing, results, handleExitCapture]);
 
   const handleStartAnalysis = async () => {
-    // 🔥 FIX: Mostra feedback visivo immediato quando il pulsante viene premuto
-    if (isMountedRef.current) {
-      setIsStarting(true);
-    }
-
+    if (isMountedRef.current) setIsStarting(true);
     try {
-      // 🔥 FIX: Chiama sempre ensureCameraPermission() che ora chiama sempre requestPermission()
-      // Android mostrerà il popup nativo se possibile (anche se permesso è "denied")
-      // Solo se l'utente ha selezionato "Non chiedere più" (blocked), Android non mostrerà il popup
       const granted = await ensureCameraPermission();
       if (!granted) {
-        // Se il permesso non è stato concesso, esci
-        // Se Android non può più mostrare il popup (blocked), l'utente dovrà aprire le impostazioni manualmente
-        if (isMountedRef.current) {
-          setIsStarting(false);
-        }
+        if (isMountedRef.current) setIsStarting(false);
         return;
       }
-
       const ready = await ensureAnalysisReady();
       if (!ready) {
         if (isMountedRef.current) {
@@ -1397,22 +1389,103 @@ const FoodAnalysisScreenContent: React.FC = () => {
         }
         return;
       }
-
-      // 🔥 FIX: Rimuoviamo console.log eccessivi
-      // Reset previous session state so the camera preview always shows immediately
       if (isMountedRef.current) {
         setResults(null);
         setAnalyzing(false);
         setCameraSwitching(false);
       }
-
-      // Avvia la fotocamera solo dopo aver verificato permessi e servizio
       await cameraController.startCamera();
     } finally {
-      // 🔥 FIX: Reset sempre il feedback visivo, anche in caso di errore
-      if (isMountedRef.current) {
-        setIsStarting(false);
+      if (isMountedRef.current) setIsStarting(false);
+    }
+  };
+
+  const handleQuickAdd = async () => {
+    if (!quickAddText.trim()) return;
+
+    setIsTextAnalyzing(true);
+    setQuickAddModalVisible(false);
+
+    try {
+      const openAIService = (await import('../services/openai-analysis.service')).OpenAIAnalysisService.getInstance();
+      const response = await openAIService.analyzeFoodFromText(quickAddText, slotPicker.mealType);
+
+      if (response.success && response.data) {
+        const data = response.data;
+        const currentUser = await AuthService.getCurrentUser();
+
+        if (currentUser) {
+          // 1. Salva l'analisi nel database (History)
+          const savedAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
+            mealType: (slotPicker.mealType as any) || data.meal_type || 'other',
+            identifiedFoods: data.identified_foods || [],
+            calories: data.macronutrients?.calories || 0,
+            carbohydrates: data.macronutrients?.carbohydrates || 0,
+            proteins: data.macronutrients?.proteins || 0,
+            fats: data.macronutrients?.fats || 0,
+            fiber: data.macronutrients?.fiber || 0,
+            healthScore: data.health_score || 70,
+            recommendations: data.recommendations || [],
+            observations: data.observations || [],
+            confidence: data.confidence || 0.8,
+            analysisData: data,
+          });
+
+          // 2. Aggiungi direttamente allo slot del Meal Planner
+          if (savedAnalysis) {
+            const planMealType = slotPicker.mealType || normalizeMealType(
+              data.meal_type,
+              inferMealTypeFromTime(new Date())
+            );
+            const planDate = slotPicker.date || toISODate(new Date());
+
+            const capitalizeTitle = (foods: string[]): string => {
+              if (!foods || foods.length === 0) return 'Pasto analizzato';
+              return foods
+                .map(food => food.charAt(0).toUpperCase() + food.slice(1).toLowerCase())
+                .join(', ');
+            };
+
+            const customRecipe = {
+              title: capitalizeTitle(data.identified_foods || []),
+              source: 'food_analysis',
+              analysis_id: savedAnalysis.id,
+              calories: data.macronutrients?.calories || 0,
+              macros: {
+                protein: data.macronutrients?.proteins || 0,
+                carbs: data.macronutrients?.carbohydrates || 0,
+                fat: data.macronutrients?.fats || 0,
+                fiber: data.macronutrients?.fiber || 0,
+              },
+              identified_foods: data.identified_foods || [],
+              health_score: data.health_score || 70,
+              image_url: savedAnalysis.image_url,
+            };
+
+            await mealPlanService.addEntry({
+              plan_date: planDate,
+              meal_type: planMealType as any,
+              custom_recipe: customRecipe,
+              servings: 1,
+              notes: `Aggiunta rapida AI - ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`,
+            });
+
+            UserFeedbackService.showSaveSuccess('pasto');
+            closeSlotPicker();
+
+            // Ricarica i dati per aggiornare la UI subito dopo l'aggiunta
+            await reloadData();
+          }
+        }
+      } else {
+        alert(response.error || (t('analysis.food.errors.analysisFailed') ?? 'Analysis failed'));
       }
+    } catch (error) {
+      console.error('Quick add failed:', error);
+      alert(t('analysis.food.errors.analysisFailed') ?? 'Analysis failed');
+    } finally {
+      setIsTextAnalyzing(false);
+      setQuickAddText('');
     }
   };
 
@@ -2013,14 +2086,15 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
   // Removed empty loading screen - CameraCapture handles its own loading state
 
-  if (analyzing) {
+  if (analyzing || isTextAnalyzing) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, flex: 1 }]}>
-        <CameraFrame />
-        <AnalysisLoader messages={[
-          'Identificando gli ingredienti del tuo piatto...',
-          'Stimando calorie e nutrienti...'
-        ]} />
+        {!isTextAnalyzing && <CameraFrame />}
+        <AnalysisLoader messages={
+          isTextAnalyzing
+            ? ['Analizzando il tuo pasto...', 'Calcolando valori nutrizionali...']
+            : ['Identificando gli ingredienti del tuo piatto...', 'Stimando calorie e nutrienti...']
+        } />
       </View>
     );
   }
@@ -2101,13 +2175,13 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
                   // 🆕 Aggiungi al diario alimentare (Meal Planner)
                   try {
-                    const inferredMealType = inferMealTypeFromTime(new Date());
-                    const mealType = normalizeMealType(
+                    // 🔥 FIX: Use slot info if available, otherwise fallback to now
+                    const planMealType = slotPicker.mealType || normalizeMealType(
                       pendingAnalysisData.analysisResult.meal_type,
-                      inferredMealType
+                      inferMealTypeFromTime(new Date())
                     );
 
-                    const todayISO = toISODate(new Date());
+                    const planDate = slotPicker.date || toISODate(new Date());
 
                     const capitalizeTitle = (foods: string[]): string => {
                       if (!foods || foods.length === 0) return 'Pasto analizzato';
@@ -2134,8 +2208,8 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
                     // 🔥 FIX: Usa addEntry invece di upsertEntry per permettere pasti multipli dello stesso tipo
                     await mealPlanService.addEntry({
-                      plan_date: todayISO,
-                      meal_type: mealType,
+                      plan_date: planDate,
+                      meal_type: planMealType,
                       custom_recipe: customRecipe,
                       servings: 1,
                       notes: `Analisi automatica - ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`,
@@ -2161,6 +2235,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
             setAnalyzing(false);
             setFullAnalysisResult(null);
             setPendingAnalysisData(null);
+            closeSlotPicker();
           }
           // Ferma la fotocamera e torna alla schermata principale (overview)
           cameraController.stopCamera();
@@ -2814,7 +2889,6 @@ const FoodAnalysisScreenContent: React.FC = () => {
           mealPlanLoading={mealPlanLoading}
           getEntryForCell={getEntryForCell}
           weeklySummary={weeklySummary}
-          onOpenFridge={() => setShowFridgeModal(true)}
           toISODate={toISODate}
           getDefaultMealType={getDefaultMealType}
         />
@@ -2873,6 +2947,24 @@ const FoodAnalysisScreenContent: React.FC = () => {
                   placeholderTextColor={colors.textTertiary}
                 />
               </View>
+
+              <TouchableOpacity
+                style={[styles.slotRecipeButton, { backgroundColor: colors.primary + '10', borderColor: colors.primary }]}
+                onPress={() => {
+                  setQuickAddModalVisible(true);
+                  // 🔥 FIX: Non resettare slotPicker.date/mealType, nascondilo solo
+                  setSlotPicker(prev => ({ ...prev, visible: false }));
+                }}
+              >
+                <MaterialCommunityIcons name="pencil-plus-outline" size={20} color={colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.recipeCardTitle, { color: colors.primary }]}>{t('analysis.food.mealPlanner.describeMeal') || 'Descrivi il pasto'}</Text>
+                  <Text style={[styles.recipeCardMeta, { color: colors.primary + '80' }]}>
+                    {t('analysis.food.mealPlanner.describeMealSubtitle') || 'Usa l\'AI per stimare calorie da testo'}
+                  </Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={18} color={colors.primary} />
+              </TouchableOpacity>
 
               <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
                 {filteredSlotRecipes.map((recipe) => (
@@ -2989,6 +3081,124 @@ const FoodAnalysisScreenContent: React.FC = () => {
                   <Text style={[styles.secondaryButtonText, { color: '#ef4444' }]}>
                     {t('common.delete') || 'Elimina'}
                   </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* AI Quick Add Modal */}
+        <Modal
+          visible={quickAddModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setQuickAddModalVisible(false)}
+        >
+          <View style={styles.slotModalOverlay}>
+            <View style={[styles.slotModalCard, {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              padding: 24,
+              borderRadius: 32,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 12 },
+              shadowOpacity: 0.15,
+              shadowRadius: 24,
+              elevation: 10
+            }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                <View style={{
+                  backgroundColor: colors.primary + '15',
+                  padding: 12,
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: colors.primary + '30'
+                }}>
+                  <MaterialCommunityIcons name="auto-fix" size={28} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.slotModalTitle, { color: colors.text, fontSize: 20, fontFamily: 'Figtree_700Bold' }]}>
+                    {t('analysis.food.mealPlanner.quickAddTitle') || 'Aggiunta Rapida con AI'}
+                  </Text>
+                  <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+                    {t('analysis.food.mealPlanner.quickAddSubtitle') || 'Descrivi cosa hai mangiato'}
+                  </Text>
+                </View>
+              </View>
+
+              <TextInput
+                style={[
+                  styles.filterTextInput,
+                  {
+                    color: colors.text,
+                    backgroundColor: colors.surfaceElevated + '50',
+                    borderRadius: 20,
+                    padding: 18,
+                    minHeight: 140,
+                    textAlignVertical: 'top',
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    fontSize: 16,
+                    lineHeight: 22,
+                    fontFamily: 'Figtree_500Medium'
+                  }
+                ]}
+                value={quickAddText}
+                onChangeText={setQuickAddText}
+                placeholder={t('analysis.food.mealPlanner.quickAddPlaceholder') || "Esempio: Insalata di pollo con avocado e semi di zucca..."}
+                placeholderTextColor={colors.textTertiary}
+                multiline
+                autoFocus
+              />
+
+              <View style={[styles.slotModalActions, { marginTop: 12, gap: 12 }]}>
+                <TouchableOpacity
+                  style={[styles.secondaryButton, {
+                    flex: 1,
+                    backgroundColor: colors.surfaceElevated,
+                    borderColor: colors.border,
+                    paddingVertical: 14,
+                    height: 56,
+                    borderRadius: 24
+                  }]}
+                  onPress={() => {
+                    setQuickAddModalVisible(false);
+                    setQuickAddText('');
+                  }}
+                >
+                  <Text style={[styles.secondaryButtonText, { color: colors.text, fontSize: 16 }]}>
+                    {t('common.cancel')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 2 }}
+                  disabled={!quickAddText.trim() || isTextAnalyzing}
+                  onPress={handleQuickAdd}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={quickAddText.trim() ? ['#8b5cf6', '#6366f1'] : [colors.border, colors.border]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[styles.primaryButton, {
+                      paddingVertical: 14,
+                      height: 56,
+                      borderRadius: 24,
+                      opacity: quickAddText.trim() ? 1 : 0.6,
+                      borderWidth: 0
+                    }]}
+                  >
+                    {isTextAnalyzing ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <>
+                        <MaterialCommunityIcons name="sparkles" size={18} color="white" />
+                        <Text style={[styles.primaryButtonText, { fontSize: 16 }]}>
+                          {t('analysis.food.mealPlanner.analyze') || 'Analizza'}
+                        </Text>
+                      </>
+                    )}
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             </View>

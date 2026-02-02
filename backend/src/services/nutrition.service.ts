@@ -27,6 +27,7 @@ import {
   recipeFromIngredientsPrompt,
   restaurantMealRecipePrompt,
   parseIngredientsUserPrompt,
+  analyzeTextUserPrompt,
   calculateNutritionPrompt,
 } from "./ai/prompt";
 import { analyzeImageSchema, suggestMealSchema, generateRecipeSchema, calculateNutritionSchema } from "./ai/schemas";
@@ -123,6 +124,69 @@ export async function analyzeImageHook(
     };
   }
 }
+
+/**
+ * Analyze food description and extract meal draft
+ */
+export async function analyzeTextHook(
+  body: { text: string; mealType?: string; prefs?: string[]; allergies?: string[]; locale?: string }
+): Promise<AnalyzeImageResp> {
+  try {
+    console.log("[Nutrition] 📝 Analyzing food description...");
+
+    const res = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      response_format: {
+        type: "json_schema",
+        json_schema: analyzeImageSchema as any,
+      },
+      messages: [
+        { role: "system", content: systemGuardrails },
+        { role: "user", content: analyzeTextUserPrompt(body) },
+      ],
+      temperature: 0.2,
+    });
+
+    const content = res.choices[0].message.content;
+    if (!content) {
+      throw new Error("Empty response from OpenAI");
+    }
+
+    const data = JSON.parse(content) as {
+      mealType?: string;
+      items: any[];
+      macrosEstimate?: any;
+      caloriesEstimate?: number;
+      qualityTags?: string[];
+      confidence: number;
+      suggestions?: string[];
+    };
+
+    const meal: MealDraft = {
+      mealType: (data.mealType as any) ?? (body.mealType as any),
+      items: data.items,
+      macrosEstimate: data.macrosEstimate,
+      caloriesEstimate: data.caloriesEstimate,
+      qualityTags: data.qualityTags,
+      confidence: data.confidence,
+      suggestions: data.suggestions,
+    };
+
+    console.log("[Nutrition] ✅ Text analysis complete:", {
+      items: meal.items.length,
+      confidence: meal.confidence,
+    });
+
+    return { success: true, meal };
+  } catch (e: any) {
+    console.error("[Nutrition] ❌ analyzeText failed:", e);
+    return {
+      success: false,
+      error: e.message ?? "analyzeText failed",
+    };
+  }
+}
+
 
 /**
  * Suggest meals to fill nutritional gaps

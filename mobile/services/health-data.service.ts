@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
 import {
   HealthData,
   HealthPermissions,
@@ -9,35 +9,75 @@ import {
 import { HealthDataSyncService } from './health-data-sync.service';
 import { AuthService } from './auth.service';
 
-// Import health libraries
+// Platform-specific module references
 let AppleHealthKit: any = null;
 let HealthConnect: any = null;
 
-try {
-  if (Platform.OS === 'ios') {
-    // 🔥 FIX: Non usare .default - il modulo patchato esporta direttamente via module.exports
-    AppleHealthKit = require('react-native-health');
-    console.log('[HealthKit] ✅ AppleHealthKit module loaded successfully');
-  } else if (Platform.OS === 'android') {
-    // CORRETTO: Import come in health-permissions.service.ts
-    HealthConnect = require('react-native-health-connect');
-    // Se esporta tramite default, usalo
-    if (HealthConnect && HealthConnect.default) {
-      HealthConnect = HealthConnect.default;
+// 🔥 CRITICAL: Import modules based on platform to avoid loading incompatible code
+// react-native-health-connect has Android-specific native code that fails on iOS
+// react-native-health has iOS-specific native code that fails on Android
+if (Platform.OS === 'ios') {
+  try {
+    // Import react-native-health for iOS
+    const HealthKitModule = require('react-native-health');
+    // Handle both default and named exports (varies between debug/release)
+    AppleHealthKit = HealthKitModule.default || HealthKitModule;
+
+    // 🔥 CHECK: Verify native module is properly linked (critical for TestFlight)
+    const nativeHK =
+      NativeModules?.AppleHealthKit ||
+      NativeModules?.RNAppleHealthKit ||
+      NativeModules?.RNHealthKit ||
+      NativeModules?.AppleHealthKitModule;
+
+    if (!nativeHK) {
+      console.error(
+        '[HealthKit] ❌ Native HealthKit module MISSING -> react-native-health is NOT linked in this build'
+      );
+      console.log('[HealthKit] NativeModules keys (partial):', Object.keys(NativeModules || {}).slice(0, 50));
+    } else {
+      console.log('[HealthKit] ✅ Native HealthKit module present');
     }
+
+    // Verify that critical methods exist
+    if (AppleHealthKit) {
+      const hasInitMethod = typeof AppleHealthKit.initHealthKit === 'function';
+      const hasStepsMethod = typeof AppleHealthKit.getStepCount === 'function';
+      console.log('[HealthKit] ✅ AppleHealthKit module loaded:', { hasInitMethod, hasStepsMethod });
+
+      if (!hasInitMethod || !hasStepsMethod) {
+        console.error('[HealthKit] ❌ AppleHealthKit missing critical methods - check module export format');
+        // Try to access the default export if methods are missing
+        if (AppleHealthKit.default && typeof AppleHealthKit.default.initHealthKit === 'function') {
+          console.log('[HealthKit] 🔧 Found methods in .default, switching...');
+          AppleHealthKit = AppleHealthKit.default;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[HealthKit] ❌ Failed to load react-native-health:', error);
   }
-} catch (error) {
-  // 🔥 FIX: Solo errori critici in console
-  console.error('❌ Health libraries not available:', error);
+} else if (Platform.OS === 'android') {
+  try {
+    // Import react-native-health-connect for Android only
+    const HealthConnectModule = require('react-native-health-connect');
+    // Handle both default and named exports
+    HealthConnect = HealthConnectModule.default || HealthConnectModule;
+    console.log('[HealthConnect] ✅ Health Connect module loaded successfully');
+  } catch (error) {
+    console.error('[HealthConnect] ❌ Failed to load react-native-health-connect:', error);
+  }
 }
+
 
 export class HealthDataService {
   private static instance: HealthDataService;
   private config: HealthDataServiceConfig;
   private isSyncInProgress: boolean = false;
   private lastSyncAt: number | null = null;
-  private lastHealthData: HealthData | null = null; // 🔥 Memorizza l'ultimo dato sincronizzato
-  private lastHealthDataSource: 'healthkit' | 'health_connect' | 'manual' | 'mock' | null = null; // 🔥 Memorizza la source dell'ultimo dato
+  private lastHealthData: HealthData | null = null;
+  private lastHealthDataSource: 'healthkit' | 'health_connect' | 'manual' | 'mock' | null = null;
+  private healthKitInitialized: boolean = false;
   private permissions: HealthPermissions = {
     steps: false,
     heartRate: false,
@@ -48,17 +88,17 @@ export class HealthDataService {
     bodyFat: false,
     hydration: false,
     mindfulness: false,
-    menstruation: false, // 🆕
+    menstruation: false,
   };
-  private needsHrvPermission: boolean = false; // 🔥 Flag to force HRV permission request
+
+  private needsHrvPermission: boolean = false;
 
   private constructor() {
     this.config = {
       enableHealthKit: Platform.OS === 'ios',
       enableHealthConnect: Platform.OS === 'android',
-      syncInterval: 15, // 15 minutes
+      syncInterval: 15,
       maxRetries: 3,
-      // 🔥 FIX: DISABILITATO mock data - vogliamo solo dati reali da HealthKit/Health Connect
       fallbackToMock: false,
     };
   }
@@ -75,19 +115,17 @@ export class HealthDataService {
    */
   async initialize(): Promise<boolean> {
     try {
-      // 🔥 FIX: Rimuoviamo console.log eccessivi - manteniamo solo errori critici
+      // ✅ Importante: refreshPermissions su iOS non è affidabile (Apple non ti dà uno stato “verificabile”).
+      // Lo usiamo SOLO su Android. Su iOS ci basiamo su initHealthKit + tentativi di query.
+      if (Platform.OS === 'android') {
+        await this.refreshPermissions();
+      }
 
-      // Carica i permessi concessi se disponibili
-      await this.refreshPermissions();
-
-      // 🔥 FIX: If HRV is missing but we have other permissions, auto-request HRV
+      // Auto-request HRV su Android se manca
       if (this.needsHrvPermission && Platform.OS === 'android') {
         console.log('🔥 [HRV FIX] Auto-requesting HRV permission...');
         try {
-          const { HealthPermissionsService } = await import('./health-permissions.service');
-          // Request ALL permissions (unified) to ensure everything is granted at once
           await this.requestPermissions();
-          // Refresh permissions again after request
           await this.refreshPermissions();
           this.needsHrvPermission = false;
         } catch (err) {
@@ -101,7 +139,6 @@ export class HealthDataService {
         return await this.initializeHealthConnect();
       }
 
-      // 🔥 FIX: Rimuoviamo console.log eccessivi
       return true;
     } catch (error) {
       console.error('❌ Failed to initialize health data service:', error);
@@ -109,33 +146,22 @@ export class HealthDataService {
     }
   }
 
-  /**
-   * 🔥 NUOVO: Getter per l'ultimo dato salute sincronizzato
-   * Usato per verificare se i permessi iOS funzionano realmente
-   */
   getLastHealthData(): HealthData | null {
     return this.lastHealthData;
   }
 
   /**
-   * 🔥 NUOVO: Forza il refresh dei permessi da HealthPermissionsService
-   * Utile dopo aver concesso nuovi permessi
+   * Forza il refresh dei permessi (Android sì, iOS NO: non affidabile).
    */
   async refreshPermissions(): Promise<void> {
     try {
       if (Platform.OS === 'android') {
         const { HealthPermissionsService } = await import('./health-permissions.service');
 
-        // 🔥 Aspetta un breve momento per assicurarci che Health Connect abbia processato i permessi
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // 🔥 Forza il refresh leggendo direttamente da Health Connect
         const grantedPermissions = await HealthPermissionsService.getGrantedPermissions();
 
-        // 🔥 PERF: Removed verbose logging
-        // console.log('🔄 Refreshed permissions from Health Connect:', grantedPermissions);
-
-        // Aggiorna i permessi locali basandosi su quelli concessi
         const newPermissions = {
           steps: grantedPermissions.includes('steps'),
           heartRate: grantedPermissions.includes('heart_rate'),
@@ -144,64 +170,40 @@ export class HealthDataService {
           bloodPressure: grantedPermissions.includes('blood_pressure'),
           weight: grantedPermissions.includes('weight'),
           bodyFat: grantedPermissions.includes('body_fat'),
-          hydration: false, // Not directly available
-          mindfulness: false, // Not directly available
-          menstruation: grantedPermissions.includes('menstruation'), // 🆕
+          hydration: false,
+          mindfulness: false,
+          menstruation: grantedPermissions.includes('menstruation'),
         };
 
-        // 🔥 CRITICO: Verifica se c'è stato un cambiamento nei permessi
         const hadPermissions = Object.values(this.permissions).some(Boolean);
         const hasPermissions = Object.values(newPermissions).some(Boolean);
 
         if (!hadPermissions && hasPermissions) {
-          // 🔥 PERF: Removed verbose logging
-          // console.log('✅ NEW PERMISSIONS DETECTED! Clearing cached data to force fresh sync');
-          // 🔥 Reset dati cached per forzare una nuova sincronizzazione
           this.lastHealthData = null;
           this.lastHealthDataSource = null;
           this.lastSyncAt = null;
         }
 
         this.permissions = newPermissions;
-        // 🔥 PERF: Removed verbose logging
-        // console.log('📋 Updated local permissions:', this.permissions);
 
-        // 🔥 FIX: Check if we have SOME permissions but HRV is missing
-        // This happens when user granted permissions BEFORE HRV was added
         const hasSomePermissions = newPermissions.steps || newPermissions.heartRate || newPermissions.sleep;
         const missingHrv = !newPermissions.hrv;
 
         if (hasSomePermissions && missingHrv) {
           console.log('⚠️ [HRV FIX] Detected missing HRV permission while other permissions exist');
-          console.log('⚠️ [HRV FIX] Will request HRV permission on next requestPermissions call');
-          // Store a flag to force HRV request
           this.needsHrvPermission = true;
         }
-      } else if (Platform.OS === 'ios') {
-        // 🔥 FIX: Per iOS, leggi i permessi da HealthPermissionsService
-        const { HealthPermissionsService } = await import('./health-permissions.service');
-        const grantedPermissions = await HealthPermissionsService.getGrantedPermissions();
 
-        // 🔥 PERF: Removed verbose logging
-        // console.log('🔄 Refreshed permissions from HealthKit:', grantedPermissions);
+        return;
+      }
 
-        const newPermissions = {
-          steps: grantedPermissions.includes('steps'),
-          heartRate: grantedPermissions.includes('heart_rate'),
-          sleep: grantedPermissions.includes('sleep'),
-          hrv: grantedPermissions.includes('hrv'),
-          bloodPressure: grantedPermissions.includes('blood_pressure'),
-          weight: grantedPermissions.includes('weight'),
-          bodyFat: grantedPermissions.includes('body_fat'),
-          hydration: false, // Not directly available
-          mindfulness: false, // Not directly available
-          menstruation: false, // TODO: Add iOS support
-        };
-
-
-        this.permissions = newPermissions;
-        // 🔥 PERF: Removed verbose logging
-        // console.log('📋 Updated local permissions (iOS):', this.permissions);
+      if (Platform.OS === 'ios') {
+        // 🔥 FIX CRITICO:
+        // NON sovrascrivere this.permissions su iOS con un check non affidabile.
+        // Lo stato reale lo determiniamo così:
+        // - initHealthKit non dà errore => ok
+        // - tentativi di query => se tornano dati/0 senza errori gravi => ok
+        return;
       }
     } catch (error) {
       console.error('❌ Could not refresh permissions:', error);
@@ -212,23 +214,27 @@ export class HealthDataService {
    * Initialize HealthKit for iOS
    */
   private async initializeHealthKit(): Promise<boolean> {
-    if (!AppleHealthKit) {
-      // 🔥 PERF: Removed verbose logging
-      // console.log('⚠️ AppleHealthKit not available');
+    if (!AppleHealthKit) return false;
+
+    // ✅ Se manca il native module, inutile continuare: in TestFlight spesso è il problema
+    const nativeHK =
+      NativeModules?.AppleHealthKit ||
+      NativeModules?.RNAppleHealthKit ||
+      NativeModules?.RNHealthKit ||
+      NativeModules?.AppleHealthKitModule;
+
+    if (!nativeHK) {
+      console.error('[HealthKit] ❌ Native HealthKit module missing. HealthKit cannot work in this build.');
       return false;
     }
 
+
     try {
-      // 🔥 FIX: Verifica che isAvailable sia una funzione prima di chiamarla
       if (typeof AppleHealthKit.isAvailable !== 'function') {
-        // 🔥 PERF: Removed verbose logging
-        // console.log('⚠️ AppleHealthKit.isAvailable is not a function');
-        // Su simulatore potrebbe non essere disponibile - consideriamo comunque inizializzato
-        // per permettere il testing dell'UI
+        // fallback: consideriamo inizializzato per non bloccare UI
         return true;
       }
 
-      // Check if HealthKit is available using callback pattern
       const isAvailable = await new Promise<boolean>((resolve) => {
         try {
           AppleHealthKit.isAvailable((error: any, results: boolean) => {
@@ -245,11 +251,7 @@ export class HealthDataService {
         }
       });
 
-      if (!isAvailable) {
-        // 🔥 PERF: Removed verbose logging
-        // console.log('⚠️ HealthKit not available on this device');
-        return false;
-      }
+      if (!isAvailable) return false;
 
       return true;
     } catch (error) {
@@ -262,41 +264,28 @@ export class HealthDataService {
    * Initialize Health Connect for Android
    */
   private async initializeHealthConnect(): Promise<boolean> {
-    if (!HealthConnect) {
-      return false;
-    }
+    if (!HealthConnect) return false;
 
     try {
-      // CORRETTO: Usa getSdkStatus() invece di isAvailable() che non esiste
       if (!HealthConnect.getSdkStatus || typeof HealthConnect.getSdkStatus !== 'function') {
         return false;
       }
 
-      // Verifica disponibilità con getSdkStatus()
       const status = await HealthConnect.getSdkStatus();
 
-      // Verifica se SDK_AVAILABLE è disponibile come costante
       if (HealthConnect.SdkAvailabilityStatus) {
         const isAvailable = status === HealthConnect.SdkAvailabilityStatus.SDK_AVAILABLE;
-        if (!isAvailable) {
-          return false;
-        }
+        if (!isAvailable) return false;
       } else {
-        // Fallback: se getSdkStatus restituisce un numero, SDK_AVAILABLE è tipicamente 1
         const isAvailable = status === 1 || status === 'SDK_AVAILABLE' || status === true;
-        if (!isAvailable) {
-          return false;
-        }
+        if (!isAvailable) return false;
       }
 
-      // Inizializza Health Connect
       if (HealthConnect.initialize && typeof HealthConnect.initialize === 'function') {
         try {
           await HealthConnect.initialize();
         } catch (initError) {
-          // 🔥 FIX: Solo errori critici in console
           console.error('❌ Health Connect initialization failed:', initError);
-          // Continua comunque, a volte l'inizializzazione può fallire ma funziona ancora
         }
       }
 
@@ -307,20 +296,15 @@ export class HealthDataService {
     }
   }
 
-  /**
-   * Request health data permissions
-   */
   async requestPermissions(): Promise<HealthPermissions> {
     try {
-      // 🔥 FIX: Rimuoviamo console.log eccessivi
-
       if (Platform.OS === 'ios' && AppleHealthKit) {
         return await this.requestHealthKitPermissions();
       } else if (Platform.OS === 'android' && HealthConnect) {
         return await this.requestHealthConnectPermissions();
       }
 
-      // Fallback to mock permissions
+      // Fallback (non dovrebbe succedere)
       this.permissions = {
         steps: true,
         heartRate: true,
@@ -331,10 +315,9 @@ export class HealthDataService {
         bodyFat: false,
         hydration: true,
         mindfulness: true,
-        menstruation: true, // 🆕
+        menstruation: true,
       };
 
-      // 🔥 FIX: Rimuoviamo console.log eccessivi
       return this.permissions;
     } catch (error) {
       console.error('❌ Failed to request health permissions:', error);
@@ -342,47 +325,47 @@ export class HealthDataService {
     }
   }
 
-  /**
-   * Request HealthKit permissions
-   */
   private async requestHealthKitPermissions(): Promise<HealthPermissions> {
+    // ✅ Permessi robusti: prendi solo quelli definiti
+    const PERMS = AppleHealthKit?.Constants?.Permissions || {};
+    const readPerms = [
+      PERMS.Steps,
+      PERMS.StepCount,
+      PERMS.DistanceWalkingRunning,
+      PERMS.ActiveEnergyBurned,
+      PERMS.HeartRate,
+      PERMS.RestingHeartRate,
+      PERMS.HeartRateVariability,
+      PERMS.SleepAnalysis,
+      PERMS.BloodPressure,
+      PERMS.BodyMass,
+      PERMS.BodyFatPercentage,
+    ].filter(Boolean);
+
+    const writePerms = [
+      PERMS.Steps,
+      PERMS.ActiveEnergyBurned,
+      PERMS.MindfulSession,
+    ].filter(Boolean);
+
     const permissions = {
       permissions: {
-        read: [
-          AppleHealthKit.Constants.Permissions.Steps,
-          AppleHealthKit.Constants.Permissions.DistanceWalkingRunning,
-          AppleHealthKit.Constants.Permissions.ActiveEnergyBurned,
-          AppleHealthKit.Constants.Permissions.HeartRate,
-          AppleHealthKit.Constants.Permissions.RestingHeartRate,
-          AppleHealthKit.Constants.Permissions.HeartRateVariability,
-          AppleHealthKit.Constants.Permissions.SleepAnalysis,
-          AppleHealthKit.Constants.Permissions.BloodPressure,
-          AppleHealthKit.Constants.Permissions.BodyMass,
-          AppleHealthKit.Constants.Permissions.BodyFatPercentage,
-        ],
-        write: [
-          AppleHealthKit.Constants.Permissions.Steps,
-          AppleHealthKit.Constants.Permissions.ActiveEnergyBurned,
-          AppleHealthKit.Constants.Permissions.MindfulSession,
-        ],
+        read: readPerms,
+        write: writePerms,
       },
     };
 
     return new Promise((resolve) => {
-      AppleHealthKit.initHealthKit(permissions, (error: any, results: any) => {
+      AppleHealthKit.initHealthKit(permissions, (error: any) => {
         if (error) {
           console.error('❌ HealthKit permission error:', error);
           resolve(this.permissions);
           return;
         }
 
-        // 🔥 FIX: Rimuoviamo console.log eccessivi
+        this.healthKitInitialized = true;
 
-        // 🔥 FIX: On iOS, we cannot distinguish between "denied" and "no data" for privacy reasons.
-        // If initHealthKit didn't error, we assume the user has been prompted.
-        // We optimistically set permissions to TRUE to avoid the "phantom permission" loop
-        // where the app keeps asking for permissions because it sees 'false'.
-        // If the user actually denied them, queries will just return 0, which is handled as 'empty' data.
+        // ✅ iOS: non puoi conoscere “denied vs empty” => set ottimistico per non loopare
         this.permissions = {
           steps: true,
           heartRate: true,
@@ -391,9 +374,9 @@ export class HealthDataService {
           bloodPressure: true,
           weight: true,
           bodyFat: true,
-          hydration: false, // Not directly available in HealthKit
+          hydration: false,
           mindfulness: true,
-          menstruation: false, // TODO: Add iOS support
+          menstruation: false,
         };
 
         resolve(this.permissions);
@@ -401,36 +384,24 @@ export class HealthDataService {
     });
   }
 
-  /**
-   * Request Health Connect permissions
-   * 🔥 Now uses HealthPermissionsService for consistent permission handling
-   */
   private async requestHealthConnectPermissions(): Promise<HealthPermissions> {
     try {
       const { HealthPermissionsService } = await import('./health-permissions.service');
 
-      // 🔥 UNIFIED: All health permissions requested together
-      // Uses internal IDs that get mapped to Health Connect types
       const permissionIds = [
         'steps',
         'heart_rate',
         'sleep',
-        'hrv',  // Maps to HeartRateVariabilityRmssd
+        'hrv',
         'blood_pressure',
         'weight',
         'body_fat',
-        'menstruation'  // Maps to MenstruationPeriod
+        'menstruation'
       ];
 
       const result = await HealthPermissionsService.requestHealthPermissions(permissionIds);
+      const granted = result.success ? await HealthPermissionsService.getGrantedPermissions() : [];
 
-      const granted = result.success
-        ? await HealthPermissionsService.getGrantedPermissions()
-        : [];
-
-      // 🔥 FIX: Rimuoviamo console.log eccessivi
-
-      // Map Health Connect permissions to our interface
       this.permissions = {
         steps: granted.includes('steps'),
         heartRate: granted.includes('heart_rate'),
@@ -439,9 +410,9 @@ export class HealthDataService {
         bloodPressure: granted.includes('blood_pressure'),
         weight: granted.includes('weight'),
         bodyFat: granted.includes('body_fat'),
-        hydration: false, // Not directly available in Health Connect
-        mindfulness: false, // Not directly available in Health Connect
-        menstruation: granted.includes('menstruation'), // 🆕
+        hydration: false,
+        mindfulness: false,
+        menstruation: granted.includes('menstruation'),
       };
 
       return this.permissions;
@@ -456,18 +427,18 @@ export class HealthDataService {
    */
   async syncHealthData(force: boolean = false): Promise<HealthDataSyncResult> {
     try {
-      // Debounce/lock: evita sync concorrenti o troppo ravvicinate
       if (this.isSyncInProgress && !force) {
         return {
           success: true,
-          data: this.lastHealthData || undefined as any,
+          data: (this.lastHealthData || undefined) as any,
           lastSyncDate: this.lastSyncAt ? new Date(this.lastSyncAt) : new Date()
         };
       }
+
       if (!force && this.lastSyncAt && Date.now() - this.lastSyncAt < 60_000) {
         return {
           success: true,
-          data: this.lastHealthData || undefined as any,
+          data: (this.lastHealthData || undefined) as any,
           lastSyncDate: new Date(this.lastSyncAt)
         };
       }
@@ -475,34 +446,40 @@ export class HealthDataService {
       this.isSyncInProgress = true;
       console.time('HealthDataService_Sync_Total');
 
-      // 🔥 CRITICO: Verifica se abbiamo permessi concessi PRIMA di sincronizzare
       const hasAnyPermission = Object.values(this.permissions).some(Boolean);
       const shouldUseRealData = hasAnyPermission &&
-        ((Platform.OS === 'ios' && AppleHealthKit) ||
+        ((Platform.OS === 'ios' && AppleHealthKit && NativeModules?.AppleHealthKit) ||
           (Platform.OS === 'android' && HealthConnect));
 
       let healthData: HealthData;
-      let isMock = false;
 
       console.time('HealthConnect_Fetch');
-      // 🔥 FIX: Su iOS, NON controllare this.permissions.steps perché non possiamo sapere lo stato reale
-      // Proviamo sempre a leggere - se funziona abbiamo i permessi, se fallisce no
-      if (Platform.OS === 'ios' && AppleHealthKit) {
+
+      const nativeHK =
+        NativeModules?.AppleHealthKit ||
+        NativeModules?.RNAppleHealthKit ||
+        NativeModules?.RNHealthKit ||
+        NativeModules?.AppleHealthKitModule;
+
+      if (Platform.OS === 'ios' && AppleHealthKit && nativeHK) {
         const result = await this.syncHealthKitData();
         if (result.success && result.data) {
           healthData = result.data;
-          // Se abbiamo ottenuto dati, aggiorniamo i permessi locali
-          if (result.data.steps > 0) this.permissions.steps = true;
-          if (result.data.heartRate > 0) this.permissions.heartRate = true;
-          if (result.data.hrv > 0) this.permissions.hrv = true;
-          if (result.data.sleepHours > 0) this.permissions.sleep = true;
+
+          // aggiorna “segnali” permessi (soft)
+          if (result.data.steps >= 0) this.permissions.steps = true;
+          if (result.data.heartRate >= 0) this.permissions.heartRate = true;
+          if (result.data.hrv >= 0) this.permissions.hrv = true;
+          if (result.data.sleepHours >= 0) this.permissions.sleep = true;
+
         } else {
-          if (this.lastHealthData && this.lastHealthData.steps && this.lastHealthData.steps > 0) {
+          if (this.lastHealthData && (this.lastHealthData.steps ?? 0) > 0) {
             healthData = this.lastHealthData;
           } else {
             throw new Error(result.error || 'HealthKit sync failed');
           }
         }
+
       } else if (Platform.OS === 'android' && HealthConnect &&
         (this.permissions.steps || this.permissions.heartRate || this.permissions.sleep)) {
 
@@ -510,11 +487,10 @@ export class HealthDataService {
         if (result.success && result.data) {
           healthData = result.data;
         } else {
-          // 🔥 CRITICO: Se i permessi sono concessi ma la sync fallisce, usa l'ultimo dato reale
           if (this.lastHealthData && shouldUseRealData) {
-            const hasRealData = (this.lastHealthData.steps && this.lastHealthData.steps > 0) ||
-              (this.lastHealthData.heartRate && this.lastHealthData.heartRate > 0) ||
-              (this.lastHealthData.sleepHours && this.lastHealthData.sleepHours > 0);
+            const hasRealData = ((this.lastHealthData.steps ?? 0) > 0) ||
+              ((this.lastHealthData.heartRate ?? 0) > 0) ||
+              ((this.lastHealthData.sleepHours ?? 0) > 0);
 
             if (hasRealData) {
               healthData = this.lastHealthData;
@@ -525,10 +501,11 @@ export class HealthDataService {
             throw new Error(result.error || 'Health Connect sync failed');
           }
         }
+
       } else {
         console.timeEnd('HealthConnect_Fetch');
 
-        // 🔥 NUOVO: Anche senza permessi, crea un record vuoto per oggi per tracciare lo streak (login)
+        // Heartbeat “vuoto” se non permessi
         const currentUser = await AuthService.getCurrentUser();
         if (currentUser) {
           const emptyHealthData: HealthData = {
@@ -543,18 +520,18 @@ export class HealthDataService {
         }
 
         console.timeEnd('HealthDataService_Sync_Total');
-        // Nessuna sorgente disponibile
         return {
           success: true,
-          data: this.lastHealthData || undefined as any,
+          data: (this.lastHealthData || undefined) as any,
           lastSyncDate: this.lastSyncAt ? new Date(this.lastSyncAt) : new Date(),
         };
       }
+
       console.timeEnd('HealthConnect_Fetch');
 
-      // Sync to Supabase
+      // Sync to Supabase (solo se non mock)
       const currentUser = await AuthService.getCurrentUser();
-      if (currentUser && !isMock) {
+      if (currentUser) {
         console.time('Supabase_Health_Sync');
         const syncService = HealthDataSyncService.getInstance();
         const syncResult = await syncService.syncHealthData(currentUser.id, healthData);
@@ -565,16 +542,16 @@ export class HealthDataService {
         }
       }
 
-      if (!isMock) {
-        this.lastHealthData = healthData;
-        this.lastHealthDataSource = 'health_connect';
-      }
+      // ✅ Cache locale
+      this.lastHealthData = healthData;
+      this.lastHealthDataSource = Platform.OS === 'ios' ? 'healthkit' : 'health_connect';
 
       const result: HealthDataSyncResult = {
         success: true,
         data: healthData,
         lastSyncDate: new Date(),
       };
+
       this.lastSyncAt = Date.now();
       console.timeEnd('HealthDataService_Sync_Total');
       return result;
@@ -607,35 +584,39 @@ export class HealthDataService {
   private async syncHealthKitData(): Promise<HealthDataSyncResult> {
     console.log('[HealthKit] 🔄 syncHealthKitData called...');
 
-    // 🔥 FIX CRITICO: Bisogna inizializzare HealthKit con le permissions PRIMA di leggere i dati
-    // react-native-health richiede una chiamata a initHealthKit prima di poter usare getStepCount
-    // 🔥 FIX: Use Constants to avoid typo issues
-    const PERMS = AppleHealthKit.Constants.Permissions;
+    const nativeHK =
+      NativeModules?.AppleHealthKit ||
+      NativeModules?.RNAppleHealthKit ||
+      NativeModules?.RNHealthKit ||
+      NativeModules?.AppleHealthKitModule;
+
+    if (!AppleHealthKit || !nativeHK) {
+      return { success: false, error: 'HealthKit native module missing' };
+    }
+
+    const PERMS = AppleHealthKit?.Constants?.Permissions || {};
+
+    // ✅ Only defined permissions
+    const readPerms = [
+      PERMS.Steps,
+      PERMS.StepCount,
+      PERMS.HeartRate,
+      PERMS.HeartRateVariability,
+      PERMS.SleepAnalysis,
+    ].filter(Boolean);
 
     const permissions = {
       permissions: {
-        // 🔥 FIX: Alcune versioni preferiscono 'Steps', altre 'StepCount'. Chiediamo entrambi.
-        read: [PERMS.StepCount, PERMS.Steps, PERMS.HeartRate, PERMS.HeartRateVariability, PERMS.SleepAnalysis],
+        read: readPerms,
         write: [] as any[],
       },
     };
 
-    return new Promise((resolve) => {
-      // 1. Inizializza HealthKit
-      AppleHealthKit.initHealthKit(permissions, async (initError: string) => {
-        if (initError) {
-          console.error('[HealthKit] ❌ initHealthKit failed:', initError);
-          resolve({ success: false, error: 'HealthKit initialization failed: ' + initError });
-          return;
-        }
+    const fetchData = async (): Promise<HealthDataSyncResult> => {
+      try {
+        console.log('[HealthKit] 📥 Fetching data...');
 
-        console.log('[HealthKit] ✅ HealthKit initialized successfully');
-
-        const today = new Date();
-        const now = new Date(); // 🔥 FIX: Define 'now' explicitely for subsequent usage
-        // 🔥 FIX: Usa la stessa logica "Fake Z" usata per il ciclo per garantire coeranza
-        // Costruisci manualmente la stringa ISO per mezzanotte locale "come se fosse UTC"
-        // per evitare che .toISOString() sposti la data al giorno prima (e.g. 23:00 del 29 Gen)
+        const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
@@ -647,72 +628,111 @@ export class HealthDataService {
           includeManuallyAdded: true,
         };
 
-        try {
-          // 2. Fetch dei vari dati
+        // Steps
+        const stepResults = await new Promise<any>((res) => {
+          AppleHealthKit.getStepCount(
+            { ...options, unit: 'count' },
+            (_err: any, results: any) => res(results)
+          );
+        });
+        const steps = stepResults?.value || 0;
 
-          // Steps
-          const stepResults = await new Promise<any>((res) => {
-            AppleHealthKit.getStepCount({ ...options, unit: 'count' }, (err, results) => res(results));
-          });
-          const steps = stepResults?.value || 0;
+        // Heart Rate (Latest)
+        const hrResults = await new Promise<any[]>((res) => {
+          AppleHealthKit.getHeartRateSamples(
+            options,
+            (_err: any, results: any) => res(results || [])
+          );
+        });
+        const heartRate = hrResults.length > 0 ? hrResults[0].value : 0;
 
-          // Heart Rate (Latest)
-          const hrResults = await new Promise<any[]>((res) => {
-            AppleHealthKit.getHeartRateSamples(options, (err, results) => res(results || []));
-          });
-          const heartRate = hrResults.length > 0 ? hrResults[0].value : 0;
+        // HRV
+        const hrvResults = await new Promise<any[]>((res) => {
+          AppleHealthKit.getHeartRateVariabilitySamples(
+            options,
+            (_err: any, results: any) => res(results || [])
+          );
+        });
+        const hrv = hrvResults.length > 0 ? hrvResults[0].value * 1000 : 0;
 
-          // HRV
-          const hrvResults = await new Promise<any[]>((res) => {
-            AppleHealthKit.getHeartRateVariabilitySamples(options, (err, results) => res(results || []));
-          });
-          const hrv = hrvResults.length > 0 ? hrvResults[0].value * 1000 : 0; // Convert to ms if needed
+        // Sleep (samples from last 24h)
+        const today = new Date();
+        const sleepStartDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+        const sleepResults = await new Promise<any[]>((res) => {
+          AppleHealthKit.getSleepSamples(
+            { startDate: sleepStartDate.toISOString(), endDate: today.toISOString() },
+            (_err: any, results: any) => res(results || [])
+          );
+        });
 
-          // Sleep (samples from last 24h)
-          const sleepStartDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-          const sleepResults = await new Promise<any[]>((res) => {
-            AppleHealthKit.getSleepSamples({ startDate: sleepStartDate.toISOString(), endDate: today.toISOString() }, (err, results) => res(results || []));
-          });
+        let sleepMinutes = 0;
+        const asleepSamples = sleepResults.filter((s) => s.value === 'ASLEEP');
+        const samplesToUse =
+          asleepSamples.length > 0 ? asleepSamples : sleepResults.filter((s) => s.value === 'INBED');
 
-          let sleepMinutes = 0;
-          // 🔥 FIX: Prioritize ASLEEP to avoid double counting (INBED + ASLEEP)
-          const asleepSamples = sleepResults.filter(s => s.value === 'ASLEEP');
-          const samplesToUse = asleepSamples.length > 0 ? asleepSamples : sleepResults.filter(s => s.value === 'INBED');
+        samplesToUse.forEach((sample) => {
+          const start = new Date(sample.startDate).getTime();
+          const end = new Date(sample.endDate).getTime();
+          sleepMinutes += (end - start) / (1000 * 60);
+        });
 
-          samplesToUse.forEach(sample => {
-            const start = new Date(sample.startDate).getTime();
-            const end = new Date(sample.endDate).getTime();
-            sleepMinutes += (end - start) / (1000 * 60);
-          });
+        const healthData: HealthData = {
+          steps,
+          distance: steps * 0.8, // meters (0.8m per step estimate)
+          calories: 0,
+          activeMinutes: 0,
+          heartRate,
+          restingHeartRate: 0,
+          hrv,
+          sleepHours: sleepMinutes / 60,
+          sleepQuality: 0,
+          deepSleepMinutes: 0,
+          remSleepMinutes: 0,
+          lightSleepMinutes: 0,
+          hydration: 0,
+          mindfulnessMinutes: 0,
+        };
 
-          const healthData: HealthData = {
-            steps,
-            distance: steps * 0.0008,
-            calories: 0,
-            activeMinutes: 0,
-            heartRate,
-            restingHeartRate: 0,
-            hrv,
-            sleepHours: sleepMinutes / 60,
-            sleepQuality: 0,
-            deepSleepMinutes: 0,
-            remSleepMinutes: 0,
-            lightSleepMinutes: 0,
-            hydration: 0,
-            mindfulnessMinutes: 0,
-          };
+        console.log(
+          '[HealthKit] ✅ Sync complete. Steps:',
+          steps,
+          'HR:',
+          heartRate,
+          'Sleep hours:',
+          (sleepMinutes / 60).toFixed(1)
+        );
 
-          console.log('[HealthKit] ✅ Sync complete. Steps:', steps, 'HR:', heartRate, 'Sleep hours:', (sleepMinutes / 60).toFixed(1));
+        return {
+          success: true,
+          data: healthData,
+          lastSyncDate: new Date(),
+        };
+      } catch (fetchError) {
+        console.error('[HealthKit] ❌ Error fetching data:', fetchError);
+        return { success: false, error: 'Error fetching HealthKit data' };
+      }
+    };
 
-          resolve({
-            success: true,
-            data: healthData,
-            lastSyncDate: new Date(),
-          });
-        } catch (fetchError) {
-          console.error('[HealthKit] ❌ Error fetching data:', fetchError);
-          resolve({ success: false, error: 'Error fetching HealthKit data' });
+    // ✅ Se già inizializzato, NON richiamare initHealthKit
+    if (this.healthKitInitialized) {
+      console.log('[HealthKit] ✅ Already initialized -> skipping initHealthKit');
+      return await fetchData();
+    }
+
+    // ✅ Init una volta sola
+    return new Promise((resolve) => {
+      AppleHealthKit.initHealthKit(permissions, async (initError: string) => {
+        if (initError) {
+          console.error('[HealthKit] ❌ initHealthKit failed:', initError);
+          resolve({ success: false, error: 'HealthKit initialization failed: ' + initError });
+          return;
         }
+
+        console.log('[HealthKit] ✅ HealthKit initialized successfully');
+        this.healthKitInitialized = true; // ✅ IMPORTANTISSIMO
+
+        const result = await fetchData();
+        resolve(result);
       });
     });
   }
@@ -1188,7 +1208,7 @@ export class HealthDataService {
 
       // Calcola distance da steps se disponibili
       if (healthData.steps > 0) {
-        healthData.distance = healthData.steps * 0.0008; // metri
+        healthData.distance = healthData.steps * 0.8; // meters (0.8m per step estimate)
         // Stima calorie basata sui passi (circa 0.04 calorie per passo)
         healthData.calories = Math.round(healthData.steps * 0.04);
       }
@@ -1228,9 +1248,6 @@ export class HealthDataService {
         return { data: null };
       }
 
-      // 🔥 FIX: Verifica che il record sia di OGGI. 
-      // Se il record è vecchio (es. ieri), NON deve essere usato come fallback per oggi.
-      // Esempio: record.date è "2024-01-30", oggi è "2024-01-31" -> scarta il record.
       const now = new Date();
       const today = [
         now.getFullYear(),
@@ -1283,16 +1300,10 @@ export class HealthDataService {
     }
   }
 
-  /**
-   * Get current permissions status
-   */
   getPermissions(): HealthPermissions {
     return { ...this.permissions };
   }
 
-  /**
-   * Check if a specific metric is available
-   */
   isMetricAvailable(metric: HealthMetricType): boolean {
     switch (metric) {
       case 'steps':
@@ -1326,16 +1337,10 @@ export class HealthDataService {
     }
   }
 
-  /**
-   * Update service configuration
-   */
   updateConfig(config: Partial<HealthDataServiceConfig>): void {
     this.config = { ...this.config, ...config };
   }
 
-  /**
-   * Get automatic sync interval in minutes
-   */
   getSyncIntervalMinutes(): number {
     return this.config.syncInterval;
   }

@@ -51,7 +51,8 @@ Analyze ONE face photo and return ONE JSON object (no markdown, no schema, no ex
 This is a consumer wellness app: results must feel specific, accurate, and useful today, but not too technical.
  
 CONSTRAINTS (HARD)
-- Use ONLY visible facial cues: eyebrows, eyes/eyelids, mouth/lips, jaw/cheeks, forehead tension.
+- Base the emotional reading primarily on visible facial cues (eyebrows, eyes/eyelids, mouth/lips, jaw/cheeks, forehead tension). 
+Historical and contextual data may be used to gently calibrate tone or contrast, without attributing causes.
 - Do NOT infer from background, clothing, age, gender, identity, or context.
 - Look for MICRO-EXPRESSIONS: subtle muscle tensions that reveal underlying emotions.
  
@@ -59,7 +60,7 @@ STYLE (HARD)
 - User-centered, warm, non-clinical.
 - NO textbook explanations ("a smile means joy").
 - NO deficit framing: never say "lack of joy", "below normal", "something missing".
-  Use "quieter / more inward / lower outward expressiveness / calmer tone" instead.
+  Use "quieter / more contained / lower outward expressiveness / calmer or more cautious tone" instead.
  
 SCORING (CRITICAL - READ CAREFULLY)
 Emotions: joy, sadness, anger, fear, surprise, disgust, neutral.
@@ -121,11 +122,12 @@ Return ONLY this JSON shape and EXACT keys:
  
 Rules for observations (SINGLE PARAGRAPH):
 - Treat facial cues as implicit evidence, not as narrative elements.
-  Observations should primarily describe the emotional or mental state, using facial signals only as a subtle backdrop.
-- Focus on the meaning or tone this state carries for the person today, not on how it is formed visually.
-- Prefer perceptual, human language over analytical or diagnostic phrasing
-- Avoid explicit cause-effect constructions (e.g. "che suggeriscono", "che contribuiscono a", "il che indica").
-  Let the emotional meaning emerge implicitly.
+  Observations should primarily describe the emotional stance or present emotional posture, using facial signals only as a subtle backdrop.
+- Observations should feel open-ended, leaving space rather than closing the emotional meaning.
+- Focus on how this emotional state shows up as a quality of presence in the moment.
+- Prefer perceptual, human language over analytical or diagnostic phrasing.
+- Prefer descriptive phrasing over interpretive phrasing.
+- Let the emotional meaning emerge implicitly.
 - No brackets [], no arrows, no bullet formatting inside strings.
  
 Rules for recommendations (EXACTLY 3):
@@ -548,6 +550,70 @@ Rules for recommendations (EXACTLY 3):
 
     } catch (error) {
       // Error logging handled by backend
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        timestamp: new Date(),
+      };
+    }
+  }
+
+  /**
+   * Analyze food from text description
+   * Uses backend API to estimate nutrition from a description
+   */
+  async analyzeFoodFromText(text: string, mealType?: string): Promise<AnalysisResponse<FoodAnalysisResult>> {
+    const startTime = Date.now();
+
+    try {
+      if (!text || text.trim().length === 0) {
+        throw new Error('Description is required');
+      }
+
+      // Import getBackendURL dynamically to avoid circular dependencies
+      const { getBackendURL } = await import('../constants/env');
+      const backendURL = await getBackendURL();
+      console.log('[OpenAIAnalysis] Calling backend text analysis:', `${backendURL}/api/nutrition/analyze-text`);
+
+      // Call backend nutrition API
+      const response = await fetch(`${backendURL}/api/nutrition/analyze-text`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: text,
+          mealType: mealType,
+          locale: 'it-IT',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Backend request failed: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success || !data.data) {
+        throw new Error(data.error || 'Invalid food analysis response from backend');
+      }
+
+      // Convert backend MealDraft format to FoodAnalysisResult format
+      const mealDraft = data.data;
+      const analysisResult = this.convertMealDraftToFoodResult(mealDraft);
+
+      const processingTime = Date.now() - startTime;
+
+      return {
+        success: true,
+        data: analysisResult,
+        processingTime,
+        timestamp: new Date(),
+      };
+
+    } catch (error) {
+      console.error('Food text analysis failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',

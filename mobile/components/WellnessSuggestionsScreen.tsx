@@ -183,7 +183,7 @@ export const WellnessSuggestionsScreen: React.FC = () => {
                   >
                     <View style={styles.suggestionContent}>
                       <View style={styles.suggestionHeader}>
-                        <FontAwesome name={suggestion.icon as any} size={16} color={category.colors.primary} />
+                        <FontAwesome name={suggestion.icon as any} size={16} color="#ffffff" />
                         <Text style={styles.suggestionTitle} allowFontScaling={false}>{suggestion.title}</Text>
                         <Text style={styles.suggestionDuration} allowFontScaling={false}>{suggestion.duration}</Text>
                       </View>
@@ -196,7 +196,7 @@ export const WellnessSuggestionsScreen: React.FC = () => {
                         ))}
                       </View>
                     </View>
-                    <FontAwesome name="chevron-right" size={14} color={category.colors.primary} />
+                    <FontAwesome name="chevron-right" size={14} color="#ffffff" />
                   </TouchableOpacity>
                 ))}
               </View>

@@ -247,8 +247,12 @@ export const DailySnapshotScreen: React.FC<DailySnapshotScreenProps> = ({ date, 
                 const rawEmotion = emotionData.dominant_emotion || 'neutral';
                 const emotionKey = rawEmotion.toLowerCase().trim();
                 const scale = (val: number | null | undefined) => {
-                    const num = val || 0;
-                    return num <= 1.0 ? Math.round(num * 100) : Math.round(num);
+                    const num = val ?? 0;
+                    // Normalize from [-1, 1] to [0, 100]
+                    if (Math.abs(num) <= 1.0) {
+                        return Math.round(((num + 1) / 2) * 100);
+                    }
+                    return Math.round(num);
                 };
                 processed.mood = {
                     value: 3,

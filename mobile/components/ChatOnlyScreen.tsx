@@ -202,6 +202,8 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
     // Refs
     const messagesListRef = useRef<FlatList>(null);
     const isMountedRef = useRef(true);
+    // Track if user has manually selected a session (to prevent auto-restore from overriding)
+    const hasManuallySelectedSession = useRef(false);
 
     // Animation values
     const keyboardHeight = useSharedValue(0);
@@ -285,9 +287,9 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
             try {
                 await tts.initialize();
 
-                // Prune old messages (7 days) and empty sessions
+                // Prune old messages (7 days) and empty sessions (excluding current one)
                 await LocalChatService.pruneOldMessages(7);
-                await LocalChatService.pruneEmptySessions();
+                await LocalChatService.pruneEmptySessions(currentSessionId || undefined);
 
                 if (currentUser?.id) {
                     const context = await AIContextService.getCompleteContext(currentUser.id, true);
@@ -295,38 +297,41 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                 }
 
                 // CHECK FOR EXISTING SESSION FOR TODAY
-                const sessions = await LocalChatService.listSessions();
-                const dateLocale = language === 'it' ? 'it-IT' : 'en-US';
-                const todayString = new Date().toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' }); // e.g., "30 gen" or "Jan 30"
+                // Only auto-restore if user hasn't manually selected a session
+                if (!hasManuallySelectedSession.current) {
+                    const sessions = await LocalChatService.listSessions();
+                    const dateLocale = language === 'it' ? 'it-IT' : 'en-US';
+                    const todayString = new Date().toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' }); // e.g., "30 gen" or "Jan 30"
 
-                // Find a session from today that already has messages (or just the most recent one from today)
-                // We'll trust pruneEmptySessions has run, so any session remaining is valid or we can reuse it.
-                // Simple logic: If the most recent session was updated today, use it.
-                const mostRecent = sessions[0];
-                if (mostRecent) {
-                    const sessionDate = new Date(mostRecent.updated_at).toDateString();
-                    const isToday = sessionDate === new Date().toDateString();
+                    // Find a session from today that already has messages (or just the most recent one from today)
+                    // We'll trust pruneEmptySessions has run, so any session remaining is valid or we can reuse it.
+                    // Simple logic: If the most recent session was updated today, use it.
+                    const mostRecent = sessions[0];
+                    if (mostRecent) {
+                        const sessionDate = new Date(mostRecent.updated_at).toDateString();
+                        const isToday = sessionDate === new Date().toDateString();
 
-                    if (isToday) {
-                        // Restore this session
-                        setCurrentSessionId(mostRecent.id);
-                        const msgs = await LocalChatService.getMessages(mostRecent.id);
-                        const formatted: Message[] = msgs.map(m => ({
-                            id: m.id,
-                            text: m.content,
-                            sender: m.role === 'user' ? 'user' : 'ai',
-                            timestamp: new Date(m.created_at),
-                            sessionId: mostRecent.id
-                        }));
-                        if (formatted.length > 0) {
-                            setMessages(formatted);
+                        if (isToday) {
+                            // Restore this session
+                            setCurrentSessionId(mostRecent.id);
+                            const msgs = await LocalChatService.getMessages(mostRecent.id);
+                            const formatted: Message[] = msgs.map(m => ({
+                                id: m.id,
+                                text: m.content,
+                                sender: m.role === 'user' ? 'user' : 'ai',
+                                timestamp: new Date(m.created_at),
+                                sessionId: mostRecent.id
+                            }));
+                            if (formatted.length > 0) {
+                                setMessages(formatted);
+                            }
+                        } else {
+                            // Start fresh (UI only), session created on first message
+                            setCurrentSessionId(null);
                         }
                     } else {
-                        // Start fresh (UI only), session created on first message
                         setCurrentSessionId(null);
                     }
-                } else {
-                    setCurrentSessionId(null);
                 }
 
             } catch (error) {
@@ -336,20 +341,45 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
         initializeServices();
     }, [currentUser?.id, tts, language, t]);
 
-    // Load chat history
-    useEffect(() => {
-        const loadHistory = async () => {
-            try {
-                const sessions = await LocalChatService.listSessions();
-                setChatHistory(sessions);
-            } catch (error) {
-                console.error('Error loading chat history:', error);
-            }
-        };
-        if (showChatHistory) {
-            loadHistory();
+    // Load chat history function
+    const loadHistory = useCallback(async (activeIdOverride?: string) => {
+        try {
+            const { LocalChatService } = await import('../services/local-storage/local-chat.service');
+            const sessions = await LocalChatService.listSessions();
+
+            // Use override if provided, otherwise use current state
+            // This is important because state updates (setCurrentSessionId) are async 
+            // and might not be available yet when loadHistory is called from a button handler.
+            const activeId = activeIdOverride !== undefined ? activeIdOverride : currentSessionId;
+
+            // Enrich sessions with first user message preview
+            const sessionsWithPreview = (await Promise.all(sessions.map(async (s) => {
+                try {
+                    const msgs = await LocalChatService.getMessages(s.id);
+                    const firstUserMsg = msgs.find((m) => m.role === 'user')?.content || '';
+
+                    // Filter: Only return the session if it has messages OR if it's the one we are currently in.
+                    // This way we don't clutter the history with empty abandoned chats,
+                    // but we DO show the one the user just created.
+                    if (msgs.length > 0 || s.id === activeId) {
+                        return { ...s, firstUserMessage: firstUserMsg };
+                    }
+                    return null;
+                } catch (e) {
+                    return { ...s, firstUserMessage: '' };
+                }
+            }))).filter(s => s !== null) as any[];
+
+            setChatHistory(sessionsWithPreview);
+        } catch (error) {
+            console.error('Error loading chat history:', error);
         }
-    }, [showChatHistory, currentSessionId]); // Reload when history opens or session changes
+    }, [currentSessionId]);
+
+    // Load history when needed
+    useEffect(() => {
+        loadHistory();
+    }, [currentUser?.id, currentSessionId, showChatHistory, loadHistory]); // Reload when session changes or history opens
 
     // Auto-scroll to bottom
     useEffect(() => {
@@ -379,31 +409,41 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
         setShowLoadingCloud(true);
 
         try {
-            // Lazy create session if needed
-            let activeSessionId = currentSessionId;
-            if (!activeSessionId) {
-                const dateLocale = language === 'it' ? 'it-IT' : 'en-US';
-                const sessionDate = new Date().toLocaleDateString(dateLocale);
-                const newSession = await LocalChatService.createSession(
-                    t('chat.sessionName', { date: sessionDate })
-                );
-                activeSessionId = newSession.id;
-                setCurrentSessionId(activeSessionId);
-            }
+            const { LocalChatService } = await import('../services/local-storage/local-chat.service');
+            let sessionId = currentSessionId;
 
-            // Save user message (Local)
-            if (activeSessionId) {
-                await LocalChatService.addMessage(
-                    activeSessionId,
-                    'user',
-                    trimmed,
-                    {
-                        emotionContext: aiContext?.currentEmotion ? JSON.stringify({
-                            dominantEmotion: aiContext.currentEmotion.emotion,
-                            valence: aiContext.currentEmotion.valence
-                        }) : undefined
+            // Save user message to database if authenticated
+            if (currentUser) {
+                // Auto-create session if missing (defensive)
+                if (!sessionId) {
+                    try {
+                        const dateLocale = language === 'it' ? 'it-IT' : 'en-US';
+                        const sessionDate = new Date().toLocaleDateString(dateLocale);
+                        const newSession = await LocalChatService.createSession(t('chat.sessionName', { date: sessionDate }));
+                        sessionId = newSession.id;
+                        setCurrentSessionId(sessionId);
+                    } catch (e) {
+                        console.error("Error creating session for message:", e);
                     }
-                );
+                }
+
+                if (sessionId) {
+                    try {
+                        await LocalChatService.addMessage(
+                            sessionId,
+                            'user',
+                            trimmed,
+                            {
+                                emotionContext: aiContext?.currentEmotion ? JSON.stringify(aiContext.currentEmotion) : undefined
+                            }
+                        );
+
+                        // Refresh history with the actual current sessionId to show preview immediately
+                        loadHistory(sessionId);
+                    } catch (e) {
+                        console.error("Error saving user message:", e);
+                    }
+                }
             }
 
             // Detect analysis intent
@@ -443,7 +483,7 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: trimmed,
-                    sessionId: activeSessionId,
+                    sessionId: sessionId,
                     userId: currentUser?.id,
                     emotionContext: aiContext?.currentEmotion,
                     userContext,
@@ -467,16 +507,17 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                 text: reply,
                 sender: 'ai',
                 timestamp: new Date(),
-                sessionId: currentSessionId || undefined,
+                sessionId: sessionId || undefined,
                 wellnessSuggestionId: data?.wellnessSuggestionId,
             };
 
             setMessages(prev => [...prev, aiMessage]);
 
             // Save AI message (Local)
-            if (activeSessionId) {
+            if (sessionId) {
+                const { LocalChatService } = await import('../services/local-storage/local-chat.service');
                 await LocalChatService.addMessage(
-                    activeSessionId,
+                    sessionId,
                     'assistant',
                     reply
                 );
@@ -807,19 +848,57 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                                     gap: 10,
                                 }}
                                 onPress={async () => {
-                                    const dateLocale = language === 'it' ? 'it-IT' : 'en-US';
-                                    const sessionDate = new Date().toLocaleDateString(dateLocale);
-                                    const newSession = await LocalChatService.createSession(t('chat.sessionName', { date: sessionDate }));
+                                    try {
+                                        console.log('[NEW CHAT] Starting new chat creation...');
+                                        const { LocalChatService } = await import('../services/local-storage/local-chat.service');
+                                        const dateLocale = language === 'it' ? 'it-IT' : 'en-US';
+                                        const now = new Date();
+                                        const sessionDate = now.toLocaleDateString(dateLocale);
+                                        const sessionTime = now.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' });
+                                        const sessionName = `${sessionDate} ${sessionTime}`;
 
-                                    const welcomeMessage = getInitialMessage();
-                                    setMessages([{
-                                        id: 'welcome',
-                                        text: welcomeMessage,
-                                        sender: 'ai',
-                                        timestamp: new Date(),
-                                    }]);
-                                    if (newSession) setCurrentSessionId(newSession.id);
-                                    setShowChatHistory(false);
+                                        console.log('[NEW CHAT] Creating session with name:', sessionName);
+
+                                        // Always create a NEW session for new chat
+                                        const newSession = await LocalChatService.createSession(sessionName);
+
+                                        console.log('[NEW CHAT] Session created:', newSession);
+
+                                        if (newSession) {
+                                            setCurrentSessionId(newSession.id);
+                                            const welcomeMessage = getInitialMessage();
+
+                                            setMessages([{
+                                                id: 'welcome',
+                                                text: welcomeMessage,
+                                                sender: 'ai',
+                                                timestamp: new Date(),
+                                                sessionId: newSession.id,
+                                            }]);
+
+                                            // Mark as manually selected to prevent auto-restore
+                                            hasManuallySelectedSession.current = true;
+                                            console.log('[NEW CHAT] Chat created successfully with name:', sessionName);
+
+                                            // Reload chat history passing the new ID explicitly to ensure it's visible immediately
+                                            await loadHistory(newSession.id);
+
+                                            // Keep history panel open so user can see the new chat
+                                            // setShowChatHistory(false); // Commented out - keep panel open
+                                        } else {
+                                            console.error('[NEW CHAT] Session creation returned null/undefined');
+                                            Alert.alert(
+                                                t('common.error') || 'Errore',
+                                                'La sessione non è stata creata correttamente'
+                                            );
+                                        }
+                                    } catch (error) {
+                                        console.error('[NEW CHAT] Error creating new chat:', error);
+                                        Alert.alert(
+                                            t('common.error') || 'Errore',
+                                            `Impossibile creare una nuova chat: ${error.message || error}`
+                                        );
+                                    }
                                 }}
                             >
                                 <FontAwesome name="plus" size={16} color="#fff" />
@@ -848,27 +927,40 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                                                 borderLeftColor: colors.primary,
                                             }}
                                             onPress={async () => {
-                                                const msgs = await LocalChatService.getMessages(session.id);
-                                                const formatted: Message[] = msgs.map(m => ({
-                                                    id: m.id,
-                                                    text: m.content,
-                                                    sender: m.role === 'user' ? 'user' : 'ai',
-                                                    timestamp: new Date(m.created_at),
-                                                    sessionId: session.id
-                                                }));
+                                                try {
+                                                    console.log('[OLD CHAT] Loading session:', session.id);
+                                                    const msgs = await LocalChatService.getMessages(session.id);
+                                                    const formatted: Message[] = msgs.map(m => ({
+                                                        id: m.id,
+                                                        text: m.content,
+                                                        sender: m.role === 'user' ? 'user' : 'ai',
+                                                        timestamp: new Date(m.created_at),
+                                                        sessionId: session.id
+                                                    }));
 
-                                                if (formatted.length > 0) {
-                                                    setMessages(formatted);
-                                                } else {
-                                                    setMessages([{
-                                                        id: 'welcome',
-                                                        text: getInitialMessage(),
-                                                        sender: 'ai',
-                                                        timestamp: new Date(),
-                                                    }]);
+                                                    if (formatted.length > 0) {
+                                                        setMessages(formatted);
+                                                    } else {
+                                                        setMessages([{
+                                                            id: 'welcome',
+                                                            text: getInitialMessage(),
+                                                            sender: 'ai',
+                                                            timestamp: new Date(),
+                                                            sessionId: session.id,
+                                                        }]);
+                                                    }
+                                                    setCurrentSessionId(session.id);
+                                                    // Mark as manually selected to prevent auto-restore
+                                                    hasManuallySelectedSession.current = true;
+                                                    console.log('[OLD CHAT] Session loaded, flag set to prevent override');
+                                                    setShowChatHistory(false);
+                                                } catch (error) {
+                                                    console.error('[OLD CHAT] Error loading chat session:', error);
+                                                    Alert.alert(
+                                                        t('common.error') || 'Errore',
+                                                        t('chat.loadChatError') || 'Impossibile caricare questa chat'
+                                                    );
                                                 }
-                                                setCurrentSessionId(session.id);
-                                                setShowChatHistory(false);
                                             }}
                                         >
                                             <FontAwesome name="comment-o" size={16} color={colors.textSecondary} style={{ marginRight: 12 }} />
@@ -878,13 +970,86 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                                                 </Text>
                                                 <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>{dateString}</Text>
                                             </View>
+
+                                            {/* Delete Button */}
+                                            <TouchableOpacity
+                                                onPress={async (e) => {
+                                                    e.stopPropagation();
+                                                    const deleteTitle = t('chat.deleteChat.title');
+                                                    const deleteMessage = t('chat.deleteChat.message');
+                                                    const confirmTitle = deleteTitle === 'chat.deleteChat.title' ? 'Elimina Chat' : deleteTitle;
+                                                    const confirmMessage = deleteMessage === 'chat.deleteChat.message' ? 'Sei sicuro di voler eliminare questa chat? Questa azione non può essere annullata.' : deleteMessage;
+
+                                                    Alert.alert(
+                                                        confirmTitle,
+                                                        confirmMessage,
+                                                        [
+                                                            {
+                                                                text: t('common.cancel') || 'Annulla',
+                                                                style: 'cancel'
+                                                            },
+                                                            {
+                                                                text: t('common.delete') || 'Elimina',
+                                                                style: 'destructive',
+                                                                onPress: async () => {
+                                                                    try {
+                                                                        console.log('[DELETE CHAT] Deleting session:', session.id);
+                                                                        await LocalChatService.deleteSession(session.id);
+
+                                                                        // If we're deleting the current session, reset to welcome
+                                                                        if (currentSessionId === session.id) {
+                                                                            setCurrentSessionId(null);
+                                                                            setMessages([{
+                                                                                id: 'welcome',
+                                                                                text: getInitialMessage(),
+                                                                                sender: 'ai',
+                                                                                timestamp: new Date(),
+                                                                            }]);
+                                                                            hasManuallySelectedSession.current = false;
+                                                                        }
+
+                                                                        // Reload chat history
+                                                                        const sessions = await LocalChatService.listSessions();
+                                                                        const sessionsWithPreview = await Promise.all(sessions.map(async (s) => {
+                                                                            try {
+                                                                                const msgs = await LocalChatService.getMessages(s.id);
+                                                                                const firstUserMsg = msgs.find((m) => m.role === 'user')?.content || '';
+                                                                                return { ...s, firstUserMessage: firstUserMsg };
+                                                                            } catch (e) {
+                                                                                return { ...s, firstUserMessage: '' };
+                                                                            }
+                                                                        }));
+                                                                        setChatHistory(sessionsWithPreview);
+
+                                                                        console.log('[DELETE CHAT] Chat deleted successfully');
+                                                                    } catch (error) {
+                                                                        console.error('[DELETE CHAT] Error deleting chat:', error);
+                                                                        Alert.alert(
+                                                                            t('common.error') || 'Errore',
+                                                                            t('chat.deleteChatError') || 'Impossibile eliminare questa chat'
+                                                                        );
+                                                                    }
+                                                                }
+                                                            }
+                                                        ]
+                                                    );
+                                                }}
+                                                style={{
+                                                    padding: 8,
+                                                    marginLeft: 8,
+                                                }}
+                                            >
+                                                <FontAwesome name="trash-o" size={16} color="#ff4444" />
+                                            </TouchableOpacity>
                                         </TouchableOpacity>
                                     );
                                 }}
                                 ListEmptyComponent={
                                     <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-                                        <FontAwesome name="comments-o" size={36} color={colors.textSecondary} />
-                                        <Text style={{ color: colors.textSecondary, marginTop: 12, fontSize: 14 }}>{t('chat.history.empty') || 'Nessuna chat'}</Text>
+                                        <FontAwesome name="comments-o" size={48} color={colors.textSecondary} style={{ opacity: 0.3, marginBottom: 12 }} />
+                                        <Text style={{ fontSize: 14, color: colors.textSecondary }}>
+                                            {t('chat.history.empty') || 'Nessuna chat precedente'}
+                                        </Text>
                                     </View>
                                 }
                             />

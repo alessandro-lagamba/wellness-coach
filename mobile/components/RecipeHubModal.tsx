@@ -52,9 +52,6 @@ interface RecipeHubModalProps {
     openSlotPicker: (date: string, mealType: MealPlanMealType) => void;
     toISODate: (date: Date) => string;
     getDefaultMealType: (recipe?: UserRecipe) => MealPlanMealType;
-
-    // Navigation
-    onOpenFridge: () => void;
 }
 
 const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -122,7 +119,6 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
     onViewRecipe,
     onEditRecipe,
     onCreateRecipe,
-    onOpenFridge,
     openSlotPicker,
     toISODate,
     getDefaultMealType,
@@ -543,16 +539,6 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
                                 </TouchableOpacity>
                             </View>
 
-                            {/* Fridge Button */}
-                            <TouchableOpacity
-                                style={[styles.fridgeButton, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-                                onPress={onOpenFridge}
-                            >
-                                <MaterialCommunityIcons name="fridge-outline" size={20} color={colors.primary} />
-                                <Text style={[styles.fridgeButtonText, { color: colors.primary }]} allowFontScaling={false}>
-                                    {t('analysis.food.fridge.openButton') || 'Open Fridge & Generate'}
-                                </Text>
-                            </TouchableOpacity>
 
                             {/* Tabs */}
                             {renderTabs()}

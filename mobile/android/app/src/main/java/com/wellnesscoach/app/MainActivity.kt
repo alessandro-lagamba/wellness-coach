@@ -11,20 +11,8 @@ import com.facebook.react.defaults.DefaultReactActivityDelegate
 
 import expo.modules.ReactActivityDelegateWrapper
 
-// 🔥 Health Connect Permission Delegate
-import dev.matinzd.healthconnect.permissions.HealthConnectPermissionDelegate
-
 class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
-    // 🔥 CRITICO: Inizializza HealthConnectPermissionDelegate PRIMA di super.onCreate()
-    // Questo è necessario per evitare l'errore "lateinit property requestPermission has not been initialized"
-    try {
-      HealthConnectPermissionDelegate.setPermissionDelegate(this)
-      println("✅ HealthConnectPermissionDelegate initialized")
-    } catch (e: Exception) {
-      println("⚠️ Could not initialize HealthConnectPermissionDelegate: ${e.message}")
-    }
-    
     // Set the theme to AppTheme BEFORE onCreate to support
     // coloring the background, status bar, and navigation bar.
     // This is required for expo-splash-screen.
