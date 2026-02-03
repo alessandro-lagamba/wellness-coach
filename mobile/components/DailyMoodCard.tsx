@@ -112,7 +112,7 @@ const DailyMoodCard: React.FC<Props> = memo(({
                         allowFontScaling={false}
                         style={[styles.lockedText, { color: isDark ? '#94a3b8' : '#6b7280' }]}
                     >
-                        Compilato oggi
+                        {t('home.dailyCheckIn.filledToday')}
                     </Text>
                 </View>
             )}
@@ -127,7 +127,7 @@ const DailyMoodCard: React.FC<Props> = memo(({
                         allowFontScaling={false}
                         style={[styles.rowLabel, { color: labelColor }]}
                     >
-                        Umore
+                        {t('home.dailySnapshot.mood')}
                     </Text>
                 </View>
 
@@ -168,7 +168,7 @@ const DailyMoodCard: React.FC<Props> = memo(({
                         allowFontScaling={false}
                         style={[styles.rowLabel, { color: labelColor }]}
                     >
-                        Sonno
+                        {t('home.dailySnapshot.sleep')}
                     </Text>
                 </View>
 

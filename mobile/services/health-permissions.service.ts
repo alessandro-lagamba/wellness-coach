@@ -1,18 +1,42 @@
 import { Platform, Alert, Linking, NativeModules } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// 🔥 CRITICAL: Conditional imports based on platform
-// react-native-health has iOS-specific code, react-native-health-connect has Android-specific code
+// 🔥 CRITICAL FIX FOR RELEASE BUILDS:
+// Use NativeModules.AppleHealthKit DIRECTLY instead of react-native-health wrapper
+// The Proxy pattern in react-native-health may not work with Hermes bytecode in Release
 let AppleHealthKit: any = null;
 let HealthConnect: any = null;
 
 if (Platform.OS === 'ios') {
   try {
-    const HealthKitModule = require('react-native-health');
-    AppleHealthKit = HealthKitModule.default || HealthKitModule;
-    console.log('[HealthPermissions] ✅ AppleHealthKit module loaded');
+    // 🔥 STRATEGY 1: Direct NativeModules access (PREFERRED - works in Release)
+    const nativeHK =
+      NativeModules?.AppleHealthKit ||
+      NativeModules?.RNAppleHealthKit ||
+      NativeModules?.RNHealthKit ||
+      NativeModules?.AppleHealthKitModule;
+
+    if (nativeHK && typeof nativeHK.initHealthKit === 'function') {
+      console.log('[HealthPermissions] ✅ Found native module directly via NativeModules');
+      AppleHealthKit = nativeHK;
+    } else {
+      // 🔥 STRATEGY 2: Fallback to wrapper
+      console.log('[HealthPermissions] 🔧 Trying react-native-health wrapper as fallback...');
+      const HealthKitModule = require('react-native-health');
+      const wrapper = HealthKitModule.default || HealthKitModule;
+      if (wrapper && typeof wrapper.initHealthKit === 'function') {
+        AppleHealthKit = wrapper;
+        console.log('[HealthPermissions] ✅ Using react-native-health wrapper');
+      }
+    }
+
+    if (AppleHealthKit) {
+      console.log('[HealthPermissions] ✅ AppleHealthKit module loaded');
+    } else {
+      console.error('[HealthPermissions] ❌ Could not load HealthKit via any strategy');
+    }
   } catch (error) {
-    console.error('[HealthPermissions] ❌ Failed to load react-native-health:', error);
+    console.error('[HealthPermissions] ❌ Failed to load HealthKit:', error);
   }
 } else if (Platform.OS === 'android') {
   try {

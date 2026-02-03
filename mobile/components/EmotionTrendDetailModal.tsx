@@ -55,17 +55,65 @@ export const EmotionTrendDetailModal: React.FC<EmotionTrendDetailModalProps> = (
         return;
       }
 
-      const formattedData = [...sessions]
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-        .map((session) => {
-          const date = new Date(session.timestamp);
+      // Raggruppa per giorno
+      const groupedByDay: Record<string, {
+        valenceSum: number;
+        arousalSum: number;
+        count: number;
+        emotions: string[];
+        timestamp: number;
+      }> = {};
+
+      sessions.forEach(session => {
+        const dateObj = new Date(session.timestamp);
+        // Usa una chiave unica per giorno (YYYY-M-D)
+        const dateKey = `${dateObj.getFullYear()}-${dateObj.getMonth() + 1}-${dateObj.getDate()}`;
+
+        if (!groupedByDay[dateKey]) {
+          groupedByDay[dateKey] = {
+            valenceSum: 0,
+            arousalSum: 0,
+            count: 0,
+            emotions: [],
+            timestamp: dateObj.getTime()
+          };
+        }
+
+        groupedByDay[dateKey].valenceSum += session.avg_valence;
+        groupedByDay[dateKey].arousalSum += session.avg_arousal;
+        groupedByDay[dateKey].count += 1;
+        if (session.dominant) {
+          groupedByDay[dateKey].emotions.push(session.dominant);
+        }
+      });
+
+      const formattedData = Object.values(groupedByDay)
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .map(group => {
+          const date = new Date(group.timestamp);
           const day = date.getDate();
           const month = date.getMonth() + 1;
+
+          // Calcola l'emozione dominante del giorno
+          const emotionCounts = group.emotions.reduce((acc, e) => {
+            acc[e] = (acc[e] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+
+          let dominant = '';
+          let maxCount = 0;
+          Object.entries(emotionCounts).forEach(([e, count]) => {
+            if (count > maxCount) {
+              maxCount = count;
+              dominant = e;
+            }
+          });
+
           return {
             date: `${day}/${month}`,
-            valence: session.avg_valence,
-            arousal: session.avg_arousal,
-            emotion: session.dominant,
+            valence: group.valenceSum / group.count,
+            arousal: group.arousalSum / group.count,
+            emotion: dominant || 'neutral',
           };
         });
 
@@ -632,4 +680,3 @@ const styles = StyleSheet.create({
 });
 
 export default EmotionTrendDetailModal;
-

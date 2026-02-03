@@ -362,7 +362,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                 allowFontScaling={false}
                 style={[styles.headerTitleMain, { color: themeColors.text }]}
               >
-                Il Punteggio
+                {t('home.dailyCopilot.theScore')}
               </Text>
               <TouchableOpacity
                 onPress={onShowInfo}
@@ -376,7 +376,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
               allowFontScaling={false}
               style={[styles.headerSubtitleHighlight, { color: scoreColors[0] }]}
             >
-              di Oggi
+              {t('home.dailyCopilot.ofToday')}
             </Text>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
@@ -384,7 +384,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                 allowFontScaling={false}
                 style={{ color: themeColors.textSecondary, fontSize: 14, fontFamily: 'Figtree_500Medium', marginRight: 4 }}
               >
-                {isExpanded ? (language === 'it' ? 'Nascondi raccomandazioni' : 'Hide recommendations') : (language === 'it' ? 'Vedi raccomandazioni' : 'See recommendations')}
+                {isExpanded ? t('home.dailyCopilot.hideRecommendations') : t('home.dailyCopilot.seeRecommendations')}
               </Text>
               <MaterialCommunityIcons
                 name={isExpanded ? "chevron-up" : "chevron-down"}
@@ -455,7 +455,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                   allowFontScaling={false}
                   style={[styles.scoreLabelSmall, { color: themeColors.textSecondary }]}
                 >
-                  PUNTI
+                  {t('home.dailyCopilot.points')}
                 </Text>
               </View>
             </View>
@@ -469,7 +469,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
               allowFontScaling={false}
               style={[styles.recommendationsTitle, { color: themeColors.text }]}
             >
-              {language === 'it' ? 'Raccomandazioni per te:' : 'Your Recommendations:'}
+              {t('home.dailyCopilot.yourRecommendations')}
             </Text>
 
             <View style={styles.recommendationsList}>
@@ -477,7 +477,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                 <View style={[styles.emptyRecommendations, { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border }]}>
                   <MaterialCommunityIcons name="information-outline" size={24} color={themeColors.textSecondary} />
                   <Text style={[styles.emptyRecommendationsText, { color: themeColors.textSecondary }, { fontFamily: 'Figtree_500Medium' }]}>
-                    {language === 'it' ? `Attendi le ore ${recommendationTime}:00 per ricevere le raccomandazioni sulla base dei tuoi dati della giornata` : `Wait until ${recommendationTime}:00 to receive recommendations based on your data for the day.`}
+                    {t('home.dailyCopilot.waitRecommendations', { time: recommendationTime })}
                   </Text>
                 </View>
               ) : (

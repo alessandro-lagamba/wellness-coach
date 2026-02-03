@@ -311,7 +311,7 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={onClose} style={styles.headerButton}>
             <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
@@ -543,32 +543,31 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
             </TouchableOpacity>
           )}
 
-          <View style={{ flexDirection: 'row', gap: 12, flex: 1, justifyContent: 'flex-end' }}>
-            {canUseAiComplete && (
-              <TouchableOpacity
-                style={[styles.aiButton, { borderColor: colors.primary }]}
-                onPress={handleAiComplete}
-                disabled={saving}
-              >
-                <Text style={[styles.aiButtonText, { color: colors.primary }]}>
-                  {t('analysis.food.recipes.editor.aiComplete')}
-                </Text>
-              </TouchableOpacity>
-            )}
+          {canUseAiComplete && (
             <TouchableOpacity
-              style={[styles.saveButton, { backgroundColor: colors.primary }]}
-              onPress={handleSave}
+              style={[styles.aiButton, { borderColor: colors.primary }]}
+              onPress={handleAiComplete}
               disabled={saving}
             >
-              {saving ? (
-                <ActivityIndicator color={colors.textInverse} />
-              ) : (
-                <Text style={[styles.saveButtonText, { color: colors.textInverse }]}>
-                  {t('common.save')}
-                </Text>
-              )}
+              <Text style={[styles.aiButtonText, { color: colors.primary }]}>
+                {t('analysis.food.recipes.editor.aiComplete')}
+              </Text>
             </TouchableOpacity>
-          </View>
+          )}
+
+          <TouchableOpacity
+            style={[styles.saveButton, { backgroundColor: colors.primary }]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color={colors.textInverse} />
+            ) : (
+              <Text style={[styles.saveButtonText, { color: colors.textInverse }]}>
+                {t('common.save')}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     </Modal>
@@ -672,42 +671,49 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    gap: 12,
-    padding: 16,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 60 : 70, // Spazio enorme per evitare QUALSIASI barra di sistema
+    marginBottom: 10, // Un ulteriore spinta verso l'alto
     borderTopWidth: 1,
   },
   deleteButton: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
+    borderWidth: 1.5,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    height: 46, // Leggermente più basso per essere più proporzionato
   },
   deleteButtonText: {
-    fontSize: 15,
-    fontFamily: 'Figtree_700Bold', // Was 600
+    fontSize: 14,
+    fontFamily: 'Figtree_700Bold',
   },
   saveButton: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    height: 46,
   },
   saveButtonText: {
-    fontSize: 15,
-    fontFamily: 'Figtree_700Bold', // Was 700
+    fontSize: 14,
+    fontFamily: 'Figtree_700Bold',
   },
   aiButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 999,
+    flex: 1,
+    paddingHorizontal: 4,
+    borderRadius: 14,
     borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 46,
   },
   aiButtonText: {
-    fontSize: 13,
-    fontFamily: 'Figtree_700Bold', // Was 700
+    fontSize: 12,
+    fontFamily: 'Figtree_700Bold',
+    textAlign: 'center',
   },
   nutritionInfo: {
     marginTop: 12,
@@ -737,5 +743,3 @@ const styles = StyleSheet.create({
 });
 
 export default RecipeEditorModal;
-
-

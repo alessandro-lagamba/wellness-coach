@@ -13,49 +13,66 @@ import { AuthService } from './auth.service';
 let AppleHealthKit: any = null;
 let HealthConnect: any = null;
 
-// 🔥 CRITICAL: Import modules based on platform to avoid loading incompatible code
-// react-native-health-connect has Android-specific native code that fails on iOS
-// react-native-health has iOS-specific native code that fails on Android
+// 🔥 CRITICAL FIX FOR RELEASE BUILDS:
+// The react-native-health wrapper uses a Proxy pattern that may not work correctly
+// with Hermes bytecode compilation in Release builds.
+// Solution: Use NativeModules.AppleHealthKit DIRECTLY instead of the wrapper.
 if (Platform.OS === 'ios') {
   try {
-    // Import react-native-health for iOS
-    const HealthKitModule = require('react-native-health');
-    // Handle both default and named exports (varies between debug/release)
-    AppleHealthKit = HealthKitModule.default || HealthKitModule;
+    console.log('[HealthKit] 🔧 Attempting to load HealthKit module...');
 
-    // 🔥 CHECK: Verify native module is properly linked (critical for TestFlight)
+    // 🔥 STRATEGY 1: Direct NativeModules access (PREFERRED - works in Release)
     const nativeHK =
       NativeModules?.AppleHealthKit ||
       NativeModules?.RNAppleHealthKit ||
       NativeModules?.RNHealthKit ||
       NativeModules?.AppleHealthKitModule;
 
-    if (!nativeHK) {
-      console.error(
-        '[HealthKit] ❌ Native HealthKit module MISSING -> react-native-health is NOT linked in this build'
-      );
-      console.log('[HealthKit] NativeModules keys (partial):', Object.keys(NativeModules || {}).slice(0, 50));
-    } else {
-      console.log('[HealthKit] ✅ Native HealthKit module present');
+    if (nativeHK) {
+      console.log('[HealthKit] ✅ Found native module directly via NativeModules');
+      AppleHealthKit = nativeHK;
+
+      // Verify critical methods exist on the native module
+      const hasInitMethod = typeof nativeHK.initHealthKit === 'function';
+      const hasStepsMethod = typeof nativeHK.getStepCount === 'function';
+      console.log('[HealthKit] ✅ Native module methods check:', { hasInitMethod, hasStepsMethod });
+
+      if (!hasInitMethod) {
+        console.warn('[HealthKit] ⚠️ initHealthKit not found on native module, will try wrapper');
+        AppleHealthKit = null; // Reset to try wrapper
+      }
     }
 
-    // Verify that critical methods exist
+    // 🔥 STRATEGY 2: Fallback to react-native-health wrapper (may fail in Release)
+    if (!AppleHealthKit) {
+      console.log('[HealthKit] 🔧 Trying react-native-health wrapper as fallback...');
+      const HealthKitModule = require('react-native-health');
+      const wrapper = HealthKitModule.default || HealthKitModule;
+
+      if (wrapper && typeof wrapper.initHealthKit === 'function') {
+        console.log('[HealthKit] ✅ Using react-native-health wrapper');
+        AppleHealthKit = wrapper;
+      } else if (wrapper && wrapper.default && typeof wrapper.default.initHealthKit === 'function') {
+        console.log('[HealthKit] ✅ Using react-native-health wrapper.default');
+        AppleHealthKit = wrapper.default;
+      } else {
+        console.error('[HealthKit] ❌ Wrapper does not have initHealthKit method');
+      }
+    }
+
+    // Final check
     if (AppleHealthKit) {
       const hasInitMethod = typeof AppleHealthKit.initHealthKit === 'function';
       const hasStepsMethod = typeof AppleHealthKit.getStepCount === 'function';
-      console.log('[HealthKit] ✅ AppleHealthKit module loaded:', { hasInitMethod, hasStepsMethod });
-
-      if (!hasInitMethod || !hasStepsMethod) {
-        console.error('[HealthKit] ❌ AppleHealthKit missing critical methods - check module export format');
-        // Try to access the default export if methods are missing
-        if (AppleHealthKit.default && typeof AppleHealthKit.default.initHealthKit === 'function') {
-          console.log('[HealthKit] 🔧 Found methods in .default, switching...');
-          AppleHealthKit = AppleHealthKit.default;
-        }
-      }
+      console.log('[HealthKit] ✅ Final AppleHealthKit module ready:', { hasInitMethod, hasStepsMethod });
+    } else {
+      console.error('[HealthKit] ❌ Could not load HealthKit module via any strategy');
+      console.log('[HealthKit] Available NativeModules:', Object.keys(NativeModules || {}).filter(k =>
+        k.toLowerCase().includes('health') || k.toLowerCase().includes('apple')
+      ));
     }
   } catch (error) {
-    console.error('[HealthKit] ❌ Failed to load react-native-health:', error);
+    console.error('[HealthKit] ❌ Exception loading HealthKit:', error);
   }
 } else if (Platform.OS === 'android') {
   try {

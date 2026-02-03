@@ -497,7 +497,8 @@
     },
     "dailyCheckIn": {
       "title": "Check-In Giornaliero",
-      "subtitle": "Uno sguardo a come si sentono corpo e mente"
+      "subtitle": "Uno sguardo a come si sentono corpo e mente",
+      "filledToday": "Compilato oggi"
     },
     "dailyCopilot": {
       "insufficientData": "Il punteggio verrà calcolato non appena ci saranno più dati per oggi.",
@@ -505,6 +506,13 @@
       "subtitle": "Il tuo spunto del giorno, pensato per te.",
       "todayScore": "Il Punteggio di Oggi",
       "notifyMe": "Avvisami",
+      "theScore": "Il Punteggio",
+      "ofToday": "di Oggi",
+      "points": "PUNTI",
+      "hideRecommendations": "Nascondi raccomandazioni",
+      "seeRecommendations": "Vedi raccomandazioni",
+      "yourRecommendations": "Raccomandazioni per te:",
+      "waitRecommendations": "Attendi le ore {{time}}:00 per ricevere le raccomandazioni sulla base dei tuoi dati della giornata",
       "schedule": {
         "title": "Orario Raccomandazioni",
         "intro": "Scegli a che ora vuoi ricevere il tuo piano giornaliero.",
@@ -1593,7 +1601,7 @@
           "titleRequired": "Il nome della ricetta è obbligatorio",
           "saveError": "Impossibile salvare la ricetta",
           "deleteTitle": "Elimina ricetta",
-          "deleteMessage": "Vuoi davvero eliminare questa ricetta?",
+          "deleteMessage": "Vuoi davvero eliminare questo pasto?",
           "deleteError": "Impossibile eliminare la ricetta",
           "aiComplete": "Completa con AI",
           "aiCompleteError": "Impossibile completare la ricetta con l'AI. Riprova più tardi.",
@@ -1617,9 +1625,9 @@
         "deleteConfirm": "Sei sicuro di voler eliminare questo pasto dal piano?",
         "describeMeal": "Descrivi il pasto",
         "describeMealSubtitle": "Usa l'AI per stimare calorie da testo",
-        "quickAddTitle": "Aggiunta Rapida con AI",
-        "quickAddSubtitle": "Descrivi cosa hai mangiato",
-        "quickAddPlaceholder": "Esempio: Insalata di pollo con avocado e semi di zucca...",
+        "quickAddTitle": "Descrivi cosa hai mangiato",
+        "quickAddSubtitle": "Includi quantità e calorie, se disponibili",
+        "quickAddPlaceholder": "Esempio: 200g di pollo ai ferri, 300 kcal...",
         "analyze": "Analizza"
       },
       "preferences": {

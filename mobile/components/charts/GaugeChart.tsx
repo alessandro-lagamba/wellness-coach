@@ -176,7 +176,12 @@ export const GaugeChart: React.FC<GaugeChartProps> = memo(({
                   {valueStr}
                 </TSpan>
                 {unit && (
-                  <TSpan fontSize={valueFontSize * 0.55} fontFamily="Figtree_500Medium" dx="2" dy="-1">
+                  <TSpan
+                    fontSize={valueFontSize * 0.55}
+                    fontFamily="Figtree_500Medium"
+                    dx={valueStr.endsWith('0') ? '0' : (valueStr.endsWith('1') && valueStr.length > 1 ? '1' : '0.5')}
+                    dy="-1"
+                  >
                     {unit}
                   </TSpan>
                 )}

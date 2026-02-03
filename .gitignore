@@ -118,3 +118,7 @@ backend/src/temp/
 # Firebase
 GoogleService-Info.plist
 **/GoogleService-Info.plist
+
+# Mobile
+google-services.json
+**/google-services.json

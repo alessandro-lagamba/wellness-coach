@@ -1081,8 +1081,25 @@ const FoodAnalysisScreenContent: React.FC = () => {
     } else if (pendingAttachSlot) {
       // NUOVA LOGICA: Elimina la voce dal planner (pasto scannerizzato)
       try {
+        // 1. Trova l'entry per recuperare eventuali ID di analisi associati
+        const entryToDelete = mealPlanEntries.find(
+          e => e.plan_date === pendingAttachSlot.date && e.meal_type === pendingAttachSlot.mealType
+        );
+
+        // 2. Rimuovi dal planner
         await mealPlanService.removeEntry(pendingAttachSlot.date, pendingAttachSlot.mealType);
-        await loadMealPlan();
+
+        // 3. Se associato a un'analisi Food, elimina anche quella per aggiornare i totali giornalieri "consumati"
+        const customRecipe = entryToDelete?.custom_recipe as any;
+        if (customRecipe?.analysis_id) {
+          const currentUser = await AuthService.getCurrentUser();
+          if (currentUser) {
+            await FoodAnalysisService.deleteFoodAnalysis(currentUser.id, customRecipe.analysis_id);
+          }
+        }
+
+        // 4. Ricarica TUTTI i dati (inclusi daily intake e grafici) per riflettere le modifiche
+        await reloadData();
       } catch (error) {
         console.error('Failed to remove meal plan entry:', error);
       } finally {
@@ -2088,13 +2105,20 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
   if (analyzing || isTextAnalyzing) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, flex: 1 }]}>
-        {!isTextAnalyzing && <CameraFrame />}
-        <AnalysisLoader messages={
-          isTextAnalyzing
-            ? ['Analizzando il tuo pasto...', 'Calcolando valori nutrizionali...']
-            : ['Identificando gli ingredienti del tuo piatto...', 'Stimando calorie e nutrienti...']
-        } />
+      <View style={[styles.container, { backgroundColor: '#ffffff', flex: 1, alignItems: 'center', justifyContent: 'center' }]}>
+        <View style={{ alignItems: 'center', gap: 20 }}>
+          <ActivityIndicator size={60} color="#3b82f6" />
+          <View style={{ alignItems: 'center', gap: 8 }}>
+            <Text style={{ fontSize: 16, fontFamily: 'Figtree_700Bold', color: '#1e3a8a', letterSpacing: 1, textTransform: 'uppercase' }}>
+              ANALISI IN CORSO
+            </Text>
+            <Text style={{ fontSize: 14, fontFamily: 'Figtree_500Medium', color: '#64748b' }}>
+              {isTextAnalyzing ? 'Calcolando valori nutrizionali...' : 'Identificando gli ingredienti...'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Absolute positioned bottom bar mockup/placeholder if needed, or just let the real one show if structure allows */}
       </View>
     );
   }
@@ -2328,10 +2352,13 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
           {/* Empty State - Show only when data is loaded and no food analyses exist */}
           {!isLoadingData && !latestFoodSession && (
-            <EmptyStateCard
-              type="food"
-              onAction={handleStartAnalysis}
-            />
+            <View style={{ marginTop: 40 }}>
+              <EmptyStateCard
+                type="food"
+                onAction={handleStartAnalysis}
+                showLearnMore={false}
+              />
+            </View>
           )}
 
           {/* Nutritional Goals Card removed and replaced by quick action button below */}
@@ -3098,30 +3125,32 @@ const FoodAnalysisScreenContent: React.FC = () => {
             <View style={[styles.slotModalCard, {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              padding: 24,
-              borderRadius: 32,
+              paddingHorizontal: 20,
+              paddingTop: 16,
+              paddingBottom: 20,
+              borderRadius: 28,
               shadowColor: colors.primary,
               shadowOffset: { width: 0, height: 12 },
               shadowOpacity: 0.15,
               shadowRadius: 24,
               elevation: 10
             }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 }}>
                 <View style={{
                   backgroundColor: colors.primary + '15',
-                  padding: 12,
-                  borderRadius: 18,
+                  padding: 8,
+                  borderRadius: 14,
                   borderWidth: 1,
                   borderColor: colors.primary + '30'
                 }}>
-                  <MaterialCommunityIcons name="auto-fix" size={28} color={colors.primary} />
+                  <MaterialCommunityIcons name="magic-staff" size={20} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.slotModalTitle, { color: colors.text, fontSize: 20, fontFamily: 'Figtree_700Bold' }]}>
-                    {t('analysis.food.mealPlanner.quickAddTitle') || 'Aggiunta Rapida con AI'}
+                  <Text style={[styles.slotModalTitle, { color: colors.text, fontSize: 17, fontFamily: 'Figtree_700Bold' }]}>
+                    {t('analysis.food.mealPlanner.quickAddTitle')}
                   </Text>
-                  <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-                    {t('analysis.food.mealPlanner.quickAddSubtitle') || 'Descrivi cosa hai mangiato'}
+                  <Text style={[styles.sectionSubtitle, { color: colors.textSecondary, fontSize: 12, marginTop: 1 }]}>
+                    {t('analysis.food.mealPlanner.quickAddSubtitle')}
                   </Text>
                 </View>
               </View>
@@ -3133,19 +3162,19 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     color: colors.text,
                     backgroundColor: colors.surfaceElevated + '50',
                     borderRadius: 20,
-                    padding: 18,
-                    minHeight: 140,
+                    padding: 16,
+                    minHeight: 120,
                     textAlignVertical: 'top',
                     borderWidth: 1,
                     borderColor: colors.border,
-                    fontSize: 16,
-                    lineHeight: 22,
+                    fontSize: 15,
+                    lineHeight: 20,
                     fontFamily: 'Figtree_500Medium'
                   }
                 ]}
                 value={quickAddText}
                 onChangeText={setQuickAddText}
-                placeholder={t('analysis.food.mealPlanner.quickAddPlaceholder') || "Esempio: Insalata di pollo con avocado e semi di zucca..."}
+                placeholder={t('analysis.food.mealPlanner.quickAddPlaceholder') || "Esempio: 200g di pollo ai ferri, 300 kcal..."}
                 placeholderTextColor={colors.textTertiary}
                 multiline
                 autoFocus
@@ -3157,16 +3186,16 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     flex: 1,
                     backgroundColor: colors.surfaceElevated,
                     borderColor: colors.border,
-                    paddingVertical: 14,
-                    height: 56,
-                    borderRadius: 24
+                    paddingVertical: 10,
+                    height: 48,
+                    borderRadius: 20
                   }]}
                   onPress={() => {
                     setQuickAddModalVisible(false);
                     setQuickAddText('');
                   }}
                 >
-                  <Text style={[styles.secondaryButtonText, { color: colors.text, fontSize: 16 }]}>
+                  <Text style={[styles.secondaryButtonText, { color: colors.text, fontSize: 15 }]}>
                     {t('common.cancel')}
                   </Text>
                 </TouchableOpacity>
@@ -3181,9 +3210,9 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={[styles.primaryButton, {
-                      paddingVertical: 14,
-                      height: 56,
-                      borderRadius: 24,
+                      paddingVertical: 10,
+                      height: 48,
+                      borderRadius: 20,
                       opacity: quickAddText.trim() ? 1 : 0.6,
                       borderWidth: 0
                     }]}
@@ -3191,12 +3220,9 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     {isTextAnalyzing ? (
                       <ActivityIndicator size="small" color="white" />
                     ) : (
-                      <>
-                        <MaterialCommunityIcons name="sparkles" size={18} color="white" />
-                        <Text style={[styles.primaryButtonText, { fontSize: 16 }]}>
-                          {t('analysis.food.mealPlanner.analyze') || 'Analizza'}
-                        </Text>
-                      </>
+                      <Text style={[styles.primaryButtonText, { fontSize: 15 }]}>
+                        {t('analysis.food.mealPlanner.analyze') || 'Analizza'}
+                      </Text>
                     )}
                   </LinearGradient>
                 </TouchableOpacity>
