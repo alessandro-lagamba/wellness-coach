@@ -1829,6 +1829,8 @@
         "moveSubtitle": "Choose which meal slot you want to assign it to.",
         "analyzed": "Analyzed",
         "deleteConfirm": "Are you sure you want to delete this meal from the plan?",
+        "describeMeal": "Describe your meal",
+        "describeMealSubtitle": "Use AI to estimate calories from text",
         "quickAddTitle": "Describe what you ate",
         "quickAddSubtitle": "Include quantities and calories, if available",
         "quickAddPlaceholder": "Example: 200g grilled chicken, 300 kcal...",

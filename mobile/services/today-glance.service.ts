@@ -310,8 +310,11 @@ export class TodayGlanceService {
   static async removeWaterGlasses(userId: string, quantity: number): Promise<{ success: boolean; error?: string; newHydration?: number }> {
     try {
       const { supabase } = await import('../lib/supabase');
-      const { HealthDataSyncService } = await import('./health-data-sync.service');
-      const { HealthDataService } = await import('./health-data.service');
+      // 🔥 FIX: Robust fallback for Release builds (handle both named and default exports)
+      const syncMod: any = await import('./health-data-sync.service');
+      const HealthDataSyncService = syncMod.HealthDataSyncService ?? syncMod.default ?? syncMod;
+      const healthMod: any = await import('./health-data.service');
+      const HealthDataService = healthMod.HealthDataService ?? healthMod.default ?? healthMod;
 
       const now = new Date();
       const today = [
@@ -404,8 +407,11 @@ export class TodayGlanceService {
   static async addWaterGlasses(userId: string, quantity: number): Promise<{ success: boolean; error?: string; newHydration?: number }> {
     try {
       const { supabase } = await import('../lib/supabase');
-      const { HealthDataSyncService } = await import('./health-data-sync.service');
-      const { HealthDataService } = await import('./health-data.service');
+      // 🔥 FIX: Robust fallback for Release builds (handle both named and default exports)
+      const syncMod: any = await import('./health-data-sync.service');
+      const HealthDataSyncService = syncMod.HealthDataSyncService ?? syncMod.default ?? syncMod;
+      const healthMod: any = await import('./health-data.service');
+      const HealthDataService = healthMod.HealthDataService ?? healthMod.default ?? healthMod;
 
       const now = new Date();
       const today = [
@@ -506,6 +512,10 @@ export class TodayGlanceService {
       const currentMinutes = existingData?.mindfulness_minutes || 0;
       const newMinutes = currentMinutes + minutes;
 
+      // 🔥 FIX: Robust fallback for Release builds (handle both named and default exports)
+      const healthMod: any = await import('./health-data.service');
+      const HealthDataService = healthMod.HealthDataService ?? healthMod.default ?? healthMod;
+
       // Recupera tutti i dati di salute attuali (o usa valori di default)
       const healthService = HealthDataService.getInstance();
       const currentHealthData = await healthService.getLatestSyncedHealthData();
@@ -529,6 +539,9 @@ export class TodayGlanceService {
       };
 
       // Sincronizza i dati aggiornati nel database
+      // 🔥 FIX: Robust fallback for Release builds
+      const syncMod: any = await import('./health-data-sync.service');
+      const HealthDataSyncService = syncMod.HealthDataSyncService ?? syncMod.default ?? syncMod;
       const syncService = HealthDataSyncService.getInstance();
       const syncResult = await syncService.syncHealthData(userId, healthDataToSync);
 
@@ -592,6 +605,10 @@ export class TodayGlanceService {
         };
       }
 
+      // 🔥 FIX: Robust fallback for Release builds (handle both named and default exports)
+      const healthMod: any = await import('./health-data.service');
+      const HealthDataService = healthMod.HealthDataService ?? healthMod.default ?? healthMod;
+
       // Recupera tutti i dati di salute attuali (o usa valori di default)
       const healthService = HealthDataService.getInstance();
       const currentHealthData = await healthService.getLatestSyncedHealthData();
@@ -615,6 +632,9 @@ export class TodayGlanceService {
       };
 
       // Sincronizza i dati aggiornati nel database
+      // 🔥 FIX: Robust fallback for Release builds
+      const syncMod: any = await import('./health-data-sync.service');
+      const HealthDataSyncService = syncMod.HealthDataSyncService ?? syncMod.default ?? syncMod;
       const syncService = HealthDataSyncService.getInstance();
       const syncResult = await syncService.syncHealthData(userId, healthDataToSync);
 

@@ -580,7 +580,8 @@ export class HealthDataService {
             steps: 0, distance: 0, calories: 0, activeMinutes: 0,
             heartRate: 0, restingHeartRate: 0, hrv: 0,
             sleepHours: 0, sleepQuality: 0, deepSleepMinutes: 0, remSleepMinutes: 0, lightSleepMinutes: 0,
-            hydration: 0, mindfulnessMinutes: 0
+            // 🔥 FIX: Do NOT pass hydration/mindfulness as 0, use undefined to preserve existing DB values
+            hydration: undefined, mindfulnessMinutes: undefined
           };
           const Sync = await getHealthDataSyncService();
           const syncService = Sync.getInstance();
@@ -793,8 +794,9 @@ export class HealthDataService {
           deepSleepMinutes: 0,
           remSleepMinutes: 0,
           lightSleepMinutes: 0,
-          hydration: 0,
-          mindfulnessMinutes: 0,
+          // 🔥 FIX: Do NOT pass hydration/mindfulness as 0, use undefined to preserve existing DB values
+          hydration: undefined,
+          mindfulnessMinutes: undefined,
         };
 
         console.log(
@@ -890,8 +892,9 @@ export class HealthDataService {
         deepSleepMinutes: 0,
         remSleepMinutes: 0,
         lightSleepMinutes: 0,
-        hydration: 0,
-        mindfulnessMinutes: 0,
+        // 🔥 FIX: Do NOT pass hydration/mindfulness as 0, use undefined to preserve existing DB values
+        hydration: undefined,
+        mindfulnessMinutes: undefined,
       };
 
       // Normalizza le risposte di readRecords che possono variare tra array e oggetti

@@ -2981,9 +2981,9 @@ const FoodAnalysisScreenContent: React.FC = () => {
               >
                 <MaterialCommunityIcons name="pencil-plus-outline" size={20} color={colors.primary} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.recipeCardTitle, { color: colors.primary }]}>{t('analysis.food.mealPlanner.describeMeal') || 'Descrivi il pasto'}</Text>
+                  <Text style={[styles.recipeCardTitle, { color: colors.primary }]}>{t('analysis.food.mealPlanner.describeMeal') || 'Describe your meal'}</Text>
                   <Text style={[styles.recipeCardMeta, { color: colors.primary + '80' }]}>
-                    {t('analysis.food.mealPlanner.describeMealSubtitle') || 'Usa l\'AI per stimare calorie da testo'}
+                    {t('analysis.food.mealPlanner.describeMealSubtitle') || 'Use AI to estimate calories from text'}
                   </Text>
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={18} color={colors.primary} />
@@ -3054,10 +3054,10 @@ const FoodAnalysisScreenContent: React.FC = () => {
           <View style={styles.slotModalOverlay}>
             <View style={[styles.slotModalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.slotModalTitle, { color: colors.text }]}>
-                {t('analysis.food.mealPlanner.moveTitle') || 'Sposta questo pasto'}
+                {t('analysis.food.mealPlanner.moveTitle') || 'Move this meal'}
               </Text>
               <Text style={[styles.emptyMealCellText, { color: colors.textSecondary, marginBottom: 12 }]}>
-                {t('analysis.food.mealPlanner.moveSubtitle') || 'Seleziona il pasto a cui vuoi assegnarlo.'}
+                {t('analysis.food.mealPlanner.moveSubtitle') || 'Select the meal slot you want to assign it to.'}
               </Text>
 
               {MEAL_TYPES.map((type) => (
@@ -3170,7 +3170,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                 ]}
                 value={quickAddText}
                 onChangeText={setQuickAddText}
-                placeholder={t('analysis.food.mealPlanner.quickAddPlaceholder') || "Esempio: 200g di pollo ai ferri, 300 kcal..."}
+                placeholder={t('analysis.food.mealPlanner.quickAddPlaceholder') || "Example: 200g grilled chicken, 300 kcal..."}
                 placeholderTextColor={colors.textTertiary}
                 multiline
                 autoFocus
@@ -3217,7 +3217,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                       <ActivityIndicator size="small" color="white" />
                     ) : (
                       <Text style={[styles.primaryButtonText, { fontSize: 15 }]}>
-                        {t('analysis.food.mealPlanner.analyze') || 'Analizza'}
+                        {t('analysis.food.mealPlanner.analyze') || 'Analyze'}
                       </Text>
                     )}
                   </LinearGradient>
