@@ -1,5 +1,4 @@
 packages:
   - mobile
-  - web-advanced
+  - web
   - backend
-  - shared

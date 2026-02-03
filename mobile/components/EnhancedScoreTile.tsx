@@ -47,43 +47,15 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
   const [isExpanded, setIsExpanded] = useState(expanded);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
-  // 🔥 FIX: Traduce le etichette dei bucket dinamicamente
+  // 🔥 FIX: Traduce le etichette dei bucket e le descrizioni dinamicamente
   const translateBucketLabel = (label: string): string => {
-    const translations: { [key: string]: { it: string; en: string } } = {
-      // Texture
-      'ROUGH': { it: 'RUVIDA', en: 'ROUGH' },
-      'FAIR': { it: 'DISCRETA', en: 'FAIR' },
-      'GOOD': { it: 'BUONA', en: 'GOOD' },
-      'EXCELLENT': { it: 'ECCELLENTE', en: 'EXCELLENT' },
-      // Redness
-      'LOW': { it: 'BASSO', en: 'LOW' },
-      'MILD': { it: 'LIEVE', en: 'MILD' },
-      'MODERATE': { it: 'MODERATO', en: 'MODERATE' },
-      'HIGH': { it: 'ALTO', en: 'HIGH' },
-      // Hydration
-      'BELOW OPTIMAL': { it: 'SOTTO OTTIMALE', en: 'BELOW OPTIMAL' },
-      'OPTIMAL': { it: 'OTTIMALE', en: 'OPTIMAL' },
-      // Oiliness
-      'DRY': { it: 'SECCA', en: 'DRY' },
-      'BALANCED': { it: 'EQUILIBRATA', en: 'BALANCED' },
-      'OILY': { it: 'OLEOSA', en: 'OILY' },
-      'VERY OILY': { it: 'MOLTO OLEOSA', en: 'VERY OILY' },
-      // Overall
-      'POOR': { it: 'SCARSA', en: 'POOR' },
-      // Emotion
-      'NEGATIVE': { it: 'NEGATIVA', en: 'NEGATIVE' },
-      'NEUTRAL': { it: 'NEUTRA', en: 'NEUTRAL' },
-      'POSITIVE': { it: 'POSITIVA', en: 'POSITIVE' },
-      'VERY POSITIVE': { it: 'MOLTO POSITIVA', en: 'VERY POSITIVE' },
-      'MEDIUM': { it: 'MEDIA', en: 'MEDIUM' },
-      'VERY HIGH': { it: 'MOLTO ALTA', en: 'VERY HIGH' },
-    };
+    // Se è già una chiave di traduzione, t() la risolverà
+    // Altrimenti cercherà di tradurla (fallback per vecchi codici)
+    return t(label);
+  };
 
-    const upperLabel = label.toUpperCase();
-    if (translations[upperLabel]) {
-      return translations[upperLabel][language as 'it' | 'en'] || label;
-    }
-    return label;
+  const translateDescription = (desc: string): string => {
+    return t(desc);
   };
 
   React.useEffect(() => {
@@ -182,7 +154,7 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
 
         {trend && (
           <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: isDark ? '#6b7280' : '#9ca3af' }]} allowFontScaling={false}>Trend</Text>
+            <Text style={[styles.detailLabel, { color: isDark ? '#6b7280' : '#9ca3af' }]} allowFontScaling={false}>{t('common.trend')}</Text>
             <Text style={[styles.detailValue, { color: getTrendColor(trend) }]}>
               {trend.trend} {trend.percentage}% {trend.text}
             </Text>
@@ -191,8 +163,8 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
 
         {bucket && (
           <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: isDark ? '#6b7280' : '#9ca3af' }]} allowFontScaling={false}>Status</Text>
-            <Text style={[styles.detailValue, { color: isDark ? '#d1d5db' : '#374151' }]}>{bucket.description}</Text>
+            <Text style={[styles.detailLabel, { color: isDark ? '#6b7280' : '#9ca3af' }]} allowFontScaling={false}>{t('common.status')}</Text>
+            <Text style={[styles.detailValue, { color: isDark ? '#d1d5db' : '#374151' }]}>{translateDescription(bucket.description)}</Text>
           </View>
         )}
 
@@ -200,7 +172,7 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
           <View style={[styles.actionContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb' }]}>
             <View style={styles.actionHeader}>
               <MaterialCommunityIcons name="lightbulb-on-outline" size={16} color={getPriorityColor(action.priority)} />
-              <Text style={[styles.actionTitle, { color: getPriorityColor(action.priority) }]} allowFontScaling={false}>Recommendation</Text>
+              <Text style={[styles.actionTitle, { color: getPriorityColor(action.priority) }]} allowFontScaling={false}>{t('common.recommendation')}</Text>
             </View>
 
             <Text style={[styles.actionDescription, { color: isDark ? '#9ca3af' : '#4b5563' }]}>{action.description}</Text>
@@ -213,7 +185,7 @@ export const EnhancedScoreTile: React.FC<EnhancedScoreTileProps> = ({
               style={[styles.actionButton, { backgroundColor: getPriorityColor(action.priority) }]}
               onPress={onActionPress}
             >
-              <Text style={styles.actionButtonText}>Mark as Done</Text>
+              <Text style={styles.actionButtonText}>{t('common.markAsDone')}</Text>
               <MaterialCommunityIcons name="check" size={16} color="#fff" />
             </TouchableOpacity>
           </View>

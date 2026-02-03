@@ -1052,8 +1052,8 @@ export const EmotionDetectionScreen: React.FC = () => {
       <View style={[styles.container, { backgroundColor: themeColors.background, flex: 1 }]}>
         <CameraFrame />
         <AnalysisLoader messages={[
-          'Analizzando l’espressione del tuo volto...',
-          'Interpretando i segnali di occhi e bocca...'
+          t('ui.analyzingExpressions'),
+          t('ui.analyzingSignals')
         ]} />
       </View>
     );
@@ -1220,7 +1220,7 @@ export const EmotionDetectionScreen: React.FC = () => {
             <View style={styles.exploreDeeperHeader}>
               <View style={styles.exploreDeeperLine} />
               <Text style={styles.exploreDeeperTitle}>
-                {language === 'it' ? 'ESPLORA DI PIÙ' : 'EXPLORE DEEPER'}
+                {t('analysis.emotion.exploreDeeper.title')}
               </Text>
               <View style={styles.exploreDeeperLine} />
             </View>
@@ -1238,10 +1238,8 @@ export const EmotionDetectionScreen: React.FC = () => {
                 } else {
                   // Show notification that analysis is required
                   Alert.alert(
-                    language === 'it' ? 'Analisi Richiesta' : 'Analysis Required',
-                    language === 'it'
-                      ? 'Per scoprire il tuo Oroscopo (non richiesto) di oggi, effettua l\'analisi emotiva!'
-                      : 'To discover your Horoscope (you didn\'t ask for) today, complete an emotion analysis!',
+                    t('analysis.emotion.exploreDeeper.horoscope.modal_title'),
+                    t('analysis.emotion.exploreDeeper.horoscope.modal_message'),
                     [{ text: 'OK' }]
                   );
                 }
@@ -1261,22 +1259,20 @@ export const EmotionDetectionScreen: React.FC = () => {
                   <View style={styles.immersiveCardContent}>
                     {/* Title */}
                     <Text style={styles.immersiveCardTitle} allowFontScaling={false}>
-                      {language === 'it' ? 'Le Tue Stelle Oggi' : 'Your Stars Today'}
+                      {t('analysis.emotion.exploreDeeper.horoscope.title')}
                     </Text>
 
                     {/* Description */}
                     <Text style={styles.immersiveCardDescription}>
-                      {language === 'it'
-                        ? 'Sblocca insight cosmici su misura per il tuo stato emotivo attuale.'
-                        : 'Unlock cosmic insights tailored to your current emotional state.'}
+                      {t('analysis.emotion.exploreDeeper.horoscope.description')}
                     </Text>
 
                     {/* Call to Action */}
                     <View style={styles.immersiveCardCTA}>
                       <Text style={[styles.immersiveCardCTAText, !hasTodayEmotionAnalysis && { opacity: 0.6 }]}>
                         {hasTodayEmotionAnalysis
-                          ? (language === 'it' ? 'Leggi oroscopo' : 'Read horoscope')
-                          : (language === 'it' ? 'Effettua analisi prima' : 'Complete analysis first')}
+                          ? t('analysis.emotion.exploreDeeper.horoscope.cta_read')
+                          : t('analysis.emotion.exploreDeeper.horoscope.cta_lock')}
                       </Text>
                       <MaterialCommunityIcons
                         name={hasTodayEmotionAnalysis ? "arrow-right" : "lock-outline"}
@@ -1312,20 +1308,18 @@ export const EmotionDetectionScreen: React.FC = () => {
                   <View style={styles.immersiveCardContent}>
                     {/* Title */}
                     <Text style={styles.immersiveCardTitle} allowFontScaling={false}>
-                      {language === 'it' ? 'Il Te Stesso del Passato' : 'Your Past Self'}
+                      {t('analysis.emotion.exploreDeeper.timeMachine.title')}
                     </Text>
 
                     {/* Description */}
                     <Text style={styles.immersiveCardDescription}>
-                      {language === 'it'
-                        ? 'Riavvolgi il tuo viaggio emotivo e guarda quanta strada hai fatto.'
-                        : 'Rewind your emotional journey and see how far you\'ve come.'}
+                      {t('analysis.emotion.exploreDeeper.timeMachine.description')}
                     </Text>
 
                     {/* Call to Action */}
                     <View style={styles.immersiveCardCTA}>
                       <Text style={styles.immersiveCardCTAText}>
-                        {language === 'it' ? 'Entra nella Macchina del Tempo' : 'Enter Time Machine'}
+                        {t('analysis.emotion.exploreDeeper.timeMachine.cta')}
                       </Text>
                       <MaterialCommunityIcons name="arrow-right" size={16} color="rgba(255,255,255,0.8)" />
                     </View>
@@ -1384,7 +1378,7 @@ export const EmotionDetectionScreen: React.FC = () => {
           {/* Weekly Recap Section */}
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: themeColors.text }, { marginTop: 24 }]}>
-              {language === 'it' ? 'Analisi Settimanale' : 'Weekly Analysis'}
+              {t('analysis.emotion.recent.weeklyTitle')}
             </Text>
           </View>
 

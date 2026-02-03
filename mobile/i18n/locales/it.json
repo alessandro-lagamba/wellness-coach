@@ -13,7 +13,7 @@
     "ok": "OK",
     "loading": "Caricamento...",
     "error": "Errore",
-    "success": "Operazione riuscita",
+    "success": "Successo",
     "retry": "Riprova",
     "skip": "Salta",
     "continue": "Continua",
@@ -26,9 +26,26 @@
     "done": "Fatto",
     "retake": "Ripeti",
     "recommendation": "Raccomandazione",
-    "markAsDone": "Segna come Completato",
+    "markAsDone": "Segna come completata",
+    "completed": "Completata",
     "view": "Vedi",
-    "confirmDelete": "Conferma eliminazione"
+    "confirmDelete": "Conferma eliminazione",
+    "next": "Avanti",
+    "finish": "Finito",
+    "warning": "Attenzione",
+    "info": "Informazione"
+  },
+  "feedback": {
+    "saveSuccess": "{{entity}} salvato con successo.",
+    "saveSuccess_analisi": "Analisi salvata con successo.",
+    "saveError": "Impossibile salvare {{entity}}. Riprova più tardi o controlla la connessione.",
+    "saveErrorTitle": "Errore di salvataggio",
+    "entities": {
+      "analisi": "analisi",
+      "check-in": "check-in",
+      "dati salute": "dati salute",
+      "dati": "dati"
+    }
   },
   "settings": {
     "title": "Impostazioni",
@@ -608,7 +625,13 @@
       "good": "Buono",
       "fair": "Discreto",
       "poor": "Scarso",
-      "needsCare": "Richiede Cura"
+      "needsCare": "Da curare"
+    },
+    "trend": {
+      "above": "sopra il tuo solito",
+      "below": "sotto il tuo solito",
+      "even": "in linea con il tuo solito",
+      "first": "Prima misurazione"
     },
     "emotion": {
       "card": {
@@ -649,7 +672,8 @@
       "noneYet": "Nessuno ancora",
       "recent": {
         "title": "Ultima Sessione di Analisi Emotiva",
-        "subtitle": "I risultati più recenti dell'analisi emotiva"
+        "subtitle": "I risultati più recenti dell'analisi emotiva",
+        "weeklyTitle": "Analisi Settimanale"
       },
       "quickStats": {
         "title": "Ultima Analisi",
@@ -689,12 +713,36 @@
           "negative": "Negativo",
           "neutral": "Neutrale",
           "positive": "Positivo",
-          "veryPositive": "Molto Positivo",
+          "veryPositive": "Molto positivo",
+          "veryNegative": "Molto negativo",
           "low": "Basso",
           "medium": "Medio",
           "high": "Alto",
-          "veryLow": "Molto Basso",
-          "veryHigh": "Molto Alto"
+          "veryLow": "Molto basso",
+          "veryHigh": "Molto alto"
+        },
+        "descriptions": {
+          "negative": "Più segnali negativi che positivi",
+          "neutral": "Espressione neutra, nessuna direzione emotiva forte",
+          "positive": "Più segnali positivi che neutri",
+          "veryPositive": "Stato chiaramente positivo",
+          "veryNegative": "Stato emotivo difficile",
+          "low": "Energia ridotta / rilassata",
+          "medium": "Attivazione nella norma",
+          "high": "Stato attivo / vigile",
+          "veryLow": "Stato molto calmo o affaticato",
+          "veryHigh": "Forte attivazione"
+        },
+        "valenceDescriptions": {
+          "positive": "L'espressione facciale suggerisce emozioni positive, con tratti che indicano piacevolezza e soddisfazione.",
+          "negative": "L'espressione facciale suggerisce emozioni negative, con tratti che indicano disagio o insoddisfazione.",
+          "neutral": "L'espressione facciale è neutra, senza chiari segnali di emozioni positive o negative."
+        },
+        "arousalDescriptions": {
+          "high": "Livello di attivazione elevato, indicando energia e vigilanza nell'espressione.",
+          "reduced": "Livello di attivazione ridotto, con segnali di pesantezza o ritiro emotivo.",
+          "low": "Livello di attivazione basso, suggerendo calma e rilassatezza.",
+          "moderate": "Livello di attivazione moderato, in uno stato di equilibrio tra calma ed energia."
         },
         "valenceDescription": "Valence misura quanto positive o negative sono le tue emozioni (0-100). Valori alti (>70) indicano felicità, mentre valori bassi (<30) indicano tristezza. Un valore di 50 è neutro. Calcolato dai segnali facciali rilevati.",
         "arousalDescription": "Arousal misura l'intensità delle tue emozioni (0-100). Valori alti (>70) indicano eccitazione o stress, mentre valori bassi (<30) indicano calma e rilassamento. Calcolato dall'intensità dei segnali espressivi.",
@@ -721,6 +769,22 @@
         "lockedTitle": "Analizza oggi per sbloccare i consigli",
         "lockedDescription": "Gli insight intelligenti vengono generati solo dopo una nuova analisi emotiva del giorno in corso.",
         "lockedCta": "Analizza ora"
+      },
+      "exploreDeeper": {
+        "title": "ESPLORA DI PIÙ",
+        "horoscope": {
+          "title": "Le Tue Stelle Oggi",
+          "description": "Sblocca insight cosmici su misura per il tuo stato emotivo attuale.",
+          "cta_read": "Leggi oroscopo",
+          "cta_lock": "Effettua analisi prima",
+          "modal_title": "Analisi Richiesta",
+          "modal_message": "Per scoprire il tuo Oroscopo (non richiesto) di oggi, effettua l'analisi emotiva!"
+        },
+        "timeMachine": {
+          "title": "Il Te Stesso del Passato",
+          "description": "Riavvolgi il tuo viaggio emotivo e guarda quanta strada hai fatto.",
+          "cta": "Entra nella Macchina del Tempo"
+        }
       },
       "horoscope": {
         "title": "L'Oroscopo (non richiesto)",
@@ -990,6 +1054,26 @@
                 "Centella asiatica negli stessi giorni di acidi o retinoidi",
                 "Routine \"aggressive\" se c'è rossore associato"
               ]
+            },
+            "nutrition": {
+              "title": "Alimenti consigliati",
+              "items": [
+                "Acidi grassi Omega-3 (pesce, noci, semi)",
+                "Alimenti ricchi di Vitamina C (agrumi, frutti di bosco)",
+                "Antiossidanti (tè verde, cioccolato fondente)",
+                "Mantieniti idratato - 8+ bicchieri d'acqua al giorno",
+                "Limita cibi processati e zuccheri"
+              ]
+            },
+            "timing": {
+              "title": "Tempistiche Ottimali",
+              "items": [
+                "Esfoliare la sera, non la mattina",
+                "I retinoidi funzionano meglio di notte",
+                "SPF essenziale ogni mattina",
+                "Aspetta 2-4 settimane per vedere miglioramenti",
+                "La costanza è fondamentale per i risultati"
+              ]
             }
           }
         },
@@ -1041,6 +1125,26 @@
                 "AHA / BHA frequenti",
                 "Retinoidi senza controllo dermatologico"
               ]
+            },
+            "nutrition": {
+              "title": "Nutrizione e Dieta",
+              "items": [
+                "Curcuma e zenzero (antinfiammatori naturali)",
+                "Verdure a foglia verde",
+                "Frutti di bosco e ciliegie",
+                "Pesce grasso (salmone, sgombro)",
+                "Evita cibi piccanti e alcol"
+              ]
+            },
+            "timing": {
+              "title": "Tempistiche Ottimali",
+              "items": [
+                "Applica prodotti calmanti subito dopo la detersione",
+                "Usa SPF ogni mattina, anche in casa",
+                "Evita trattamenti aggressivi durante le riacutizzazioni",
+                "Dai alla pelle tempo di guarire tra i trattamenti",
+                "Monitora la reazione della pelle ai nuovi prodotti"
+              ]
             }
           }
         },
@@ -1090,6 +1194,26 @@
                 "Alcol denaturato",
                 "Over-cleansing",
                 "Solo prodotti “opacizzanti” senza idratazione"
+              ]
+            },
+            "nutrition": {
+              "title": "Nutrizione e Dieta",
+              "items": [
+                "Riduci latticini e cibi processati",
+                "Limita zuccheri e carboidrati raffinati",
+                "Aumenta i cibi ricchi di fibre",
+                "Mantieniti idratato con acqua",
+                "Considera integratori di zinco e vitamine B"
+              ]
+            },
+            "timing": {
+              "title": "Tempistiche Ottimali",
+              "items": [
+                "Detergi subito dopo aver sudato",
+                "Applica maschere all'argilla di sera",
+                "Usa prodotti opacizzanti la mattina",
+                "Aspetta 4-6 settimane per riduzione del sebo",
+                "Adatta la routine ai cambi stagionali"
               ]
             }
           }
@@ -1142,6 +1266,26 @@
                 "Saltare la crema dopo i sieri acquosi",
                 "Solo prodotti opacizzanti senza fase idratante"
               ]
+            },
+            "nutrition": {
+              "title": "Nutrizione e Dieta",
+              "items": [
+                "Bevi almeno 8 bicchieri d'acqua al giorno",
+                "Consuma frutta e verdura ricche d'acqua (cetrioli, anguria)",
+                "Acidi grassi Omega-3 (pesce, noci, semi di lino)",
+                "Limita alcol e caffeina che disidratano",
+                "Aggiungi cibi ricchi di vitamina E (avocado, mandorle)"
+              ]
+            },
+            "timing": {
+              "title": "Tempistiche Ottimali",
+              "items": [
+                "Applica sieri idratanti su pelle ancora umida",
+                "Usa creme più ricche la sera",
+                "Idrata subito dopo la detersione",
+                "Riapplica durante il giorno in ambienti secchi",
+                "Aspetta 2-3 settimane per vedere miglioramenti"
+              ]
             }
           }
         },
@@ -1161,7 +1305,7 @@
       },
       "hero": {
         "title": "Analisi Avanzata della Pelle",
-        "subtitle": "Misura idratazione, rossore e texture con una scansione guidata."
+        "subtitle": "Misura idratazione, rossore, texture e oleosità con una scansione guidata."
       },
       "start": "Avvia analisi pelle",
       "recent": {
@@ -1199,7 +1343,84 @@
         "textureDescription": "Mostra l'uniformità della superficie cutanea. Aiuta a identificare secchezza, rugosità o danni. Valori alti indicano una pelle liscia e sana, mentre valori bassi possono indicare secchezza, irregolarità o danni. Una buona texture è essenziale per un aspetto giovane e sano.",
         "rednessDescription": "Misura l'irritazione e l'infiammazione della pelle. Valori bassi indicano una pelle calma e sana, mentre valori alti possono indicare infiammazione, sensibilità o condizioni come la rosacea. Monitorare questo valore aiuta a identificare i fattori scatenanti irritanti.",
         "hydrationDescription": "Mostra il contenuto d'acqua superficiale. Aiuta a prevenire la secchezza e i segni di affaticamento. Valori alti indicano una pelle ben idratata ed elastica, mentre valori bassi indicano secchezza e disidratazione. Una buona idratazione è essenziale per mantenere una pelle morbida ed elastica resistente alle rughe.",
-        "oilinessDescription": "Misura l'attività sebacea e la produzione di sebo. Aiuta a bilanciare la routine di cura della pelle. Valori alti indicano pelle grassa, mentre valori bassi indicano pelle secca. Un'oleosità bilanciata è essenziale per una barriera cutanea sana."
+        "oilinessDescription": "Misura l'attività sebacea e la produzione di sebo. Aiuta a bilanciare la routine di cura della pelle. Valori alti indicano pelle grassa, mentre valori bassi indicano pelle secca.",
+        "balanced": "Un'oleosità bilanciata è essenziale per una barriera cutanea sana.",
+        "buckets": {
+          "rough": {
+            "label": "RUVIDA",
+            "description": "Texture ruvida con irregolarità evidenti. Potrebbero essere presenti pori dilatati o imperfezioni. Consigliato esfoliare regolarmente."
+          },
+          "fair": {
+            "label": "DISCRETA",
+            "description": "Texture con alcune irregolarità. La pelle potrebbe beneficiare di trattamenti leviganti e idratazione costante."
+          },
+          "good": {
+            "label": "BUONA",
+            "description": "Texture morbida e uniforme. La pelle appare sana con pori poco visibili. Mantieni la routine attuale."
+          },
+          "excellent": {
+            "label": "ECCELLENTE",
+            "description": "Texture eccellente, liscia e setosa. Pori quasi invisibili, pelle ben curata e luminosa."
+          },
+          "low": {
+            "label": "BASSO",
+            "description": "Tono uniforme senza arrossamenti. La pelle appare calma e in equilibrio. Ottimo stato di salute cutanea."
+          },
+          "mild": {
+            "label": "LIEVE",
+            "description": "Leggero rossore in alcune zone. Potrebbe indicare sensibilità o lieve irritazione. Considera prodotti lenitivi."
+          },
+          "moderate": {
+            "label": "MODERATO",
+            "description": "Arrossamento moderato visibile. La pelle mostra segni di irritazione o sensibilità. Evita prodotti aggressivi."
+          },
+          "high": {
+            "label": "ALTO",
+            "description": "Arrossamento significativo. Potrebbero essere presenti irritazioni o condizioni che richiedono attenzione. Consulta uno specialista."
+          },
+          "calm": {
+            "description": "Tono uniforme senza arrossamenti. La pelle appare calma e in equilibrio. Ottimo stato di salute cutanea."
+          },
+          "mild_redness": {
+            "description": "Leggero rossore in alcune zone. Potrebbe indicare sensibilità o lieve irritazione. Considera prodotti lenitivi."
+          },
+          "moderate_redness": {
+            "description": "Arrossamento moderato visibile. La pelle mostra segni di irritazione o sensibilità. Evita prodotti aggressivi."
+          },
+          "high_redness": {
+            "description": "Arrossamento significativo. Potrebbero essere presenti irritazioni o condizioni che richiedono attenzione. Consulta uno specialista."
+          },
+          "dehydrated": {
+            "description": "Pelle disidratata che può apparire opaca, tesa o squamosa. Necessita di idratazione profonda e costante."
+          },
+          "below_optimal": {
+            "label": "SOTTO OTTIMALE",
+            "description": "Idratazione sotto il livello ottimale. Aumenta l'apporto di acqua e usa creme idratanti più ricche."
+          },
+          "optimal": {
+            "label": "OTTIMALE",
+            "description": "Idratazione ottimale. La pelle è elastica, morbida e luminosa. La barriera cutanea funziona correttamente."
+          },
+          "hydrated_excellent": {
+            "description": "Pelle perfettamente idratata, elastica e radiosa. Eccellente equilibrio di acqua nella pelle."
+          },
+          "dry": {
+            "label": "SECCA",
+            "description": "Pelle secca con bassa produzione di sebo. Può apparire opaca e tendere a desquamarsi. Usa prodotti nutrienti."
+          },
+          "balanced": {
+            "label": "EQUILIBRATA",
+            "description": "Produzione di sebo equilibrata. La pelle non è né troppo secca né troppo grassa. Stato ideale."
+          },
+          "oily": {
+            "label": "OLEOSA",
+            "description": "Pelle tendenzialmente oleosa, specialmente nella zona T. Usa prodotti opacizzanti e detergenti delicati."
+          },
+          "very_oily": {
+            "label": "MOLTO OLEOSA",
+            "description": "Pelle molto oleosa con eccesso di sebo. I pori potrebbero apparire dilatati. Controlla la produzione con prodotti specifici."
+          }
+        }
       },
       "camera": {
         "instructionText": "Mantieni una luce costante e uniforme sul viso per la massima accuratezza"
@@ -1248,10 +1469,11 @@
         "skinHealthLabel": "Salute della Pelle",
         "detectedIssues": "Problemi Rilevati",
         "analysisNotes": "Note di Analisi",
-        "personalizedRecommendations": "Raccomandazioni Personalizzate",
+        "personalizedRecommendations": "RACCOMANDAZIONI PERSONALIZZATE",
         "healthScore": "Punteggio Salute Pelle",
         "excellentCondition": "Condizione Eccellente",
-        "goodCondition": "Condizione Buona",
+        "goodCondition": "Buone Condizioni",
+        "fairCondition": "Condizioni Discrete",
         "needsAttention": "Richiede Attenzione",
         "recommendation": "Consiglio per la Pelle",
         "detectedIssue": "Problema Rilevato",
@@ -1802,10 +2024,12 @@
         "cameraNotReady": "Fotocamera non pronta. Attendi un momento...",
         "initializationFailed": "Impossibile inizializzare il servizio di analisi. Controlla le impostazioni di OpenAI.",
         "captureTimeout": "Tempo scaduto per la cattura. Riprova.",
-        "captureFailed": "Impossibile catturare l'immagine.",
+        "captureFailed": "Cattura foto fallita. Riprova.",
         "allStrategiesFailed": "Tutte le strategie di cattura sono fallite",
         "cameraNull": "Riferimento fotocamera nullo - la fotocamera potrebbe essere stata smontata. Riavvia la fotocamera.",
-        "emptyData": "La fotocamera ha restituito dati vuoti. Riprova."
+        "emptyData": "La fotocamera ha restituito dati vuoti. Riprova.",
+        "networkError": "Errore di rete. Controlla la connessione e riprova.",
+        "unknownError": "Si è verificato un errore imprevisto. Riprova."
       }
     },
     "common": {
@@ -1825,7 +2049,13 @@
     "whyItMatters": "Perché è importante",
     "howItWorks": "Come funziona",
     "analysisInProgress": "ANALISI IN CORSO",
-    "analyzing": "Analisi in corso..."
+    "analyzing": "Analisi in corso...",
+    "analyzingExpressions": "Analizzando l’espressione del tuo volto...",
+    "analyzingSignals": "Interpretando i segnali di occhi e bocca...",
+    "analyzingSkinTexture": "Esaminando texture e uniformità della pelle...",
+    "analyzingSkinLuminosity": "Rilevando luminosità e idratazione...",
+    "analyzingNutritionalValues": "Calcolando valori nutrizionali...",
+    "identifyingIngredients": "Identificando gli ingredienti..."
   },
   "rating": {
     "excellent": "Eccellente",
@@ -1945,7 +2175,57 @@
       "examples": "Esempi",
       "recommendedAction": "Azione consigliata",
       "resources": "Risorse",
-      "disclaimer": "⚠️ Valutazione cosmetica, non diagnostica. Per dubbi clinici rivolgiti a un professionista."
+      "disclaimer": "⚠️ Valutazione cosmetica, non diagnostica. Per dubbi clinici rivolgiti a un professionista.",
+      "metrics": {
+        "valence": {
+          "whyItMatters": "Misura la positività/negatività del tuo stato emotivo.",
+          "howItWorks": "Stima basata su segnali facciali (bocca/occhi/sopracciglia).",
+          "examples": {
+            "positive": "Felice, contento, soddisfatto",
+            "negative": "Triste, frustrato, deluso"
+          }
+        },
+        "arousal": {
+          "whyItMatters": "Indica quanta attivazione/energia emotiva c'è in questo momento.",
+          "howItWorks": "Valutazione dell'intensità dei segnali espressivi.",
+          "examples": {
+            "high": "Eccitato, stressato, energico",
+            "low": "Calmo, rilassato, tranquillo"
+          }
+        },
+        "texture": {
+          "whyItMatters": "Indica uniformità e levigatezza della pelle.",
+          "howItWorks": "Analisi delle irregolarità superficiali.",
+          "examples": {
+            "good": "Pelle liscia e uniforme",
+            "poor": "Pelle ruvida o irregolare"
+          }
+        },
+        "redness": {
+          "whyItMatters": "Stima arrossamento/irritazione visibile.",
+          "howItWorks": "Analisi dei segnali cromatici cutanei.",
+          "examples": {
+            "low": "Pelle calma e uniforme",
+            "high": "Pelle arrossata o irritata"
+          }
+        },
+        "hydration": {
+          "whyItMatters": "Contenuto d'acqua superficiale.",
+          "howItWorks": "Stima dell'idratazione da pattern cutanei.",
+          "examples": {
+            "good": "Pelle ben idratata ed elastica",
+            "poor": "Pelle secca e disidratata"
+          }
+        },
+        "oiliness": {
+          "whyItMatters": "Equilibrio del sebo e lucidità.",
+          "howItWorks": "Rilevazione della brillantezza superficiale.",
+          "examples": {
+            "balanced": "Pelle con equilibrio sebaceo",
+            "excess": "Pelle lucida o oleosa"
+          }
+        }
+      }
     }
   },
   "microphonePermissions": {

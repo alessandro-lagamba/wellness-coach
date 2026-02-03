@@ -7,18 +7,15 @@ import { useTranslation as useI18nTranslation } from 'react-i18next';
 
 export function useTranslation() {
   const { t: tOriginal, i18n } = useI18nTranslation();
-  
-  // 🆕 Wrapper per garantire sempre stringa
-  const t = (key: string, options?: any): string => {
+
+  // 🆕 Wrapper per garantire flessibilità (stringhe o oggetti)
+  const t = (key: string, options?: any): any => {
     const result = tOriginal(key, options);
-    // Se è un oggetto o altro, converte a stringa
-    if (typeof result === 'string') {
-      return result;
-    }
-    // Fallback alla chiave se la traduzione non è disponibile
-    return String(result || key);
+    // Se non è nulla, restituisce il risultato (stringa o oggetto)
+    // Altrimenti fa il fallback alla chiave
+    return result !== undefined && result !== null ? result : key;
   };
-  
+
   return {
     t,
     language: i18n.language as 'it' | 'en',
@@ -27,4 +24,3 @@ export function useTranslation() {
     },
   };
 }
-

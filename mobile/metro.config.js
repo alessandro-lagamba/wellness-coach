@@ -50,12 +50,9 @@ config.resolver.nodeModulesPaths = [
 const workspaceRoot = path.resolve(projectRoot, '..');
 config.resolver.blockList = [
   new RegExp(`${workspaceRoot}/backend/.*`),
-  new RegExp(`${workspaceRoot}/web-advanced/.*`),
   new RegExp(`${workspaceRoot}/web/.*`),
-  new RegExp(`${workspaceRoot}/LiveKit implementation/.*`),
   new RegExp(`${workspaceRoot}/audio-orb/.*`),
   new RegExp(`${workspaceRoot}/docs/.*`),
-  new RegExp(`${workspaceRoot}/shared/.*`),  // Only block root-level shared, not mobile/components/shared
 ];
 
 // 5. Ensure proper platform resolution

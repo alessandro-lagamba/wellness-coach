@@ -68,7 +68,7 @@ export const ROLE_METADATA: Record<EmotionalRole, RoleMetadata> = {
     il_regista_con_il_budget: {
         id: 'il_regista_con_il_budget',
         titleIT: 'Il Regista con il Budget',
-        titleEN: 'The Director',
+        titleEN: 'The Director with Budget',
         subtitleIT: 'Visione e azione in sintonia',
         subtitleEN: 'Vision meets action',
         descriptionIT: 'Oggi tieni insieme visione e azione. L\'energia non è rumore, è direzione.',

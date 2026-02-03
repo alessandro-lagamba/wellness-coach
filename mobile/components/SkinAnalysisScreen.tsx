@@ -96,180 +96,52 @@ const heroVideoUri = require('../assets/videos/skin-analysis-video.mp4');
 // Guide dettagliate per ogni modulo - Contenuto in italiano
 const skincareGuides = {
   smoothness: {
-    id: 'smoothness', // Added ID for logic
-    title: 'Guida miglioramento texture',
-    subtitle: 'Suggerimenti per una pelle più uniforme',
+    id: 'smoothness',
     image: 'https://images.unsplash.com/photo-1654781350550-0dc72ecb6fae?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=998',
     sections: {
-      routine: {
-        title: 'Routine Consigliata',
-        isDynamic: true, // Flag per indicare che questa sezione è dinamica
-        items: [] // Verranno popolati dinamicamente
-      },
-      avoid: {
-        title: 'Da Evitare',
-        items: [] // Verranno popolati da i18n
-      },
-      nutrition: {
-        title: 'Alimenti consigliati',
-        items: [
-          'Acidi grassi Omega-3 (pesce, noci, semi)',
-          'Alimenti ricchi di Vitamina C (agrumi, frutti di bosco)',
-          'Antiossidanti (tè verde, cioccolato fondente)',
-          'Mantieniti idratato - 8+ bicchieri d\'acqua al giorno',
-          'Limita cibi processati e zuccheri'
-        ]
-      },
-      timing: {
-        title: 'Tempistiche Ottimali',
-        items: [
-          'Esfoliare la sera, non la mattina',
-          'I retinoidi funzionano meglio di notte',
-          'SPF essenziale ogni mattina',
-          'Aspetta 2-4 settimane per vedere miglioramenti',
-          'La costanza è fondamentale per i risultati'
-        ]
-      }
+      routine: { isDynamic: true, items: [] },
+      avoid: { items: [] },
+      nutrition: { items: [] },
+      timing: { items: [] }
     }
   },
   redness: {
     id: 'redness',
-    title: 'Guida riduzione rossore',
-    subtitle: 'Come calmare pelle irritata e sensibile',
     image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80',
     sections: {
-      routine: {
-        title: 'Routine Consigliata',
-        isDynamic: true,
-        items: []
-      },
-      avoid: {
-        title: 'Da Evitare',
-        items: []
-      },
-      nutrition: {
-        title: 'Nutrizione e Dieta',
-        items: [
-          'Curcuma e zenzero (antinfiammatori naturali)',
-          'Verdure a foglia verde',
-          'Frutti di bosco e ciliegie',
-          'Pesce grasso (salmone, sgombro)',
-          'Evita cibi piccanti e alcol'
-        ]
-      },
-      timing: {
-        title: 'Tempistiche Ottimali',
-        items: [
-          'Applica prodotti calmanti subito dopo la detersione',
-          'Usa SPF ogni mattina, anche in casa',
-          'Evita trattamenti aggressivi durante le riacutizzazioni',
-          'Dai alla pelle tempo di guarire tra i trattamenti',
-          'Monitora la reazione della pelle ai nuovi prodotti'
-        ]
-      }
+      routine: { isDynamic: true, items: [] },
+      avoid: { items: [] },
+      nutrition: { items: [] },
+      timing: { items: [] }
     }
   },
   oiliness: {
     id: 'oiliness',
-    title: 'Guida bilanciamento sebo',
-    subtitle: 'Controlla la produzione di sebo in eccesso',
     image: 'https://images.unsplash.com/photo-1718490953028-021d352b14fd?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1699',
     sections: {
-      routine: {
-        title: 'Routine consigliata',
-        isDynamic: true,
-        items: []
-      },
-      avoid: {
-        title: 'Da Evitare',
-        items: []
-      },
-      nutrition: {
-        title: 'Nutrizione e Dieta',
-        items: [
-          'Riduci latticini e cibi processati',
-          'Limita zuccheri e carboidrati raffinati',
-          'Aumenta i cibi ricchi di fibre',
-          'Mantieniti idratato con acqua',
-          'Considera integratori di zinco e vitamine B'
-        ]
-      },
-      timing: {
-        title: 'Tempistiche Ottimali',
-        items: [
-          'Detergi subito dopo aver sudato',
-          'Applica maschere all\'argilla di sera',
-          'Usa prodotti opacizzanti la mattina',
-          'Aspetta 4-6 settimane per riduzione del sebo',
-          'Adatta la routine ai cambi stagionali'
-        ]
-      }
+      routine: { isDynamic: true, items: [] },
+      avoid: { items: [] },
+      nutrition: { items: [] },
+      timing: { items: [] }
     }
   },
   hydration: {
     id: 'hydration',
-    title: 'Guida miglioramento idratazione',
-    subtitle: 'Aumenta e mantieni l\'idratazione della pelle',
     image: 'https://images.unsplash.com/photo-1676755029584-5650586944d0?q=80&w=800&h=450&auto=format&fit=crop&crop=top&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     sections: {
-      routine: {
-        title: 'Routine Consigliata',
-        isDynamic: true,
-        items: []
-      },
-      avoid: {
-        title: 'Da Evitare',
-        items: []
-      },
-      nutrition: {
-        title: 'Nutrizione e Dieta',
-        items: [
-          'Bevi almeno 8 bicchieri d\'acqua al giorno',
-          'Consuma frutta e verdura ricche d\'acqua (cetrioli, anguria)',
-          'Acidi grassi Omega-3 (pesce, noci, semi di lino)',
-          'Limita alcol e caffeina che disidratano',
-          'Aggiungi cibi ricchi di vitamina E (avocado, mandorle)'
-        ]
-      },
-      timing: {
-        title: 'Tempistiche Ottimali',
-        items: [
-          'Applica sieri idratanti su pelle ancora umida',
-          'Usa creme più ricche la sera',
-          'Idrata subito dopo la detersione',
-          'Riapplica durante il giorno in ambienti secchi',
-          'Aspetta 2-3 settimane per vedere miglioramenti'
-        ]
-      }
+      routine: { isDynamic: true, items: [] },
+      avoid: { items: [] },
+      nutrition: { items: [] },
+      timing: { items: [] }
     }
   }
 };
 
-const insightCards: InsightCard[] = [
-  {
-    id: 'smoothness',
-    title: 'Texture Improvement Guide',
-    description: 'Get personalized tips for smoother, more even skin.',
-    image: 'https://images.unsplash.com/photo-1654781350550-0dc72ecb6fae?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=998',
-  },
-  {
-    id: 'redness',
-    title: 'Inflammation Reduction Guide',
-    description: 'Learn how to calm irritated and sensitive skin.',
-    image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    id: 'oiliness',
-    title: 'Sebum Balance Guide',
-    description: 'Control excess oil production with expert tips.',
-    image: 'https://images.unsplash.com/photo-1718490953028-021d352b14fd?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1699',
-  },
-  {
-    id: 'hydration',
-    title: 'Hydration Improvement Guide',
-    description: 'Boost and maintain your skin hydration levels.',
-    image: 'https://images.unsplash.com/photo-1676755029584-5650586944d0?q=80&w=800&h=450&auto=format&fit=crop&crop=top&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-  },
+const insightCards = [
+  { id: 'smoothness', image: 'https://images.unsplash.com/photo-1654781350550-0dc72ecb6fae?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=998' },
+  { id: 'redness', image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80' },
+  { id: 'oiliness', image: 'https://images.unsplash.com/photo-1718490953028-021d352b14fd?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1699' },
+  { id: 'hydration', image: 'https://images.unsplash.com/photo-1676755029584-5650586944d0?q=80&w=800&h=450&auto=format&fit=crop&crop=top&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
 ];
 
 // ✅ ADD: Image component with fallback
@@ -301,6 +173,7 @@ const ImageWithFallback: React.FC<{ uri: string; style: any; fallbackColor?: str
 const WalkthroughableView = walkthroughable(View);
 
 const SkinAnalysisScreen: React.FC = () => {
+  const { t } = useTranslation();
   return (
     <CopilotProvider
       overlay="view"
@@ -309,10 +182,10 @@ const SkinAnalysisScreen: React.FC = () => {
       arrowColor="transparent"
       backdropColor="rgba(0, 0, 0, 0.6)"
       labels={{
-        previous: "Indietro",
-        next: "Avanti",
-        skip: "Salta",
-        finish: "Finito"
+        previous: t('common.back'),
+        next: t('common.next'),
+        skip: t('common.skip'),
+        finish: t('common.finish')
       }}
     >
       <SkinAnalysisScreenContent />
@@ -322,7 +195,7 @@ const SkinAnalysisScreen: React.FC = () => {
 
 const SkinAnalysisScreenContent: React.FC = () => {
   const { start: startCopilot } = useCopilot();
-  const { t, i18n } = useTranslation(); // 🆕 i18n hook
+  const { t, language, i18n } = useTranslation(); // 🆕 i18n hook
   const { colors, mode } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
   const { hideTabBar, showTabBar } = useTabBarVisibility();
@@ -1230,27 +1103,18 @@ const SkinAnalysisScreenContent: React.FC = () => {
   };
 
   const getSectionTitle = (key: string, guideId: string) => {
-    // Mappa le chiavi delle sezioni ai titoli tradotti
+    // 🆕 Try specific guide section title first
+    const specificTitle = t(`analysis.skin.guides.${guideId}.sections.${key}.title`);
+    if (specificTitle && specificTitle !== `analysis.skin.guides.${guideId}.sections.${key}.title`) {
+      return specificTitle;
+    }
+
     const titleMap: Record<string, string> = {
       products: t('analysis.skin.guideSections.products.title'),
-      nutrition: guideId === 'redness'
-        ? t('analysis.skin.guideSections.nutrition.antiInflammatory')
-        : guideId === 'oiliness'
-          ? t('analysis.skin.guideSections.nutrition.title')
-          : t('analysis.skin.guideSections.nutrition.title'),
-      routine: guideId === 'smoothness'
-        ? t('analysis.skin.guides.smoothness.sections.routine.title')
-        : guideId === 'redness'
-          ? t('analysis.skin.guideSections.routine.title')
-          : guideId === 'oiliness'
-            ? t('analysis.skin.guideSections.routine.title')
-            : t('analysis.skin.guideSections.routine.title'),
-      timing: guideId === 'redness'
-        ? t('analysis.skin.guideSections.timing.title')
-        : guideId === 'confidence'
-          ? t('analysis.skin.guideSections.timing.optimal')
-          : t('analysis.skin.guideSections.timing.title'),
-      avoid: t('analysis.skin.guides.smoothness.sections.avoid.title'),
+      nutrition: t('analysis.skin.guideSections.nutrition.title'),
+      routine: t('analysis.skin.guideSections.routine.title'),
+      timing: t('analysis.skin.guideSections.timing.title'),
+      avoid: t('analysis.skin.guideSections.avoid.title'),
       photoQuality: t('analysis.skin.guideSections.photoQuality.title'),
       skinPreparation: t('analysis.skin.guideSections.skinPreparation.title'),
       bestPractices: t('analysis.skin.guideSections.bestPractices.title'),
@@ -1357,8 +1221,8 @@ const SkinAnalysisScreenContent: React.FC = () => {
       <View style={[styles.container, { backgroundColor: colors.background, flex: 1 }]}>
         <CameraFrame />
         <AnalysisLoader messages={[
-          'Esaminando texture e uniformità della pelle...',
-          'Rilevando luminosità e idratazione...'
+          t('ui.analyzingSkinTexture'),
+          t('ui.analyzingSkinLuminosity')
         ]} />
       </View>
     );
@@ -1366,7 +1230,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
 
   if (cameraController.active && !analyzing) {
     return (
-      <CopilotStep text="Analisi della Pelle" description="Scatta una foto per analizzare la salute della tua pelle." order={1} name="skinCamera">
+      <CopilotStep text={language === 'it' ? "Analisi della Pelle" : "Skin Analysis"} description={language === 'it' ? "Scatta una foto per analizzare la salute della tua pelle." : "Take a photo to analyze your skin health."} order={1} name="skinCamera">
         <WalkthroughableView style={{ flex: 1 }}>
           <AnalysisCaptureLayout
             renderCamera={<CameraFrame />}
@@ -1376,7 +1240,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
             captureDisabled={captureDisabled || cameraSwitching}
             showSwitch
             switchDisabled={cameraSwitching}
-            switchLabel={cameraType === 'front' ? 'Back' : 'Front'}
+            switchLabel={cameraType === 'front' ? (language === 'it' ? 'Posteriore' : 'Back') : (language === 'it' ? 'Frontale' : 'Front')}
             onSwitch={switchCamera}
             cancelLabel={t('common.cancel')}
             captureLabel={t('common.capture')}
@@ -1760,160 +1624,48 @@ const SkinAnalysisScreenContent: React.FC = () => {
                 {Object.entries(skincareGuides[selectedGuide as keyof typeof skincareGuides]?.sections || {}).map(([key, section], index) => {
                   let items = section.items;
 
-                  // Dynamic logic for smoothness guide
-                  if (selectedGuide === 'smoothness') {
-                    if (key === 'routine') {
-                      const score = latestSkinCapture?.scores?.texture || 0;
-                      const level = score >= 70 ? 'good' : score >= 45 ? 'medium' : 'low';
-
-                      const routineKey = randomRoutineIndex === 1 ? 'routine1' : 'routine2';
-                      const morningStr = t(`analysis.skin.guides.smoothness.sections.routine.${level}.${routineKey}.morning`);
-                      const eveningStr = t(`analysis.skin.guides.smoothness.sections.routine.${level}.${routineKey}.evening`);
-
-                      // Split by comma and clean up
-                      const cleanMorning = morningStr.replace(/^(Mattino|Morning):\s*/i, '');
-                      const cleanEvening = eveningStr.replace(/^(Sera|Evening):\s*/i, '');
-
-                      const morningSteps = cleanMorning.split(',').map(s => s.trim());
-                      const eveningSteps = cleanEvening.split(',').map(s => s.trim());
-
-                      items = [
-                        { text: t('analysis.skin.guides.smoothness.morningHeader', { defaultValue: 'Mattino' }), isHeader: true },
-                        ...morningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 })),
-                        { text: t('analysis.skin.guides.smoothness.eveningHeader', { defaultValue: 'Sera' }), isHeader: true },
-                        ...eveningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 }))
-                      ] as any;
-                    } else if (key === 'avoid') {
-                      // Get avoid items from translations
-                      const avoidItems = t('analysis.skin.guides.smoothness.sections.avoid.items', { returnObjects: true });
-
-                      if (Array.isArray(avoidItems) && avoidItems.length > 0) {
-                        items = avoidItems;
-                      } else {
-                        // Fallback to hardcoded items if translation fails
-                        items = [
-                          'Scrub meccanici',
-                          'Esfoliazione quotidiana',
-                          'Acidi + retinoidi nello stesso giorno',
-                          'Routine "aggressive" se c\'è rossore'
-                        ];
-                      }
-                    }
+                  // 🆕 Try to get items from translation first (for nutrition, timing, avoid)
+                  const translatedItems = t(`analysis.skin.guides.${selectedGuide}.sections.${key}.items`, { returnObjects: true });
+                  if (Array.isArray(translatedItems) && translatedItems.length > 0) {
+                    items = translatedItems;
                   }
 
-                  // Dynamic logic for redness guide
-                  if (selectedGuide === 'redness') {
-                    if (key === 'routine') {
-                      const score = latestSkinCapture?.scores?.redness || 0;
-                      const level = score >= 75 ? 'low' : score >= 40 ? 'medium' : 'good';
+                  // Dynamic logic for specialized sections like 'routine'
+                  if (key === 'routine') {
+                    const score = selectedGuide === 'smoothness'
+                      ? (latestSkinCapture?.scores?.texture || 0)
+                      : selectedGuide === 'redness'
+                        ? (latestSkinCapture?.scores?.redness || 0)
+                        : selectedGuide === 'oiliness'
+                          ? (latestSkinCapture?.scores?.oiliness || 0)
+                          : (latestSkinCapture?.scores?.hydration || 0);
 
-                      const routineKey = randomRoutineIndex === 1 ? 'routine1' : 'routine2';
-                      const morningStr = t(`analysis.skin.guides.redness.sections.routine.${level}.${routineKey}.morning`);
-                      const eveningStr = t(`analysis.skin.guides.redness.sections.routine.${level}.${routineKey}.evening`);
-
-                      // Split by comma and clean up
-                      const cleanMorning = morningStr.replace(/^(Mattino|Morning):\s*/i, '');
-                      const cleanEvening = eveningStr.replace(/^(Sera|Evening):\s*/i, '');
-
-                      const morningSteps = cleanMorning.split(',').map(s => s.trim());
-                      const eveningSteps = cleanEvening.split(',').map(s => s.trim());
-
-                      items = [
-                        { text: t('analysis.skin.guides.redness.morningHeader', { defaultValue: 'Mattino' }), isHeader: true },
-                        ...morningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 })),
-                        { text: t('analysis.skin.guides.redness.eveningHeader', { defaultValue: 'Sera' }), isHeader: true },
-                        ...eveningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 }))
-                      ] as any;
-                    } else if (key === 'avoid') {
-                      const avoidItems = t('analysis.skin.guides.redness.sections.avoid.items', { returnObjects: true });
-                      if (Array.isArray(avoidItems) && avoidItems.length > 0) {
-                        items = avoidItems;
-                      } else {
-                        items = [
-                          'Alcol denaturato',
-                          'Profumi / oli essenziali',
-                          'Vitamina C ad alta concentrazione',
-                          'AHA / BHA frequenti',
-                          'Retinoidi senza controllo dermatologico'
-                        ];
-                      }
+                    // Logic for level based on metric
+                    let level = 'good';
+                    if (selectedGuide === 'redness') {
+                      level = score >= 75 ? 'low' : score >= 40 ? 'medium' : 'good';
+                    } else if (selectedGuide === 'oiliness') {
+                      level = score >= 70 ? 'low' : score >= 40 ? 'medium' : 'good';
+                    } else { // smoothness & hydration
+                      level = score >= 70 ? 'good' : score >= 40 ? 'medium' : 'low';
                     }
-                  }
 
-                  // Dynamic logic for oiliness guide
-                  if (selectedGuide === 'oiliness') {
-                    if (key === 'routine') {
-                      const score = latestSkinCapture?.scores?.oiliness || 0;
-                      const level = score >= 70 ? 'low' : score >= 40 ? 'medium' : 'good';
+                    const routineKey = randomRoutineIndex === 1 ? 'routine1' : 'routine2';
+                    const morningStr = t(`analysis.skin.guides.${selectedGuide}.sections.routine.${level}.${routineKey}.morning`);
+                    const eveningStr = t(`analysis.skin.guides.${selectedGuide}.sections.routine.${level}.${routineKey}.evening`);
 
-                      const routineKey = randomRoutineIndex === 1 ? 'routine1' : 'routine2';
-                      const morningStr = t(`analysis.skin.guides.oiliness.sections.routine.${level}.${routineKey}.morning`);
-                      const eveningStr = t(`analysis.skin.guides.oiliness.sections.routine.${level}.${routineKey}.evening`);
+                    const cleanMorning = morningStr.replace(/^(Mattino|Morning):\s*/i, '');
+                    const cleanEvening = eveningStr.replace(/^(Sera|Evening):\s*/i, '');
 
-                      const cleanMorning = morningStr.replace(/^(Mattino|Morning):\s*/i, '');
-                      const cleanEvening = eveningStr.replace(/^(Sera|Evening):\s*/i, '');
+                    const morningSteps = cleanMorning.split(',').map(s => s.trim());
+                    const eveningSteps = cleanEvening.split(',').map(s => s.trim());
 
-                      const morningSteps = cleanMorning.split(',').map(s => s.trim());
-                      const eveningSteps = cleanEvening.split(',').map(s => s.trim());
-
-                      items = [
-                        { text: t('analysis.skin.guides.oiliness.morningHeader', { defaultValue: 'Mattino' }), isHeader: true },
-                        ...morningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 })),
-                        { text: t('analysis.skin.guides.oiliness.eveningHeader', { defaultValue: 'Sera' }), isHeader: true },
-                        ...eveningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 }))
-                      ] as any;
-                    } else if (key === 'avoid') {
-                      const avoidItems = t('analysis.skin.guides.oiliness.sections.avoid.items', { returnObjects: true });
-                      if (Array.isArray(avoidItems) && avoidItems.length > 0) {
-                        items = avoidItems;
-                      } else {
-                        items = [
-                          'Detergenti aggressivi schiumogeni',
-                          'Alcol denaturato nei tonici',
-                          'Oli comedogenici (cocco, germe di grano)',
-                          'Creme troppo ricche/occlusive',
-                          'Toccarsi il viso frequentemente'
-                        ];
-                      }
-                    }
-                  }
-
-                  // Dynamic logic for hydration guide
-                  if (selectedGuide === 'hydration') {
-                    if (key === 'routine') {
-                      const score = latestSkinCapture?.scores?.hydration || 0;
-                      const level = score >= 70 ? 'good' : score >= 40 ? 'medium' : 'low';
-
-                      const routineKey = randomRoutineIndex === 1 ? 'routine1' : 'routine2';
-                      const morningStr = t(`analysis.skin.guides.hydration.sections.routine.${level}.${routineKey}.morning`);
-                      const eveningStr = t(`analysis.skin.guides.hydration.sections.routine.${level}.${routineKey}.evening`);
-
-                      const cleanMorning = morningStr.replace(/^(Mattino|Morning):\s*/i, '');
-                      const cleanEvening = eveningStr.replace(/^(Sera|Evening):\s*/i, '');
-
-                      const morningSteps = cleanMorning.split(',').map(s => s.trim());
-                      const eveningSteps = cleanEvening.split(',').map(s => s.trim());
-
-                      items = [
-                        { text: t('analysis.skin.guides.hydration.morningHeader', { defaultValue: 'Mattino' }), isHeader: true },
-                        ...morningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 })),
-                        { text: t('analysis.skin.guides.hydration.eveningHeader', { defaultValue: 'Sera' }), isHeader: true },
-                        ...eveningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 }))
-                      ] as any;
-                    } else if (key === 'avoid') {
-                      const avoidItems = t('analysis.skin.guides.hydration.sections.avoid.items', { returnObjects: true });
-                      if (Array.isArray(avoidItems) && avoidItems.length > 0) {
-                        items = avoidItems;
-                      } else {
-                        items = [
-                          'Detergenti aggressivi o acqua troppo calda',
-                          'Alcol denaturato e profumi intensi',
-                          'Esfoliazione frequente quando l\'idratazione è in calo',
-                          'Saltare la crema dopo i sieri acquosi',
-                          'Solo prodotti opacizzanti senza fase idratante'
-                        ];
-                      }
-                    }
+                    items = [
+                      { text: t(`analysis.skin.guides.${selectedGuide}.morningHeader`, { defaultValue: t('common.morning') }), isHeader: true },
+                      ...morningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 })),
+                      { text: t(`analysis.skin.guides.${selectedGuide}.eveningHeader`, { defaultValue: t('common.evening') }), isHeader: true },
+                      ...eveningSteps.map((s, i) => ({ text: s, displayIndex: i + 1 }))
+                    ] as any;
                   }
 
                   return (

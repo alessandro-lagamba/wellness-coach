@@ -81,68 +81,17 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
 
   // Ottieni informazioni specifiche per la metrica
   const getMetricInfo = () => {
-    switch (metric) {
-      case 'valence':
-        return {
-          whyItMatters: 'Misura la positività/negatività del tuo stato emotivo.',
-          howItWorks: 'Stima basata su segnali facciali (bocca/occhi/sopracciglia).',
-          examples: {
-            positive: 'Felice, contento, soddisfatto',
-            negative: 'Triste, frustrato, deluso'
-          }
-        };
-      case 'arousal':
-        return {
-          whyItMatters: "Indica quanta attivazione/energia emotiva c'è in questo momento.",
-          howItWorks: 'Valutazione dell\'intensità dei segnali espressivi.',
-          examples: {
-            high: 'Eccitato, stressato, energico',
-            low: 'Calmo, rilassato, tranquillo'
-          }
-        };
-      case 'texture':
-        return {
-          whyItMatters: 'Indica uniformità e levigatezza della pelle.',
-          howItWorks: 'Analisi delle irregolarità superficiali.',
-          examples: {
-            good: 'Pelle liscia e uniforme',
-            poor: 'Pelle ruvida o irregolare'
-          }
-        };
-      case 'redness':
-        return {
-          whyItMatters: 'Stima arrossamento/irritazione visibile.',
-          howItWorks: 'Analisi dei segnali cromatici cutanei.',
-          examples: {
-            low: 'Pelle calma e uniforme',
-            high: 'Pelle arrossata o irritata'
-          }
-        };
-      case 'hydration':
-        return {
-          whyItMatters: "Contenuto d'acqua superficiale.",
-          howItWorks: "Stima dell'idratazione da pattern cutanei.",
-          examples: {
-            good: 'Pelle ben idratata ed elastica',
-            poor: 'Pelle secca e disidratata'
-          }
-        };
-      case 'oiliness':
-        return {
-          whyItMatters: 'Equilibrio del sebo e lucidità.',
-          howItWorks: 'Rilevazione della brillantezza superficiale.',
-          examples: {
-            balanced: 'Pelle con equilibrio sebaceo',
-            excess: 'Pelle lucida o oleosa'
-          }
-        };
-      default:
-        return {
-          whyItMatters: 'Metrica importante per la tua salute.',
-          howItWorks: 'Analisi basata su algoritmi avanzati.',
-          examples: {}
-        };
-    }
+    if (!metric) return {
+      whyItMatters: t('common.notAvailable'),
+      howItWorks: t('common.notAvailable'),
+      examples: {}
+    };
+
+    return {
+      whyItMatters: t(`popups.gauge.metrics.${metric}.whyItMatters`) as string,
+      howItWorks: t(`popups.gauge.metrics.${metric}.howItWorks`) as string,
+      examples: (t(`popups.gauge.metrics.${metric}.examples`, { returnObjects: true }) || {}) as Record<string, string>
+    };
   };
 
   const metricInfo = getMetricInfo();
@@ -207,7 +156,7 @@ export const GaugePopup: React.FC<GaugePopupProps> = ({
                       size={16}
                       color={trendInfo.trend === '↑' ? '#10b981' : trendInfo.trend === '↓' ? '#ef4444' : colors.textSecondary}
                     />
-                    <Text style={[styles.trendText, { color: colors.textSecondary }]}>{trendInfo.text}</Text>
+                    <Text style={[styles.trendText, { color: colors.textSecondary }]}>{t(trendInfo.text)}</Text>
                     {trendInfo.percentage !== 0 && (
                       <Text style={[styles.trendPercentage, { color: colors.text }]}>{trendInfo.percentage}%</Text>
                     )}

@@ -14,6 +14,8 @@
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
+    "warning": "Warning",
+    "info": "Information",
     "retry": "Retry",
     "skip": "Skip",
     "continue": "Continue",
@@ -26,9 +28,24 @@
     "done": "Done",
     "retake": "Retake",
     "recommendation": "Recommendation",
-    "markAsDone": "Mark as Done",
+    "markAsDone": "Mark as completed",
+    "completed": "Completed",
     "view": "View",
-    "confirmDelete": "Confirm Deletion"
+    "confirmDelete": "Confirm Deletion",
+    "next": "Next",
+    "finish": "Finish"
+  },
+  "feedback": {
+    "saveSuccess": "{{entity}} saved successfully.",
+    "saveSuccess_analisi": "Analysis saved successfully.",
+    "saveError": "Could not save {{entity}}. Please try again later or check your connection.",
+    "saveErrorTitle": "Saving Error",
+    "entities": {
+      "analisi": "Analysis",
+      "check-in": "Check-in",
+      "dati salute": "Health Data",
+      "dati": "Data"
+    }
   },
   "settings": {
     "title": "Settings",
@@ -600,6 +617,12 @@
       "poor": "Poor",
       "needsCare": "Needs Care"
     },
+    "trend": {
+      "above": "above your usual",
+      "below": "below your usual",
+      "even": "in line with your usual",
+      "first": "First measurement"
+    },
     "emotion": {
       "card": {
         "lastTitle": "Last emotion analysis",
@@ -625,8 +648,9 @@
         "subtitle": "Capture a quick scan to understand how you feel and track mood trends."
       },
       "recent": {
-        "title": "Recent Session",
-        "subtitle": "Your latest emotion analysis results"
+        "title": "Recent Sessions",
+        "subtitle": "Your latest emotion analysis results",
+        "weeklyTitle": "Weekly Analysis"
       },
       "quickStats": {
         "title": "Latest Analysis",
@@ -665,11 +689,35 @@
           "neutral": "Neutral",
           "positive": "Positive",
           "veryPositive": "Very Positive",
+          "veryNegative": "Very Negative",
           "low": "Low",
           "medium": "Medium",
           "high": "High",
           "veryLow": "Very Low",
           "veryHigh": "Very High"
+        },
+        "descriptions": {
+          "negative": "More negative than positive signals",
+          "neutral": "Neutral expression, no strong emotional direction",
+          "positive": "More positive than neutral signals",
+          "veryPositive": "Clearly positive state",
+          "veryNegative": "Difficult emotional state",
+          "low": "Reduced / relaxed energy",
+          "medium": "Normal activation",
+          "high": "Active / alert state",
+          "veryLow": "Very calm or fatigued state",
+          "veryHigh": "Strong activation"
+        },
+        "valenceDescriptions": {
+          "positive": "Facial expression suggests positive emotions, with features indicating pleasantness and satisfaction.",
+          "negative": "Facial expression suggests negative emotions, with features indicating discomfort or dissatisfaction.",
+          "neutral": "Facial expression is neutral, without clear signs of positive or negative emotions."
+        },
+        "arousalDescriptions": {
+          "high": "High activation level, indicating energy and alertness in the expression.",
+          "reduced": "Reduced activation level, with signs of heaviness or emotional withdrawal.",
+          "low": "Low activation level, suggesting calmness and relaxation.",
+          "moderate": "Moderate activation level, in a balanced state between calmness and energy."
         },
         "valenceDesc": "Tracks the positivity of your expression and overall affect.",
         "arousalDesc": "Measures the intensity or energy level detected at the moment.",
@@ -699,6 +747,22 @@
         "lockedDescription": "Smart insights are generated only after you complete a new emotion analysis on the current day.",
         "lockedCta": "Analyze now"
       },
+      "exploreDeeper": {
+        "title": "EXPLORE DEEPER",
+        "horoscope": {
+          "title": "Your Stars Today",
+          "description": "Unlock cosmic insights tailored to your current emotional state.",
+          "cta_read": "Read horoscope",
+          "cta_lock": "Complete analysis first",
+          "modal_title": "Analysis Required",
+          "modal_message": "To discover your Horoscope (you didn't ask for) today, complete an emotion analysis!"
+        },
+        "timeMachine": {
+          "title": "Your Past Self",
+          "description": "Rewind your emotional journey and see how far you've come.",
+          "cta": "Enter Time Machine"
+        }
+      },
       "horoscope": {
         "title": "The Horoscope You Didn't Ask For",
         "signOfTheMoment": "SIGN OF THE MOMENT",
@@ -709,7 +773,7 @@
         "buttonLabel": "Horoscope",
         "roles": {
           "il_regista_con_il_budget": {
-            "title": "The Director",
+            "title": "The Director with Budget",
             "subtitle": "Vision meets action"
           },
           "l_equilibrista": {
@@ -980,6 +1044,26 @@
                 "Centella asiatica on the same days as acids or retinoids",
                 "\"Aggressive\" routines if there is associated redness"
               ]
+            },
+            "nutrition": {
+              "title": "Recommended Foods",
+              "items": [
+                "Omega-3 fatty acids (fish, walnuts, seeds)",
+                "Foods rich in Vitamin C (citrus, berries)",
+                "Antioxidants (green tea, dark chocolate)",
+                "Stay hydrated - 8+ glasses of water per day",
+                "Limit processed foods and sugars"
+              ]
+            },
+            "timing": {
+              "title": "Optimal Timing",
+              "items": [
+                "Exfoliate in the evening, not in the morning",
+                "Retinoids work best at night",
+                "SPF is essential every morning",
+                "Wait 2-4 weeks to see improvements",
+                "Consistency is key for results"
+              ]
             }
           }
         },
@@ -1031,6 +1115,26 @@
                 "Frequent AHA / BHA",
                 "Retinoids without dermatological control"
               ]
+            },
+            "nutrition": {
+              "title": "Nutrition and Diet",
+              "items": [
+                "Turmeric and ginger (natural anti-inflammatories)",
+                "Leafy green vegetables",
+                "Berries and cherries",
+                "Fatty fish (salmon, mackerel)",
+                "Avoid spicy foods and alcohol"
+              ]
+            },
+            "timing": {
+              "title": "Optimal Timing",
+              "items": [
+                "Apply calming products immediately after cleansing",
+                "Use SPF every morning, even at home",
+                "Avoid aggressive treatments during flare-ups",
+                "Give skin time to heal between treatments",
+                "Monitor skin reaction to new products"
+              ]
             }
           }
         },
@@ -1080,6 +1184,26 @@
                 "Denatured alcohol",
                 "Over-cleansing",
                 "Only “mattifying” products without hydration"
+              ]
+            },
+            "nutrition": {
+              "title": "Nutrition and Diet",
+              "items": [
+                "Reduce dairy and processed foods",
+                "Limit sugars and refined carbohydrates",
+                "Increase fiber-rich foods",
+                "Stay hydrated with water",
+                "Consider zinc and Vitamin B supplements"
+              ]
+            },
+            "timing": {
+              "title": "Optimal Timing",
+              "items": [
+                "Cleanse immediately after sweating",
+                "Apply clay masks in the evening",
+                "Use mattifying products in the morning",
+                "Wait 4-6 weeks for sebum reduction",
+                "Adapt routine to seasonal changes"
               ]
             }
           }
@@ -1132,6 +1256,26 @@
                 "Skipping moisturizer after watery serums",
                 "Only mattifying products without a hydration step"
               ]
+            },
+            "nutrition": {
+              "title": "Nutrition and Diet",
+              "items": [
+                "Drink at least 8 glasses of water a day",
+                "Consume water-rich fruits and vegetables (cucumbers, watermelon)",
+                "Omega-3 fatty acids (fish, walnuts, flaxseeds)",
+                "Limit dehydrating alcohol and caffeine",
+                "Add Vitamin E-rich foods (avocado, almonds)"
+              ]
+            },
+            "timing": {
+              "title": "Optimal Timing",
+              "items": [
+                "Apply hydrating serums to still damp skin",
+                "Use richer creams in the evening",
+                "Hydrate immediately after cleansing",
+                "Reapply during the day in dry environments",
+                "Wait 2-3 weeks to see improvements"
+              ]
             }
           }
         },
@@ -1151,7 +1295,7 @@
       },
       "hero": {
         "title": "Advanced Skin Analysis",
-        "subtitle": "Measure hydration, redness and texture with a guided camera scan."
+        "subtitle": "Measure hydration, redness, texture and oiliness with a guided camera scan."
       },
       "start": "Start skin scan",
       "recent": {
@@ -1189,7 +1333,84 @@
         "textureDescription": "Shows skin surface uniformity. Helps identify dryness, roughness, or damage. High values indicate smooth, healthy skin, while low values may indicate dryness, irregularities, or damage. Good texture is essential for a youthful and healthy appearance.",
         "rednessDescription": "Measures skin irritation and inflammation. Low values indicate calm, healthy skin, while high values may indicate inflammation, sensitivity, or conditions like rosacea. Monitoring this value helps identify irritating triggers.",
         "hydrationDescription": "Shows surface water content. Helps prevent dryness and signs of fatigue. High values indicate well-hydrated and elastic skin, while low values indicate dryness and dehydration. Good hydration is essential for maintaining soft, elastic skin resistant to wrinkles.",
-        "oilinessDescription": "Measures sebaceous activity and oil production. Helps balance skincare routine. High values indicate oily skin, while low values indicate dry skin. Balanced oiliness is essential for healthy skin barrier."
+        "oilinessDescription": "Measures sebaceous activity and oil production. Helps balance skincare routine. High values indicate oily skin, while low values indicate dry skin.",
+        "balanced": "Balanced oiliness is essential for healthy skin barrier.",
+        "buckets": {
+          "rough": {
+            "label": "Rough",
+            "description": "Rough texture with evident irregularities. Pores may be enlarged or imperfections present. Regular exfoliation recommended."
+          },
+          "fair": {
+            "label": "Fair",
+            "description": "Texture with some irregularities. Skin may benefit from smoothing treatments and constant hydration."
+          },
+          "good": {
+            "label": "Good",
+            "description": "Soft and uniform texture. Skin appears healthy with barely visible pores. Maintain current routine."
+          },
+          "excellent": {
+            "label": "Excellent",
+            "description": "Excellent texture, smooth and silky. Almost invisible pores, well-cared and luminous skin."
+          },
+          "low": {
+            "label": "Low",
+            "description": "Even tone without redness. Skin appears calm and balanced. Excellent skin health status."
+          },
+          "mild": {
+            "label": "Mild",
+            "description": "Mild redness in some areas. May indicate sensitivity or slight irritation. Consider soothing products."
+          },
+          "moderate": {
+            "label": "Moderate",
+            "description": "Moderate visible redness. Skin shows signs of irritation or sensitivity. Avoid harsh products."
+          },
+          "high": {
+            "label": "High",
+            "description": "Significant redness. Irritations or conditions may be present that require attention. Consult a specialist."
+          },
+          "calm": {
+            "description": "Even tone without redness. Skin appears calm and balanced. Excellent skin health status."
+          },
+          "mild_redness": {
+            "description": "Mild redness in some areas. May indicate sensitivity or slight irritation. Consider soothing products."
+          },
+          "moderate_redness": {
+            "description": "Moderate visible redness. Skin shows signs of irritation or sensitivity. Avoid harsh products."
+          },
+          "high_redness": {
+            "description": "Significant redness. Irritations or conditions may be present that require attention. Consult a specialist."
+          },
+          "dehydrated": {
+            "description": "Dehydrated skin that may appear dull, tight, or flaky. Needs deep and constant hydration."
+          },
+          "below_optimal": {
+            "label": "Below Optimal",
+            "description": "Hydration below optimal level. Increase water intake and use richer moisturizers."
+          },
+          "optimal": {
+            "label": "Optimal",
+            "description": "Optimal hydration. Skin is supple, soft and luminous. The skin barrier is functioning correctly."
+          },
+          "hydrated_excellent": {
+            "description": "Perfectly hydrated skin, elastic and radiant. Excellent water balance in the skin."
+          },
+          "dry": {
+            "label": "Dry",
+            "description": "Dry skin with low sebum production. May appear dull and tend to flake. Use nourishing products."
+          },
+          "balanced": {
+            "label": "Balanced",
+            "description": "Balanced sebum production. Skin is neither too dry nor too oily. Ideal state."
+          },
+          "oily": {
+            "label": "Oily",
+            "description": "Skin tends to be oily, especially in the T-zone. Use mattifying products and gentle cleansers."
+          },
+          "very_oily": {
+            "label": "Very Oily",
+            "description": "Very oily skin with excess sebum. Pores may appear enlarged. Control production with specific products."
+          }
+        }
       },
       "camera": {
         "instructionText": "Keep a steady, even light on your face for best accuracy"
@@ -1777,10 +1998,12 @@
         "cameraNotReady": "Camera not ready. Please wait a moment...",
         "initializationFailed": "Unable to initialize analysis service. Check OpenAI settings.",
         "captureTimeout": "Camera capture timed out. Please try again.",
-        "captureFailed": "Failed to capture image.",
+        "captureFailed": "Photo capture failed. Please try again.",
         "allStrategiesFailed": "All capture strategies failed",
         "cameraNull": "Camera ref is null - camera may have been unmounted. Please restart the camera.",
-        "emptyData": "Camera returned empty data. Please try again."
+        "emptyData": "Camera returned empty data. Please try again.",
+        "networkError": "Network error. Please check your connection and try again.",
+        "unknownError": "An unexpected error occurred. Please try again."
       }
     },
     "common": {
@@ -1797,9 +2020,16 @@
   "ui": {
     "tapToExpand": "Tap to expand details",
     "tapToCollapse": "Tap to collapse details",
+    "whyItMatters": "Why it matters",
     "howItWorks": "How it works",
     "analysisInProgress": "ANALYSIS IN PROGRESS",
-    "analyzing": "Analyzing..."
+    "analyzing": "Analyzing...",
+    "analyzingExpressions": "Analyzing facial expressions...",
+    "analyzingSignals": "Interpreting eye and mouth signals...",
+    "analyzingSkinTexture": "Examining skin texture and uniformity...",
+    "analyzingSkinLuminosity": "Detecting luminosity and hydration...",
+    "analyzingNutritionalValues": "Calculating nutritional values...",
+    "identifyingIngredients": "Identifying ingredients..."
   },
   "rating": {
     "excellent": "Excellent",
@@ -2043,7 +2273,57 @@
       "examples": "Examples",
       "recommendedAction": "Recommended Action",
       "resources": "Resources",
-      "disclaimer": "⚠️ Cosmetic evaluation, not diagnostic. For clinical concerns, consult a professional."
+      "disclaimer": "⚠️ Cosmetic evaluation, not diagnostic. For clinical concerns, consult a professional.",
+      "metrics": {
+        "valence": {
+          "whyItMatters": "Measures the positivity/negativity of your emotional state.",
+          "howItWorks": "Estimate based on facial signals (mouth/eyes/eyebrows).",
+          "examples": {
+            "positive": "Happy, content, satisfied",
+            "negative": "Sad, frustrated, disappointed"
+          }
+        },
+        "arousal": {
+          "whyItMatters": "Indicates how much emotional activation/energy there is right now.",
+          "howItWorks": "Evaluation of the intensity of expressive signals.",
+          "examples": {
+            "high": "Excited, stressed, energetic",
+            "low": "Calm, relaxed, tranquil"
+          }
+        },
+        "texture": {
+          "whyItMatters": "Indicates skin uniformity and smoothness.",
+          "howItWorks": "Analysis of surface irregularities.",
+          "examples": {
+            "good": "Smooth and even skin",
+            "poor": "Rough or uneven skin"
+          }
+        },
+        "redness": {
+          "whyItMatters": "Estimates visible redness/irritation.",
+          "howItWorks": "Analysis of skin color signals.",
+          "examples": {
+            "low": "Calm and even skin",
+            "high": "Reddened or irritated skin"
+          }
+        },
+        "hydration": {
+          "whyItMatters": "Surface water content.",
+          "howItWorks": "Estimates hydration from skin patterns.",
+          "examples": {
+            "good": "Well-hydrated and elastic skin",
+            "poor": "Dry and dehydrated skin"
+          }
+        },
+        "oiliness": {
+          "whyItMatters": "Sebum balance and shine.",
+          "howItWorks": "Detection of surface shine.",
+          "examples": {
+            "balanced": "Skin with sebum balance",
+            "excess": "Shiny or oily skin"
+          }
+        }
+      }
     }
   },
   "onboarding": {

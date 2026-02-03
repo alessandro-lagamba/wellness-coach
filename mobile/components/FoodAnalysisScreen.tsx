@@ -397,6 +397,7 @@ const WalkthroughableView = walkthroughable(View);
 const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
 
 export const FoodAnalysisScreen: React.FC = () => {
+  const { t } = useTranslation();
   return (
     <CopilotProvider
       overlay="view"
@@ -405,10 +406,10 @@ export const FoodAnalysisScreen: React.FC = () => {
       arrowColor="transparent"
       backdropColor="rgba(0, 0, 0, 0.6)"
       labels={{
-        previous: "Indietro",
-        next: "Avanti",
-        skip: "Salta",
-        finish: "Finito"
+        previous: t('common.back'),
+        next: t('common.next'),
+        skip: t('common.skip'),
+        finish: t('common.finish')
       }}
     >
       <FoodAnalysisScreenContent />
@@ -1681,19 +1682,18 @@ const FoodAnalysisScreenContent: React.FC = () => {
       return;
     }
 
-    // 🔥 FIX: Imposta flag di cattura in corso
-    isCapturingRef.current = true;
     if (detecting || analyzing) {
-      // 🔥 FIX: Rimuoviamo console.log eccessivi
       return;
     }
     if (cameraSwitching) {
-      // 🔥 FIX: Rimuoviamo console.log eccessivi
       if (isMountedRef.current) {
         alert(t('analysis.common.processing'));
       }
       return;
     }
+
+    // 🔥 FIX: Imposta flag di cattura in corso SOLO dopo tutti i controlli early-return
+    isCapturingRef.current = true;
 
     try {
       const serviceReady = await ensureAnalysisReady();
@@ -1950,19 +1950,28 @@ const FoodAnalysisScreenContent: React.FC = () => {
         setResults(foodResults);
       }
     } catch (error: any) {
-      console.error('❌ Capture error:', error?.message || error);
+      console.error('❌ Food analysis error:', error?.message || error);
 
-      let errorMessage = 'Capture failed';
-      if (error?.message) {
-        if (error.message.includes('timeout')) {
-          errorMessage = 'Capture timeout';
-        } else if (error.message.includes('permission')) {
-          errorMessage = 'Camera permission is required';
-        } else if (error.message.includes('not available')) {
-          errorMessage = 'Camera not ready';
-        } else {
-          errorMessage = 'Capture failed';
-        }
+      // Determine if this is a capture error or an analysis error
+      const errorMsg = error?.message || '';
+      let errorMessage: string;
+
+      if (errorMsg.includes('timeout') || errorMsg.includes('Camera capture timeout')) {
+        errorMessage = t('analysis.food.errors.captureTimeout') ?? 'Capture timeout';
+      } else if (errorMsg.includes('permission')) {
+        errorMessage = t('analysis.food.errors.cameraPermission') ?? 'Camera permission required';
+      } else if (errorMsg.includes('not available') || errorMsg.includes('not ready') || errorMsg.includes('Camera ref')) {
+        errorMessage = t('analysis.food.errors.cameraNotReady') ?? 'Camera not ready';
+      } else if (errorMsg.includes('All capture strategies failed')) {
+        errorMessage = t('analysis.food.errors.captureFailed') ?? 'Photo capture failed. Please try again.';
+      } else if (errorMsg.includes('Backend request failed') || errorMsg.includes('fetch') || errorMsg.includes('network')) {
+        errorMessage = t('analysis.food.errors.networkError') ?? 'Network error. Please check your connection.';
+      } else if (errorMsg.includes('Food analysis failed') || errorMsg.includes('analyze')) {
+        // Show the actual error from the backend for analysis failures
+        errorMessage = t('analysis.food.errors.analysisFailed', { error: errorMsg }) ?? `Analysis failed: ${errorMsg}`;
+      } else {
+        // For unknown errors, show the actual message for debugging
+        errorMessage = errorMsg || (t('analysis.food.errors.unknownError') ?? 'An unexpected error occurred');
       }
 
       if (isMountedRef.current) {
@@ -2110,10 +2119,10 @@ const FoodAnalysisScreenContent: React.FC = () => {
           <ActivityIndicator size={60} color="#3b82f6" />
           <View style={{ alignItems: 'center', gap: 8 }}>
             <Text style={{ fontSize: 16, fontFamily: 'Figtree_700Bold', color: '#1e3a8a', letterSpacing: 1, textTransform: 'uppercase' }}>
-              ANALISI IN CORSO
+              {t('ui.analysisInProgress')}
             </Text>
             <Text style={{ fontSize: 14, fontFamily: 'Figtree_500Medium', color: '#64748b' }}>
-              {isTextAnalyzing ? 'Calcolando valori nutrizionali...' : 'Identificando gli ingredienti...'}
+              {isTextAnalyzing ? t('ui.analyzingNutritionalValues') : t('ui.identifyingIngredients')}
             </Text>
           </View>
         </View>
@@ -2125,7 +2134,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
   if (cameraController.active && !analyzing) {
     return (
-      <CopilotStep text="Analizza il tuo cibo" description="Scatta una foto o carica un'immagine per analizzare i valori nutrizionali." order={1} name="camera">
+      <CopilotStep text={language === 'it' ? "Analizza il tuo cibo" : "Analyze your food"} description={language === 'it' ? "Scatta una foto o carica un'immagine per analizzare i valori nutrizionali." : "Take a photo or upload an image to analyze nutritional values."} order={1} name="camera">
         <WalkthroughableView style={{ flex: 1 }}>
           <AnalysisCaptureLayout
             renderCamera={<CameraFrame />}

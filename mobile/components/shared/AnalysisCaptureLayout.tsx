@@ -5,6 +5,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const withAlpha = (color: string | undefined, alpha: string) => {
   if (typeof color === 'string' && color.startsWith('#') && color.length === 7) {
@@ -34,13 +35,14 @@ export const AnalysisCaptureLayout: React.FC<AnalysisCaptureLayoutProps> = ({
   onCapture,
   captureDisabled = false,
   showSwitch = false,
-  switchLabel = 'Switch',
+  switchLabel,
   onSwitch,
   switchDisabled = false,
-  cancelLabel = 'Cancel',
-  captureLabel = 'Capture',
+  cancelLabel,
+  captureLabel,
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const primaryColor = colors.primary || '#6366f1';
   const primaryLightColor = colors.primaryLight || primaryColor;
   const primaryMutedColor = colors.primaryMuted || primaryColor;
@@ -62,7 +64,7 @@ export const AnalysisCaptureLayout: React.FC<AnalysisCaptureLayoutProps> = ({
               ]}
             >
               <FontAwesome name="chevron-left" size={14} color={colors.text} />
-              <Text style={[styles.captureBackButtonText, { color: colors.text }]}>Indietro</Text>
+              <Text style={[styles.captureBackButtonText, { color: colors.text }]}>{t('common.back')}</Text>
             </TouchableOpacity>
           </View>
 

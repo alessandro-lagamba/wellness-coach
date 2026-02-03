@@ -506,50 +506,80 @@ Rules for recommendations (EXACTLY 3):
       const { getBackendURL } = await import('../constants/env');
       const backendURL = await getBackendURL();
 
+      // Validate backend URL
+      if (!backendURL || backendURL === 'https://your-backend.com') {
+        console.error('[FoodAnalysis] Backend URL not configured:', backendURL);
+        throw new Error('Backend URL not configured. Please check your environment settings.');
+      }
+
       // Convert image to base64
+      console.log('[FoodAnalysis] Converting image to base64...');
       const imageBase64 = await this.convertImageToBase64(request.imageUri);
 
-      // Call backend nutrition API
-      const response = await fetch(`${backendURL}/api/nutrition/analyze-image`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`,
-          mealType: request.mealType,
-          prefs: request.prefs,
-          allergies: request.allergies,
-          locale: 'it-IT',
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Backend request failed: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`);
+      if (!imageBase64 || imageBase64.length < 100) {
+        throw new Error('Failed to convert image to base64 - image data is too small or empty');
       }
 
-      const data = await response.json();
+      console.log('[FoodAnalysis] Calling backend:', `${backendURL}/api/nutrition/analyze-image`);
 
-      if (!data.success || !data.data) {
-        throw new Error(data.error || 'Invalid food analysis response from backend');
+      // Call backend nutrition API with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+      try {
+        const response = await fetch(`${backendURL}/api/nutrition/analyze-image`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            image: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`,
+            mealType: request.mealType,
+            prefs: request.prefs,
+            allergies: request.allergies,
+            locale: 'it-IT',
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[FoodAnalysis] Backend error:', response.status, errorData);
+          throw new Error(`Backend request failed: ${response.status} - ${errorData.error || response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.success || !data.data) {
+          console.error('[FoodAnalysis] Invalid response:', data);
+          throw new Error(data.error || 'Invalid response from backend');
+        }
+
+        // Convert backend MealDraft format to FoodAnalysisResult format
+        const mealDraft = data.data;
+        const analysisResult = this.convertMealDraftToFoodResult(mealDraft);
+
+        const processingTime = Date.now() - startTime;
+        console.log('[FoodAnalysis] Analysis complete in', processingTime, 'ms');
+
+        return {
+          success: true,
+          data: analysisResult,
+          processingTime,
+          timestamp: new Date(),
+        };
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Food analysis timed out. Please try again.');
+        }
+        throw fetchError;
       }
 
-      // Convert backend MealDraft format to FoodAnalysisResult format
-      const mealDraft = data.data;
-      const analysisResult = this.convertMealDraftToFoodResult(mealDraft);
-
-      const processingTime = Date.now() - startTime;
-
-      return {
-        success: true,
-        data: analysisResult,
-        processingTime,
-        timestamp: new Date(),
-      };
-
-    } catch (error) {
-      // Error logging handled by backend
+    } catch (error: any) {
+      console.error('[FoodAnalysis] Error:', error?.message || error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',

@@ -6,79 +6,102 @@ import {
   HealthDataServiceConfig,
   HealthMetricType
 } from '../types/health.types';
-import { HealthDataSyncService } from './health-data-sync.service';
-import { AuthService } from './auth.service';
+
+const safeTime = (label: string) => {
+  try {
+    const c: any = console;
+    if (c && typeof c.time === 'function') c.time(label);
+  } catch { }
+};
+
+const safeTimeEnd = (label: string) => {
+  try {
+    const c: any = console;
+    if (c && typeof c.timeEnd === 'function') c.timeEnd(label);
+  } catch { }
+};
+
+// 🔥 FIX: Use lazy imports to break potential circular dependencies
+// This is the #1 cause of "works in debug, fails in release"
+// 🔥 ROBUST: Handle both named and default exports (Release bundling may differ)
+const getAuthService = async () => {
+  const mod: any = await import('./auth.service');
+  const Auth = mod.AuthService ?? mod.default ?? mod;
+  console.log('[DIAG] getAuthService mod keys:', Object.keys(mod || {}));
+  console.log('[DIAG] getAuthService result:', Auth);
+  console.log('[DIAG] getAuthService.getCurrentUser typeof:', typeof Auth?.getCurrentUser);
+  return Auth;
+};
+
+const getHealthDataSyncService = async () => {
+  const mod: any = await import('./health-data-sync.service');
+  const Sync = mod.HealthDataSyncService ?? mod.default ?? mod;
+  console.log('[DIAG] getHealthDataSyncService mod keys:', Object.keys(mod || {}));
+  console.log('[DIAG] getHealthDataSyncService result:', Sync);
+  console.log('[DIAG] getHealthDataSyncService.getInstance typeof:', typeof Sync?.getInstance);
+  return Sync;
+};
 
 // Platform-specific module references
 let AppleHealthKit: any = null;
 let HealthConnect: any = null;
 
-// 🔥 CRITICAL FIX FOR RELEASE BUILDS:
-// The react-native-health wrapper uses a Proxy pattern that may not work correctly
-// with Hermes bytecode compilation in Release builds.
-// Solution: Use NativeModules.AppleHealthKit DIRECTLY instead of the wrapper.
+// 🔥 SINGLE SOURCE OF TRUTH: Helper function to resolve the native module
+// RNAppleHealthKit is typically the name in Release builds with react-native-health
+const getHealthKitNativeModule = (): any => {
+  return (
+    NativeModules?.RNAppleHealthKit ||
+    NativeModules?.AppleHealthKit ||
+    NativeModules?.RNHealthKit ||
+    NativeModules?.AppleHealthKitModule ||
+    null
+  );
+};
+
+// 🔥 CRITICAL: Import modules based on platform to avoid loading incompatible code
 if (Platform.OS === 'ios') {
   try {
-    console.log('[HealthKit] 🔧 Attempting to load HealthKit module...');
+    // Use the react-native-health wrapper (works in both Debug and Release)
+    const HealthKitModule = require('react-native-health');
+    AppleHealthKit = HealthKitModule.default || HealthKitModule;
 
-    // 🔥 STRATEGY 1: Direct NativeModules access (PREFERRED - works in Release)
-    const nativeHK =
-      NativeModules?.AppleHealthKit ||
-      NativeModules?.RNAppleHealthKit ||
-      NativeModules?.RNHealthKit ||
-      NativeModules?.AppleHealthKitModule;
+    // Verify native module exists (for diagnostics only) - 🔥 FIX: Use helper function
+    const nativeHK = getHealthKitNativeModule();
 
-    if (nativeHK) {
-      console.log('[HealthKit] ✅ Found native module directly via NativeModules');
-      AppleHealthKit = nativeHK;
-
-      // Verify critical methods exist on the native module
-      const hasInitMethod = typeof nativeHK.initHealthKit === 'function';
-      const hasStepsMethod = typeof nativeHK.getStepCount === 'function';
-      console.log('[HealthKit] ✅ Native module methods check:', { hasInitMethod, hasStepsMethod });
-
-      if (!hasInitMethod) {
-        console.warn('[HealthKit] ⚠️ initHealthKit not found on native module, will try wrapper');
-        AppleHealthKit = null; // Reset to try wrapper
-      }
+    if (!nativeHK) {
+      console.warn('[HealthKit] ⚠️ Native module not found in NativeModules - may not be linked');
+    } else {
+      console.log('[HealthKit] ✅ Native HealthKit module present');
     }
 
-    // 🔥 STRATEGY 2: Fallback to react-native-health wrapper (may fail in Release)
-    if (!AppleHealthKit) {
-      console.log('[HealthKit] 🔧 Trying react-native-health wrapper as fallback...');
-      const HealthKitModule = require('react-native-health');
-      const wrapper = HealthKitModule.default || HealthKitModule;
-
-      if (wrapper && typeof wrapper.initHealthKit === 'function') {
-        console.log('[HealthKit] ✅ Using react-native-health wrapper');
-        AppleHealthKit = wrapper;
-      } else if (wrapper && wrapper.default && typeof wrapper.default.initHealthKit === 'function') {
-        console.log('[HealthKit] ✅ Using react-native-health wrapper.default');
-        AppleHealthKit = wrapper.default;
-      } else {
-        console.error('[HealthKit] ❌ Wrapper does not have initHealthKit method');
-      }
-    }
-
-    // Final check
+    // Verify wrapper has the methods we need
     if (AppleHealthKit) {
       const hasInitMethod = typeof AppleHealthKit.initHealthKit === 'function';
       const hasStepsMethod = typeof AppleHealthKit.getStepCount === 'function';
-      console.log('[HealthKit] ✅ Final AppleHealthKit module ready:', { hasInitMethod, hasStepsMethod });
-    } else {
-      console.error('[HealthKit] ❌ Could not load HealthKit module via any strategy');
-      console.log('[HealthKit] Available NativeModules:', Object.keys(NativeModules || {}).filter(k =>
-        k.toLowerCase().includes('health') || k.toLowerCase().includes('apple')
-      ));
+      console.log('[HealthKit] ✅ AppleHealthKit module loaded:', { hasInitMethod, hasStepsMethod });
+
+      // If wrapper doesn't have methods, try .default
+      if (!hasInitMethod && AppleHealthKit.default) {
+        console.log('[HealthKit] 🔧 Switching to .default export');
+        AppleHealthKit = AppleHealthKit.default;
+      }
+
+      // 🔥 CRITICAL: Validate all required methods exist (for Release debugging)
+      const requiredMethods = ['initHealthKit', 'getStepCount', 'getHeartRateSamples', 'getSleepSamples', 'getHeartRateVariabilitySamples'];
+      const missingMethods = requiredMethods.filter(m => typeof AppleHealthKit?.[m] !== 'function');
+      if (missingMethods.length > 0) {
+        console.error('[HealthKit] ❌ Missing required methods:', missingMethods);
+        console.log('[HealthKit] Available keys:', AppleHealthKit ? Object.keys(AppleHealthKit).slice(0, 20) : 'null');
+      } else {
+        console.log('[HealthKit] ✅ All required methods present');
+      }
     }
   } catch (error) {
-    console.error('[HealthKit] ❌ Exception loading HealthKit:', error);
+    console.error('[HealthKit] ❌ Failed to load react-native-health:', error);
   }
 } else if (Platform.OS === 'android') {
   try {
-    // Import react-native-health-connect for Android only
     const HealthConnectModule = require('react-native-health-connect');
-    // Handle both default and named exports
     HealthConnect = HealthConnectModule.default || HealthConnectModule;
     console.log('[HealthConnect] ✅ Health Connect module loaded successfully');
   } catch (error) {
@@ -233,12 +256,8 @@ export class HealthDataService {
   private async initializeHealthKit(): Promise<boolean> {
     if (!AppleHealthKit) return false;
 
-    // ✅ Se manca il native module, inutile continuare: in TestFlight spesso è il problema
-    const nativeHK =
-      NativeModules?.AppleHealthKit ||
-      NativeModules?.RNAppleHealthKit ||
-      NativeModules?.RNHealthKit ||
-      NativeModules?.AppleHealthKitModule;
+    // 🔥 FIX: Use single source of truth helper function
+    const nativeHK = getHealthKitNativeModule();
 
     if (!nativeHK) {
       console.error('[HealthKit] ❌ Native HealthKit module missing. HealthKit cannot work in this build.');
@@ -461,24 +480,50 @@ export class HealthDataService {
       }
 
       this.isSyncInProgress = true;
-      console.time('HealthDataService_Sync_Total');
+      safeTime('HealthDataService_Sync_Total');
+
+      // 🔥 DIAGNOSTIC: Log all critical dependencies to find the undefined function
+      console.log('[DIAG] === RELEASE DEBUG START ===');
+      console.log('[DIAG] Platform.OS:', Platform.OS);
+      console.log('[DIAG] getAuthService:', typeof getAuthService);
+      console.log('[DIAG] getHealthDataSyncService:', typeof getHealthDataSyncService);
+      console.log('[DIAG] AppleHealthKit:', AppleHealthKit ? 'exists' : 'null/undefined');
+      console.log('[DIAG] AppleHealthKit keys:', AppleHealthKit ? Object.keys(AppleHealthKit).slice(0, 30) : null);
+      console.log('[DIAG] initHealthKit type:', typeof AppleHealthKit?.initHealthKit);
+      console.log('[DIAG] getStepCount type:', typeof AppleHealthKit?.getStepCount);
+      console.log('[DIAG] getHeartRateSamples type:', typeof AppleHealthKit?.getHeartRateSamples);
+      console.log('[DIAG] getSleepSamples type:', typeof AppleHealthKit?.getSleepSamples);
+      console.log('[DIAG] getHeartRateVariabilitySamples type:', typeof AppleHealthKit?.getHeartRateVariabilitySamples);
+      console.log('[DIAG] HealthConnect:', HealthConnect ? 'exists' : 'null/undefined');
+      console.log('[DIAG] NativeModules keys:', Object.keys(NativeModules || {}).filter(k => k.toLowerCase().includes('health') || k.toLowerCase().includes('apple')));
+      console.log('[DIAG] === RELEASE DEBUG END ===');
 
       const hasAnyPermission = Object.values(this.permissions).some(Boolean);
+
+      // 🔥 FIX: Use consistent module resolution for shouldUseRealData
+      const nativeHKForCheck = getHealthKitNativeModule();
       const shouldUseRealData = hasAnyPermission &&
-        ((Platform.OS === 'ios' && AppleHealthKit && NativeModules?.AppleHealthKit) ||
+        ((Platform.OS === 'ios' && AppleHealthKit && !!nativeHKForCheck) ||
           (Platform.OS === 'android' && HealthConnect));
+
+      // 🔥 Release diagnostic logging
+      console.log('[HealthKit] 📊 Release Diagnostics:', {
+        hasAnyPermission,
+        hasAppleHealthKit: !!AppleHealthKit,
+        nativeModuleFound: !!nativeHKForCheck,
+        initHealthKitType: typeof AppleHealthKit?.initHealthKit,
+        shouldUseRealData
+      });
 
       let healthData: HealthData;
 
-      console.time('HealthConnect_Fetch');
+      safeTime('HealthConnect_Fetch');
 
-      const nativeHK =
-        NativeModules?.AppleHealthKit ||
-        NativeModules?.RNAppleHealthKit ||
-        NativeModules?.RNHealthKit ||
-        NativeModules?.AppleHealthKitModule;
+      // 🔥 FIX: Use single source of truth helper function
+      const nativeHK = getHealthKitNativeModule();
 
       if (Platform.OS === 'ios' && AppleHealthKit && nativeHK) {
+        console.log('[DIAG] About to call this.syncHealthKitData, typeof:', typeof this.syncHealthKitData);
         const result = await this.syncHealthKitData();
         if (result.success && result.data) {
           healthData = result.data;
@@ -520,10 +565,11 @@ export class HealthDataService {
         }
 
       } else {
-        console.timeEnd('HealthConnect_Fetch');
+        safeTimeEnd('HealthConnect_Fetch');
 
         // Heartbeat “vuoto” se non permessi
-        const currentUser = await AuthService.getCurrentUser();
+        const Auth = await getAuthService();
+        const currentUser = await Auth.getCurrentUser();
         if (currentUser) {
           const emptyHealthData: HealthData = {
             steps: 0, distance: 0, calories: 0, activeMinutes: 0,
@@ -531,12 +577,13 @@ export class HealthDataService {
             sleepHours: 0, sleepQuality: 0, deepSleepMinutes: 0, remSleepMinutes: 0, lightSleepMinutes: 0,
             hydration: 0, mindfulnessMinutes: 0
           };
-          const syncService = HealthDataSyncService.getInstance();
+          const Sync = await getHealthDataSyncService();
+          const syncService = Sync.getInstance();
           await syncService.syncHealthData(currentUser.id, emptyHealthData);
           if (__DEV__) console.log('💓 Activity heartbeat synced to Supabase (no health permissions)');
         }
 
-        console.timeEnd('HealthDataService_Sync_Total');
+        safeTimeEnd('HealthDataService_Sync_Total');
         return {
           success: true,
           data: (this.lastHealthData || undefined) as any,
@@ -544,15 +591,17 @@ export class HealthDataService {
         };
       }
 
-      console.timeEnd('HealthConnect_Fetch');
+      safeTimeEnd('HealthConnect_Fetch');
 
-      // Sync to Supabase (solo se non mock)
-      const currentUser = await AuthService.getCurrentUser();
+      // Sync to Supabase (solo se non mock) - 🔥 FIX: Use lazy imports
+      const Auth = await getAuthService();
+      const currentUser = await Auth.getCurrentUser();
       if (currentUser) {
-        console.time('Supabase_Health_Sync');
-        const syncService = HealthDataSyncService.getInstance();
+        safeTime('Supabase_Health_Sync');
+        const Sync = await getHealthDataSyncService();
+        const syncService = Sync.getInstance();
         const syncResult = await syncService.syncHealthData(currentUser.id, healthData);
-        console.timeEnd('Supabase_Health_Sync');
+        safeTimeEnd('Supabase_Health_Sync');
 
         if (!syncResult.success) {
           console.error('❌ Failed to sync to Supabase:', syncResult.error);
@@ -570,12 +619,18 @@ export class HealthDataService {
       };
 
       this.lastSyncAt = Date.now();
-      console.timeEnd('HealthDataService_Sync_Total');
+      safeTimeEnd('HealthDataService_Sync_Total');
       return result;
 
-    } catch (error) {
-      console.error('❌ Health data sync failed:', error);
-      console.timeEnd('HealthDataService_Sync_Total');
+    } catch (error: any) {
+      // 🔥 CRITICAL: Log full error details including stack trace
+      console.error('❌ Health data sync failed:', {
+        message: error?.message,
+        name: error?.name,
+        stack: error?.stack,
+      });
+      console.error('❌ Full error object:', error);
+      safeTimeEnd('HealthDataService_Sync_Total');
 
       const hasAnyPermission = Object.values(this.permissions).some(Boolean);
       if (hasAnyPermission && this.lastHealthData && this.lastHealthDataSource !== 'mock') {
@@ -601,11 +656,8 @@ export class HealthDataService {
   private async syncHealthKitData(): Promise<HealthDataSyncResult> {
     console.log('[HealthKit] 🔄 syncHealthKitData called...');
 
-    const nativeHK =
-      NativeModules?.AppleHealthKit ||
-      NativeModules?.RNAppleHealthKit ||
-      NativeModules?.RNHealthKit ||
-      NativeModules?.AppleHealthKitModule;
+    // 🔥 FIX: Use single source of truth helper function
+    const nativeHK = getHealthKitNativeModule();
 
     if (!AppleHealthKit || !nativeHK) {
       return { success: false, error: 'HealthKit native module missing' };
@@ -645,40 +697,69 @@ export class HealthDataService {
           includeManuallyAdded: true,
         };
 
-        // Steps
-        const stepResults = await new Promise<any>((res) => {
+        // Steps - 🔥 FIX: Proper error handling
+        const stepResults = await new Promise<any>((res, rej) => {
           AppleHealthKit.getStepCount(
             { ...options, unit: 'count' },
-            (_err: any, results: any) => res(results)
+            (err: any, results: any) => {
+              if (err) {
+                console.warn('[HealthKit] getStepCount error:', err);
+                return res({ value: 0 }); // Graceful fallback
+              }
+              res(results);
+            }
           );
         });
         const steps = stepResults?.value || 0;
 
-        // Heart Rate (Latest)
+        // Heart Rate (Latest) - 🔥 FIX: Proper error handling
         const hrResults = await new Promise<any[]>((res) => {
           AppleHealthKit.getHeartRateSamples(
             options,
-            (_err: any, results: any) => res(results || [])
+            (err: any, results: any) => {
+              if (err) {
+                console.warn('[HealthKit] getHeartRateSamples error:', err);
+                return res([]);
+              }
+              res(results || []);
+            }
           );
         });
         const heartRate = hrResults.length > 0 ? hrResults[0].value : 0;
 
-        // HRV
-        const hrvResults = await new Promise<any[]>((res) => {
-          AppleHealthKit.getHeartRateVariabilitySamples(
-            options,
-            (_err: any, results: any) => res(results || [])
-          );
-        });
-        const hrv = hrvResults.length > 0 ? hrvResults[0].value * 1000 : 0;
+        // HRV - 🔥 FIX: Guard before calling + Proper error handling
+        let hrv = 0;
+        if (typeof AppleHealthKit.getHeartRateVariabilitySamples === 'function') {
+          const hrvResults = await new Promise<any[]>((res) => {
+            AppleHealthKit.getHeartRateVariabilitySamples(
+              options,
+              (err: any, results: any) => {
+                if (err) {
+                  console.warn('[HealthKit] getHeartRateVariabilitySamples error:', err);
+                  return res([]);
+                }
+                res(results || []);
+              }
+            );
+          });
+          hrv = hrvResults.length > 0 ? hrvResults[0].value * 1000 : 0;
+        } else {
+          console.warn('[HealthKit] ⚠️ getHeartRateVariabilitySamples method not available in this build');
+        }
 
-        // Sleep (samples from last 24h)
+        // Sleep (samples from last 24h) - 🔥 FIX: Proper error handling
         const today = new Date();
         const sleepStartDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
         const sleepResults = await new Promise<any[]>((res) => {
           AppleHealthKit.getSleepSamples(
             { startDate: sleepStartDate.toISOString(), endDate: today.toISOString() },
-            (_err: any, results: any) => res(results || [])
+            (err: any, results: any) => {
+              if (err) {
+                console.warn('[HealthKit] getSleepSamples error:', err);
+                return res([]);
+              }
+              res(results || []);
+            }
           );
         });
 
@@ -695,7 +776,7 @@ export class HealthDataService {
 
         const healthData: HealthData = {
           steps,
-          distance: steps * 0.8, // meters (0.8m per step estimate)
+          distance: (steps * 0.8) / 1000, // km (0.8m per step estimate, converted to km)
           calories: 0,
           activeMinutes: 0,
           heartRate,
@@ -759,7 +840,7 @@ export class HealthDataService {
    */
   private async syncHealthConnectData(): Promise<HealthDataSyncResult> {
     try {
-      console.time('HealthConnect_Total');
+      safeTime('HealthConnect_Total');
 
       // Assicurati che Health Connect sia inizializzato
       if (HealthConnect.initialize && typeof HealthConnect.initialize === 'function') {
@@ -839,7 +920,7 @@ export class HealthDataService {
         const seenTokens = new Set<string>();
         let pageToken: string | undefined;
 
-        console.time(`HealthConnect_Read_${recordType}`);
+        safeTime(`HealthConnect_Read_${recordType}`);
         do {
           try {
             if (pageToken && seenTokens.has(pageToken)) {
@@ -872,7 +953,7 @@ export class HealthDataService {
             break;
           }
         } while (pageToken);
-        console.timeEnd(`HealthConnect_Read_${recordType}`);
+        safeTimeEnd(`HealthConnect_Read_${recordType}`);
 
         return allRecords;
       };
@@ -1225,12 +1306,12 @@ export class HealthDataService {
 
       // Calcola distance da steps se disponibili
       if (healthData.steps > 0) {
-        healthData.distance = healthData.steps * 0.8; // meters (0.8m per step estimate)
+        healthData.distance = (healthData.steps * 0.8) / 1000; // km (0.8m per step estimate, converted to km)
         // Stima calorie basata sui passi (circa 0.04 calorie per passo)
         healthData.calories = Math.round(healthData.steps * 0.04);
       }
 
-      console.timeEnd('HealthConnect_Total');
+      safeTimeEnd('HealthConnect_Total');
 
       return {
         success: true,
@@ -1239,7 +1320,7 @@ export class HealthDataService {
       };
     } catch (error) {
       console.error('❌ Health Connect sync error:', error);
-      console.timeEnd('HealthConnect_Total');
+      safeTimeEnd('HealthConnect_Total');
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -1254,12 +1335,14 @@ export class HealthDataService {
    */
   async getLatestSyncedHealthData(): Promise<{ data: HealthData | null; syncedAt?: Date }> {
     try {
-      const currentUser = await AuthService.getCurrentUser();
+      const Auth = await getAuthService();
+      const currentUser = await Auth.getCurrentUser();
       if (!currentUser) {
         return { data: null };
       }
 
-      const syncService = HealthDataSyncService.getInstance();
+      const Sync = await getHealthDataSyncService();
+      const syncService = Sync.getInstance();
       const record = await syncService.getLatestHealthData(currentUser.id);
       if (!record) {
         return { data: null };

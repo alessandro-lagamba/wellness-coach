@@ -106,6 +106,9 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
 
   // Translate bucket label
   const getTranslatedBucketLabel = (label: string): string => {
+    // 🔥 NEW: Check if it's already a full key
+    if (label.includes('.')) return t(label);
+
     const labelLower = label.toLowerCase();
     if (labelLower.includes('negative')) return t('analysis.emotion.metrics.buckets.negative') || label;
     if (labelLower.includes('neutral')) return t('analysis.emotion.metrics.buckets.neutral') || label;
@@ -146,7 +149,7 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
           </LinearGradient>
 
           <View style={styles.metricInfo}>
-            <Text style={[styles.label, { color: isDark ? colors.textSecondary : '#6b7280' }]}>{label}</Text>
+            <Text style={[styles.label, { color: isDark ? colors.textSecondary : '#6b7280' }]} numberOfLines={1}>{label}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
               <Text style={[styles.value, { color: isDark ? colors.text : '#1f2937' }]}>
                 {formatValue(value)}
@@ -162,7 +165,7 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
         <View style={styles.rightSection}>
           {bucket && (
             <View style={[styles.bucketBadge, { backgroundColor: bucket.color + '15' }]}>
-              <Text style={[styles.bucketText, { color: bucket.color }]}>
+              <Text style={[styles.bucketText, { color: bucket.color }]} numberOfLines={1}>
                 {getTranslatedBucketLabel(bucket.label)}
               </Text>
             </View>
@@ -205,7 +208,7 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
               {t('common.status') || 'Status'}
             </Text>
             <Text style={[styles.detailValue, { color: isDark ? colors.text : '#374151' }]}>
-              {bucket.description}
+              {t(bucket.description)}
             </Text>
           </View>
         )}
@@ -214,7 +217,7 @@ export const EnhancedMetricTile: React.FC<EnhancedMetricTileProps> = ({
         {description && (
           <View style={styles.detailRow}>
             <Text style={[styles.descriptionText, { color: isDark ? colors.textSecondary : '#6b7280' }]}>
-              {description}
+              {t(description)}
             </Text>
           </View>
         )}
@@ -284,6 +287,7 @@ const styles = StyleSheet.create({
   },
   metricInfo: {
     flex: 1,
+    minWidth: 90,
   },
   label: {
     fontSize: 13,
@@ -304,6 +308,8 @@ const styles = StyleSheet.create({
   rightSection: {
     alignItems: 'flex-end',
     gap: 4,
+    flexShrink: 1,
+    minWidth: 40,
   },
   bucketBadge: {
     paddingHorizontal: 10,

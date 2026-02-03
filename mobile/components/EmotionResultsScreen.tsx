@@ -356,37 +356,23 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
   // Get Valence description based on value
   const getValenceDescription = (valence: number): string => {
     if (valence > 0.3) {
-      return language === 'it'
-        ? 'L\'espressione facciale suggerisce emozioni positive, con tratti che indicano piacevolezza e soddisfazione.'
-        : 'Facial expression suggests positive emotions, with features indicating pleasantness and satisfaction.';
+      return t('analysis.emotion.metrics.valenceDescriptions.positive');
     } else if (valence < -0.3) {
-      return language === 'it'
-        ? 'L\'espressione facciale suggerisce emozioni negative, con tratti che indicano disagio o insoddisfazione.'
-        : 'Facial expression suggests negative emotions, with features indicating discomfort or dissatisfaction.';
+      return t('analysis.emotion.metrics.valenceDescriptions.negative');
     }
-    return language === 'it'
-      ? 'L\'espressione facciale è neutra, senza chiari segnali di emozioni positive o negative.'
-      : 'Facial expression is neutral, without clear signs of positive or negative emotions.';
+    return t('analysis.emotion.metrics.valenceDescriptions.neutral');
   };
 
   // Get Arousal description based on value
   const getArousalDescription = (arousal: number): string => {
     if (arousal > 0.3) {
-      return language === 'it'
-        ? 'Livello di attivazione elevato, indicando energia e vigilanza nell\'espressione.'
-        : 'High activation level, indicating energy and alertness in the expression.';
+      return t('analysis.emotion.metrics.arousalDescriptions.high');
     } else if (arousal < -0.2) {
-      return language === 'it'
-        ? 'Livello di attivazione ridotto, con segnali di pesantezza o ritiro emotivo.'
-        : 'Reduced activation level, with signs of heaviness or emotional withdrawal.';
+      return t('analysis.emotion.metrics.arousalDescriptions.reduced');
     } else if (arousal < 0.1) {
-      return language === 'it'
-        ? 'Livello di attivazione basso, suggerendo calma e rilassatezza.'
-        : 'Low activation level, suggesting calmness and relaxation.';
+      return t('analysis.emotion.metrics.arousalDescriptions.low');
     }
-    return language === 'it'
-      ? 'Livello di attivazione moderato, in uno stato di equilibrio tra calma ed energia.'
-      : 'Moderate activation level, in a balanced state between calmness and energy.';
+    return t('analysis.emotion.metrics.arousalDescriptions.moderate');
   };
 
   const getEmotionData = (emotion: string) => {

@@ -4,8 +4,7 @@
   "workspaces": [
     "mobile",
     "web",
-    "backend",
-    "shared"
+    "backend"
   ],
   "scripts": {
     "build": "turbo run build",

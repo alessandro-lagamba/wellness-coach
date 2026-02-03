@@ -140,6 +140,7 @@ const WalkthroughableView = walkthroughable(View);
 const WalkthroughableText = walkthroughable(Text);
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
+  const { t } = useTranslation();
   // We need to wrap the content in a component to use useCopilot hook
   return (
     <CopilotProvider
@@ -149,10 +150,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       arrowColor="transparent"
       backdropColor="rgba(0, 0, 0, 0.6)"
       labels={{
-        previous: "Indietro",
-        next: "Avanti",
-        skip: "Salta",
-        finish: "Finito"
+        previous: t('common.back'),
+        next: t('common.next'),
+        skip: t('common.skip'),
+        finish: t('common.finish')
       }}
     >
       <HomeScreenContent user={user} onLogout={onLogout} />
@@ -2970,8 +2971,11 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             const units = hydrationUnitService.mlToUnit(result.newHydration || 0, unit);
 
             UserFeedbackService.showSuccess(
-              `${quantity > 1 ? `Aggiunti ${quantity} bicchieri!` : 'Aggiunto!'} Totale: ${Math.round(units * 10) / 10} ${config.label}`,
-              t('home.hydrationActions.addedTitle') || 'Acqua aggiunta'
+              t('home.hydrationActions.addedSuccess', {
+                units: Math.round(units * 10) / 10,
+                unitLabel: units === 1 ? t('home.widgets.units.glass_one') : t('home.widgets.units.glass_other')
+              }),
+              t('home.hydrationActions.addedTitle')
             );
 
             await reloadWidgetDataFromDatabase();
@@ -3018,8 +3022,11 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             const units = hydrationUnitService.mlToUnit(result.newHydration || 0, unit);
 
             UserFeedbackService.showSuccess(
-              `${quantity > 1 ? `Rimossi ${quantity} bicchieri!` : 'Rimosso!'} Totale: ${Math.round(units * 10) / 10} ${config.label}`,
-              t('home.hydrationActions.removedTitle') || 'Acqua rimossa'
+              t('home.hydrationActions.removedSuccess', {
+                units: Math.round(units * 10) / 10,
+                unitLabel: units === 1 ? t('home.widgets.units.glass_one') : t('home.widgets.units.glass_other')
+              }),
+              t('home.hydrationActions.removedTitle')
             );
 
             await reloadWidgetDataFromDatabase();
@@ -3301,6 +3308,7 @@ const ActivityItem: React.FC<{
   onActivityUpdated?: (id: string, completed: boolean) => void;
 }> = ({ activity, index, onSync, permissions, onActivityUpdated }) => {
   const { colors: themeColors, mode } = useTheme();
+  const { t } = useTranslation();
   const [isCompleting, setIsCompleting] = React.useState(false);
   const { useRouter } = require('expo-router');
   const router = useRouter();
@@ -3431,7 +3439,7 @@ const ActivityItem: React.FC<{
               <Text
                 style={[styles.statusText, { color: themeColors.textSecondary }]} allowFontScaling={false}
               >
-                {activity.completed ? 'Completata' : 'Segna come completata'}
+                {activity.completed ? t('common.completed') : t('common.markAsDone')}
               </Text>
             </TouchableOpacity>
 

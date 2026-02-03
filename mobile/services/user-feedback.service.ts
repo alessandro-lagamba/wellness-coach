@@ -1,5 +1,5 @@
-import { Alert, Platform } from 'react-native';
-import { useTranslation } from '../hooks/useTranslation';
+import { Alert } from 'react-native';
+import i18n from '../i18n';
 
 export type FeedbackType = 'success' | 'error' | 'warning' | 'info';
 
@@ -32,14 +32,14 @@ export class UserFeedbackService {
 
     if (showRetry && retryAction) {
       buttons.push({
-        text: 'Riprova',
+        text: i18n.t('common.retry'),
         onPress: retryAction,
         style: 'default',
       });
     }
 
     buttons.push({
-      text: 'OK',
+      text: i18n.t('common.ok'),
       onPress: onPress,
       style: type === 'error' ? 'destructive' : 'default',
     });
@@ -52,7 +52,7 @@ export class UserFeedbackService {
    */
   static showSuccess(message: string, title?: string): void {
     this.show({
-      title: title || 'Successo',
+      title: title || i18n.t('common.success'),
       message,
       type: 'success',
     });
@@ -63,7 +63,7 @@ export class UserFeedbackService {
    */
   static showError(message: string, title?: string, retryAction?: () => void): void {
     this.show({
-      title: title || 'Errore',
+      title: title || i18n.t('common.error'),
       message,
       type: 'error',
       showRetry: !!retryAction,
@@ -76,7 +76,7 @@ export class UserFeedbackService {
    */
   static showWarning(message: string, title?: string): void {
     this.show({
-      title: title || 'Attenzione',
+      title: title || i18n.t('common.warning'),
       message,
       type: 'warning',
     });
@@ -87,7 +87,7 @@ export class UserFeedbackService {
    */
   static showInfo(message: string, title?: string): void {
     this.show({
-      title: title || 'Informazione',
+      title: title || i18n.t('common.info'),
       message,
       type: 'info',
     });
@@ -100,9 +100,10 @@ export class UserFeedbackService {
     entityType: 'analisi' | 'check-in' | 'dati salute' | 'dati',
     retryAction?: () => void
   ): void {
+    const translatedEntity = i18n.t(`feedback.entities.${entityType}`);
     this.showError(
-      `Impossibile salvare ${entityType}. Riprova più tardi o controlla la connessione.`,
-      'Errore di salvataggio',
+      i18n.t('feedback.saveError', { entity: translatedEntity }),
+      i18n.t('feedback.saveErrorTitle'),
       retryAction
     );
   }
@@ -111,7 +112,14 @@ export class UserFeedbackService {
    * Mostra un successo di salvataggio
    */
   static showSaveSuccess(entityType: 'analisi' | 'check-in' | 'dati salute' | 'dati'): void {
-    this.showSuccess(`${entityType.charAt(0).toUpperCase() + entityType.slice(1)} salvato con successo.`);
+    const translatedEntity = i18n.t(`feedback.entities.${entityType}`);
+
+    // In Italian, we have specific keys for feminine entities to avoid "Analisi salvato"
+    const successKey = i18n.exists(`feedback.saveSuccess_${entityType}`)
+      ? `feedback.saveSuccess_${entityType}`
+      : 'feedback.saveSuccess';
+
+    this.showSuccess(i18n.t(successKey, { entity: translatedEntity }));
   }
 
   /**
@@ -120,14 +128,14 @@ export class UserFeedbackService {
   private static getDefaultTitle(type: FeedbackType): string {
     switch (type) {
       case 'success':
-        return 'Successo';
+        return i18n.t('common.success');
       case 'error':
-        return 'Errore';
+        return i18n.t('common.error');
       case 'warning':
-        return 'Attenzione';
+        return i18n.t('common.warning');
       case 'info':
       default:
-        return 'Informazione';
+        return i18n.t('common.info');
     }
   }
 }
