@@ -2359,19 +2359,6 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
           </LinearGradient>
 
-          {/* Empty State - Show only when data is loaded and no food analyses exist */}
-          {!isLoadingData && !latestFoodSession && (
-            <View style={{ marginTop: 40 }}>
-              <EmptyStateCard
-                type="food"
-                onAction={handleStartAnalysis}
-                showLearnMore={false}
-              />
-            </View>
-          )}
-
-          {/* Nutritional Goals Card removed and replaced by quick action button below */}
-
           {/* Daily Intake Section - Always visible */}
           <View style={styles.sectionHeader}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -3189,7 +3176,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                 autoFocus
               />
 
-              <View style={[styles.slotModalActions, { marginTop: 12, gap: 12 }]}>
+              <View style={[styles.slotModalActions, { marginTop: 20, gap: 12 }]}>
                 <TouchableOpacity
                   style={[styles.secondaryButton, {
                     flex: 1,
@@ -3620,7 +3607,8 @@ const styles = StyleSheet.create({
   slotModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 80,
   },
   slotModalCard: {
     borderRadius: 24,

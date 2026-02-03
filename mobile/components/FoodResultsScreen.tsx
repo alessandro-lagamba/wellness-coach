@@ -468,15 +468,6 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
             </View>
           )}
 
-          {/* Intelligent Insights */}
-          <IntelligentInsightsSection
-            category="food"
-            data={insightsData}
-            showTitle={true}
-            maxInsights={3}
-            compact={false}
-          />
-
           {/* Recommendations */}
           {recommendations.length > 0 && (
             <>

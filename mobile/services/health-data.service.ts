@@ -43,7 +43,10 @@ const getHealthDataSyncService = async () => {
 };
 
 // Platform-specific module references
+// 🔥 CRITICAL FIX: In Release builds with Hermes, react-native-health's Object.assign
+// doesn't copy non-enumerable native methods. We MUST use NativeModules directly.
 let AppleHealthKit: any = null;
+let HealthKitConstants: any = null; // 🆕 Separate reference for Constants only
 let HealthConnect: any = null;
 
 // 🔥 SINGLE SOURCE OF TRUTH: Helper function to resolve the native module
@@ -61,43 +64,43 @@ const getHealthKitNativeModule = (): any => {
 // 🔥 CRITICAL: Import modules based on platform to avoid loading incompatible code
 if (Platform.OS === 'ios') {
   try {
-    // Use the react-native-health wrapper (works in both Debug and Release)
-    const HealthKitModule = require('react-native-health');
-    AppleHealthKit = HealthKitModule.default || HealthKitModule;
+    // 🔥 FIX: Use NativeModules DIRECTLY for method calls (bypasses Object.assign issue)
+    AppleHealthKit = getHealthKitNativeModule();
 
-    // Verify native module exists (for diagnostics only) - 🔥 FIX: Use helper function
-    const nativeHK = getHealthKitNativeModule();
-
-    if (!nativeHK) {
-      console.warn('[HealthKit] ⚠️ Native module not found in NativeModules - may not be linked');
-    } else {
-      console.log('[HealthKit] ✅ Native HealthKit module present');
+    // 🆕 Use the react-native-health wrapper ONLY for Constants (permissions enum)
+    try {
+      const HealthKitWrapper = require('react-native-health');
+      const wrapper = HealthKitWrapper.default || HealthKitWrapper;
+      HealthKitConstants = wrapper?.Constants ?? {};
+      console.log('[HealthKit] ✅ Constants loaded from wrapper');
+    } catch (constErr) {
+      console.warn('[HealthKit] ⚠️ Could not load Constants from wrapper:', constErr);
+      HealthKitConstants = {}; // Fallback to empty
     }
 
-    // Verify wrapper has the methods we need
-    if (AppleHealthKit) {
+    if (!AppleHealthKit) {
+      console.error('[HealthKit] ❌ Native module not found in NativeModules - may not be linked');
+      console.log('[HealthKit] 🔍 Available NativeModules:', Object.keys(NativeModules || {}).filter(k => k.toLowerCase().includes('health')));
+    } else {
+      console.log('[HealthKit] ✅ Native HealthKit module present via NativeModules');
+
+      // Verify native module has the methods we need
       const hasInitMethod = typeof AppleHealthKit.initHealthKit === 'function';
       const hasStepsMethod = typeof AppleHealthKit.getStepCount === 'function';
-      console.log('[HealthKit] ✅ AppleHealthKit module loaded:', { hasInitMethod, hasStepsMethod });
-
-      // If wrapper doesn't have methods, try .default
-      if (!hasInitMethod && AppleHealthKit.default) {
-        console.log('[HealthKit] 🔧 Switching to .default export');
-        AppleHealthKit = AppleHealthKit.default;
-      }
+      console.log('[HealthKit] ✅ Native methods check:', { hasInitMethod, hasStepsMethod });
 
       // 🔥 CRITICAL: Validate all required methods exist (for Release debugging)
       const requiredMethods = ['initHealthKit', 'getStepCount', 'getHeartRateSamples', 'getSleepSamples', 'getHeartRateVariabilitySamples'];
       const missingMethods = requiredMethods.filter(m => typeof AppleHealthKit?.[m] !== 'function');
       if (missingMethods.length > 0) {
-        console.error('[HealthKit] ❌ Missing required methods:', missingMethods);
-        console.log('[HealthKit] Available keys:', AppleHealthKit ? Object.keys(AppleHealthKit).slice(0, 20) : 'null');
+        console.error('[HealthKit] ❌ Missing required methods from NativeModule:', missingMethods);
+        console.log('[HealthKit] Available keys on NativeModule:', AppleHealthKit ? Object.keys(AppleHealthKit).slice(0, 20) : 'null');
       } else {
-        console.log('[HealthKit] ✅ All required methods present');
+        console.log('[HealthKit] ✅ All required native methods present');
       }
     }
   } catch (error) {
-    console.error('[HealthKit] ❌ Failed to load react-native-health:', error);
+    console.error('[HealthKit] ❌ Failed to load HealthKit:', error);
   }
 } else if (Platform.OS === 'android') {
   try {
@@ -108,6 +111,7 @@ if (Platform.OS === 'ios') {
     console.error('[HealthConnect] ❌ Failed to load react-native-health-connect:', error);
   }
 }
+
 
 
 export class HealthDataService {
@@ -363,7 +367,8 @@ export class HealthDataService {
 
   private async requestHealthKitPermissions(): Promise<HealthPermissions> {
     // ✅ Permessi robusti: prendi solo quelli definiti
-    const PERMS = AppleHealthKit?.Constants?.Permissions || {};
+    // 🔥 FIX: Use HealthKitConstants (from wrapper) not AppleHealthKit (native module)
+    const PERMS = HealthKitConstants?.Permissions ?? {};
     const readPerms = [
       PERMS.Steps,
       PERMS.StepCount,
@@ -663,7 +668,8 @@ export class HealthDataService {
       return { success: false, error: 'HealthKit native module missing' };
     }
 
-    const PERMS = AppleHealthKit?.Constants?.Permissions || {};
+    // 🔥 FIX: Use HealthKitConstants (from wrapper) not AppleHealthKit (native module)
+    const PERMS = HealthKitConstants?.Permissions ?? {};
 
     // ✅ Only defined permissions
     const readPerms = [
