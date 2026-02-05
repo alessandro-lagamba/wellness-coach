@@ -967,10 +967,11 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   }, [widgetsLoading]);
 
   useEffect(() => {
-    // 🔥 FIX: Crea una chiave univoca per healthData per evitare processamenti duplicati
+    // 🔥 FIX: Crea una chiave univoca per healthData e dailyIntake per evitare processamenti duplicati
+    // ma assicurare l'aggiornamento quando cambiano le calorie
     const healthDataKey = healthData
-      ? `${healthData.steps}-${healthData.heartRate}-${healthData.sleepHours}-${healthData.hrv}`
-      : 'null';
+      ? `${healthData.steps}-${healthData.heartRate}-${healthData.sleepHours}-${healthData.hrv}-${dailyIntake?.calories || 0}-${dailyIntake?.carbohydrates || 0}-${dailyIntake?.proteins || 0}-${dailyIntake?.fats || 0}`
+      : `null-${dailyIntake?.calories || 0}`;
 
     // 🔥 FIX: Evita processamento se i dati non sono cambiati
     if (healthDataKey === lastProcessedHealthDataRef.current) {
@@ -978,12 +979,13 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     }
 
     (async () => {
-      // 🔥 DEBUG: Trace widget loading flow
+      // ... rest of the effect logic ...
       console.log('[WIDGET DEBUG] useEffect triggered:', {
         healthStatus,
         hasAnyHealthPermission,
         healthDataExists: healthData !== null,
         steps: healthData?.steps,
+        calories: dailyIntake?.calories,
         isInitialized
       });
 
@@ -991,56 +993,30 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       // 🔥 FIX: Accetta sia 'ready' che 'empty' - i widget devono caricare anche con dati a 0
       if (healthStatus !== 'ready' && healthStatus !== 'empty') {
         console.log('[WIDGET DEBUG] Early return: healthStatus is', healthStatus);
-        // Don't show anything until health is ready or empty - keep showing loader
         return;
       }
 
-      // 🔥 FIX: Se abbiamo dati reali (steps > 0), significa che abbiamo i permessi
-      // La presenza di dati reali DIMOSTRA che abbiamo i permessi, quindi ignorare hasAnyHealthPermission
-      // Questo risolve il bug dove hasAnyHealthPermission rimaneva false nonostante HealthKit funzionasse
       const hasRealData = healthData !== null && healthData !== undefined && (
         (healthData.steps && healthData.steps > 0) ||
         (healthData.heartRate && healthData.heartRate > 0) ||
         (healthData.sleepHours && healthData.sleepHours > 0) ||
-        (healthData.hrv && healthData.hrv > 0)
+        (healthData.hrv && healthData.hrv > 0) ||
+        (dailyIntake && dailyIntake.calories > 0) // 🔥 FIX: Anche le calorie sono dati reali
       );
 
-      // 🔥 FIX: Usa hasRealData OPPURE hasAnyHealthPermission (non entrambi richiesti)
-      if (healthData !== null && healthData !== undefined && (hasRealData || hasAnyHealthPermission)) {
-        console.log('[WIDGET DEBUG] Building widget data:', { hasRealData, hasAnyHealthPermission, steps: healthData?.steps });
+      if ((healthData !== null && healthData !== undefined && (hasRealData || hasAnyHealthPermission)) || (dailyIntake !== null)) {
+        console.log('[WIDGET DEBUG] Building widget data:', { hasRealData, hasAnyHealthPermission, steps: healthData?.steps, calories: dailyIntake?.calories });
 
-        // 🔥 Aggiorna i widget SOLO se i dati sono reali o se non abbiamo ancora dati
-        // Questo previene che i widget vengano aggiornati con dati mock
         if (hasRealData || !lastProcessedHealthDataRef.current || lastProcessedHealthDataRef.current.startsWith('placeholder-')) {
           try {
-            // 🔥 FIX: Usa sempre reloadWidgetDataFromDatabase per assicurare il merge con i dati manuali del DB
-            // Precedentemente, buildWidgetDataFromHealth usava solo i dati dal hook (healthData),
-            // sovrascrivendo con 0 i dati manuali (meditazione, idratazione) se non presenti in HealthKit.
             await reloadWidgetDataFromDatabase();
-
-            // 🔥 FIX: Aggiorna il ref solo dopo aver costruito i dati con successo
             lastProcessedHealthDataRef.current = healthDataKey;
-            setWidgetsLoading(false); // 🔥 FIX: Mark widgets as loaded
-            console.log('[WIDGET DEBUG] ✅ Widgets loaded, merged with DB data');
-            // Aggiorna anche la sezione Today At a Glance
-            loadTodayGlanceData();
+            setWidgetsLoading(false);
           } catch (error) {
-            // 🔥 FIX: Solo errori critici in console + feedback utente per errori critici
             console.error('❌ Error building widget data from health:', error);
-            // Mostra feedback utente solo per errori critici (non per errori di rete temporanei)
-            if (error instanceof Error && error.message.includes('critical')) {
-              Alert.alert(
-                t('common.error') || 'Errore',
-                t('home.errors.widgetDataLoad') || 'Errore nel caricamento dei dati dei widget. Riprova più tardi.'
-              );
-            }
           }
-        } else {
-          // 🔥 Se i dati sono mock ma abbiamo già dati reali, non aggiornare i widget
-          // 🔥 PERF: Removed verbose skip logging
         }
       } else if (isInitialized && (healthData === null || healthData === undefined) && !hasAnyHealthPermission) {
-        // Se non ci sono dati E non ci sono permessi, usa i mock
         try {
           const goals = await widgetGoalsService.getGoals();
           const widgetData = WidgetDataService.generateWidgetData(goals, userGender === 'female' ? cycleData : null);
@@ -1048,31 +1024,24 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             ...w,
             title: translateWidgetTitle(w.id),
           }));
-          // 🔥 FIX: Aggiorna il ref anche per i mock
           lastProcessedHealthDataRef.current = healthDataKey;
           setWidgetData(translatedWidgetData);
-          setWidgetsLoading(false); // 🔥 FIX: Mark widgets as loaded for mock data
+          setWidgetsLoading(false);
         } catch (error) {
-          // 🔥 FIX: Solo errori critici in console + feedback utente per errori critici
           console.error('❌ Error generating mock widget data:', error);
-          // Mostra feedback utente solo per errori critici
-          if (error instanceof Error && error.message.includes('critical')) {
-            Alert.alert(
-              t('common.error') || 'Errore',
-              t('home.errors.mockDataLoad') || 'Errore nel caricamento dei dati mock. Riprova più tardi.'
-            );
-          }
         }
       }
     })();
   }, [
-    healthData, // 🔥 FIX: Solo healthData - le proprietà nested cambiano automaticamente
+    healthData,
+    dailyIntake, // 🔥 Aggiunto dailyIntake
     isInitialized,
     hasAnyHealthPermission,
     healthStatus,
-    buildWidgetDataFromHealth, // 🔥 FIX: Aggiungiamo la funzione memoizzata
-    translateWidgetTitle, // 🔥 FIX: Aggiungiamo la funzione memoizzata
-    loadTodayGlanceData, // 🔥 FIX: Aggiungiamo la funzione memoizzata
+    buildWidgetDataFromHealth,
+    translateWidgetTitle,
+    loadTodayGlanceData,
+    reloadWidgetDataFromDatabase, // 🔥 Aggiunto reloadWidgetDataFromDatabase
   ]);
 
   // Intelligent insights are now handled by DailyCopilot component
@@ -2952,21 +2921,28 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         onClose={() => setHydrationActionModal(false)}
         currentGlasses={widgetData.find(w => w.id === 'hydration')?.hydration?.glasses || 0}
         goalGlasses={widgetData.find(w => w.id === 'hydration')?.hydration?.goal || 8}
+        unitLabel={widgetData.find(w => w.id === 'hydration')?.hydration?.unitLabel}
+        unitLabelPlural={t(`home.widgets.units.${widgetData.find(w => w.id === 'hydration')?.hydration?.preferredUnit || 'glass'}_other`)}
         onAdd={async (quantity: number) => {
           // 1. Optimistic Update
-          const GLASS_SIZE = 1; // Assuming 1 unit/glass in logic
+          const hydrationInfo = widgetData.find(w => w.id === 'hydration')?.hydration;
+          const preferredUnit = hydrationInfo?.preferredUnit || 'glass';
+          const unitConfig = hydrationUnitService.getUnitConfig(preferredUnit as any);
+          const mlPerUnit = unitConfig.mlPerUnit || 250;
+
           setWidgetData(currentData => {
             return currentData.map(w => {
               if (w.id === 'hydration' && w.hydration) {
                 const currentGlasses = w.hydration.glasses || 0;
+                const addedMl = quantity * mlPerUnit;
                 return {
                   ...w,
                   hydration: {
                     ...w.hydration,
-                    glasses: currentGlasses + quantity, // Optimistic add
-                    ml: (w.hydration.ml || 0) + (quantity * 250)
+                    glasses: Math.round((currentGlasses + quantity) * 10) / 10, // Optimistic add
+                    ml: (w.hydration.ml || 0) + addedMl
                   },
-                  value: `${currentGlasses + quantity}`
+                  value: `${Math.round((currentGlasses + quantity) * 10) / 10}`
                 };
               }
               return w;
@@ -2976,19 +2952,17 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           const currentUser = await AuthService.getCurrentUser();
           if (!currentUser?.id) return;
 
-          // 🔥 FIX: Usa funzione batch per aggiungere tutti i bicchieri in una volta
-          const result = await TodayGlanceService.addWaterGlasses(currentUser.id, quantity);
+          // 🔥 FIX: Usa la nuova funzione unificata con ML
+          const result = await TodayGlanceService.addWater(currentUser.id, quantity * mlPerUnit);
 
           if (result.success) {
-            const { hydrationUnitService } = await import('../services/hydration-unit.service');
-            const unit = await hydrationUnitService.getPreferredUnit();
-            const config = hydrationUnitService.getUnitConfig(unit);
-            const units = hydrationUnitService.mlToUnit(result.newHydration || 0, unit);
+            const units = hydrationUnitService.mlToUnit(result.newHydration || 0, preferredUnit as any);
+            const unitLabelKey = `home.widgets.units.${preferredUnit}_${units === 1 ? 'one' : 'other'}`;
 
             UserFeedbackService.showSuccess(
               t('home.hydrationActions.addedSuccess', {
                 units: Math.round(units * 10) / 10,
-                unitLabel: units === 1 ? t('home.widgets.units.glass_one') : t('home.widgets.units.glass_other')
+                unitLabel: t(unitLabelKey)
               }),
               t('home.hydrationActions.addedTitle')
             );
@@ -3005,19 +2979,24 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         }}
         onRemove={async (quantity: number) => {
           // 1. Optimistic Update
+          const hydrationInfo = widgetData.find(w => w.id === 'hydration')?.hydration;
+          const preferredUnit = hydrationInfo?.preferredUnit || 'glass';
+          const unitConfig = hydrationUnitService.getUnitConfig(preferredUnit as any);
+          const mlPerUnit = unitConfig.mlPerUnit || 250;
           setWidgetData(currentData => {
             return currentData.map(w => {
               if (w.id === 'hydration' && w.hydration) {
                 const currentGlasses = w.hydration.glasses || 0;
                 const newGlasses = Math.max(0, currentGlasses - quantity);
+                const removedMl = quantity * mlPerUnit;
                 return {
                   ...w,
                   hydration: {
                     ...w.hydration,
-                    glasses: newGlasses, // Optimistic remove
-                    ml: Math.max(0, (w.hydration.ml || 0) - (quantity * 250))
+                    glasses: Math.round(newGlasses * 10) / 10, // Optimistic remove
+                    ml: Math.max(0, (w.hydration.ml || 0) - removedMl)
                   },
-                  value: `${newGlasses}`
+                  value: `${Math.round(newGlasses * 10) / 10}`
                 };
               }
               return w;
@@ -3027,19 +3006,17 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           const currentUser = await AuthService.getCurrentUser();
           if (!currentUser?.id) return;
 
-          // 🔥 FIX: Usa funzione batch per rimuovere tutti i bicchieri in una volta
-          const result = await TodayGlanceService.removeWaterGlasses(currentUser.id, quantity);
+          // 🔥 FIX: Usa la nuova funzione unificata con ML
+          const result = await TodayGlanceService.removeWater(currentUser.id, quantity * mlPerUnit);
 
           if (result.success) {
-            const { hydrationUnitService } = await import('../services/hydration-unit.service');
-            const unit = await hydrationUnitService.getPreferredUnit();
-            const config = hydrationUnitService.getUnitConfig(unit);
-            const units = hydrationUnitService.mlToUnit(result.newHydration || 0, unit);
+            const units = hydrationUnitService.mlToUnit(result.newHydration || 0, preferredUnit as any);
+            const unitLabelKey = `home.widgets.units.${preferredUnit}_${units === 1 ? 'one' : 'other'}`;
 
             UserFeedbackService.showSuccess(
               t('home.hydrationActions.removedSuccess', {
                 units: Math.round(units * 10) / 10,
-                unitLabel: units === 1 ? t('home.widgets.units.glass_one') : t('home.widgets.units.glass_other')
+                unitLabel: t(unitLabelKey)
               }),
               t('home.hydrationActions.removedTitle')
             );

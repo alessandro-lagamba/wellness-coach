@@ -882,7 +882,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                         </Text>
                       </View>
 
-                      <View style={styles.cardSection}>
+                      <View style={[styles.cardSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                         <View style={styles.preferencesHeader}>
                           <View style={styles.preferencesIconWrapper}>
                             <MaterialCommunityIcons name="silverware-fork-knife" size={20} color={colors.primary} />
@@ -965,12 +965,12 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                                 key={item}
                                 style={[
                                   styles.preferenceChipModern,
-                                  { backgroundColor: '#D4F4DD' },
+                                  { backgroundColor: colors.success + '20' },
                                 ]}
                               >
-                                <Text style={[styles.preferenceChipTextModern, { color: '#1A5D1A' }]}>{item}</Text>
+                                <Text style={[styles.preferenceChipTextModern, { color: colors.success }]}>{item}</Text>
                                 <TouchableOpacity onPress={() => handleRemoveFavorite(item)} style={styles.chipRemoveModern}>
-                                  <Text style={[styles.chipRemoveText, { color: '#1A5D1A' }]}>×</Text>
+                                  <Text style={[styles.chipRemoveText, { color: colors.success }]}>×</Text>
                                 </TouchableOpacity>
                               </View>
                             ))}
@@ -1005,12 +1005,12 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                                 key={item}
                                 style={[
                                   styles.preferenceChipModern,
-                                  { backgroundColor: '#FFE5E5' },
+                                  { backgroundColor: colors.error + '20' },
                                 ]}
                               >
-                                <Text style={[styles.preferenceChipTextModern, { color: '#C62828' }]}>{item}</Text>
+                                <Text style={[styles.preferenceChipTextModern, { color: colors.error }]}>{item}</Text>
                                 <TouchableOpacity onPress={() => handleRemoveAllergy(item)} style={styles.chipRemoveModern}>
-                                  <Text style={[styles.chipRemoveText, { color: '#C62828' }]}>×</Text>
+                                  <Text style={[styles.chipRemoveText, { color: colors.error }]}>×</Text>
                                 </TouchableOpacity>
                               </View>
                             ))}
@@ -1037,7 +1037,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                       </View>
 
                       {/* Inserimento rapido */}
-                      <View style={[styles.cardSection, styles.quickAddSection]}>
+                      <View style={[styles.cardSection, styles.quickAddSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                         <View style={styles.quickAddHeader}>
                           <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>
                             {t('analysis.food.fridge.quickAdd')}
@@ -1132,7 +1132,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
 
                       {/* Ingredienti salvati */}
                       {savedIngredients.length > 0 && (
-                        <View style={styles.cardSection}>
+                        <View style={[styles.cardSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                           <Text style={[styles.sectionTitle, { color: colors.text }]}>
                             {t('analysis.food.fridge.savedIngredients') || 'Ingredienti Salvati'}
                           </Text>
@@ -1191,7 +1191,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                           {savedIngredients
                             .filter(item => categoryFilter === null || item.category === categoryFilter)
                             .map((item) => (
-                              <View key={item.id} style={styles.savedIngredientCard}>
+                              <View key={item.id} style={[styles.savedIngredientCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                                 <Text style={styles.savedIngredientName}>{item.name}</Text>
                                 <View style={styles.savedIngredientActions}>
                                   <TouchableOpacity
@@ -1212,7 +1212,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                                   </TouchableOpacity>
                                   <TouchableOpacity
                                     onPress={() => removeSavedIngredient(item.id)}
-                                    style={[styles.actionButton, { backgroundColor: '#FEF2F2' }]}
+                                    style={[styles.actionButton, { backgroundColor: colors.error + '15' }]}
                                   >
                                     <FontAwesome name="trash-o" size={18} color="#EF4444" />
                                   </TouchableOpacity>
@@ -1605,7 +1605,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderRadius: 24,
     padding: 20,
     marginBottom: 24,
@@ -1615,7 +1615,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F8FAFC',
+    borderColor: 'transparent',
   },
   preferencesHeader: {
     flexDirection: 'row',
@@ -1624,7 +1624,7 @@ const styles = StyleSheet.create({
   },
   preferencesLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     marginTop: 8,
     marginBottom: 6,
   },
@@ -1641,7 +1641,7 @@ const styles = StyleSheet.create({
   },
   cuisineOptionText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   cuisineDropdown: {
     flexDirection: 'row',
@@ -1704,13 +1704,15 @@ const styles = StyleSheet.create({
   },
   preferencesSubtitle: {
     fontSize: 13,
+    fontFamily: 'Figtree_500Medium',
     marginTop: 2, // Ridotto da 4
     lineHeight: 18,
   },
   preferencesLabelUppercase: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     letterSpacing: 0.8,
+    textTransform: 'uppercase', // Assicuriamoci che sia uppercase se non lo è già
     marginTop: 12, // Ridotto da 16
     marginBottom: 8, // Ridotto da 10
   },
@@ -1772,12 +1774,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   savedIngredientCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderRadius: 16,
     padding: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1789,8 +1791,7 @@ const styles = StyleSheet.create({
   },
   savedIngredientName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontFamily: 'Figtree_700Bold',
     flex: 1,
   },
   savedIngredientActions: {
@@ -1803,7 +1804,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
   },
   quickAddHeader: {
     flexDirection: 'row',
@@ -1822,7 +1822,7 @@ const styles = StyleSheet.create({
   },
   photoButtonText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   micButton: {
     flexDirection: 'row',
@@ -1835,14 +1835,14 @@ const styles = StyleSheet.create({
   },
   micButtonText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   chipsSection: {
     marginTop: 16,
   },
   chipsLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 8,
   },
   chipsContainer: {
@@ -1867,7 +1867,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   chipRemove: {
     padding: 4,
@@ -1883,7 +1883,7 @@ const styles = StyleSheet.create({
   },
   confirmChipsText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   infoText: {
     flex: 1,
@@ -1895,7 +1895,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 16,
   },
   ingredientRowContainer: {
@@ -1910,8 +1910,6 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    backgroundColor: '#F8FAFC',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -1936,8 +1934,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    backgroundColor: '#F8FAFC',
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 12,
@@ -2260,7 +2256,7 @@ const styles = StyleSheet.create({
   },
   categoryLabel: {
     fontSize: 12,
-    fontFamily: 'Figtree_700Bold', // Was 600
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 6,
   },
   categoryChips: {
@@ -2289,7 +2285,7 @@ const styles = StyleSheet.create({
   },
   categoryChipText: {
     fontSize: 12,
-    fontFamily: 'Figtree_700Bold', // Was 600
+    fontFamily: 'Figtree_700Bold',
   },
   commaHintContainer: {
     flexDirection: 'row',

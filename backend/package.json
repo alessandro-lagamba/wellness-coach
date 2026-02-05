@@ -19,7 +19,6 @@
     "@types/fluent-ffmpeg": "^2.1.28",
     "@types/multer": "^2.0.0",
     "@types/ws": "^8.18.1",
-    "@wellness-coach/shared": "workspace:*",
     "axios": "^1.12.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",

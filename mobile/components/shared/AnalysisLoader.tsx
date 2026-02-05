@@ -161,14 +161,14 @@ const styles = StyleSheet.create({
     },
     eyebrow: {
         fontSize: 11,
-        fontWeight: '800',
+        fontFamily: 'Figtree_700Bold',
         letterSpacing: 1.5,
         textTransform: 'uppercase',
         opacity: 0.9,
     },
     message: {
         fontSize: 16, // Slightly larger
-        fontWeight: '600',
+        fontFamily: 'Figtree_700Bold',
         letterSpacing: 0.3,
         textAlign: 'center',
         flexWrap: 'wrap',

@@ -119,10 +119,41 @@ class RecipeLibraryService {
     return data ? this.mapRow(data) : null;
   }
 
+  /**
+   * Find a recipe by exact title match (case-insensitive)
+   */
+  async findExactByTitle(title: string): Promise<UserRecipe | null> {
+    const user = await AuthService.getCurrentUser();
+    if (!user || !title.trim()) return null;
+
+    const normalizedTitle = title.trim();
+
+    const { data, error } = await supabase
+      .from('user_recipes')
+      .select('*')
+      .eq('user_id', user.id)
+      .ilike('title', normalizedTitle)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('[RecipeLibrary] findExactByTitle error', error);
+      return null;
+    }
+
+    return data ? this.mapRow(data) : null;
+  }
+
   async save(input: SaveRecipeInput): Promise<UserRecipe> {
     const user = await AuthService.getCurrentUser();
     if (!user) {
       throw new Error('User not authenticated');
+    }
+
+    // 🔥 SOLUTION 3: Check for exact name duplicate before saving
+    const existing = await this.findExactByTitle(input.title);
+    if (existing) {
+      console.log(`[RecipeLibrary] Recipe "${input.title}" already exists, updating...`);
+      return this.update(existing.id, input);
     }
 
     const payload = this.serializePayload(input, user.id);
@@ -316,6 +347,3 @@ class RecipeLibraryService {
 
 export const recipeLibraryService = RecipeLibraryService.getInstance();
 export default recipeLibraryService;
-
-
-

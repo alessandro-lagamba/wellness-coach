@@ -23,6 +23,8 @@ interface HydrationActionModalProps {
   onRemove: (quantity: number) => void;
   currentGlasses?: number;
   goalGlasses?: number;
+  unitLabel?: string;
+  unitLabelPlural?: string;
 }
 
 export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
@@ -32,6 +34,8 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
   onRemove,
   currentGlasses = 0,
   goalGlasses = 8,
+  unitLabel,
+  unitLabelPlural,
 }) => {
   const { colors, mode } = useTheme();
   const { t } = useTranslation();
@@ -87,6 +91,10 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
 
   const progressPercent = Math.min((currentGlasses / goalGlasses) * 100, 100);
 
+  // Fallback labels if not provided
+  const labelOne = unitLabel || t('home.hydrationActions.glass') || 'bicchiere';
+  const labelMany = unitLabelPlural || t('home.hydrationActions.glasses') || 'bicchieri';
+
   return (
     <Modal
       visible={visible}
@@ -134,7 +142,7 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
                 {t('home.hydrationActions.menuTitle') || 'Idratazione'}
               </Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                {currentGlasses} / {goalGlasses} {t('home.hydrationActions.glasses') || 'bicchieri'}
+                {currentGlasses} / {goalGlasses} {labelMany}
               </Text>
             </View>
           </View>
@@ -249,8 +257,8 @@ export const HydrationActionModal: React.FC<HydrationActionModalProps> = ({
                 />
                 <Text style={styles.confirmText}>
                   {isAdding
-                    ? `${t('home.hydrationActions.add') || 'Aggiungi'} ${quantity} ${quantity === 1 ? t('home.hydrationActions.glass') || 'bicchiere' : t('home.hydrationActions.glasses') || 'bicchieri'}`
-                    : `${t('home.hydrationActions.remove') || 'Rimuovi'} ${quantity} ${quantity === 1 ? t('home.hydrationActions.glass') || 'bicchiere' : t('home.hydrationActions.glasses') || 'bicchieri'}`
+                    ? `${t('home.hydrationActions.add') || 'Aggiungi'} ${quantity} ${quantity === 1 ? labelOne : labelMany}`
+                    : `${t('home.hydrationActions.remove') || 'Rimuovi'} ${quantity} ${quantity === 1 ? labelOne : labelMany}`
                   }
                 </Text>
               </LinearGradient>

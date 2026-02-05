@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator, useColorScheme } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator, useColorScheme, Modal, TextInput, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SafeAreaWrapper } from './shared/SafeAreaWrapper';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -18,6 +18,8 @@ import { Switch } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext'; // 🆕 Theme hook
 import { EmptyStateCard } from './EmptyStateCard';
 import WellnessSyncService from '../services/wellness-sync.service';
+import { UserFeedbackService } from '../services/user-feedback.service';
+import Constants from 'expo-constants';
 
 interface SettingsItem {
   id: string;
@@ -303,6 +305,110 @@ const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
   );
 };
 
+// ---------------- Feedback Modal ----------------
+const FeedbackModal = ({
+  visible,
+  onClose,
+  userProfile
+}: {
+  visible: boolean;
+  onClose: () => void;
+  userProfile: UserProfile | null;
+}) => {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const [message, setMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSend = async () => {
+    if (!message.trim() || !userProfile?.id) return;
+
+    setIsSending(true);
+    try {
+      const metadata = {
+        platform: Platform.OS,
+        version: Constants.expoConfig?.version || '1.0.0',
+        device: Platform.select({ ios: 'iPhone/iPad', android: 'Android Device', default: 'Web' }),
+        timestamp: new Date().toISOString()
+      };
+
+      const result = await UserFeedbackService.sendFeedback(userProfile.id, message, metadata);
+
+      if (result.success) {
+        Alert.alert(t('common.success'), t('settings.feedbackSuccess'));
+        setMessage('');
+        onClose();
+      } else {
+        Alert.alert(t('common.error'), t('settings.feedbackError'));
+      }
+    } catch (error) {
+      Alert.alert(t('common.error'), t('settings.feedbackError'));
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.feedbackModalContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <View style={styles.feedbackModalHeader}>
+            <Text style={[styles.feedbackModalTitle, { color: colors.text }]}>{t('settings.feedback')}</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <FontAwesome name="times" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[styles.feedbackModalSubtitle, { color: colors.textSecondary }]}>
+            {t('settings.feedbackDescription')}
+          </Text>
+
+          <TextInput
+            style={[
+              styles.feedbackInput,
+              {
+                backgroundColor: colors.surface,
+                color: colors.text,
+                borderColor: colors.border
+              }
+            ]}
+            placeholder={t('settings.feedbackPlaceholder')}
+            placeholderTextColor={colors.textTertiary}
+            multiline
+            numberOfLines={6}
+            value={message}
+            onChangeText={setMessage}
+            textAlignVertical="top"
+          />
+
+          <TouchableOpacity
+            style={[
+              styles.feedbackSubmitBtn,
+              {
+                backgroundColor: colors.primary,
+                opacity: (!message.trim() || isSending) ? 0.6 : 1
+              }
+            ]}
+            onPress={handleSend}
+            disabled={!message.trim() || isSending}
+          >
+            {isSending ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.feedbackSubmitText}>{t('settings.feedbackSubmit')}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }) => {
   const { t, language, changeLanguage } = useTranslation(); // 🆕 Hook traduzioni
   const { mode, colors, toggleTheme } = useTheme(); // 🆕 Theme hook
@@ -320,6 +426,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   const [requestingWellnessPermissions, setRequestingWellnessPermissions] = useState<boolean>(false);
   const [wellnessPermissions, setWellnessPermissions] = useState({ calendar: false, notifications: false });
   const [syncService] = useState(() => WellnessSyncService.getInstance());
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const emailVerified = Boolean(resolvedUser?.email_confirmed_at);
 
@@ -343,6 +450,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
     { id: 'notifications', label: t('settings.notificationsTitle'), description: t('settings.notificationsDescription'), icon: 'bell' },
     { id: 'subscription', label: t('settings.subscription'), description: t('settings.subscriptionDescription'), icon: 'credit-card' },
     { id: 'about', label: t('settings.about'), description: t('settings.aboutDescription'), icon: 'info-circle' },
+    { id: 'feedback', label: t('settings.feedback'), description: t('settings.feedbackDescription'), icon: 'commenting-o' },
   ];
 
   useEffect(() => {
@@ -769,6 +877,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       case 'about':
         Alert.alert(t('settings.aboutTitle'), t('settings.aboutMessage'));
         break;
+      case 'feedback':
+        setShowFeedbackModal(true);
+        break;
       default:
         break;
     }
@@ -1039,6 +1150,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
         loading={requestingWellnessPermissions}
         missingCalendar={!wellnessPermissions.calendar}
         missingNotifications={!wellnessPermissions.notifications}
+      />
+
+      <FeedbackModal
+        visible={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        userProfile={userProfile}
       />
     </SafeAreaWrapper>
   );
@@ -1333,6 +1450,60 @@ const styles = StyleSheet.create({
   },
   permissionCardActionText: {
     fontSize: 13,
+    fontFamily: 'Figtree_700Bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  feedbackModalContent: {
+    padding: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  feedbackModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  feedbackModalTitle: {
+    fontSize: 20,
+    fontFamily: 'Figtree_700Bold',
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  feedbackModalSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Figtree_500Medium',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  feedbackInput: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    minHeight: 120,
+    fontSize: 16,
+    fontFamily: 'Figtree_500Medium',
+    marginBottom: 24,
+  },
+  feedbackSubmitBtn: {
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  feedbackSubmitText: {
+    color: '#fff',
+    fontSize: 16,
     fontFamily: 'Figtree_700Bold',
   },
 });

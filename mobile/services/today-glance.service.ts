@@ -304,8 +304,8 @@ export class TodayGlanceService {
    * @returns true se l'operazione è riuscita, false altrimenti
    */
   static async removeWaterGlass(userId: string): Promise<{ success: boolean; error?: string; newHydration?: number }> {
-    // 🔥 Use the batch function for a single glass
-    return this.removeWaterGlasses(userId, 1);
+    // 🔥 Use the generic function for a single glass
+    return this.removeWater(userId, 250);
   }
 
   /**
@@ -314,6 +314,15 @@ export class TodayGlanceService {
    * @returns true se l'operazione è riuscita, false altrimenti
    */
   static async removeWaterGlasses(userId: string, quantity: number): Promise<{ success: boolean; error?: string; newHydration?: number }> {
+    return this.removeWater(userId, quantity * 250);
+  }
+
+  /**
+   * Rimuove una quantità specifica di acqua in ML
+   * @param userId - ID dell'utente
+   * @param ml - Quantità in millilitri da rimuovere
+   */
+  static async removeWater(userId: string, ml: number): Promise<{ success: boolean; error?: string; newHydration?: number }> {
     try {
       const { supabase } = await import('../lib/supabase');
       // 🔥 FIX: Robust fallback for Release builds (handle both named and default exports)
@@ -328,7 +337,6 @@ export class TodayGlanceService {
         String(now.getMonth() + 1).padStart(2, '0'),
         String(now.getDate()).padStart(2, '0')
       ].join('-'); // YYYY-MM-DD (Local)
-      const GLASS_SIZE_ML = 250; // Un bicchiere standard è 250ml
 
       // Recupera i dati di salute attuali per oggi
       const { data: existingData } = await supabase
@@ -338,15 +346,15 @@ export class TodayGlanceService {
         .eq('date', today)
         .maybeSingle();
 
-      // 🔥 Calcola la nuova idratazione (rimuovi tutti i bicchieri richiesti, minimo 0)
+      // 🔥 Calcola la nuova idratazione (rimuovi la quantità richiesta, minimo 0)
       const currentHydration = existingData?.hydration || 0;
-      const newHydration = Math.max(0, currentHydration - (GLASS_SIZE_ML * quantity));
+      const newHydration = Math.max(0, currentHydration - ml);
 
       // Se l'idratazione è già 0, non fare nulla
       if (currentHydration === 0) {
         return {
           success: false,
-          error: 'Nessun bicchiere da rimuovere',
+          error: 'Nessuna acqua da rimuovere',
         };
       }
 
@@ -388,7 +396,7 @@ export class TodayGlanceService {
         };
       }
     } catch (error) {
-      console.error('❌ Error removing water glasses:', error);
+      console.error('❌ Error removing water:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Errore sconosciuto',
@@ -401,8 +409,8 @@ export class TodayGlanceService {
    * @returns true se l'operazione è riuscita, false altrimenti
    */
   static async addWaterGlass(userId: string): Promise<{ success: boolean; error?: string; newHydration?: number }> {
-    // 🔥 Use the batch function for a single glass
-    return this.addWaterGlasses(userId, 1);
+    // 🔥 Use the generic function for a single glass
+    return this.addWater(userId, 250);
   }
 
   /**
@@ -411,6 +419,15 @@ export class TodayGlanceService {
    * @returns true se l'operazione è riuscita, false altrimenti
    */
   static async addWaterGlasses(userId: string, quantity: number): Promise<{ success: boolean; error?: string; newHydration?: number }> {
+    return this.addWater(userId, quantity * 250);
+  }
+
+  /**
+   * Aggiunge una quantità specifica di acqua in ML
+   * @param userId - ID dell'utente
+   * @param ml - Quantità in millilitri da aggiungere
+   */
+  static async addWater(userId: string, ml: number): Promise<{ success: boolean; error?: string; newHydration?: number }> {
     try {
       const { supabase } = await import('../lib/supabase');
       // 🔥 FIX: Robust fallback for Release builds (handle both named and default exports)
@@ -425,7 +442,6 @@ export class TodayGlanceService {
         String(now.getMonth() + 1).padStart(2, '0'),
         String(now.getDate()).padStart(2, '0')
       ].join('-'); // YYYY-MM-DD (Local)
-      const GLASS_SIZE_ML = 250; // Un bicchiere standard è 250ml
 
       // Recupera i dati di salute attuali per oggi
       const { data: existingData } = await supabase
@@ -435,9 +451,9 @@ export class TodayGlanceService {
         .eq('date', today)
         .maybeSingle();
 
-      // 🔥 Calcola la nuova idratazione (aggiungi tutti i bicchieri in una volta)
+      // 🔥 Calcola la nuova idratazione (aggiungi la quantità richiesta)
       const currentHydration = existingData?.hydration || 0;
-      const newHydration = currentHydration + (GLASS_SIZE_ML * quantity);
+      const newHydration = currentHydration + ml;
 
       // Recupera tutti i dati di salute attuali (o usa valori di default)
       const healthService = HealthDataService.getInstance();
@@ -477,7 +493,7 @@ export class TodayGlanceService {
         };
       }
     } catch (error) {
-      console.error('❌ Error adding water glasses:', error);
+      console.error('❌ Error adding water:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Errore sconosciuto',

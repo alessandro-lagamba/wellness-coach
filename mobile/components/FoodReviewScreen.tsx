@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     },
     topCancelButtonText: {
         fontSize: 14,
-        fontFamily: 'Figtree_600SemiBold',
+        fontFamily: 'Figtree_700Bold',
     },
     topConfirmButton: {
         flex: 1,
@@ -454,12 +454,12 @@ const styles = StyleSheet.create({
     },
     foodName: {
         fontSize: 16,
-        fontFamily: 'Figtree_600SemiBold',
+        fontFamily: 'Figtree_700Bold',
         lineHeight: 22,
     },
     foodNameInput: {
         fontSize: 16,
-        fontFamily: 'Figtree_600SemiBold',
+        fontFamily: 'Figtree_700Bold',
         paddingHorizontal: 12,
         paddingVertical: 10,
         borderWidth: 1,
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     },
     addButtonText: {
         fontSize: 15,
-        fontFamily: 'Figtree_600SemiBold',
+        fontFamily: 'Figtree_700Bold',
     },
     addForm: {
         borderRadius: 16,
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     addFormConfirmText: {
         color: '#fff',
         fontSize: 14,
-        fontFamily: 'Figtree_600SemiBold',
+        fontFamily: 'Figtree_700Bold',
     },
     emptyState: {
         alignItems: 'center',

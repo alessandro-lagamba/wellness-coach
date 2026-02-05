@@ -161,6 +161,7 @@ export const Tables = {
   USER_WELLNESS_SUGGESTIONS: 'user_wellness_suggestions',
   USER_INSIGHTS: 'user_insights',
   HEALTH_DATA: 'health_data',
+  USER_FEEDBACKS: 'user_feedbacks',
 } as const;
 
 

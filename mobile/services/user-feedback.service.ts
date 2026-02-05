@@ -1,5 +1,6 @@
 import { Alert } from 'react-native';
 import i18n from '../i18n';
+import { supabase, Tables } from '../lib/supabase';
 
 export type FeedbackType = 'success' | 'error' | 'warning' | 'info';
 
@@ -136,6 +137,27 @@ export class UserFeedbackService {
       case 'info':
       default:
         return i18n.t('common.info');
+    }
+  }
+
+  /**
+   * Invia un feedback al database
+   */
+  static async sendFeedback(userId: string, message: string, metadata: any = {}): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from(Tables.USER_FEEDBACKS)
+        .insert({
+          user_id: userId,
+          message,
+          metadata
+        });
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error: any) {
+      console.error('[UserFeedbackService] Error sending feedback:', error);
+      return { success: false, error: error.message };
     }
   }
 }

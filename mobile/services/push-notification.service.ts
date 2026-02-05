@@ -142,14 +142,14 @@ class PushNotificationService {
 
       // 🆕 Ottieni ultime 3 analisi emotive
       const history = await EmotionAnalysisService.getEmotionHistory(userId, 3);
-      
+
       if (history.length < 3) {
         // 🔥 FIX: Rimuoviamo console.log eccessivi
         return false;
       }
 
       // 🆕 Ordina per data (più recente prima)
-      const sortedHistory = history.sort((a, b) => 
+      const sortedHistory = history.sort((a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
@@ -168,10 +168,10 @@ class PushNotificationService {
 
         // 🆕 Invia notifica
         await this.sendMoodDeclineNotification(userId);
-        
+
         // 🆕 Salva che abbiamo inviato oggi
         await AsyncStorage.setItem(`${LAST_MOOD_NOTIFICATION_KEY}:${userId}`, today);
-        
+
         return true;
       }
 
@@ -189,19 +189,19 @@ class PushNotificationService {
     try {
       // 🆕 Carica traduzione corrente (fallback a ITA se i18n non disponibile)
       let title = 'Stai bene?';
-      let body = 'Hai notato un calo del tuo umore negli ultimi 3 giorni. Vuoi parlare con il tuo coach?';
-      
+      let body = 'Ho notato un calo del tuo umore negli ultimi 3 giorni. Vuoi parlarne con il tuo coach?';
+
       try {
         const i18n = (await import('../i18n')).default;
         const lang = i18n.language || 'it';
         if (lang === 'en') {
           title = 'Are you okay?';
-          body = "You've noticed a decline in your mood over the last 3 days. Would you like to talk with your coach?";
+          body = "I've noticed a decline in your mood over the last 3 days. Would you like to talk about it with your coach?";
         }
       } catch (e) {
         // Fallback a ITA se i18n non disponibile
       }
-      
+
       await Notifications.scheduleNotificationAsync({
         content: {
           title: title,
@@ -235,11 +235,11 @@ class PushNotificationService {
     try {
       // 🆕 Controlla regola mood decline
       await this.checkMoodDeclineRule(userId);
-      
+
       // 🆕 Qui puoi aggiungere altre regole in futuro
       // await this.checkSleepQualityRule(userId);
       // await this.checkStreakRule(userId);
-      
+
     } catch (error) {
       console.error('[PushNotifications] ❌ Error checking rules:', error);
     }

@@ -133,7 +133,14 @@ export class FoodAnalysisService {
                   confidence: analysis.confidence,
                   analysis_data: analysis.analysisData || {},
                   image_url: finalImageUrl, // 🔥 FIX: Usa l'URL pubblico di Supabase Storage
-                  created_at: analysis.date ? new Date(analysis.date).toISOString() : new Date().toISOString(),
+                  created_at: (() => {
+                    if (analysis.date) {
+                      const d = new Date(analysis.date);
+                      d.setHours(12, 0, 0, 0); // 🔥 FIX: Forza mezzogiorno per evitare problemi di timezone (UTC vs Locale)
+                      return d.toISOString();
+                    }
+                    return new Date().toISOString();
+                  })(),
                 })
                 .select()
                 .single();
@@ -283,10 +290,14 @@ export class FoodAnalysisService {
   }> {
     try {
       const targetDate = date || new Date();
+
       const startOfDay = new Date(targetDate);
       startOfDay.setHours(0, 0, 0, 0);
+
       const endOfDay = new Date(targetDate);
       endOfDay.setHours(23, 59, 59, 999);
+
+      console.log(`[FoodAnalysis] Fetching daily intake for range: ${startOfDay.toISOString()} to ${endOfDay.toISOString()}`);
 
       const { data, error } = await supabase
         .from(Tables.FOOD_ANALYSES)

@@ -1108,6 +1108,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
           servings: 1,
         }, false); // merge=false
 
+        await new Promise(r => setTimeout(r, 800));
         await reloadData();
         await loadMealPlan();
       } catch (error) {
@@ -1220,7 +1221,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
               }
 
               // 4. Piccola attesa per propagazione DB e poi ricarica
-              await new Promise(r => setTimeout(r, 300));
+              await new Promise(r => setTimeout(r, 800));
               await reloadData();
               closeMoveModal();
             } catch (error) {
@@ -1257,6 +1258,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
       await mealPlanService.removeEntry(moveModal.date, moveModal.fromMealType);
       await reloadData();
+      await new Promise(r => setTimeout(r, 800));
     } catch (error) {
       console.warn('Failed to move meal plan entry:', error);
     } finally {
@@ -1284,6 +1286,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
         meal_type: slotPicker.mealType,
         recipe_id: recipeId,
       });
+      await new Promise(r => setTimeout(r, 800));
       await reloadData();
       closeSlotPicker();
     } catch (error) {
@@ -1317,7 +1320,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
       }
 
       // 4. Piccola attesa per propagazione DB e poi ricarica
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 800));
       await reloadData();
       closeSlotPicker();
     } catch (error) {
@@ -2241,14 +2244,14 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
   if (analyzing || isTextAnalyzing) {
     return (
-      <View style={[styles.container, { backgroundColor: '#ffffff', flex: 1, alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[styles.container, { backgroundColor: colors.background, flex: 1, alignItems: 'center', justifyContent: 'center' }]}>
         <View style={{ alignItems: 'center', gap: 20 }}>
-          <ActivityIndicator size={60} color="#3b82f6" />
+          <ActivityIndicator size={60} color={colors.primary} />
           <View style={{ alignItems: 'center', gap: 8 }}>
-            <Text style={{ fontSize: 16, fontFamily: 'Figtree_700Bold', color: '#1e3a8a', letterSpacing: 1, textTransform: 'uppercase' }}>
+            <Text style={{ fontSize: 16, fontFamily: 'Figtree_700Bold', color: colors.primary, letterSpacing: 1, textTransform: 'uppercase' }}>
               {t('ui.analysisInProgress')}
             </Text>
-            <Text style={{ fontSize: 14, fontFamily: 'Figtree_500Medium', color: '#64748b' }}>
+            <Text style={{ fontSize: 14, fontFamily: 'Figtree_500Medium', color: colors.textSecondary }}>
               {isTextAnalyzing ? t('ui.analyzingNutritionalValues') : t('ui.identifyingIngredients')}
             </Text>
           </View>
@@ -2737,7 +2740,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                   </Text>
                   <Text style={{
                     fontSize: 18,
-                    fontWeight: 'bold',
+                    fontFamily: 'Figtree_700Bold',
                     color: isSelected ? '#FFF' : colors.text
                   }}>
                     {day.label.split(' ')[1]}
@@ -2758,7 +2761,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
               return (
                 <View key={mealType}>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginBottom: 8, marginLeft: 4 }}>
+                  <Text style={{ fontSize: 14, fontFamily: 'Figtree_700Bold', color: colors.textSecondary, marginBottom: 8, marginLeft: 4 }}>
                     {t(`analysis.food.mealTypes.${mealType}`)}
                   </Text>
 
@@ -2801,7 +2804,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                       <View style={{ flex: 1, paddingTop: 2 }}>
                         <Text style={{
                           fontSize: 14,
-                          fontWeight: '600',
+                          fontFamily: 'Figtree_700Bold',
                           color: colors.text,
                           lineHeight: 18,
                         }}>
@@ -2912,7 +2915,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                       }}
                     >
                       <MaterialCommunityIcons name="plus" size={20} color={colors.primary} />
-                      <Text style={{ marginLeft: 8, color: colors.primary, fontWeight: '600' }}>
+                      <Text style={{ marginLeft: 8, color: colors.primary, fontFamily: 'Figtree_700Bold' }}>
                         {t('analysis.food.mealPlanner.add')} {t(`analysis.food.mealTypes.${mealType}`)}
                       </Text>
                     </TouchableOpacity>
@@ -3524,7 +3527,7 @@ const styles = StyleSheet.create({
   heroChipValue: {
     marginTop: 6,
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     color: '#ffffff',
   },
   primaryButton: {
@@ -3557,9 +3560,8 @@ const styles = StyleSheet.create({
   permissionBanner: {
     marginTop: 12,
     fontSize: 13,
-    fontFamily: 'Figtree_400Regular',
+    fontFamily: 'Figtree_500Medium',
     textAlign: 'center',
-    fontWeight: '500',
     // Color will be set inline with colors.warning or colors.accent
   },
   sectionHeader: {
@@ -3593,7 +3595,7 @@ const styles = StyleSheet.create({
   filterTextInput: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   filterChipsRow: {
     flexDirection: 'row',
@@ -3608,7 +3610,7 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   timeChip: {
     flexDirection: 'row',
@@ -3644,11 +3646,11 @@ const styles = StyleSheet.create({
   },
   recipeCardTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   recipeCardMeta: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   recipeTagsRow: {
     flexDirection: 'row',
@@ -3662,7 +3664,7 @@ const styles = StyleSheet.create({
   },
   recipeTagText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   recipeActionsRow: {
     flexDirection: 'row',
@@ -3680,7 +3682,7 @@ const styles = StyleSheet.create({
   },
   recipeActionText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   emptyRecipeState: {
     borderWidth: 1,
@@ -3691,7 +3693,7 @@ const styles = StyleSheet.create({
   },
   emptyRecipeTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   emptyRecipeSubtitle: {
     fontSize: 13,
@@ -3725,12 +3727,12 @@ const styles = StyleSheet.create({
   },
   stepNumberText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     color: '#1d4ed8',
   },
   stepTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     color: '#0f172a',
     marginBottom: 6,
   },
@@ -3763,7 +3765,7 @@ const styles = StyleSheet.create({
   },
   weekLabel: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   mealPlannerColumn: {
     width: 130,
@@ -3771,7 +3773,7 @@ const styles = StyleSheet.create({
   },
   mealPlannerDay: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 8,
   },
   mealCell: {
@@ -3784,7 +3786,7 @@ const styles = StyleSheet.create({
   },
   mealCellTitle: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   mealCellMeta: {
     fontSize: 11,
@@ -3796,7 +3798,7 @@ const styles = StyleSheet.create({
   },
   emptyMealCellText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   mealSummaryRow: {
     flexDirection: 'row',
@@ -3808,11 +3810,11 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   summaryValue: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   slotModalOverlay: {
     flex: 1,
@@ -3829,7 +3831,7 @@ const styles = StyleSheet.create({
   },
   slotModalTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   slotRecipeButton: {
     borderWidth: 1,
@@ -3869,7 +3871,7 @@ const styles = StyleSheet.create({
   },
   insightTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 8,
   },
   insightDescription: {
@@ -3916,7 +3918,7 @@ const styles = StyleSheet.create({
   cameraLoadingText: {
     color: '#f8fafc',
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
     textAlign: 'center',
   },
   detectionFrame: {
@@ -3951,7 +3953,7 @@ const styles = StyleSheet.create({
   cameraSwitchText: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   captureHeader: {
     width: '100%',
@@ -3971,7 +3973,7 @@ const styles = StyleSheet.create({
   },
   captureBackButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   captureLayout: {
     flex: 1,
@@ -4006,7 +4008,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   ghostButtonText: {
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     color: '#4338ca',
   },
   analyzingCard: {
@@ -4522,7 +4524,6 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: '#6366f1',
     borderTopColor: 'transparent',
     position: 'absolute',
   },
@@ -4531,7 +4532,6 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     borderWidth: 2,
-    borderColor: '#8b5cf6',
     borderTopColor: 'transparent',
     position: 'absolute',
   },
@@ -4539,10 +4539,8 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#6366f1',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#6366f1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -4591,6 +4589,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748b',
     fontStyle: 'italic',
+    fontFamily: 'Figtree_500Medium',
   },
   progressContainer: {
     width: '100%',
@@ -4598,7 +4597,6 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 12,
-    color: '#6366f1',
     textAlign: 'center',
     marginTop: 8,
     fontFamily: 'Figtree_700Bold', // Was 600
@@ -4614,8 +4612,7 @@ const styles = StyleSheet.create({
   },
   analysisStepText: {
     fontSize: 11,
-    color: '#64748b',
-    fontFamily: 'Figtree_500Medium', // Was 500
+    fontFamily: 'Figtree_500Medium',
   },
   // Action Buttons
   actionButtonsContainer: {
@@ -4639,8 +4636,7 @@ const styles = StyleSheet.create({
   },
   goBackButtonText: {
     fontSize: 14,
-    fontFamily: 'Figtree_700Bold', // Was 600
-    color: '#6366f1',
+    fontFamily: 'Figtree_700Bold',
   },
   retakeButton: {
     flex: 1,
@@ -4669,9 +4665,9 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 14,
-    color: '#64748b',
     textAlign: 'center',
     lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
   },
 
   // ✅ ADD: Guide hint styles
@@ -4781,7 +4777,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    fontFamily: 'Figtree_700Bold', // Was 600
+    fontFamily: 'Figtree_700Bold',
     textAlign: 'center',
   },
   statDivider: {
@@ -4841,13 +4837,13 @@ const styles = StyleSheet.create({
   },
   bulletNumber: {
     fontSize: 14,
-    fontFamily: 'Figtree_700Bold', // Was 800
+    fontFamily: 'Figtree_700Bold',
   },
   itemText: {
     flex: 1,
     fontSize: 16,
     lineHeight: 24,
-    fontFamily: 'Figtree_500Medium', // Was 500
+    fontFamily: 'Figtree_500Medium',
   },
 
   // ✅ ENHANCED: Action Section
@@ -4872,8 +4868,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 16,
-    fontFamily: 'Figtree_700Bold', // Was 700
-    color: '#ffffff',
+    fontFamily: 'Figtree_700Bold',
   },
 
   // Detailed Analysis Button
@@ -4898,8 +4893,7 @@ const styles = StyleSheet.create({
   detailedAnalysisButtonText: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Figtree_700Bold', // Was 600
-    color: '#ffffff',
+    fontFamily: 'Figtree_700Bold',
     textAlign: 'center',
     marginHorizontal: 12,
   },
@@ -4946,7 +4940,7 @@ const styles = StyleSheet.create({
   },
   fridgeTitle: {
     fontSize: 18,
-    fontFamily: 'Figtree_700Bold', // Was 700
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 6,
   },
   fridgeDescription: {
@@ -4970,7 +4964,7 @@ const styles = StyleSheet.create({
   },
   fridgeButtonText: {
     fontSize: 15,
-    fontFamily: 'Figtree_700Bold', // Was 700
+    fontFamily: 'Figtree_700Bold',
   },
 
   // ✅ ADD: Nutritional Goals styles
@@ -5018,7 +5012,7 @@ const styles = StyleSheet.create({
   },
   recipeHubTagText: {
     fontSize: 11,
-    fontFamily: 'Figtree_700Bold', // Was 700
+    fontFamily: 'Figtree_700Bold',
     color: '#ffffff',
     letterSpacing: 0.5,
   },
@@ -5033,7 +5027,7 @@ const styles = StyleSheet.create({
   },
   recipeHubTitle: {
     fontSize: 20,
-    fontFamily: 'Figtree_700Bold', // Was 700
+    fontFamily: 'Figtree_700Bold',
     color: '#ffffff',
     marginBottom: 6,
   },

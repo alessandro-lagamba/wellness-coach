@@ -265,7 +265,13 @@ class MealPlanService {
       payload.custom_recipe = incomingData || baseData;
       if (!baseData && input.recipe_id) {
         payload.recipe_id = input.recipe_id;
-        payload.custom_recipe = null;
+        // 🔥 FIX: Se abbiamo creato un'analisi shadow (incomingData), DOBBIAMO tenerla nel custom_recipe
+        // altrimenti perdiamo l'ID dell'analisi e non potremo più cancellarla dal database (rimarrebbe orfana)
+        if (incomingData && (incomingData.analysis_id || incomingData.analysis_ids)) {
+          payload.custom_recipe = incomingData;
+        } else {
+          payload.custom_recipe = null;
+        }
       }
     }
 
