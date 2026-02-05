@@ -170,44 +170,35 @@ export const NotificationService = {
     if (options.hour !== undefined && options.minute !== undefined) {
       const repeats = options.repeats ?? true;
 
-      // 🔧 NORMALIZZA e POSTICIPA SE NECESSARIO
-      const now = new Date();
-      let hour = options.hour!;
-      let minute = options.minute!;
+      // 🔧 FIX #2: USA SEMPRE L'ORARIO ORIGINALE NELLA CHIAVE
+      // Expo Notifications gestisce automaticamente le notifiche passate (le schedula per il giorno successivo)
+      // Non serve "bumpare" l'orario manualmente - questo causava chiavi diverse e duplicazioni
+      const originalHour = options.hour;
+      const originalMinute = options.minute;
       const weekday = options.weekday; // Expo: 1=Mon ... 7=Sun
 
-      // cand: oggi all'ora/minuto richiesti
-      const cand = new Date(now);
-      cand.setSeconds(0, 0);
-      cand.setHours(hour, minute, 0, 0);
-
-      // Se DAILY e l'orario è già passato/uguale → sposta di 60s (per evitare "now")
-      if (!weekday) {
-        if (cand.getTime() <= now.getTime()) {
-          const bumped = new Date(now.getTime() + 60 * 1000);
-          hour = bumped.getHours();
-          minute = bumped.getMinutes();
-        }
-      } else {
-        // WEEKLY: se è il giorno giusto ma l'orario è passato/uguale → bump di 60s
-        const nowExpoW = (now.getDay() === 0 ? 7 : now.getDay()); // 1..7
-        if (nowExpoW === weekday && cand.getTime() <= now.getTime()) {
-          const bumped = new Date(now.getTime() + 60 * 1000);
-          hour = bumped.getHours();
-          minute = bumped.getMinutes();
-        }
-        // (Se è un giorno diverso, lasciamo a Expo la prossima occorrenza)
-      }
-
-      // 🔑 Key stabile (includi second=0)
+      // 🔑 Key stabile con orario ORIGINALE (sempre uguale, indipendentemente da quando viene chiamato)
       const key = weekday
-        ? `${baseKey}:${weekday}:${hour}:${minute}:s0`
-        : `${baseKey}:daily:${hour}:${minute}:s0`;
+        ? `${baseKey}:${weekday}:${originalHour}:${originalMinute}:s0`
+        : `${baseKey}:daily:${originalHour}:${originalMinute}:s0`;
 
-      // 🔔 Trigger con second fissato a 0
-      const trigger: Notifications.DailyTriggerInput | Notifications.WeeklyTriggerInput = weekday
-        ? { hour, minute, second: 0, weekday, repeats }
-        : { hour, minute, second: 0, repeats };
+      // 🔔 Trigger con orario ORIGINALE e second fissato a 0
+      const trigger = weekday
+        ? {
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+          hour: originalHour,
+          minute: originalMinute,
+          second: 0,
+          weekday,
+          repeats
+        }
+        : {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour: originalHour,
+          minute: originalMinute,
+          second: 0,
+          repeats
+        };
 
       return scheduleUnique(key, { content, trigger });
     }
@@ -222,7 +213,8 @@ export const NotificationService = {
       }
 
       const key = `${baseKey}:in:${Math.max(1, options.secondsFromNow)}s:${Date.now()}`;
-      const trigger: Notifications.TimeIntervalTriggerInput = {
+      const trigger = {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
         seconds: Math.max(1, options.secondsFromNow),
         repeats: options.repeats ?? false,
       };
@@ -237,7 +229,13 @@ export const NotificationService = {
       return existing.identifier;
     }
 
-    return scheduleUnique(`${baseKey}:now:${Date.now()}`, { content, trigger: null });
+    // 🔧 FIX: trigger deve avere type esplicito per expo-notifications 0.32+
+    const trigger = {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: 1,
+      repeats: false,
+    };
+    return scheduleUnique(`${baseKey}:now:${Date.now()}`, { content, trigger });
   },
 
   async cancel(id: string) {
@@ -337,19 +335,15 @@ export const NotificationService = {
       .slice(0, 3);
     const list = top3.map((i: any) => `${i.name} (${new Date(i.expiry_date).toLocaleDateString()})`).join(', ');
 
-    // Send immediate notification (not scheduled) - debounced con ritardo randomizzato per evitare valanghe
-    const delay = 15_000 + Math.floor(Math.random() * 10_000); // 15-25 secondi
-    setTimeout(async () => {
-      await this.schedule(
-        'fridge_expiry',
-        'Ingredienti in scadenza',
-        `Stanno per scadere: ${list}. Vuoi una ricetta?`,
-        { secondsFromNow: 1 },
-        { screen: 'food', action: 'OPEN_FRIDGE_RECIPES' }
-      );
-    }, delay);
-
-    return null; // Non ritorniamo l'ID perché è asincrono
+    // 🔧 FIX #4: Invia immediatamente, senza delay randomizzato
+    // Il delay causava notifiche perse se l'app veniva chiusa prima del timeout
+    return this.schedule(
+      'fridge_expiry',
+      'Ingredienti in scadenza',
+      `Stanno per scadere: ${list}. Vuoi una ricetta?`,
+      { secondsFromNow: 1 },
+      { screen: 'food', action: 'OPEN_FRIDGE_RECIPES' }
+    );
   },
 
   async scheduleHydrationReminders() {
@@ -477,13 +471,17 @@ export const NotificationService = {
     debug('Scheduling defaults...');
     const ids: string[] = [];
     ids.push(...(await this.scheduleEmotionSkinWeekly()));
-    ids.push(await this.scheduleDiaryDaily());
-    ids.push(...(await this.scheduleBreathingNudges()));
+    // ❌ REMOVED: Journal Reminder - rimossa su richiesta utente
+    // ids.push(await this.scheduleDiaryDaily());
+    // ❌ REMOVED: Breathing Nudges - rimossa su richiesta utente
+    // ids.push(...(await this.scheduleBreathingNudges()));
     ids.push(...(await this.scheduleHydrationReminders()));
     ids.push(await this.scheduleMorningGreeting());
     ids.push(await this.scheduleEveningWinddown());
     // ✅ OPTIMIZED: Removed scheduleSleepPreparation - now unified with scheduleEveningWinddown
-    ids.push(await this.scheduleFridgeExpiryCheck()); // Daily check at 18:00
+    // ❌ REMOVED: Fridge Expiry Check - rimossa su richiesta utente
+    // ids.push(await this.scheduleFridgeExpiryCheck());
+    // ❌ REMOVED: Weight Reminder - rimossa su richiesta utente (non era nemmeno qui)
 
     debug('Defaults scheduled:', ids.length, 'notifications');
     return ids;

@@ -668,7 +668,7 @@ CURRENT HEALTH DATA:
 - Mood: ${data.mood !== null ? data.mood : 'N/A'}/5
 - Sleep: ${data.sleep ? `${data.sleep.hours.toFixed(1)}h (quality: ${data.sleep.quality}%)` : 'N/A'}
 - Steps: ${data.healthMetrics.steps ?? 'N/A'}
-- HRV: ${data.healthMetrics.hrv ?? 'N/A'} ms
+- HRV: ${(data.healthMetrics.hrv && data.healthMetrics.hrv > 0) ? `${data.healthMetrics.hrv} ms` : 'N/A (Data missing, DO NOT use for recommendations)'}
 - Hydration: ${data.healthMetrics.hydration ?? 'N/A'}/8 glasses
 - Calories burned: ${data.healthMetrics.calories ?? 'N/A'} kcal
 - Meditation: ${data.healthMetrics.meditationMinutes ?? 'N/A'} min
@@ -709,7 +709,8 @@ TASK:
 
 IMPORTANT RULES:
 
-        - Tailor every insight strictly to the specific data provided.
+- IGNORE metrics marked as 'N/A' or 'Data missing'. Do not generate recommendations based on missing data.
+- Tailor every insight strictly to the specific data provided.
 
 - Use realistic physiology and behavior.
 

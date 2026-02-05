@@ -798,6 +798,19 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cycleData, userGender]);
 
+  // 🆕 Ascolta i cambiamenti dell'unità di idratazione e aggiorna i widget
+  useEffect(() => {
+    const unsubscribe = hydrationUnitService.addListener(async () => {
+      try {
+        const updatedWidgetData = await buildWidgetDataFromHealth();
+        setWidgetData(updatedWidgetData);
+      } catch (error) {
+        console.error('❌ Error updating widgets after hydration unit change:', error);
+      }
+    });
+    return unsubscribe;
+  }, [buildWidgetDataFromHealth]);
+
   // 🔥 NEW: Funzione per ricaricare i dati dal database e aggiornare i widget
   // Questa funzione è necessaria perché i dati di idratazione e meditazione sono salvati
   // direttamente nel database, non in Health Connect/HealthKit

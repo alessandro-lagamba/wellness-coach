@@ -16,7 +16,25 @@ const UNIT_CONFIGS: Record<HydrationUnit, HydrationUnitConfig> = {
 
 const STORAGE_KEY = 'hydrationUnitPreference';
 
+type UnitChangeListener = () => void;
+
 class HydrationUnitService {
+  private listeners: UnitChangeListener[] = [];
+
+  /**
+   * Iscriviti ai cambiamenti di unità
+   * @returns funzione per disiscriversi
+   */
+  addListener(listener: UnitChangeListener): () => void {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach((listener) => listener());
+  }
   /**
    * Ottiene l'unità preferita dell'utente (default: 'glass')
    */
@@ -38,6 +56,7 @@ class HydrationUnitService {
   async setPreferredUnit(unit: HydrationUnit): Promise<void> {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, unit);
+      this.notifyListeners();
     } catch (error) {
       console.error('Error saving hydration unit preference:', error);
     }

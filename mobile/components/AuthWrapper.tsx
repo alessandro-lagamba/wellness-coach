@@ -586,12 +586,21 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       if (!isMountedRef.current) return;
 
       const pushService = PushNotificationService.getInstance();
-      const enabled = await pushService.isEnabled();
+
+      // 🔧 FIX CRITICO: Abilita automaticamente le push notifications al primo avvio
+      // QUESTO ERA IL PROBLEMA: le notifiche non venivano mai abilitate!
+      let enabled = await pushService.isEnabled();
+
+      if (!enabled) {
+        console.log('🔔 Enabling push notifications for the first time...');
+        await pushService.setEnabled(true);
+        enabled = true;
+      }
 
       if (enabled) {
         const initialized = await pushService.initialize(user.id);
         if (initialized) {
-          // 🔥 FIX: Rimuoviamo console.log eccessivi
+          console.log('✅ Push notifications initialized successfully');
 
           // 🆕 Esegui controlli delle regole ogni 6 ore
           // 🔥 FIX: Usiamo user.id direttamente dalla closure per evitare problemi con le dipendenze
@@ -631,6 +640,25 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
             }
           }, 6 * 60 * 60 * 1000);
         }
+      }
+
+      // 🆕 FIX #1: Inizializza notifiche locali schedulate CENTRALMENTE (una sola volta)
+      // Questo evita duplicazioni da chiamate multiple in HomeScreen/Settings
+      try {
+        const { NotificationService } = await import('../services/notifications.service');
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+
+        // Schedula SOLO se non è mai stato fatto
+        const scheduled = await AsyncStorage.getItem('@notifications:defaults_scheduled');
+        if (!scheduled) {
+          console.log('📅 Scheduling default notifications (first time)...');
+          await NotificationService.scheduleDefaults();
+          console.log('✅ Default notifications scheduled successfully');
+        } else {
+          console.log('ℹ️ Default notifications already scheduled');
+        }
+      } catch (error) {
+        console.error('❌ Error scheduling default notifications:', error);
       }
     };
 

@@ -568,7 +568,7 @@
       "noData": "No Data",
       "texture": "Texture",
       "oiliness": "Oiliness",
-      "hydrationSkin": "Hydration (Skin)",
+      "hydrationSkin": "Hydration",
       "redness": "Redness",
       "pigmentation": "Pigmentation",
       "noMoodData": "You haven't performed any emotional analysis on this day",
@@ -1853,7 +1853,8 @@
           "latin": "Latin American",
           "middleEastern": "Middle Eastern",
           "american": "American",
-          "vegetarian": "Vegetarian"
+          "vegetarian": "Vegetarian",
+          "vegan": "Vegan"
         }
       },
       "fridge": {
@@ -1933,6 +1934,27 @@
         "recipeNameRequired": "Recipe name is required",
         "saveRecipe": "Save recipe"
       },
+      "preferences": {
+        "title": "Nutrition Preferences",
+        "subtitle": "Customize your food preferences for tailored recipes",
+        "cuisineLabel": "Cuisine Type",
+        "cuisines": {
+          "none": "No preference",
+          "italian": "Italian",
+          "mediterranean": "Mediterranean",
+          "asian": "Asian",
+          "latin": "Latin American",
+          "middleEastern": "Middle Eastern",
+          "american": "American",
+          "vegetarian": "Vegetarian",
+          "vegan": "Vegan"
+        },
+        "favorites": "Favorite Ingredients",
+        "favoritePlaceholder": "e.g. tomatoes, basil",
+        "allergies": "Allergies/Intolerances",
+        "allergyPlaceholder": "e.g. lactose, gluten",
+        "saveError": "Error saving preferences"
+      },
       "goals": {
         "title": "Nutritional Goals",
         "shortTitle": "Goals",
@@ -1989,6 +2011,30 @@
           "extremelyActive": "Extremely Active"
         },
         "saveError": "Error saving activity level"
+      },
+      "review": {
+        "title": "Review Foods",
+        "subtitle": "Edit if needed",
+        "infoBanner": "Review and edit the identified foods before proceeding with the full nutritional analysis.",
+        "addFood": "Add food",
+        "newFood": "New food",
+        "foodNamePlaceholder": "Food name (e.g. Tomato pasta)",
+        "add": "Add",
+        "cancel": "Cancel",
+        "confirmAndAnalyze": "Confirm & Analyze",
+        "noFoodsIdentified": "No foods identified.\nManually add the foods in your meal.",
+        "analyzingNutrition": "Nutritional analysis in progress...",
+        "calculatingMacros": "Calculating calories, macronutrients and recommendations",
+        "units": {
+          "g": "grams",
+          "ml": "milliliters",
+          "pz": "pieces",
+          "cucchiaio": "tablespoons",
+          "cucchiaino": "teaspoons",
+          "tazza": "cups",
+          "fetta": "slices",
+          "porzione": "servings"
+        }
       },
       "errors": {
         "cameraPermission": "Camera permission is required for food analysis",

@@ -8,6 +8,7 @@ export type CuisinePreference =
   | 'middle-eastern'
   | 'american'
   | 'vegetarian'
+  | 'vegan'
   | 'none';
 
 export interface NutritionPreferences {

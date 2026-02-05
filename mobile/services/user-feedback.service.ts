@@ -97,7 +97,7 @@ export class UserFeedbackService {
    * Mostra un errore di salvataggio con opzione di retry
    */
   static showSaveError(
-    entityType: 'analisi' | 'check-in' | 'dati salute' | 'dati',
+    entityType: 'analisi' | 'check-in' | 'dati salute' | 'dati' | 'pasto',
     retryAction?: () => void
   ): void {
     const translatedEntity = i18n.t(`feedback.entities.${entityType}`);
@@ -111,7 +111,7 @@ export class UserFeedbackService {
   /**
    * Mostra un successo di salvataggio
    */
-  static showSaveSuccess(entityType: 'analisi' | 'check-in' | 'dati salute' | 'dati'): void {
+  static showSaveSuccess(entityType: 'analisi' | 'check-in' | 'dati salute' | 'dati' | 'pasto'): void {
     const translatedEntity = i18n.t(`feedback.entities.${entityType}`);
 
     // In Italian, we have specific keys for feminine entities to avoid "Analisi salvato"

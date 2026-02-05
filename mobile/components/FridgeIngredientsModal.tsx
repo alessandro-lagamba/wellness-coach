@@ -64,6 +64,7 @@ const CUISINE_OPTIONS: { id: CuisinePreference; labelKey: string }[] = [
   { id: 'middle-eastern', labelKey: 'analysis.food.preferences.cuisines.middleEastern' },
   { id: 'american', labelKey: 'analysis.food.preferences.cuisines.american' },
   { id: 'vegetarian', labelKey: 'analysis.food.preferences.cuisines.vegetarian' },
+  { id: 'vegan', labelKey: 'analysis.food.preferences.cuisines.vegan' },
 ];
 
 export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
@@ -88,11 +89,12 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   const [processingAI, setProcessingAI] = useState<Record<number, boolean>>({}); // 🔥 FIX: Traccia quali ingredienti stanno processando
   const [preferences, setPreferences] = useState<NutritionPreferences | null>(null);
   const [preferencesLoading, setPreferencesLoading] = useState(false);
-  const [newFavorite, setNewFavorite] = useState('');
-  const [newAllergy, setNewAllergy] = useState('');
+  const [newFavorite, setNewFavorite] = useState<string | null>(null);
+  const [newAllergy, setNewAllergy] = useState<string | null>(null);
   const [excludedIngredientIds, setExcludedIngredientIds] = useState<Record<string, boolean>>({});
   const [recipeEditorVisible, setRecipeEditorVisible] = useState(false);
   const [recipeDraft, setRecipeDraft] = useState<Partial<UserRecipe> | null>(null);
+  const [cuisineDropdownOpen, setCuisineDropdownOpen] = useState(false);
 
   const addIngredient = () => {
     setIngredients([...ingredients, { name: '' }]);
@@ -547,23 +549,26 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   };
 
   const handleAddFavorite = () => {
+    if (!newFavorite || newFavorite.trim() === '') {
+      setNewFavorite(null);
+      return;
+    }
     const value = newFavorite.trim();
-    if (!value) return;
     if (preferences?.favoriteIngredients?.some((fav) => fav.toLowerCase() === value.toLowerCase())) {
-      setNewFavorite('');
+      setNewFavorite(null);
       return;
     }
     updatePreferencesAsync((prev) => ({
       ...prev,
-      favoriteIngredients: [...prev.favoriteIngredients, value],
+      favoriteIngredients: [...(prev.favoriteIngredients || []), value],
     }));
-    setNewFavorite('');
+    setNewFavorite(null);
   };
 
   const handleRemoveFavorite = (value: string) => {
     updatePreferencesAsync((prev) => ({
       ...prev,
-      favoriteIngredients: prev.favoriteIngredients.filter(
+      favoriteIngredients: (prev.favoriteIngredients || []).filter(
         (fav) => fav.toLowerCase() !== value.toLowerCase(),
       ),
     }));
@@ -572,34 +577,37 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
   const handleAddFavoriteFromSaved = (value: string) => {
     if (!value) return;
     updatePreferencesAsync((prev) => {
-      if (prev.favoriteIngredients.some((fav) => fav.toLowerCase() === value.toLowerCase())) {
+      if ((prev.favoriteIngredients || []).some((fav) => fav.toLowerCase() === value.toLowerCase())) {
         return prev;
       }
       return {
         ...prev,
-        favoriteIngredients: [...prev.favoriteIngredients, value],
+        favoriteIngredients: [...(prev.favoriteIngredients || []), value],
       };
     });
   };
 
   const handleAddAllergy = () => {
+    if (!newAllergy || newAllergy.trim() === '') {
+      setNewAllergy(null);
+      return;
+    }
     const value = newAllergy.trim();
-    if (!value) return;
     if (preferences?.allergies?.some((allergy) => allergy.toLowerCase() === value.toLowerCase())) {
-      setNewAllergy('');
+      setNewAllergy(null);
       return;
     }
     updatePreferencesAsync((prev) => ({
       ...prev,
-      allergies: [...prev.allergies, value],
+      allergies: [...(prev.allergies || []), value],
     }));
-    setNewAllergy('');
+    setNewAllergy(null);
   };
 
   const handleRemoveAllergy = (value: string) => {
     updatePreferencesAsync((prev) => ({
       ...prev,
-      allergies: prev.allergies.filter(
+      allergies: (prev.allergies || []).filter(
         (allergy) => allergy.toLowerCase() !== value.toLowerCase(),
       ),
     }));
@@ -869,139 +877,169 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                   {!generatedRecipe ? (
                     <>
                       <View style={styles.infoSection}>
-                        <MaterialCommunityIcons name="information" size={24} color={colors.accent} />
                         <Text style={[styles.infoText, { color: colors.textSecondary }]}>
                           {t('analysis.food.fridge.modalDesc')}
                         </Text>
                       </View>
 
-                      <View style={[styles.preferencesSection, { borderColor: colors.border }]}>
+                      <View style={styles.cardSection}>
                         <View style={styles.preferencesHeader}>
-                          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                            {t('analysis.food.preferences.title')}
-                          </Text>
+                          <View style={styles.preferencesIconWrapper}>
+                            <MaterialCommunityIcons name="silverware-fork-knife" size={20} color={colors.primary} />
+                          </View>
+                          <View style={styles.preferencesHeaderText}>
+                            <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>
+                              {t('analysis.food.preferences.title')}
+                            </Text>
+                          </View>
                           {preferencesLoading && <ActivityIndicator size="small" color={colors.primary} />}
                         </View>
-                        <Text style={[styles.helperText, { color: colors.textSecondary }]}>
-                          {t('analysis.food.preferences.subtitle')}
-                        </Text>
 
-                        <Text style={[styles.preferencesLabel, { color: colors.text }]}>
-                          {t('analysis.food.preferences.cuisineLabel')}
+                        <Text style={[styles.preferencesLabelUppercase, { color: colors.textSecondary }]}>
+                          {t('analysis.food.preferences.cuisineLabel').toUpperCase()}
                         </Text>
-                        <View style={styles.cuisineOptionsRow}>
-                          {CUISINE_OPTIONS.map((option) => {
-                            const isActive = preferences?.cuisinePreference === option.id;
-                            return (
-                              <TouchableOpacity
-                                key={option.id}
-                                style={[
-                                  styles.cuisineOption,
-                                  {
-                                    backgroundColor: isActive ? colors.primary : colors.surfaceElevated,
-                                    borderColor: isActive ? colors.primary : colors.border,
-                                  },
-                                ]}
-                                onPress={() => handleCuisineSelect(option.id)}
-                              >
-                                <Text
-                                  style={[
-                                    styles.cuisineOptionText,
-                                    { color: isActive ? colors.textInverse : colors.text },
-                                  ]}
-                                >
-                                  {t(option.labelKey)}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
+                        <TouchableOpacity
+                          style={[
+                            styles.cuisineDropdown,
+                            {
+                              backgroundColor: colors.surfaceElevated,
+                              borderColor: colors.border,
+                            },
+                          ]}
+                          onPress={() => setCuisineDropdownOpen(!cuisineDropdownOpen)}
+                        >
+                          <Text style={[styles.cuisineDropdownText, { color: colors.text }]}>
+                            {t(CUISINE_OPTIONS.find(opt => opt.id === preferences?.cuisinePreference)?.labelKey || CUISINE_OPTIONS[0].labelKey)}
+                          </Text>
+                          <MaterialCommunityIcons
+                            name={cuisineDropdownOpen ? "chevron-up" : "chevron-down"}
+                            size={20}
+                            color={colors.textSecondary}
+                          />
+                        </TouchableOpacity>
+                        {cuisineDropdownOpen && (
+                          <View style={[styles.cuisineDropdownMenu, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                            <ScrollView style={styles.cuisineDropdownScroll} nestedScrollEnabled>
+                              {CUISINE_OPTIONS.map((option) => {
+                                const isActive = preferences?.cuisinePreference === option.id;
+                                return (
+                                  <TouchableOpacity
+                                    key={option.id}
+                                    style={[
+                                      styles.cuisineDropdownItem,
+                                      {
+                                        backgroundColor: isActive ? colors.primary + '15' : 'transparent',
+                                        borderBottomColor: colors.border,
+                                      },
+                                    ]}
+                                    onPress={() => {
+                                      handleCuisineSelect(option.id);
+                                      setCuisineDropdownOpen(false);
+                                    }}
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.cuisineDropdownItemText,
+                                        { color: isActive ? colors.primary : colors.text },
+                                      ]}
+                                    >
+                                      {t(option.labelKey)}
+                                    </Text>
+                                    {isActive && (
+                                      <MaterialCommunityIcons name="check" size={18} color={colors.primary} />
+                                    )}
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </ScrollView>
+                          </View>
+                        )}
 
                         <View style={styles.preferenceRow}>
-                          <Text style={[styles.preferencesLabel, { color: colors.text }]}>
-                            {t('analysis.food.preferences.favorites')}
+                          <Text style={[styles.preferencesLabelUppercase, { color: colors.textSecondary }]}>
+                            {t('analysis.food.preferences.favorites').toUpperCase()}
                           </Text>
+                          <View style={styles.preferenceChipsContainer}>
+                            {preferences?.favoriteIngredients?.map((item) => (
+                              <View
+                                key={item}
+                                style={[
+                                  styles.preferenceChipModern,
+                                  { backgroundColor: '#D4F4DD' },
+                                ]}
+                              >
+                                <Text style={[styles.preferenceChipTextModern, { color: '#1A5D1A' }]}>{item}</Text>
+                                <TouchableOpacity onPress={() => handleRemoveFavorite(item)} style={styles.chipRemoveModern}>
+                                  <Text style={[styles.chipRemoveText, { color: '#1A5D1A' }]}>×</Text>
+                                </TouchableOpacity>
+                              </View>
+                            ))}
+                          </View>
                           <View
                             style={[
-                              styles.preferenceInputWrapper,
+                              styles.preferenceInputWrapperModern,
                               { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
                             ]}
                           >
                             <TextInput
                               style={[styles.preferenceInput, { color: colors.text }]}
-                              value={newFavorite}
+                              value={newFavorite || ''}
                               onChangeText={setNewFavorite}
                               placeholder={t('analysis.food.preferences.favoritePlaceholder')}
                               placeholderTextColor={colors.textTertiary}
                               onSubmitEditing={handleAddFavorite}
                             />
-                            <TouchableOpacity onPress={handleAddFavorite} style={styles.preferenceAddButton}>
-                              <MaterialCommunityIcons name="plus" size={16} color={colors.primary} />
+                            <TouchableOpacity onPress={handleAddFavorite} style={styles.preferenceAddButtonModern}>
+                              <MaterialCommunityIcons name="plus-circle" size={24} color={colors.primary} />
                             </TouchableOpacity>
-                          </View>
-                          <View style={styles.preferenceChips}>
-                            {preferences?.favoriteIngredients?.map((item) => (
-                              <View
-                                key={item}
-                                style={[
-                                  styles.preferenceChip,
-                                  { backgroundColor: colors.primary + '15', borderColor: colors.primary },
-                                ]}
-                              >
-                                <Text style={[styles.preferenceChipText, { color: colors.text }]}>{item}</Text>
-                                <TouchableOpacity onPress={() => handleRemoveFavorite(item)} style={styles.chipRemove}>
-                                  <FontAwesome name="times" size={12} color={colors.textSecondary} />
-                                </TouchableOpacity>
-                              </View>
-                            ))}
                           </View>
                         </View>
 
                         <View style={styles.preferenceRow}>
-                          <Text style={[styles.preferencesLabel, { color: colors.text }]}>
-                            {t('analysis.food.preferences.allergies')}
+                          <Text style={[styles.preferencesLabelUppercase, { color: colors.textSecondary }]}>
+                            {t('analysis.food.preferences.allergies').toUpperCase()}
                           </Text>
+                          <View style={styles.preferenceChipsContainer}>
+                            {preferences?.allergies?.map((item) => (
+                              <View
+                                key={item}
+                                style={[
+                                  styles.preferenceChipModern,
+                                  { backgroundColor: '#FFE5E5' },
+                                ]}
+                              >
+                                <Text style={[styles.preferenceChipTextModern, { color: '#C62828' }]}>{item}</Text>
+                                <TouchableOpacity onPress={() => handleRemoveAllergy(item)} style={styles.chipRemoveModern}>
+                                  <Text style={[styles.chipRemoveText, { color: '#C62828' }]}>×</Text>
+                                </TouchableOpacity>
+                              </View>
+                            ))}
+                          </View>
                           <View
                             style={[
-                              styles.preferenceInputWrapper,
+                              styles.preferenceInputWrapperModern,
                               { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
                             ]}
                           >
                             <TextInput
                               style={[styles.preferenceInput, { color: colors.text }]}
-                              value={newAllergy}
+                              value={newAllergy || ''}
                               onChangeText={setNewAllergy}
                               placeholder={t('analysis.food.preferences.allergyPlaceholder')}
                               placeholderTextColor={colors.textTertiary}
                               onSubmitEditing={handleAddAllergy}
                             />
-                            <TouchableOpacity onPress={handleAddAllergy} style={styles.preferenceAddButton}>
-                              <MaterialCommunityIcons name="plus" size={16} color={colors.primary} />
+                            <TouchableOpacity onPress={handleAddAllergy} style={styles.preferenceAddButtonModern}>
+                              <MaterialCommunityIcons name="plus-circle" size={24} color={colors.primary} />
                             </TouchableOpacity>
-                          </View>
-                          <View style={styles.preferenceChips}>
-                            {preferences?.allergies?.map((item) => (
-                              <View
-                                key={item}
-                                style={[
-                                  styles.preferenceChip,
-                                  { backgroundColor: colors.error + '15', borderColor: colors.error },
-                                ]}
-                              >
-                                <Text style={[styles.preferenceChipText, { color: colors.text }]}>{item}</Text>
-                                <TouchableOpacity onPress={() => handleRemoveAllergy(item)} style={styles.chipRemove}>
-                                  <FontAwesome name="times" size={12} color={colors.textSecondary} />
-                                </TouchableOpacity>
-                              </View>
-                            ))}
                           </View>
                         </View>
                       </View>
 
                       {/* Inserimento rapido */}
-                      <View style={styles.quickAddSection}>
+                      <View style={[styles.cardSection, styles.quickAddSection]}>
                         <View style={styles.quickAddHeader}>
-                          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                          <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>
                             {t('analysis.food.fridge.quickAdd')}
                           </Text>
                           <TouchableOpacity
@@ -1022,17 +1060,17 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                           </TouchableOpacity>
                         </View>
 
-                        {/* Chips confermabili */}
+                        {/* Chips dell'analisi AI */}
                         {parsedChips.length > 0 && (
                           <View style={styles.chipsSection}>
                             <Text style={[styles.chipsLabel, { color: colors.text }]}>
-                              {t('analysis.food.fridge.confirmIngredients')}:
+                              {t('analysis.food.fridge.transcript')}
                             </Text>
                             <View style={styles.chipsContainer}>
                               {parsedChips.map((chip) => (
                                 <View
                                   key={chip.id}
-                                  style={[styles.chip, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
+                                  style={styles.chip}
                                 >
                                   <View style={styles.chipContent}>
                                     <Text style={[styles.chipText, { color: colors.text }]}>
@@ -1090,14 +1128,11 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                             {parsingTranscript ? t('common.loading') : t('analysis.food.fridge.parseAndAdd')}
                           </Text>
                         </TouchableOpacity>
-                        <Text style={[styles.helperText, { color: colors.textTertiary }]}>
-                          {t('analysis.food.fridge.dictationHint')}
-                        </Text>
                       </View>
 
                       {/* Ingredienti salvati */}
                       {savedIngredients.length > 0 && (
-                        <View style={styles.savedIngredientsSection}>
+                        <View style={styles.cardSection}>
                           <Text style={[styles.sectionTitle, { color: colors.text }]}>
                             {t('analysis.food.fridge.savedIngredients') || 'Ingredienti Salvati'}
                           </Text>
@@ -1156,56 +1191,30 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                           {savedIngredients
                             .filter(item => categoryFilter === null || item.category === categoryFilter)
                             .map((item) => (
-                              <View key={item.id} style={[styles.savedIngredientRow, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-                                <View style={styles.savedIngredientInfo}>
-                                  <Text style={[styles.savedIngredientName, { color: colors.text }]}>{item.name}</Text>
-                                  {item.expiry_date && (
-                                    <Text style={[styles.savedIngredientExpiry, { color: colors.textSecondary }]}>
-                                      {t('analysis.food.fridge.expires')}: {item.expiry_date}
-                                    </Text>
-                                  )}
-                                  {item.quantity && (
-                                    <Text style={[styles.savedIngredientQuantity, { color: colors.textSecondary }]}>
-                                      {item.quantity} {item.unit || ''}
-                                    </Text>
-                                  )}
-                                </View>
+                              <View key={item.id} style={styles.savedIngredientCard}>
+                                <Text style={styles.savedIngredientName}>{item.name}</Text>
                                 <View style={styles.savedIngredientActions}>
                                   <TouchableOpacity
                                     onPress={() => toggleExcludeIngredient(item.id)}
-                                    style={[
-                                      styles.excludeButton,
-                                      {
-                                        backgroundColor: excludedIngredientIds[item.id]
-                                          ? colors.warning + '25'
-                                          : colors.surface,
-                                        borderColor: excludedIngredientIds[item.id]
-                                          ? colors.warning
-                                          : colors.border,
-                                      },
-                                    ]}
+                                    style={styles.actionButton}
                                   >
                                     <MaterialCommunityIcons
-                                      name={
-                                        excludedIngredientIds[item.id]
-                                          ? 'eye-off-outline'
-                                          : 'eye-outline'
-                                      }
-                                      size={16}
-                                      color={excludedIngredientIds[item.id] ? colors.warning : colors.textSecondary}
+                                      name={excludedIngredientIds[item.id] ? 'eye-off-outline' : 'eye-outline'}
+                                      size={20}
+                                      color={excludedIngredientIds[item.id] ? colors.textTertiary : '#64748B'}
                                     />
                                   </TouchableOpacity>
                                   <TouchableOpacity
                                     onPress={() => handleAddFavoriteFromSaved(item.name)}
-                                    style={[styles.excludeButton, { borderColor: colors.primary }]}
+                                    style={styles.actionButton}
                                   >
-                                    <MaterialCommunityIcons name="star-outline" size={16} color={colors.primary} />
+                                    <MaterialCommunityIcons name="star-outline" size={20} color={colors.primary} />
                                   </TouchableOpacity>
                                   <TouchableOpacity
                                     onPress={() => removeSavedIngredient(item.id)}
-                                    style={[styles.removeSavedButton, { backgroundColor: colors.error + '20' }]}
+                                    style={[styles.actionButton, { backgroundColor: '#FEF2F2' }]}
                                   >
-                                    <FontAwesome name="trash" size={14} color={colors.error} />
+                                    <FontAwesome name="trash-o" size={18} color="#EF4444" />
                                   </TouchableOpacity>
                                 </View>
                               </View>
@@ -1436,7 +1445,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                   {!generatedRecipe ? (
                     <View style={styles.ingredientsActions}>
                       <TouchableOpacity
-                        style={[styles.saveButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                        style={[styles.saveButton, { borderColor: colors.primary, backgroundColor: colors.surface }]}
                         onPress={handleSaveIngredients}
                         disabled={loading}
                       >
@@ -1445,7 +1454,10 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                         ) : (
                           <>
                             <FontAwesome name="save" size={16} color={colors.primary} />
-                            <Text style={[styles.saveButtonText, { color: colors.primary }]}>
+                            <Text
+                              allowFontScaling={false}
+                              style={[styles.saveButtonText, { color: colors.primary }]}
+                            >
                               {t('analysis.food.fridge.saveIngredients') || 'Salva Ingredienti'}
                             </Text>
                           </>
@@ -1461,7 +1473,10 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                         ) : (
                           <>
                             <MaterialCommunityIcons name="chef-hat" size={18} color={colors.textInverse} />
-                            <Text style={[styles.generateButtonText, { color: colors.textInverse }]}>
+                            <Text
+                              allowFontScaling={false}
+                              style={[styles.generateButtonText, { color: colors.textInverse }]}
+                            >
                               {t('analysis.food.fridge.generateRecipe')}
                             </Text>
                           </>
@@ -1469,7 +1484,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                       </TouchableOpacity>
                     </View>
                   ) : (
-                    <View style={styles.recipeActions}>
+                    <View style={[styles.recipeActions, { flexWrap: 'nowrap' }]}>
                       <TouchableOpacity
                         style={[styles.secondaryButton, { borderColor: colors.border }]}
                         onPress={() => {
@@ -1478,6 +1493,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                         }}
                       >
                         <Text
+                          allowFontScaling={false}
                           style={[styles.secondaryButtonText, { color: colors.text }]}
                           numberOfLines={1}
                           ellipsizeMode="tail"
@@ -1489,20 +1505,21 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                         style={[styles.saveLibraryButton, { borderColor: colors.primary }]}
                         onPress={openRecipeEditorForGenerated}
                       >
-                        <MaterialCommunityIcons name="content-save-outline" size={18} color={colors.primary} />
                         <Text
+                          allowFontScaling={false}
                           style={[styles.saveLibraryButtonText, { color: colors.primary }]}
                           numberOfLines={1}
                           ellipsizeMode="tail"
                         >
-                          {t('analysis.food.fridge.editAndSave')}
+                          {t('common.save') || 'Salva'}
                         </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+                        style={[styles.primaryButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
                         onPress={handleClose}
                       >
                         <Text
+                          allowFontScaling={false}
                           style={[styles.primaryButtonText, { color: colors.textInverse }]}
                           numberOfLines={1}
                           ellipsizeMode="tail"
@@ -1513,11 +1530,11 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                     </View>
                   )}
                 </View>
-              </View>
-            </SafeAreaView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+              </View >
+            </SafeAreaView >
+          </View >
+        </KeyboardAvoidingView >
+      </Modal >
 
       <RecipeEditorModal
         visible={recipeEditorVisible}
@@ -1587,23 +1604,29 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     gap: 12,
   },
-  preferencesSection: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
+  cardSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
     marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F8FAFC',
   },
   preferencesHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 16, // Ridotto da 20
   },
   preferencesLabel: {
     fontSize: 14,
     fontWeight: '600',
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 8,
+    marginBottom: 6,
   },
   cuisineOptionsRow: {
     flexDirection: 'row',
@@ -1620,10 +1643,119 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  preferenceRow: {
-    marginTop: 12,
+  cuisineDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 4, // Ridotto da 8
+    marginBottom: 8,
   },
-  preferenceInputWrapper: {
+  cuisineDropdownText: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  cuisineDropdownMenu: {
+    borderWidth: 1,
+    borderRadius: 12,
+    marginTop: 4,
+    marginBottom: 12,
+    maxHeight: 240,
+    overflow: 'hidden',
+  },
+  cuisineDropdownScroll: {
+    maxHeight: 240,
+  },
+  cuisineDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  cuisineDropdownItemText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  preferenceRow: {
+    marginTop: 8, // Ridotto da 12
+  },
+  preferenceInput: {
+    flex: 1,
+    fontSize: 14,
+  },
+  // Nuovi stili moderni
+  preferencesIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#EDE7F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  preferencesHeaderText: {
+    flex: 1,
+  },
+  preferencesSubtitle: {
+    fontSize: 13,
+    marginTop: 2, // Ridotto da 4
+    lineHeight: 18,
+  },
+  preferencesLabelUppercase: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginTop: 12, // Ridotto da 16
+    marginBottom: 8, // Ridotto da 10
+  },
+  preferenceChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6, // Ridotto da 8
+  },
+  preferenceChipModern: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 20,
+    paddingLeft: 14,
+    paddingRight: 10,
+    paddingVertical: 8,
+  },
+  preferenceChipTextModern: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  chipRemoveModern: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipRemoveText: {
+    fontSize: 18,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  addChipButton: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  addChipButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  preferenceInputWrapperModern: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -1631,35 +1763,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
+    marginTop: 6, // Ridotto da 8
   },
-  preferenceInput: {
-    flex: 1,
-    fontSize: 14,
-  },
-  preferenceAddButton: {
-    padding: 6,
-  },
-  preferenceChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 10,
-  },
-  preferenceChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  preferenceChipText: {
-    fontSize: 13,
-    fontWeight: '600',
+  preferenceAddButtonModern: {
+    padding: 0,
   },
   quickAddSection: {
     marginBottom: 20,
+  },
+  savedIngredientCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  savedIngredientName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    flex: 1,
+  },
+  savedIngredientActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
   },
   quickAddHeader: {
     flexDirection: 'row',
@@ -1755,7 +1899,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   ingredientRowContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   ingredientRow: {
     flexDirection: 'row',
@@ -1766,10 +1910,12 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 12,
+    borderColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    minWidth: 0, // Permette al flex di ridursi correttamente
+    minWidth: 0,
   },
   input: {
     fontSize: 16,
@@ -1790,11 +1936,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 8,
+    borderColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    paddingHorizontal: 10,
     paddingVertical: 12,
-    width: 120, // 🔥 FIX: Larghezza fissa ridotta invece di minWidth
-    flexShrink: 0, // Non si riduce
+    width: 120,
+    flexShrink: 0,
   },
   expiryInput: {
     flex: 1,
@@ -1983,54 +2131,59 @@ const styles = StyleSheet.create({
   },
   recipeActions: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     gap: 12,
   },
   secondaryButton: {
     flex: 1,
-    minWidth: 0, // ✅ FIX: Permette al flex di ridursi correttamente
+    flexBasis: 0,
+    minWidth: 0,
     paddingVertical: 14,
-    paddingHorizontal: 12, // ✅ FIX: Aggiunge padding orizzontale per il testo
+    paddingHorizontal: 8,
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryButtonText: {
-    fontSize: 14, // ✅ FIX: Ridotto leggermente per evitare overflow
-    fontFamily: 'Figtree_700Bold', // Was 600
+    fontSize: 13,
+    fontFamily: 'Figtree_700Bold',
     textAlign: 'center',
   },
   primaryButton: {
     flex: 1,
-    minWidth: 0, // ✅ FIX: Permette al flex di ridursi correttamente
+    flexBasis: 0,
+    minWidth: 0,
     paddingVertical: 14,
-    paddingHorizontal: 12, // ✅ FIX: Aggiunge padding orizzontale per il testo
+    paddingHorizontal: 8,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
   },
   primaryButtonText: {
-    fontSize: 14, // ✅ FIX: Ridotto leggermente per evitare overflow
-    fontFamily: 'Figtree_700Bold', // Was 700
+    fontSize: 13,
+    fontFamily: 'Figtree_700Bold',
     textAlign: 'center',
   },
   saveLibraryButton: {
     flex: 1,
-    minWidth: 0, // ✅ FIX: Permette al flex di ridursi correttamente
+    flexBasis: 0,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 14,
-    paddingHorizontal: 12, // ✅ FIX: Aggiunge padding orizzontale per il testo
-    gap: 6, // ✅ FIX: Ridotto gap per dare più spazio al testo
+    paddingHorizontal: 8,
+    gap: 6,
   },
   saveLibraryButtonText: {
-    fontSize: 14, // ✅ FIX: Ridotto leggermente per evitare overflow
-    fontFamily: 'Figtree_700Bold', // Was 600
-    flexShrink: 1, // ✅ FIX: Permette al testo di ridursi se necessario
+    fontSize: 13,
+    fontFamily: 'Figtree_700Bold',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   saveRecipeOverlay: {
     flex: 1,
@@ -2101,54 +2254,6 @@ const styles = StyleSheet.create({
   },
   savedIngredientsSection: {
     marginBottom: 24,
-  },
-  savedIngredientRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  savedIngredientInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  savedIngredientName: {
-    fontSize: 16,
-    fontFamily: 'Figtree_700Bold', // Was 600
-    marginBottom: 4,
-  },
-  savedIngredientExpiry: {
-    fontSize: 13,
-    marginTop: 2,
-    fontFamily: 'Figtree_500Medium',
-  },
-  savedIngredientQuantity: {
-    fontSize: 13,
-    marginTop: 2,
-    fontFamily: 'Figtree_500Medium',
-  },
-  savedIngredientActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  excludeButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeSavedButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   categorySelector: {
     marginTop: 4,

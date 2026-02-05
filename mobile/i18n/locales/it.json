@@ -38,13 +38,15 @@
   "feedback": {
     "saveSuccess": "{{entity}} salvato con successo.",
     "saveSuccess_analisi": "Analisi salvata con successo.",
+    "saveSuccess_pasto": "Pasto salvato con successo.",
     "saveError": "Impossibile salvare {{entity}}. Riprova più tardi o controlla la connessione.",
     "saveErrorTitle": "Errore di salvataggio",
     "entities": {
       "analisi": "analisi",
       "check-in": "check-in",
       "dati salute": "dati salute",
-      "dati": "dati"
+      "dati": "dati",
+      "pasto": "pasto"
     }
   },
   "settings": {
@@ -578,7 +580,7 @@
       "noData": "Nessun dato",
       "texture": "Texture",
       "oiliness": "Oleosità",
-      "hydrationSkin": "Idratazione (Pelle)",
+      "hydrationSkin": "Idratazione",
       "redness": "Rossore",
       "pigmentation": "Macchie",
       "noMoodData": "Non hai effettuato analisi emotive in questa giornata",
@@ -625,7 +627,7 @@
       "good": "Buono",
       "fair": "Discreto",
       "poor": "Scarso",
-      "needsCare": "Da curare"
+      "needsCare": "Da migliorare"
     },
     "trend": {
       "above": "sopra il tuo solito",
@@ -1951,6 +1953,27 @@
         "recipeNameRequired": "Il nome della ricetta è obbligatorio",
         "saveRecipe": "Salva ricetta"
       },
+      "preferences": {
+        "title": "Preferenze Nutrizionali",
+        "subtitle": "Personalizza le tue preferenze alimentari per ricette su misura",
+        "cuisineLabel": "Tipo di Cucina",
+        "cuisines": {
+          "none": "Nessuna preferenza",
+          "italian": "Italiana",
+          "mediterranean": "Mediterranea",
+          "asian": "Asiatica",
+          "latin": "Latina",
+          "middleEastern": "Medio-orientale",
+          "american": "Americana",
+          "vegetarian": "Vegetariana",
+          "vegan": "Vegana"
+        },
+        "favorites": "Ingredienti Preferiti",
+        "favoritePlaceholder": "es. pomodori, basilico",
+        "allergies": "Allergie/Intolleranze",
+        "allergyPlaceholder": "es. lattosio, glutine",
+        "saveError": "Errore durante il salvataggio delle preferenze"
+      },
       "goals": {
         "title": "Obiettivi Nutrizionali",
         "shortTitle": "Obiettivi",
@@ -2013,6 +2036,30 @@
           "extremelyActive": "Estremamente Attivo"
         },
         "saveError": "Errore durante il salvataggio"
+      },
+      "review": {
+        "title": "Verifica alimenti",
+        "subtitle": "Modifica se necessario",
+        "infoBanner": "Controlla e modifica gli alimenti identificati prima di procedere con l'analisi nutrizionale completa.",
+        "addFood": "Aggiungi alimento",
+        "newFood": "Nuovo alimento",
+        "foodNamePlaceholder": "Nome alimento (es. Pasta al pomodoro)",
+        "add": "Aggiungi",
+        "cancel": "Annulla",
+        "confirmAndAnalyze": "Conferma e Analizza",
+        "noFoodsIdentified": "Nessun alimento identificato.\nAggiungi manualmente gli alimenti nel tuo pasto.",
+        "analyzingNutrition": "Analisi nutrizionale in corso...",
+        "calculatingMacros": "Calcolo calorie, macronutrienti e raccomandazioni",
+        "units": {
+          "g": "grammi",
+          "ml": "millilitri",
+          "pz": "pezzi",
+          "cucchiaio": "cucchiai",
+          "cucchiaino": "cucchiaini",
+          "tazza": "tazze",
+          "fetta": "fette",
+          "porzione": "porzioni"
+        }
       },
       "errors": {
         "cameraPermission": "Permesso fotocamera necessario per l'analisi del cibo",

@@ -47,6 +47,7 @@ import { CoachService } from '../services/coach.service';
 import { GaugeChart } from './charts/GaugeChart';
 import { AnalysisLoader } from './shared/AnalysisLoader';
 import { FoodResultsScreen } from './FoodResultsScreen';
+import { FoodReviewScreen, FoodItem } from './FoodReviewScreen';
 import { FoodAnalysisResult } from '../types/analysis.types';
 import { EnhancedScoreTile } from './EnhancedScoreTile';
 import { QualityBadge } from './QualityBadge';
@@ -468,6 +469,11 @@ const FoodAnalysisScreenContent: React.FC = () => {
   const [isStarting, setIsStarting] = useState(false); // 🔥 FIX: Stato per feedback visivo del pulsante
   const [analysisReady, setAnalysisReady] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  // 🆕 Stato per la fase di revisione alimenti (two-phase analysis flow)
+  const [reviewFoods, setReviewFoods] = useState<FoodItem[] | null>(null);
+  const [reviewImageUri, setReviewImageUri] = useState<string | null>(null);
+  const [isReviewAnalyzing, setIsReviewAnalyzing] = useState(false);
 
   // Enhanced components states
   const [nextBestActions, setNextBestActions] = useState<any[]>([]);
@@ -1579,33 +1585,41 @@ const FoodAnalysisScreenContent: React.FC = () => {
         if (analysisResult.success && analysisResult.data) {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
 
-          // Store the full analysis result
+          // 🆕 TWO-PHASE FLOW: Prima mostra la schermata di revisione alimenti
+          const identifiedFoods = analysisResult.data.identified_foods || [];
+
+          // Converti gli alimenti identificati nel formato FoodItem per la revisione
+          const foodItems: FoodItem[] = identifiedFoods.map((food: any, index: number) => {
+            // Se food è una stringa, convertila in oggetto
+            if (typeof food === 'string') {
+              return {
+                id: `food-${Date.now()}-${index}`,
+                name: food,
+                quantity: 100,
+                unit: 'g',
+              };
+            }
+            // Se food è già un oggetto
+            return {
+              id: `food-${Date.now()}-${index}`,
+              name: food.name || food,
+              quantity: food.quantity || food.amount || 100,
+              unit: food.unit || 'g',
+            };
+          });
+
           if (isMountedRef.current) {
+            // Salva i dati dell'analisi completa per uso successivo
             setFullAnalysisResult(analysisResult.data);
-          }
-
-          const foodResults: FoodAnalysisResults = {
-            calories: analysisResult.data.macronutrients?.calories || 0,
-            carbohydrates: analysisResult.data.macronutrients?.carbohydrates || 0,
-            proteins: analysisResult.data.macronutrients?.proteins || 0,
-            fats: analysisResult.data.macronutrients?.fats || 0,
-            fiber: analysisResult.data.macronutrients?.fiber,
-            healthScore: analysisResult.data.health_score || 70,
-            recommendations: analysisResult.data.recommendations || [],
-          };
-
-          if (isMountedRef.current) {
-            setResults(foodResults);
-            setAnalyzing(false);
-          }
-
-          // 🆕 NON salvare l'analisi automaticamente - salva solo i dati temporanei
-          // Il salvataggio effettivo avverrà quando l'utente preme "Aggiungi ai pasti"
-          if (isMountedRef.current) {
             setPendingAnalysisData({
               imageUri: asset.uri,
               analysisResult: analysisResult.data,
             });
+
+            // Passa alla fase di revisione
+            setReviewFoods(foodItems);
+            setReviewImageUri(asset.uri);
+            setAnalyzing(false);
           }
 
         } else {
@@ -1703,11 +1717,12 @@ const FoodAnalysisScreenContent: React.FC = () => {
         if (isMountedRef.current) {
           alert(errorMsg);
         }
+        isCapturingRef.current = false; // 🔥 FIX: Reset flag before return
         return;
       }
 
       if (isMountedRef.current) {
-        setAnalyzing(true);
+        // setAnalyzing(true); // ⚠️ SPOSTATO: Non impostare analyzing qui, altrimenti la camera viene smontata prima dello scatto!
         setDetecting(true);
       }
 
@@ -1910,6 +1925,10 @@ const FoodAnalysisScreenContent: React.FC = () => {
       const dataUrl = `data:image/jpeg;base64,${photo.base64}`;
       // 🔥 FIX: Rimuoviamo console.log eccessivi
 
+      if (isMountedRef.current) {
+        setAnalyzing(true); // ✅ Adesso impostiamo l'animazione di caricamento solo dopo che abbiamo la foto
+      }
+
       const result = await analysisServiceRef.current.analyzeFood(dataUrl, 'food-analysis-session', {
         source: 'camera',
       });
@@ -1919,35 +1938,43 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
       // 🔥 FIX: Rimuoviamo console.log eccessivi
 
-      // Store the full analysis result
-      if (isMountedRef.current) {
-        setFullAnalysisResult(result.data);
-      }
+      // 🆕 TWO-PHASE FLOW: Prima mostra la schermata di revisione alimenti
+      const identifiedFoods = result.data.identified_foods || [];
 
-      // 🆕 NON salvare l'analisi automaticamente - salva solo i dati temporanei
-      // Il salvataggio effettivo avverrà quando l'utente preme "Aggiungi ai pasti"
+      // Converti gli alimenti identificati nel formato FoodItem per la revisione
+      const foodItems: FoodItem[] = identifiedFoods.map((food: any, index: number) => {
+        // Se food è una stringa, convertila in oggetto
+        if (typeof food === 'string') {
+          return {
+            id: `food-${Date.now()}-${index}`,
+            name: food,
+            quantity: 100,
+            unit: 'g',
+          };
+        }
+        // Se food è già un oggetto
+        return {
+          id: `food-${Date.now()}-${index}`,
+          name: food.name || food,
+          quantity: food.quantity || food.amount || 100,
+          unit: food.unit || 'g',
+        };
+      });
+
       if (isMountedRef.current) {
+        // Salva i dati dell'analisi completa per uso successivo
+        setFullAnalysisResult(result.data);
         setPendingAnalysisData({
           imageUri: finalUri, // Use manipulated URI
           analysisResult: result.data,
         });
-      }
 
-      const foodResults: FoodAnalysisResults = {
-        calories: result.data.macronutrients?.calories || 0,
-        carbohydrates: result.data.macronutrients?.carbohydrates || 0,
-        proteins: result.data.macronutrients?.proteins || 0,
-        fats: result.data.macronutrients?.fats || 0,
-        fiber: result.data.macronutrients?.fiber,
-        healthScore: result.data.health_score || 70,
-        recommendations: result.data.recommendations || [],
-      };
-
-      if (isMountedRef.current) {
+        // Passa alla fase di revisione
         cameraController.stopCamera();
+        setReviewFoods(foodItems);
+        setReviewImageUri(finalUri);
         setAnalyzing(false);
         setDetecting(false);
-        setResults(foodResults);
       }
     } catch (error: any) {
       console.error('❌ Food analysis error:', error?.message || error);
@@ -2132,7 +2159,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
     );
   }
 
-  if (cameraController.active && !analyzing) {
+  if (cameraController.active) {
     return (
       <CopilotStep text={language === 'it' ? "Analizza il tuo cibo" : "Analyze your food"} description={language === 'it' ? "Scatta una foto o carica un'immagine per analizzare i valori nutrizionali." : "Take a photo or upload an image to analyze nutritional values."} order={1} name="camera">
         <WalkthroughableView style={{ flex: 1 }}>
@@ -2155,6 +2182,68 @@ const FoodAnalysisScreenContent: React.FC = () => {
   }
 
   // Removed old capture card rendering - now using FoodResultsScreen for all results
+
+  // 🆕 TWO-PHASE FLOW: Mostra la schermata di revisione alimenti se disponibile
+  if (reviewFoods && reviewImageUri) {
+    return (
+      <FoodReviewScreen
+        identifiedFoods={reviewFoods}
+        imageUri={reviewImageUri}
+        isAnalyzing={isReviewAnalyzing}
+        onCancel={() => {
+          // Torna indietro e resetta tutto
+          console.log('[FoodAnalysis] ❌ Revisione annullata');
+          if (isMountedRef.current) {
+            setReviewFoods(null);
+            setReviewImageUri(null);
+            setIsReviewAnalyzing(false);
+            setFullAnalysisResult(null);
+            setPendingAnalysisData(null);
+          }
+        }}
+        onConfirm={async (confirmedFoods: FoodItem[]) => {
+          // Procedi con l'analisi nutrizionale completa
+          console.log('[FoodAnalysis] ✅ Alimenti confermati, procedo con analisi completa:', confirmedFoods);
+
+          if (isMountedRef.current) {
+            setIsReviewAnalyzing(true);
+          }
+
+          try {
+            // Qui normalmente faremmo una seconda chiamata API con gli alimenti confermati
+            // Per ora usiamo i dati già disponibili dall'analisi iniziale
+            // TODO: Implementare chiamata API per analisi completa con alimenti confermati
+
+            // Usa i dati dell'analisi completa già disponibili
+            if (fullAnalysisResult) {
+              const foodResults: FoodAnalysisResults = {
+                calories: fullAnalysisResult.macronutrients?.calories || 0,
+                carbohydrates: fullAnalysisResult.macronutrients?.carbohydrates || 0,
+                proteins: fullAnalysisResult.macronutrients?.proteins || 0,
+                fats: fullAnalysisResult.macronutrients?.fats || 0,
+                fiber: fullAnalysisResult.macronutrients?.fiber,
+                healthScore: fullAnalysisResult.health_score || 70,
+                recommendations: fullAnalysisResult.recommendations || [],
+              };
+
+              if (isMountedRef.current) {
+                setResults(foodResults);
+                setReviewFoods(null);
+                setReviewImageUri(null);
+                setIsReviewAnalyzing(false);
+              }
+            }
+          } catch (error) {
+            console.error('[FoodAnalysis] ❌ Errore durante l\'analisi completa:', error);
+            if (isMountedRef.current) {
+              alert(t('analysis.food.errors.analysisFailed', { error: 'Analysis failed' }));
+              setIsReviewAnalyzing(false);
+            }
+          }
+        }}
+      />
+    );
+  }
 
   // Only render results section if we have results
   if (results) {
