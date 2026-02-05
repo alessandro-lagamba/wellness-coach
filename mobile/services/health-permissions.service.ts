@@ -47,7 +47,6 @@ if (Platform.OS === 'ios') {
   try {
     const HealthConnectModule = require('react-native-health-connect');
     HealthConnect = HealthConnectModule.default || HealthConnectModule;
-    console.log('[HealthPermissions] ✅ Health Connect module loaded');
   } catch (error) {
     console.error('[HealthPermissions] ❌ Failed to load react-native-health-connect:', error);
   }
@@ -224,6 +223,7 @@ export class HealthPermissionsService {
 
     try {
       if (!HealthConnect || typeof HealthConnect.getSdkStatus !== 'function') {
+        console.warn('🔍 [HealthConnect] getSdkStatus is not available');
         return false;
       }
 
@@ -231,24 +231,27 @@ export class HealthPermissionsService {
       const status = await HealthConnect.getSdkStatus();
 
       // Verifica se SDK_AVAILABLE è disponibile come costante
-      // Altrimenti verifica che lo status sia un valore positivo
       if (HealthConnect.SdkAvailabilityStatus) {
         return status === HealthConnect.SdkAvailabilityStatus.SDK_AVAILABLE;
       }
 
-      // Fallback: se getSdkStatus restituisce un numero, SDK_AVAILABLE è tipicamente 1 o 2
+      // Fallback: se getSdkStatus restituisce un numero, SDK_AVAILABLE è tipicamente 1 o 2 (Android 14+)
       // Status 1 = SDK_AVAILABLE, Status 2 = SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED, etc.
-      return status === 1 || status === 'SDK_AVAILABLE' || status === true;
+      // Su versioni precedenti o particolari, potrebbe essere una stringa
+      const isAvailable = (status === 1 || status === 'SDK_AVAILABLE' || status === true);
+      console.log('🔍 [HealthConnect] Availability check result (fallback):', isAvailable);
+      return isAvailable;
     } catch (error) {
-      console.warn('⚠️ Error checking Health Connect availability:', error);
+      console.warn('⚠️ [HealthConnect] Error checking availability:', error);
       // Fallback ottimistico: prova comunque a inizializzare
       try {
         if (HealthConnect && HealthConnect.initialize && typeof HealthConnect.initialize === 'function') {
+          console.log('🔍 [HealthConnect] Attempting fallback initialization...');
           await HealthConnect.initialize();
           return true;
         }
       } catch (initError) {
-        // Se l'inizializzazione fallisce, Health Connect non è disponibile
+        console.error('❌ [HealthConnect] Fallback initialization failed:', initError);
         return false;
       }
       return false;
@@ -314,9 +317,7 @@ export class HealthPermissionsService {
       // 2) Inizializza Health Connect (CRITICO)
       if (HealthConnect.initialize && typeof HealthConnect.initialize === 'function') {
         try {
-          console.log('🔧 Initializing Health Connect...');
           await HealthConnect.initialize();
-          console.log('✅ Health Connect initialized');
         } catch (initError) {
           console.warn('⚠️ Health Connect initialization failed:', initError);
         }
@@ -387,27 +388,10 @@ export class HealthPermissionsService {
         console.warn('⚠️ Test read failed:', testReadError);
       }
 
-      // 6) Se l'app è registrata, aspetta e poi PROVA ad aprire Health Connect PRIMA di requestPermission
-      // Questo potrebbe essere necessario per alcuni dispositivi/versioni di Health Connect
+      // 6) Se l'app è registrata, aspetta un momento per sicurezza
       if (appRegistered) {
         console.log('⏳ Waiting for Health Connect to process registration...');
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // PROVA: Apri Health Connect alle impostazioni dell'app PRIMA di chiamare requestPermission
-        // Alcuni dispositivi richiedono che Health Connect sia "sveglio" per mostrare il dialog
-        console.log('🔧 Attempting to open Health Connect to app settings before requesting permissions...');
-        try {
-          // Apri Health Connect alle impostazioni dell'app (non bloccante)
-          if (HealthConnect.openHealthConnectSettings && typeof HealthConnect.openHealthConnectSettings === 'function') {
-            HealthConnect.openHealthConnectSettings().catch(() => {
-              // Ignora errori, è solo un tentativo
-            });
-          }
-          // Aspetta un po' per dare tempo a Health Connect di aprirsi
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } catch (openError) {
-          console.warn('⚠️ Could not pre-open Health Connect:', openError);
-        }
+        await new Promise(resolve => setTimeout(resolve, 800));
       }
 
       // 7) ORA chiedi i permessi - l'app DOVREBBE essere registrata
@@ -778,11 +762,11 @@ export class HealthPermissionsService {
       'steps': 'Steps',
       'heart_rate': 'HeartRate',
       'sleep': 'SleepSession',
-      'hrv': 'HeartRateVariabilityRmssd', // CORRETTO: deve essere HeartRateVariabilityRmssd, non HeartRateVariability
+      'hrv': 'HeartRateVariabilityRmssd',
       'blood_pressure': 'BloodPressure',
       'weight': 'Weight',
       'body_fat': 'BodyFat',
-      'menstruation': 'MenstruationPeriod', // 🆕
+      'menstruation': 'MenstruationPeriod',
     };
     return permissionMap[permissionId] || permissionId;
   }
@@ -862,17 +846,23 @@ export class HealthPermissionsService {
 
                 const idMapping: { [key: string]: string } = {
                   'Steps': 'steps',
+                  'StepsRecord': 'steps',
                   'HeartRate': 'heart_rate',
+                  'HeartRateRecord': 'heart_rate',
                   'SleepSession': 'sleep',
-                  'HeartRateVariabilityRmssd': 'hrv', // Standard
-                  'HeartRateVariabilityRmssdRecord': 'hrv', // With Record suffix
-                  'HeartRateVariability': 'hrv', // Generic/Old
-                  'HeartRateVariabilityRecord': 'hrv', // Generic/Old Record
+                  'SleepSessionRecord': 'sleep',
+                  'HeartRateVariabilityRmssd': 'hrv',
+                  'HeartRateVariabilityRmssdRecord': 'hrv',
+                  'HeartRateVariability': 'hrv',
+                  'HeartRateVariabilityRecord': 'hrv',
                   'BloodPressure': 'blood_pressure',
+                  'BloodPressureRecord': 'blood_pressure',
                   'Weight': 'weight',
+                  'WeightRecord': 'weight',
                   'BodyFat': 'body_fat',
-                  'MenstruationPeriod': 'menstruation', // Standard
-                  'MenstruationPeriodRecord': 'menstruation', // With Record suffix
+                  'BodyFatRecord': 'body_fat',
+                  'MenstruationPeriod': 'menstruation',
+                  'MenstruationPeriodRecord': 'menstruation',
                 };
 
                 const permissionId = idMapping[recordType] || recordType.toLowerCase();

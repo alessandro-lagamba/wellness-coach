@@ -22,17 +22,7 @@ import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 
 const { width } = Dimensions.get('window');
 
-// Unità di misura disponibili
-const UNITS = [
-    { value: 'g', label: 'g', labelFull: 'grammi' },
-    { value: 'ml', label: 'ml', labelFull: 'millilitri' },
-    { value: 'pz', label: 'pz', labelFull: 'pezzi' },
-    { value: 'cucchiaio', label: 'cucch.', labelFull: 'cucchiai' },
-    { value: 'cucchiaino', label: 'cucch.no', labelFull: 'cucchiaini' },
-    { value: 'tazza', label: 'tazza', labelFull: 'tazze' },
-    { value: 'fetta', label: 'fetta', labelFull: 'fette' },
-    { value: 'porzione', label: 'porz.', labelFull: 'porzioni' },
-];
+
 
 export interface FoodItem {
     id: string;
@@ -66,8 +56,6 @@ export const FoodReviewScreen: React.FC<FoodReviewScreenProps> = ({
     const [foods, setFoods] = useState<FoodItem[]>(identifiedFoods);
     const [showAddForm, setShowAddForm] = useState(false);
     const [newFoodName, setNewFoodName] = useState('');
-    const [newFoodQuantity, setNewFoodQuantity] = useState('100');
-    const [newFoodUnit, setNewFoodUnit] = useState('g');
     const [editingId, setEditingId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -106,16 +94,14 @@ export const FoodReviewScreen: React.FC<FoodReviewScreenProps> = ({
         const newFood: FoodItem = {
             id: generateId(),
             name: newFoodName.trim(),
-            quantity: parseFloat(newFoodQuantity) || 100,
-            unit: newFoodUnit,
+            quantity: 1,
+            unit: 'pz',
         };
 
         setFoods(prev => [...prev, newFood]);
         setNewFoodName('');
-        setNewFoodQuantity('100');
-        setNewFoodUnit('g');
         setShowAddForm(false);
-    }, [newFoodName, newFoodQuantity, newFoodUnit]);
+    }, [newFoodName]);
 
     const handleConfirm = useCallback(() => {
         if (foods.length === 0) return;
@@ -163,59 +149,16 @@ export const FoodReviewScreen: React.FC<FoodReviewScreenProps> = ({
                             style={[styles.foodNameInput, { color: colors.text, borderColor: colors.border }]}
                             value={food.name}
                             onChangeText={(text) => handleUpdateFood(food.id, 'name', text)}
-                            placeholder={language === 'it' ? 'Nome alimento' : 'Food name'}
+                            placeholder={t('analysis.food.review.foodName')}
                             placeholderTextColor={colors.textTertiary}
                             autoFocus
                         />
                     ) : (
-                        <Text style={[styles.foodName, { color: colors.text }]} numberOfLines={2}>
+                        <Text style={[styles.foodName, { color: colors.text }]} numberOfLines={3}>
                             {food.name}
                         </Text>
                     )}
                 </TouchableOpacity>
-
-                <View style={styles.quantityRow}>
-                    <View style={[styles.quantityInputContainer, { borderColor: colors.border }]}>
-                        <TextInput
-                            style={[styles.quantityInput, { color: colors.text }]}
-                            value={food.quantity.toString()}
-                            onChangeText={(text) => {
-                                const num = parseFloat(text.replace(',', '.')) || 0;
-                                handleUpdateFood(food.id, 'quantity', num);
-                            }}
-                            keyboardType="decimal-pad"
-                            selectTextOnFocus
-                        />
-                    </View>
-
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        style={styles.unitsScroll}
-                        contentContainerStyle={styles.unitsContainer}
-                    >
-                        {UNITS.map(unit => (
-                            <TouchableOpacity
-                                key={unit.value}
-                                style={[
-                                    styles.unitChip,
-                                    {
-                                        backgroundColor: food.unit === unit.value ? colors.primary : colors.surfaceMuted,
-                                        borderColor: food.unit === unit.value ? colors.primary : colors.border,
-                                    }
-                                ]}
-                                onPress={() => handleUpdateFood(food.id, 'unit', unit.value)}
-                            >
-                                <Text style={[
-                                    styles.unitChipText,
-                                    { color: food.unit === unit.value ? '#fff' : colors.text }
-                                ]}>
-                                    {unit.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
             </Animated.View>
         );
     };
@@ -229,7 +172,7 @@ export const FoodReviewScreen: React.FC<FoodReviewScreenProps> = ({
                 >
                     <MaterialCommunityIcons name="plus" size={20} color={colors.primary} />
                     <Text style={[styles.addButtonText, { color: colors.primary }]}>
-                        {language === 'it' ? 'Aggiungi alimento' : 'Add food'}
+                        {t('analysis.food.review.addFood')}
                     </Text>
                 </TouchableOpacity>
             );
@@ -243,7 +186,7 @@ export const FoodReviewScreen: React.FC<FoodReviewScreenProps> = ({
             >
                 <View style={styles.addFormHeader}>
                     <Text style={[styles.addFormTitle, { color: colors.text }]}>
-                        {language === 'it' ? 'Nuovo alimento' : 'New food'}
+                        {t('analysis.food.review.newFood')}
                     </Text>
                     <TouchableOpacity onPress={() => setShowAddForm(false)}>
                         <MaterialCommunityIcons name="close" size={20} color={colors.textSecondary} />
@@ -254,51 +197,10 @@ export const FoodReviewScreen: React.FC<FoodReviewScreenProps> = ({
                     style={[styles.addFormInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
                     value={newFoodName}
                     onChangeText={setNewFoodName}
-                    placeholder={language === 'it' ? 'Nome alimento (es. Pasta al pomodoro)' : 'Food name (e.g. Tomato pasta)'}
+                    placeholder={t('analysis.food.review.foodNamePlaceholder')}
                     placeholderTextColor={colors.textTertiary}
                     autoFocus
                 />
-
-                <View style={styles.quantityRow}>
-                    <View style={[styles.quantityInputContainer, { borderColor: colors.border, backgroundColor: colors.background }]}>
-                        <TextInput
-                            style={[styles.quantityInput, { color: colors.text }]}
-                            value={newFoodQuantity}
-                            onChangeText={setNewFoodQuantity}
-                            keyboardType="decimal-pad"
-                            placeholder="100"
-                            placeholderTextColor={colors.textTertiary}
-                        />
-                    </View>
-
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        style={styles.unitsScroll}
-                        contentContainerStyle={styles.unitsContainer}
-                    >
-                        {UNITS.map(unit => (
-                            <TouchableOpacity
-                                key={unit.value}
-                                style={[
-                                    styles.unitChip,
-                                    {
-                                        backgroundColor: newFoodUnit === unit.value ? colors.primary : colors.surfaceMuted,
-                                        borderColor: newFoodUnit === unit.value ? colors.primary : colors.border,
-                                    }
-                                ]}
-                                onPress={() => setNewFoodUnit(unit.value)}
-                            >
-                                <Text style={[
-                                    styles.unitChipText,
-                                    { color: newFoodUnit === unit.value ? '#fff' : colors.text }
-                                ]}>
-                                    {unit.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
 
                 <TouchableOpacity
                     style={[
@@ -310,7 +212,7 @@ export const FoodReviewScreen: React.FC<FoodReviewScreenProps> = ({
                 >
                     <MaterialCommunityIcons name="check" size={18} color="#fff" />
                     <Text style={styles.addFormConfirmText}>
-                        {language === 'it' ? 'Aggiungi' : 'Add'}
+                        {t('analysis.food.review.add')}
                     </Text>
                 </TouchableOpacity>
             </Animated.View>
@@ -322,10 +224,10 @@ export const FoodReviewScreen: React.FC<FoodReviewScreenProps> = ({
             <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
                 <ActivityIndicator size={60} color={colors.primary} />
                 <Text style={[styles.loadingTitle, { color: colors.text }]}>
-                    {language === 'it' ? 'Analisi nutrizionale in corso...' : 'Nutritional analysis in progress...'}
+                    {t('analysis.food.review.analyzingNutrition')}
                 </Text>
                 <Text style={[styles.loadingSubtitle, { color: colors.textSecondary }]}>
-                    {language === 'it' ? 'Calcolo calorie, macronutrienti e raccomandazioni' : 'Calculating calories, macronutrients and recommendations'}
+                    {t('analysis.food.review.calculatingMacros')}
                 </Text>
             </View>
         );
@@ -341,23 +243,43 @@ export const FoodReviewScreen: React.FC<FoodReviewScreenProps> = ({
                     </TouchableOpacity>
                     <View style={styles.headerTitleContainer}>
                         <Text style={[styles.headerTitle, { color: colors.text }]}>
-                            {language === 'it' ? 'Verifica alimenti' : 'Review foods'}
+                            {t('analysis.food.review.title')}
                         </Text>
                         <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-                            {language === 'it' ? 'Modifica se necessario' : 'Edit if needed'}
+                            {t('analysis.food.review.subtitle')}
                         </Text>
                     </View>
                     <View style={styles.headerButton} />
                 </View>
 
-                {/* Info Banner */}
-                <View style={[styles.infoBanner, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
-                    <MaterialCommunityIcons name="information" size={20} color="#3b82f6" />
-                    <Text style={[styles.infoBannerText, { color: isDark ? '#93c5fd' : '#1d4ed8' }]}>
-                        {language === 'it'
-                            ? 'Controlla e modifica gli alimenti identificati prima di procedere con l\'analisi nutrizionale completa.'
-                            : 'Review and edit the identified foods before proceeding with the full nutritional analysis.'}
-                    </Text>
+                {/* Action Header (Sostituisce Info Banner e Bottom Bar) */}
+                <View style={styles.topActionsContainer}>
+                    <TouchableOpacity
+                        style={[styles.topCancelButton, { borderColor: colors.border }]}
+                        onPress={onCancel}
+                    >
+                        <Text style={[styles.topCancelButtonText, { color: colors.textSecondary }]}>
+                            {t('analysis.food.review.cancel')}
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.topConfirmButton, { opacity: foods.length === 0 ? 0.5 : 1 }]}
+                        onPress={handleConfirm}
+                        disabled={foods.length === 0}
+                    >
+                        <LinearGradient
+                            colors={['#10b981', '#059669']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.topConfirmGradient}
+                        >
+                            <Text style={styles.topConfirmButtonText}>
+                                {t('analysis.food.review.confirmAndAnalyze')}
+                            </Text>
+                            <MaterialCommunityIcons name="check" size={18} color="#fff" />
+                        </LinearGradient>
+                    </TouchableOpacity>
                 </View>
 
                 <KeyboardAvoidingView
@@ -381,49 +303,15 @@ export const FoodReviewScreen: React.FC<FoodReviewScreenProps> = ({
                             <View style={styles.emptyState}>
                                 <MaterialCommunityIcons name="food-off" size={48} color={colors.textTertiary} />
                                 <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
-                                    {language === 'it'
-                                        ? 'Nessun alimento identificato.\nAggiungi manualmente gli alimenti nel tuo pasto.'
-                                        : 'No foods identified.\nManually add the foods in your meal.'}
+                                    {t('analysis.food.review.noFoodsIdentified')}
                                 </Text>
                             </View>
                         )}
 
                         {/* Bottom Spacer */}
-                        <View style={{ height: 120 }} />
+                        <View style={{ height: 40 }} />
                     </ScrollView>
                 </KeyboardAvoidingView>
-            </SafeAreaView>
-
-            {/* Bottom Action Bar */}
-            <SafeAreaView edges={['bottom']} style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-                <View style={styles.bottomBarContent}>
-                    <TouchableOpacity
-                        style={[styles.cancelButton, { borderColor: colors.border }]}
-                        onPress={onCancel}
-                    >
-                        <Text style={[styles.cancelButtonText, { color: colors.text }]}>
-                            {language === 'it' ? 'Annulla' : 'Cancel'}
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.confirmButton, { opacity: foods.length === 0 ? 0.5 : 1 }]}
-                        onPress={handleConfirm}
-                        disabled={foods.length === 0}
-                    >
-                        <LinearGradient
-                            colors={['#10b981', '#059669']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.confirmButtonGradient}
-                        >
-                            <Text style={styles.confirmButtonText}>
-                                {language === 'it' ? 'Conferma e Analizza' : 'Confirm & Analyze'}
-                            </Text>
-                            <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
             </SafeAreaView>
         </View>
     );
@@ -479,20 +367,42 @@ const styles = StyleSheet.create({
         fontFamily: 'Figtree_500Medium',
         marginTop: 2,
     },
-    infoBanner: {
+    topActionsContainer: {
         flexDirection: 'row',
-        alignItems: 'flex-start',
-        padding: 12,
-        marginHorizontal: 16,
-        marginTop: 12,
-        borderRadius: 12,
-        gap: 10,
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        gap: 12,
     },
-    infoBannerText: {
+    topCancelButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    topCancelButtonText: {
+        fontSize: 14,
+        fontFamily: 'Figtree_600SemiBold',
+    },
+    topConfirmButton: {
         flex: 1,
-        fontSize: 13,
-        fontFamily: 'Figtree_500Medium',
-        lineHeight: 18,
+        height: 44,
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    topConfirmGradient: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+    },
+    topConfirmButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontFamily: 'Figtree_700Bold',
     },
     keyboardView: {
         flex: 1,
@@ -508,13 +418,14 @@ const styles = StyleSheet.create({
     },
     foodItem: {
         borderRadius: 16,
-        padding: 14,
+        padding: 16,
         gap: 10,
     },
     foodItemHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        marginBottom: 4,
     },
     foodNumberBadge: {
         width: 24,
@@ -550,44 +461,9 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontFamily: 'Figtree_600SemiBold',
         paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingVertical: 10,
         borderWidth: 1,
-        borderRadius: 8,
-    },
-    quantityRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-    },
-    quantityInputContainer: {
-        width: 70,
-        height: 38,
-        borderWidth: 1,
-        borderRadius: 8,
-        justifyContent: 'center',
-    },
-    quantityInput: {
-        fontSize: 15,
-        fontFamily: 'Figtree_600SemiBold',
-        textAlign: 'center',
-        paddingHorizontal: 8,
-    },
-    unitsScroll: {
-        flex: 1,
-    },
-    unitsContainer: {
-        gap: 6,
-        paddingRight: 8,
-    },
-    unitChip: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        borderWidth: 1,
-    },
-    unitChipText: {
-        fontSize: 13,
-        fontFamily: 'Figtree_600SemiBold',
+        borderRadius: 10,
     },
     addButton: {
         flexDirection: 'row',
@@ -651,50 +527,6 @@ const styles = StyleSheet.create({
         fontFamily: 'Figtree_500Medium',
         textAlign: 'center',
         lineHeight: 20,
-    },
-    bottomBar: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        borderTopWidth: 1,
-        paddingTop: 12,
-        paddingHorizontal: 16,
-        paddingBottom: 8,
-    },
-    bottomBarContent: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    cancelButton: {
-        flex: 1,
-        height: 50,
-        borderRadius: 25,
-        borderWidth: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    cancelButtonText: {
-        fontSize: 15,
-        fontFamily: 'Figtree_600SemiBold',
-    },
-    confirmButton: {
-        flex: 2,
-        height: 50,
-        borderRadius: 25,
-        overflow: 'hidden',
-    },
-    confirmButtonGradient: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-    },
-    confirmButtonText: {
-        color: '#fff',
-        fontSize: 15,
-        fontFamily: 'Figtree_700Bold',
     },
 });
 

@@ -1699,7 +1699,7 @@
         "subtitle": "Valutazione nutrizionale completa con AI",
         "nutrition": "Nutrizione",
         "mealType": "Tipo di Pasto",
-        "identifiedFoods": "Cibi Identificati",
+        "identifiedFoods": "Alimenti Identificati",
         "macronutrients": "Macronutrienti",
         "vitaminsMinerals": "Vitamine e Minerali",
         "vitamins": "Vitamine",
@@ -1853,26 +1853,6 @@
         "quickAddSubtitle": "Includi quantità e calorie, se disponibili",
         "quickAddPlaceholder": "Esempio: 200g di pollo ai ferri, 300 kcal...",
         "analyze": "Analizza"
-      },
-      "preferences": {
-        "title": "Preferenze Alimentari",
-        "subtitle": "Personalizza la generazione delle ricette con i tuoi gusti, ingredienti preferiti e allergie.",
-        "cuisineLabel": "Cucina preferita",
-        "favorites": "Ingredienti preferiti",
-        "favoritePlaceholder": "Es. basilico fresco, salmone...",
-        "allergies": "Allergie o intolleranze",
-        "allergyPlaceholder": "Es. glutine, lattosio...",
-        "saveError": "Impossibile salvare le preferenze",
-        "cuisines": {
-          "none": "Qualsiasi",
-          "italian": "Italiana",
-          "mediterranean": "Mediterranea",
-          "asian": "Asiatica",
-          "latin": "Latino-americana",
-          "middleEastern": "Mediorientale",
-          "american": "Americana",
-          "vegetarian": "Vegetariana"
-        }
       },
       "fridge": {
         "title": "Cosa hai nel Frigo?",
@@ -2043,6 +2023,7 @@
         "infoBanner": "Controlla e modifica gli alimenti identificati prima di procedere con l'analisi nutrizionale completa.",
         "addFood": "Aggiungi alimento",
         "newFood": "Nuovo alimento",
+        "foodName": "Nome alimento",
         "foodNamePlaceholder": "Nome alimento (es. Pasta al pomodoro)",
         "add": "Aggiungi",
         "cancel": "Annulla",

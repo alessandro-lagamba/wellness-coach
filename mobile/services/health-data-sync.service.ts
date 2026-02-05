@@ -23,6 +23,8 @@ export interface HealthDataRecord {
   body_fat?: number; // percentage
   hydration?: number; // ml
   mindfulness_minutes?: number;
+  bedtime?: string;
+  waketime?: string;
   // 🔥 REMOVED: source column dropped from database
   created_at: string;
   updated_at: string;
@@ -170,6 +172,8 @@ export class HealthDataSyncService {
         // We rely on the caller (TodayGlanceService) to pass the correct cumulative value.
         hydration: healthData.hydration !== undefined ? roundInt(healthData.hydration) : (existingRecord?.hydration || 0),
         mindfulness_minutes: healthData.mindfulnessMinutes !== undefined ? roundInt(healthData.mindfulnessMinutes) : (existingRecord?.mindfulness_minutes || 0),
+        bedtime: healthData.bedtime !== undefined ? healthData.bedtime : (existingRecord?.bedtime || null),
+        waketime: healthData.waketime !== undefined ? healthData.waketime : (existingRecord?.waketime || null),
       };
 
       // ✅ OPTIM: se non cambia niente rispetto al record esistente, skip upsert
@@ -189,6 +193,8 @@ export class HealthDataSyncService {
           light_sleep_minutes: healthRecord.light_sleep_minutes ?? 0,
           hydration: healthRecord.hydration ?? 0,
           mindfulness_minutes: healthRecord.mindfulness_minutes ?? 0,
+          bedtime: healthRecord.bedtime ?? null,
+          waketime: healthRecord.waketime ?? null,
         };
 
         const prev = {
@@ -206,7 +212,14 @@ export class HealthDataSyncService {
           light_sleep_minutes: existingRecord.light_sleep_minutes ?? 0,
           hydration: existingRecord.hydration ?? 0,
           mindfulness_minutes: existingRecord.mindfulness_minutes ?? 0,
+          bedtime: existingRecord.bedtime ?? null,
+          waketime: existingRecord.waketime ?? null,
         };
+
+        if (__DEV__) {
+          console.log('🔍 [SYNC DEBUG] Next (New) Record:', JSON.stringify(next, null, 2));
+          console.log('🔍 [SYNC DEBUG] Prev (DB) Record:', JSON.stringify(prev, null, 2));
+        }
 
         const unchanged = Object.keys(next).every((k) => (next as any)[k] === (prev as any)[k]);
 

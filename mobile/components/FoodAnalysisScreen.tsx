@@ -581,6 +581,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
   // 🔥 FIX: Spostato hook useAnalysisStore prima dei return condizionali per rispettare le regole degli hook
   const foodHistory = useAnalysisStore((state) => state.getSafeFoodHistory());
   const latestFoodSession = useAnalysisStore((state) => state.latestFoodSession);
+  const removeFoodSession = useAnalysisStore((state) => state.removeFoodSession);
 
   const ensureSafeCalories = useCallback((calories?: number) => {
     const normalized = typeof calories === 'number' ? Math.round(calories) : MIN_SAFE_CALORIES;
@@ -744,7 +745,9 @@ const FoodAnalysisScreenContent: React.FC = () => {
     try {
       const currentUser = await AuthService.getCurrentUser();
       if (currentUser && isMountedRef.current) {
+        console.log('🔄 Loading daily intake...');
         const intake = await FoodAnalysisService.getDailyIntake(currentUser.id);
+        console.log('✅ Daily Intake loaded:', intake);
         if (isMountedRef.current) {
           setDailyIntake(intake);
         }
@@ -1046,6 +1049,25 @@ const FoodAnalysisScreenContent: React.FC = () => {
   };
 
   const handleRecipeEditorSaved = async (saved: UserRecipe) => {
+    // 🔥 Cleanup Analisi: Se abbiamo rimosso dei componenti nell'editor, eliminiamo le loro analisi dal database
+    const oldIds = (editingRecipe as any)?.analysis_ids || (recipeDraft as any)?.analysis_ids || [];
+    const newIds = (saved as any).analysis_ids || [];
+    const removedIds = oldIds.filter((id: string) => !newIds.includes(id));
+
+    if (removedIds.length > 0) {
+      try {
+        const currentUser = await AuthService.getCurrentUser();
+        if (currentUser) {
+          for (const id of removedIds) {
+            await FoodAnalysisService.deleteFoodAnalysis(currentUser.id, id);
+            removeFoodSession(id);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to cleanup removed analyses:', err);
+      }
+    }
+
     setRecipeEditorVisible(false);
     setEditingRecipe(null);
     setRecipeDraft(null);
@@ -1060,13 +1082,33 @@ const FoodAnalysisScreenContent: React.FC = () => {
     // collega lo slot del planner a questa nuova UserRecipe.
     if (pendingAttachSlot) {
       try {
-        await mealPlanService.upsertEntry({
+        // 🔥 FIX: Prima di aggiungere la nuova versione, elimina TUTTE le analisi vecchie associate a questo slot
+        // per evitare "fantasmi" o doppi conteggi nei Gauges.
+        const prevEntry = getEntryForCell(pendingAttachSlot.date, pendingAttachSlot.mealType);
+        if (prevEntry && prevEntry.custom_recipe) {
+          const oldCustom = prevEntry.custom_recipe as any;
+          const oldAnalysisIds = oldCustom.analysis_ids || (oldCustom.analysis_id ? [oldCustom.analysis_id] : []);
+
+          if (oldAnalysisIds.length > 0) {
+            const currentUser = await AuthService.getCurrentUser();
+            if (currentUser) {
+              // Eliminiamo in parallelo per velocità
+              await Promise.all(oldAnalysisIds.map((id: string) =>
+                FoodAnalysisService.deleteFoodAnalysis(currentUser.id, id).catch(e => console.warn('Failed to delete old analysis', id, e))
+              ));
+            }
+          }
+        }
+
+        await mealPlanService.addEntry({
           plan_date: pendingAttachSlot.date,
           meal_type: pendingAttachSlot.mealType,
           recipe_id: saved.id,
-          custom_recipe: null,
+          custom_recipe: undefined,
           servings: 1,
-        });
+        }, false); // merge=false
+
+        await reloadData();
         await loadMealPlan();
       } catch (error) {
         console.warn('Failed to attach saved recipe to meal plan slot:', error);
@@ -1074,6 +1116,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
         setPendingAttachSlot(null);
       }
     }
+    await reloadData();
     loadRecipeLibrary();
   };
 
@@ -1098,10 +1141,15 @@ const FoodAnalysisScreenContent: React.FC = () => {
 
         // 3. Se associato a un'analisi Food, elimina anche quella per aggiornare i totali giornalieri "consumati"
         const customRecipe = entryToDelete?.custom_recipe as any;
-        if (customRecipe?.analysis_id) {
+        const analysisIds = customRecipe?.analysis_ids || (customRecipe?.analysis_id ? [customRecipe.analysis_id] : []);
+
+        if (analysisIds.length > 0) {
           const currentUser = await AuthService.getCurrentUser();
           if (currentUser) {
-            await FoodAnalysisService.deleteFoodAnalysis(currentUser.id, customRecipe.analysis_id);
+            for (const id of analysisIds) {
+              await FoodAnalysisService.deleteFoodAnalysis(currentUser.id, id);
+              removeFoodSession(id);
+            }
           }
         }
 
@@ -1149,8 +1197,31 @@ const FoodAnalysisScreenContent: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
+              // 1. Trova l'entry per recuperare eventuali ID di analisi associati
+              const entryToDelete = getEntryForCell(moveModal.date!, moveModal.fromMealType!);
+
+              // 2. Rimuovi dal planner
               await mealPlanService.removeEntry(moveModal.date!, moveModal.fromMealType!);
-              await loadMealPlan();
+
+              // 3. Se associato a un'analisi Food, elimina anche quella per aggiornare i totali giornalieri
+              const customRecipe = entryToDelete?.custom_recipe as any;
+              const analysisIds = customRecipe?.analysis_ids || (customRecipe?.analysis_id ? [customRecipe.analysis_id] : []);
+
+              if (analysisIds.length > 0) {
+                const currentUser = await AuthService.getCurrentUser();
+                if (currentUser) {
+                  // Eliminiamo in parallelo per velocità
+                  await Promise.all(analysisIds.map((id: string) =>
+                    FoodAnalysisService.deleteFoodAnalysis(currentUser.id, id)
+                      .then(() => removeFoodSession(id))
+                      .catch(e => console.warn('Failed to delete analysis', id, e))
+                  ));
+                }
+              }
+
+              // 4. Piccola attesa per propagazione DB e poi ricarica
+              await new Promise(r => setTimeout(r, 300));
+              await reloadData();
               closeMoveModal();
             } catch (error) {
               console.error('Failed to delete meal plan entry:', error);
@@ -1185,7 +1256,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
       });
 
       await mealPlanService.removeEntry(moveModal.date, moveModal.fromMealType);
-      await loadMealPlan();
+      await reloadData();
     } catch (error) {
       console.warn('Failed to move meal plan entry:', error);
     } finally {
@@ -1198,17 +1269,22 @@ const FoodAnalysisScreenContent: React.FC = () => {
     setSlotSearch('');
   };
 
-  const closeSlotPicker = () => setSlotPicker({ visible: false });
+  const closeSlotPicker = () => {
+    setSlotPicker((prev) => ({ ...prev, visible: false }));
+    setSlotSearch('');
+  };
 
   const handleAssignRecipeToSlot = async (recipeId: string) => {
     if (!slotPicker.date || !slotPicker.mealType) return;
     try {
-      await mealPlanService.upsertEntry({
+      // Usiamo addEntry invece di upsertEntry:
+      // addEntry è ora intelligente e unisce i dati se la cella non è vuota.
+      await mealPlanService.addEntry({
         plan_date: slotPicker.date,
         meal_type: slotPicker.mealType,
         recipe_id: recipeId,
       });
-      await loadMealPlan();
+      await reloadData();
       closeSlotPicker();
     } catch (error) {
       console.error('❌ Failed to assign recipe to meal plan:', error);
@@ -1218,8 +1294,31 @@ const FoodAnalysisScreenContent: React.FC = () => {
   const handleClearSlot = async () => {
     if (!slotPicker.date || !slotPicker.mealType) return;
     try {
+      // 1. Trova l'entry per recuperare eventuali ID di analisi associati
+      const entryToDelete = getEntryForCell(slotPicker.date, slotPicker.mealType);
+
+      // 2. Rimuovi dal planner
       await mealPlanService.removeEntry(slotPicker.date, slotPicker.mealType);
-      await loadMealPlan();
+
+      // 3. Se associato a un'analisi Food, elimina anche quella per aggiornare i totali giornalieri
+      const customRecipe = entryToDelete?.custom_recipe as any;
+      const analysisIds = customRecipe?.analysis_ids || (customRecipe?.analysis_id ? [customRecipe.analysis_id] : []);
+
+      if (analysisIds.length > 0) {
+        const currentUser = await AuthService.getCurrentUser();
+        if (currentUser) {
+          // Eliminiamo in parallelo per velocità
+          await Promise.all(analysisIds.map((id: string) =>
+            FoodAnalysisService.deleteFoodAnalysis(currentUser.id, id)
+              .then(() => removeFoodSession(id))
+              .catch(e => console.warn('Failed to delete analysis', id, e))
+          ));
+        }
+      }
+
+      // 4. Piccola attesa per propagazione DB e poi ricarica
+      await new Promise(r => setTimeout(r, 300));
+      await reloadData();
       closeSlotPicker();
     } catch (error) {
       console.error('❌ Failed to remove meal plan entry:', error);
@@ -1474,6 +1573,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
               title: capitalizeTitle(data.identified_foods || []),
               source: 'food_analysis',
               analysis_id: savedAnalysis.id,
+              analysis_ids: [savedAnalysis.id],
               calories: data.macronutrients?.calories || 0,
               macros: {
                 protein: data.macronutrients?.proteins || 0,
@@ -2210,20 +2310,24 @@ const FoodAnalysisScreenContent: React.FC = () => {
           }
 
           try {
-            // Qui normalmente faremmo una seconda chiamata API con gli alimenti confermati
-            // Per ora usiamo i dati già disponibili dall'analisi iniziale
-            // TODO: Implementare chiamata API per analisi completa con alimenti confermati
+            // Uniamo i nomi degli alimenti confermati in una stringa per l'analisi testuale
+            const foodText = confirmedFoods.map(f => f.name).join(', ');
 
-            // Usa i dati dell'analisi completa già disponibili
-            if (fullAnalysisResult) {
+            // Recupera il mealType dai risultati iniziali o inferiscilo
+            const mealType = fullAnalysisResult?.meal_type || inferMealTypeFromTime();
+
+            // Chiamata API per analisi completa con alimenti confermati
+            const result = await analysisServiceRef.current.analyzeFoodFromText(foodText, mealType);
+
+            if (result.success && result.data) {
               const foodResults: FoodAnalysisResults = {
-                calories: fullAnalysisResult.macronutrients?.calories || 0,
-                carbohydrates: fullAnalysisResult.macronutrients?.carbohydrates || 0,
-                proteins: fullAnalysisResult.macronutrients?.proteins || 0,
-                fats: fullAnalysisResult.macronutrients?.fats || 0,
-                fiber: fullAnalysisResult.macronutrients?.fiber,
-                healthScore: fullAnalysisResult.health_score || 70,
-                recommendations: fullAnalysisResult.recommendations || [],
+                calories: result.data.macronutrients?.calories || 0,
+                carbohydrates: result.data.macronutrients?.carbohydrates || 0,
+                proteins: result.data.macronutrients?.proteins || 0,
+                fats: result.data.macronutrients?.fats || 0,
+                fiber: result.data.macronutrients?.fiber,
+                healthScore: result.data.health_score || 70,
+                recommendations: result.data.recommendations || [],
               };
 
               if (isMountedRef.current) {
@@ -2231,12 +2335,17 @@ const FoodAnalysisScreenContent: React.FC = () => {
                 setReviewFoods(null);
                 setReviewImageUri(null);
                 setIsReviewAnalyzing(false);
+
+                // Aggiorniamo anche fullAnalysisResult con i nuovi dati se necessario
+                setFullAnalysisResult(result.data);
               }
+            } else {
+              throw new Error(result.error || 'Text analysis failed');
             }
-          } catch (error) {
+          } catch (error: any) {
             console.error('[FoodAnalysis] ❌ Errore durante l\'analisi completa:', error);
             if (isMountedRef.current) {
-              alert(t('analysis.food.errors.analysisFailed', { error: 'Analysis failed' }));
+              alert(t('analysis.food.errors.analysisFailed', { error: error?.message || 'Analysis failed' }));
               setIsReviewAnalyzing(false);
             }
           }
@@ -2656,6 +2765,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                   {entry ? (
                     <TouchableOpacity
                       activeOpacity={0.9}
+                      onPress={() => openSlotPicker(dateIso, mealType as MealPlanMealType)}
                       onLongPress={() => openMoveModal(dateIso, mealType as MealPlanMealType)}
                       style={{
                         flexDirection: 'row',
@@ -2751,6 +2861,9 @@ const FoodAnalysisScreenContent: React.FC = () => {
                                 : [],
                               steps: [],
                               source: custom.source || 'food_analysis',
+                              // 🔥 FIX: Passa i sub_items e gli analysis_ids al draft per permettere la gestione dei componenti
+                              sub_items: custom.sub_items || [],
+                              analysis_ids: custom.analysis_ids || (custom.analysis_id ? [custom.analysis_id] : []),
                             };
 
                             setPendingAttachSlot({ date: dateIso, mealType: mealType as MealPlanMealType });
@@ -3104,13 +3217,19 @@ const FoodAnalysisScreenContent: React.FC = () => {
                 )}
               </ScrollView>
 
-              <View style={styles.slotModalActions}>
+              <View style={[styles.slotModalActions, { marginTop: 20 }]}>
                 {slotPicker.date && slotPicker.mealType && getEntryForCell(slotPicker.date, slotPicker.mealType) && (
                   <TouchableOpacity
-                    style={[styles.secondaryButton, { borderColor: colors.error }]}
+                    style={[styles.secondaryButton, {
+                      borderColor: '#ef4444',
+                      backgroundColor: '#fef2f2',
+                      borderWidth: 1,
+                      flex: 1,
+                      paddingVertical: 10
+                    }]}
                     onPress={handleClearSlot}
                   >
-                    <Text style={[styles.secondaryButtonText, { color: colors.error }]}>
+                    <Text style={[styles.secondaryButtonText, { color: '#ef4444', fontSize: 13 }]}>
                       {t('analysis.food.mealPlanner.remove')}
                     </Text>
                   </TouchableOpacity>
@@ -3120,13 +3239,15 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     backgroundColor: colors.surfaceElevated || colors.surface,
                     borderColor: colors.border,
                     borderWidth: 1,
+                    flex: 1,
                     paddingVertical: 10,
-                    paddingHorizontal: 16,
                   }]}
                   onPress={closeSlotPicker}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.secondaryButtonText, { color: colors.text, fontSize: 13 }]}>{t('common.close')}</Text>
+                  <Text style={[styles.secondaryButtonText, { color: colors.text, fontSize: 13 }]}>
+                    {t('common.close')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>

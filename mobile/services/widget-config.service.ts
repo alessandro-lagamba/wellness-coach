@@ -502,7 +502,6 @@ export const useWidgetConfig = () => {
   const load = async () => {
     setLoading(true);
     const cfg = await widgetConfigService.getWidgetConfig();
-    console.log('🔄 HOOK LOADING CONFIG:', cfg.map(w => ({ id: w.id, position: w.position, enabled: w.enabled, size: w.size })));
     setConfig(cfg);
     setLoading(false);
   };

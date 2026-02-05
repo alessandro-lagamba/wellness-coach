@@ -56,7 +56,7 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
   allowDelete = false,
 }) => {
   const { colors } = useTheme();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const isCreateMode = mode === 'create';
   const [form, setForm] = useState({
     title: '',
@@ -70,6 +70,7 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
     ingredients: '',
     steps: '',
   });
+  const [subItems, setSubItems] = useState<any[]>([]);
   const [recipeImage, setRecipeImage] = useState<string | null>(null);  // Track recipe image separately
   const [saving, setSaving] = useState(false);
   const canUseAiComplete = !!aiContext && mode === 'create';
@@ -122,6 +123,22 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
     // Set the image from the source (generated recipe or existing recipe)
     setRecipeImage(source?.image || null);
 
+    // Set composite sub-items if present
+    let incomingSubItems = (source as any)?.sub_items || [];
+
+    // 🔥 FIX: Se non ci sono sub_items ma abbiamo calorie (vecchio pasto), 
+    // creiamo un sub_item sintetico per permettere la gestione uniforme
+    if (incomingSubItems.length === 0 && (source?.calories_per_serving || (source as any)?.calories)) {
+      incomingSubItems = [{
+        title: source.title || 'Pasto',
+        calories: source.calories_per_serving || (source as any).calories || 0,
+        macros: source.macros || (source as any).macros || {},
+        analysis_ids: (source as any).analysis_ids || ((source as any).analysis_id ? [(source as any).analysis_id] : []),
+        source: (source as any).source || 'legacy'
+      }];
+    }
+    setSubItems(incomingSubItems);
+
     // ✅ Initialize calculatedNutrition from source data (handles both camelCase and snake_case)
     const calories = (source as any)?.caloriesPerServing || source?.calories_per_serving || 0;
     const macros = (source as any)?.macrosPerServing || source?.macros || null;
@@ -169,6 +186,30 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
     });
   };
 
+  const handleRemoveSubItem = (index: number) => {
+    const itemToRemove = subItems[index];
+    const updatedSubItems = subItems.filter((_, i) => i !== index);
+    setSubItems(updatedSubItems);
+
+    // Ricalcola automaticamente il titolo (rimuovendo il pezzo)
+    const newTitle = updatedSubItems.map(i => i.title).join(', ');
+
+    // Ricalcola kcal e macros
+    const newCalories = Math.max(0, (calculatedNutrition?.caloriesPerServing || 0) - (itemToRemove.calories || 0));
+    const newMacros = {
+      protein: Math.max(0, (calculatedNutrition?.macrosPerServing?.protein || 0) - (itemToRemove.macros?.protein || 0)),
+      carbs: Math.max(0, (calculatedNutrition?.macrosPerServing?.carbs || 0) - (itemToRemove.macros?.carbs || 0)),
+      fat: Math.max(0, (calculatedNutrition?.macrosPerServing?.fat || 0) - (itemToRemove.macros?.fat || 0)),
+      fiber: Math.max(0, (calculatedNutrition?.macrosPerServing?.fiber || 0) - (itemToRemove.macros?.fiber || 0)),
+    };
+
+    setForm(prev => ({ ...prev, title: newTitle }));
+    setCalculatedNutrition({
+      caloriesPerServing: newCalories,
+      macrosPerServing: newMacros,
+    });
+  };
+
   const buildPayload = () => {
     const ingredients = form.ingredients
       .split('\n')
@@ -180,6 +221,9 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
       .map((line) => line.trim())
       .filter(Boolean);
     const mealTypeArray = Array.from(form.mealTypes);
+
+    // Raccogliamo tutti gli ID analisi correnti per assicurare la pulizia futura
+    const currentAnalysisIds = [...new Set(subItems.flatMap(i => i.analysis_ids || (i.analysis_id ? [i.analysis_id] : [])))].filter(Boolean);
 
     return {
       title: form.title.trim(),
@@ -204,6 +248,10 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
         fiber: calculatedNutrition.macrosPerServing.fiber,
         sugar: calculatedNutrition.macrosPerServing.sugar,
       } : undefined,
+      // Passiamo i sub_items aggiornati e gli ID analisi ricalcolati
+      sub_items: subItems.length > 0 ? subItems : undefined,
+      analysis_ids: currentAnalysisIds.length > 0 ? currentAnalysisIds : undefined,
+      analysis_id: currentAnalysisIds[currentAnalysisIds.length - 1] || undefined,
       // ✅ Include the recipe image if available
       image: recipeImage || undefined,
     };
@@ -347,6 +395,57 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
                 placeholderTextColor={colors.textTertiary}
               />
             </View>
+
+            {/* Composite Meal Items (if present) */}
+            {subItems.length > 0 && (
+              <View style={{ marginBottom: 24, paddingHorizontal: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+                  <MaterialCommunityIcons name="bowl-mix-outline" size={20} color={colors.primary} />
+                  <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>
+                    {language === 'it' ? 'Componenti del pasto' : 'Meal Components'}
+                  </Text>
+                </View>
+                <View style={{ gap: 10 }}>
+                  {subItems.map((item, idx) => (
+                    <View
+                      key={`${item.title}-${idx}`}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: colors.surfaceElevated || colors.surface,
+                        padding: 14,
+                        borderRadius: 18,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.05,
+                        shadowRadius: 2,
+                        elevation: 2
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>{item.title}</Text>
+                        <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+                          {Math.round(item.calories || 0)} kcal • P: {Math.round(item.macros?.protein || 0)}g | C: {Math.round(item.macros?.carbs || 0)}g
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => handleRemoveSubItem(idx)}
+                        style={{ padding: 6, backgroundColor: colors.error + '10', borderRadius: 10 }}
+                      >
+                        <MaterialCommunityIcons name="close" size={20} color={colors.error} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+                <Text style={{ fontSize: 12, fontStyle: 'italic', color: colors.textTertiary, marginTop: 10, lineHeight: 16 }}>
+                  {language === 'it'
+                    ? 'Puoi rimuoverli singolarmente: kcal e nutrienti verranno ricalcolati automaticamente.'
+                    : 'You can remove them individually: calories and nutrients will be recalculated automatically.'}
+                </Text>
+              </View>
+            )}
 
             <View style={[styles.field, { borderColor: colors.border }]}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>

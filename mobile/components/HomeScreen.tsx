@@ -544,11 +544,11 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         iconImage: require('../assets/images/widgets_logos/sleep.png'),
         color: '#F59E0B', backgroundColor: 'rgba(245, 158, 11, 0.08)', borderColor: 'rgba(245, 158, 11, 0.25)', textColor: '#B45309', category: 'health',
         sleep: {
-          hours: Math.round((hd.sleepHours || 0) * 10) / 10,
+          hours: Math.round((hd.sleepHours || 0) * 100) / 100,
           goal: sleepGoal,
           // 🔥 FIX: Usa bedtime e waketime da HealthConnect invece di deepSleep/remSleep
-          bedtime: (hd as any).bedtime || '—',
-          wakeTime: (hd as any).waketime || '—',
+          bedtime: hd.bedtime || '—',
+          wakeTime: hd.waketime || '—',
         }
       },
       {
@@ -873,6 +873,8 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         // Manual inputs: ALWAYS from DB
         hydration: dbHealthData?.hydration || 0,
         mindfulnessMinutes: dbHealthData?.mindfulness_minutes || 0,
+        bedtime: dbHealthData?.bedtime || '',
+        waketime: dbHealthData?.waketime || '',
       };
 
       // Aggiorna i widget con i dati combinati
@@ -1110,27 +1112,27 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   };
 
   const computeGaugeSubtitle = (info: any) => {
-    const currentStyle = { color: info.textColor || info.color, fontWeight: '800' } as const;
+    const currentStyle = { color: info.textColor || info.color, fontFamily: 'Figtree_700Bold' } as const;
 
     if (info?.steps) {
       const current = Math.max(0, info.steps.current || 0).toLocaleString();
       const goal = info.steps.goal.toLocaleString();
       return (
-        <Text>
+        <Text style={{ fontFamily: 'Figtree_500Medium' }}>
           <Text style={currentStyle}>{current}</Text> <Text style={{ color: '#94a3b8' }}>/</Text> {goal}
         </Text>
       );
     }
     if (info?.hydration) {
       return (
-        <Text>
+        <Text style={{ fontFamily: 'Figtree_500Medium' }}>
           <Text style={currentStyle}>{info.hydration.glasses}</Text> <Text style={{ color: '#94a3b8' }}>/</Text> {info.hydration.goal}
         </Text>
       );
     }
     if (info?.meditation) {
       return (
-        <Text>
+        <Text style={{ fontFamily: 'Figtree_500Medium' }}>
           <Text style={currentStyle}>{info.meditation.minutes}</Text> <Text style={{ color: '#94a3b8' }}>/</Text> {info.meditation.goal}
         </Text>
       );
@@ -1138,7 +1140,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     // 🔥 FIX: Mostra obiettivo kcal invece del valore attuale
     if (info?.calories) {
       return (
-        <Text>
+        <Text style={{ fontFamily: 'Figtree_500Medium' }}>
           <Text style={currentStyle}>{info.calories.current}</Text> <Text style={{ color: '#94a3b8' }}>/</Text> {info.calories.goal}
         </Text>
       );

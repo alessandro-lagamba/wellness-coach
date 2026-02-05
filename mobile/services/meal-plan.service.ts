@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { AuthService } from './auth.service';
 import { UserRecipe } from './recipe-library.service';
+import { FoodAnalysisService } from './food-analysis.service';
 import { encryptText, decryptText } from './encryption.service';
 
 export type MealPlanMealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -53,7 +54,7 @@ class MealPlanService {
     if (error) {
       if (error.message?.includes('Network request failed')) {
         console.warn('[MealPlan] Network request failed (offline?)');
-        return []; // Return empty array on network error instead of throwing
+        return [];
       }
       console.error('[MealPlan] getEntries error', error);
       throw error;
@@ -61,7 +62,6 @@ class MealPlanService {
 
     const entries = (data || []).map((row) => this.mapRow(row));
 
-    // Decifra le note se presenti
     for (const entry of entries) {
       if (entry.notes) {
         const decrypted = await decryptText(entry.notes, user.id);
@@ -78,14 +78,13 @@ class MealPlanService {
     const user = await AuthService.getCurrentUser();
     if (!user) throw new Error('User not authenticated');
 
-    // Cifra le note prima di salvare
     let encryptedNotes: string | null = null;
     if (input.notes) {
       try {
         encryptedNotes = await encryptText(input.notes, user.id);
       } catch (encError) {
         console.warn('[MealPlan] ⚠️ Encryption failed, saving as plaintext (fallback):', encError);
-        encryptedNotes = input.notes; // Fallback
+        encryptedNotes = input.notes;
       }
     }
 
@@ -111,42 +110,50 @@ class MealPlanService {
       throw error;
     }
 
-    const entry = this.mapRow(data);
-
-    // Decifra le note prima di restituire
-    if (entry.notes) {
-      const decrypted = await decryptText(entry.notes, user.id);
-      if (decrypted !== null) {
-        entry.notes = decrypted;
+    // 🔥 Sincronizzazione Gauges: Se spostiamo un pasto esistente, aggiorniamo la data dell'analisi associata
+    const custom: any = data.custom_recipe;
+    const analysisIds = custom?.analysis_ids || (custom?.analysis_id ? [custom.analysis_id] : []);
+    if (analysisIds.length > 0) {
+      try {
+        await FoodAnalysisService.updateFoodAnalysesDate(user.id, analysisIds, input.plan_date);
+      } catch (e) {
+        console.warn('[MealPlan] Failed to sync analysis dates:', e);
       }
     }
 
+    const entry = this.mapRow(data);
+    if (entry.notes) {
+      const decrypted = await decryptText(entry.notes, user.id);
+      if (decrypted !== null) entry.notes = decrypted;
+    }
     return entry;
   }
 
-  async addEntry(input: UpsertMealPlanInput): Promise<MealPlanEntry> {
+  async addEntry(input: UpsertMealPlanInput, merge: boolean = true): Promise<MealPlanEntry> {
     const user = await AuthService.getCurrentUser();
     if (!user) throw new Error('User not authenticated');
 
-    // 1. Controlla se esiste già un'entrata per questo utente, data e tipo di pasto
-    const { data: existingEntry, error: fetchError } = await supabase
-      .from('meal_plan_entries')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('plan_date', input.plan_date)
-      .eq('meal_type', input.meal_type)
-      .maybeSingle();
+    // 1. Recupera l'entry esistente solo se siamo in modalità merge
+    let existingEntry: any = null;
+    if (merge) {
+      const { data, error: fetchError } = await supabase
+        .from('meal_plan_entries')
+        .select('*, user_recipes (*)')
+        .eq('user_id', user.id)
+        .eq('plan_date', input.plan_date)
+        .eq('meal_type', input.meal_type)
+        .maybeSingle();
 
-    if (fetchError) {
-      console.error('[MealPlan] Error fetching existing entry:', fetchError);
+      if (fetchError) {
+        console.error('[MealPlan] Error fetching existing entry:', fetchError);
+      }
+      existingEntry = data;
     }
 
-    // Cifra le note prima di salvare
+    // 2. Calcoliamo la nota finale (appendiamo solo se merge=true)
     let encryptedNotes: string | null = null;
     const newNote = input.notes || '';
-
-    if (existingEntry && existingEntry.notes) {
-      // Se esiste già un'entrata, decifra la vecchia nota e appendi la nuova
+    if (merge && existingEntry && existingEntry.notes) {
       try {
         const oldNote = await decryptText(existingEntry.notes, user.id);
         const combinedNotes = oldNote ? `${oldNote}\n${newNote}` : newNote;
@@ -158,76 +165,123 @@ class MealPlanService {
       encryptedNotes = await encryptText(newNote, user.id);
     }
 
-    let payload: any = {
-      user_id: user.id,
-      plan_date: input.plan_date,
-      meal_type: input.meal_type,
-      recipe_id: input.recipe_id || (existingEntry?.recipe_id || null),
-      servings: input.servings ?? (existingEntry?.servings || 1),
-      notes: encryptedNotes,
-      updated_at: new Date().toISOString(),
-    };
-
-    // Gestione custom_recipe (Merge se esiste già)
-    if (existingEntry && existingEntry.custom_recipe && input.custom_recipe) {
-      const oldRecipe = existingEntry.custom_recipe;
-      const newRecipe = input.custom_recipe;
-
-      payload.custom_recipe = {
-        ...oldRecipe,
-        title: `${oldRecipe.title}, ${newRecipe.title}`,
-        calories: (oldRecipe.calories || 0) + (newRecipe.calories || 0),
-        macros: {
-          protein: (oldRecipe.macros?.protein || 0) + (newRecipe.macros?.protein || 0),
-          carbs: (oldRecipe.macros?.carbs || 0) + (newRecipe.macros?.carbs || 0),
-          fat: (oldRecipe.macros?.fat || 0) + (newRecipe.macros?.fat || 0),
-          fiber: (oldRecipe.macros?.fiber || 0) + (newRecipe.macros?.fiber || 0),
-        },
-        identified_foods: [
-          ...(oldRecipe.identified_foods || []),
-          ...(newRecipe.identified_foods || [])
-        ],
-        health_score: Math.round(((oldRecipe.health_score || 70) + (newRecipe.health_score || 70)) / 2),
-        image_url: newRecipe.image_url || oldRecipe.image_url, // Usa l'ultima immagine
-      };
-    } else {
-      payload.custom_recipe = input.custom_recipe || (existingEntry?.custom_recipe || null);
-    }
-
-    let result;
-    if (existingEntry) {
-      // Update
-      const { data, error } = await supabase
-        .from('meal_plan_entries')
-        .update(payload)
-        .eq('id', existingEntry.id)
-        .select('*, user_recipes (*)')
-        .single();
-
-      if (error) throw error;
-      result = data;
-    } else {
-      // Insert
-      const { data, error } = await supabase
-        .from('meal_plan_entries')
-        .insert(payload)
-        .select('*, user_recipes (*)')
-        .single();
-
-      if (error) throw error;
-      result = data;
-    }
-
-    const entry = this.mapRow(result);
-
-    // Decifra le note prima di restituire
-    if (entry.notes) {
-      const decrypted = await decryptText(entry.notes, user.id);
-      if (decrypted !== null) {
-        entry.notes = decrypted;
+    // 3. Prepariamo i dati del pasto attuale (solo se merge=true)
+    let baseData: any = null;
+    if (merge && existingEntry) {
+      if (existingEntry.custom_recipe) {
+        baseData = existingEntry.custom_recipe;
+      } else if (existingEntry.user_recipes) {
+        const r = existingEntry.user_recipes;
+        baseData = {
+          title: r.title,
+          calories: r.calories_per_serving,
+          macros: r.macros || {},
+          identified_foods: Array.isArray(r.ingredients) ? r.ingredients.map((i: any) => i.name) : [r.title],
+          image_url: r.image,
+          source: 'recipe_library'
+        };
       }
     }
 
+    // 4. Prepariamo i dati del nuovo pasto da aggiungere
+    let incomingData = input.custom_recipe;
+
+    // Se l'input ha un recipe_id ma non un custom_recipe, carichiamo la ricetta e CREIAMO un'analisi shadow
+    if (input.recipe_id && !incomingData) {
+      const { data: r } = await supabase.from('user_recipes').select('*').eq('id', input.recipe_id).single();
+      if (r) {
+        // 🔥 Creiamo un'analisi per far apparire la ricetta nei Gauges
+        const savedAnalysis = await FoodAnalysisService.saveFoodAnalysis(user.id, {
+          mealType: input.meal_type as any,
+          identifiedFoods: Array.isArray(r.ingredients) ? r.ingredients.map((i: any) => i.name) : [r.title],
+          calories: r.calories_per_serving || 0,
+          carbohydrates: r.macros?.carbs || r.macros?.carbohydrates || 0,
+          proteins: r.macros?.protein || r.macros?.proteins || 0,
+          fats: r.macros?.fat || r.macros?.fats || 0,
+          fiber: r.macros?.fiber || 0,
+          recommendations: [],
+          observations: [],
+          confidence: 1,
+          date: input.plan_date,
+          imageUrl: r.image
+        });
+
+        incomingData = {
+          title: r.title,
+          calories: r.calories_per_serving,
+          macros: r.macros || {},
+          identified_foods: Array.isArray(r.ingredients) ? r.ingredients.map((i: any) => i.name) : [r.title],
+          image_url: r.image,
+          source: 'recipe_library',
+          analysis_id: savedAnalysis?.id,
+          analysis_ids: savedAnalysis ? [savedAnalysis.id] : []
+        };
+      }
+    }
+
+    // 5. Costruiamo il payload
+    const payload: any = {
+      user_id: user.id,
+      plan_date: input.plan_date,
+      meal_type: input.meal_type,
+      servings: input.servings ?? (existingEntry?.servings || 1),
+      notes: encryptedNotes,
+      updated_at: new Date().toISOString(),
+      recipe_id: null,
+    };
+
+    if (baseData && incomingData) {
+      const oldItems = baseData.sub_items || [baseData];
+      const newItems = incomingData.sub_items || [incomingData];
+      const combinedItems = [...oldItems, ...newItems].map(item => ({
+        ...item,
+        title: item.title,
+        calories: item.calories || 0,
+        macros: item.macros || {},
+        analysis_id: item.analysis_id || null,
+        analysis_ids: item.analysis_ids || (item.analysis_id ? [item.analysis_id] : [])
+      }));
+
+      const mergedAnalysisIds = [...new Set(combinedItems.flatMap(i => i.analysis_ids))].filter(Boolean);
+
+      payload.custom_recipe = {
+        title: combinedItems.map(i => i.title).join(', '),
+        calories: combinedItems.reduce((acc, i) => acc + (i.calories || 0), 0),
+        macros: {
+          protein: combinedItems.reduce((acc, i) => acc + (i.macros?.protein || i.macros?.proteins || 0), 0),
+          carbs: combinedItems.reduce((acc, i) => acc + (i.macros?.carbohydrates || i.macros?.carbs || 0), 0),
+          fat: combinedItems.reduce((acc, i) => acc + (i.macros?.fats || i.macros?.fat || 0), 0),
+          fiber: combinedItems.reduce((acc, i) => acc + (i.macros?.fiber || 0), 0),
+        },
+        identified_foods: [...new Set(combinedItems.flatMap(i => i.identified_foods || []))],
+        sub_items: combinedItems,
+        analysis_ids: mergedAnalysisIds,
+        analysis_id: mergedAnalysisIds[mergedAnalysisIds.length - 1] || null,
+        health_score: Math.round(combinedItems.reduce((acc, i) => acc + (i.health_score || 70), 0) / combinedItems.length),
+        image_url: incomingData.image_url || baseData.image_url,
+        source: 'composite'
+      };
+    } else {
+      payload.custom_recipe = incomingData || baseData;
+      if (!baseData && input.recipe_id) {
+        payload.recipe_id = input.recipe_id;
+        payload.custom_recipe = null;
+      }
+    }
+
+    const { data: result, error: saveError } = await supabase
+      .from('meal_plan_entries')
+      .upsert(payload, { onConflict: 'user_id,plan_date,meal_type' })
+      .select('*, user_recipes (*)')
+      .single();
+
+    if (saveError) throw saveError;
+
+    const entry = this.mapRow(result);
+    if (entry.notes) {
+      const decrypted = await decryptText(entry.notes, user.id);
+      if (decrypted !== null) entry.notes = decrypted;
+    }
     return entry;
   }
 

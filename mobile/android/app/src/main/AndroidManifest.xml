@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools" package="com.wellnesscoach.app">
   <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION"/>
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
   <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
@@ -24,6 +24,22 @@
   <uses-permission android:name="android.permission.WAKE_LOCK"/>
   <uses-permission android:name="android.permission.WRITE_CALENDAR"/>
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
+  <!-- Health Connect Permissions -->
+  <uses-permission android:name="android.permission.health.READ_STEPS"/>
+  <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
+  <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
+  <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE"/>
+  <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY"/>
+  <uses-permission android:name="android.permission.health.READ_SLEEP"/>
+  <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
+  <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+  <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE"/>
+  <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
+  <uses-permission android:name="android.permission.health.READ_BODY_FAT"/>
+  <uses-permission android:name="android.permission.health.READ_MENSTRUATION"/>
+  <uses-permission android:name="android.permission.health.READ_HYDRATION"/>
+  <uses-permission android:name="android.permission.health.READ_NUTRITION"/>
   <queries>
     <intent>
       <action android:name="android.intent.action.VIEW"/>
@@ -33,6 +49,10 @@
   </queries>
   <queries>
     <package android:name="com.google.android.googlequicksearchbox"/>
+    <!-- 🔥 REQUIRED for Health Connect visibility on Android < 14 -->
+    <package android:name="com.google.android.apps.healthdata"/>
+    <!-- 🔥 Legacy Health Connect package -->
+    <package android:name="com.google.android.apps.healthconnect"/>
     <intent>
       <action android:name="android.speech.RecognitionService"/>
     </intent>
@@ -59,7 +79,35 @@
         <data android:scheme="exp+wellness-coach"/>
       </intent-filter>
       <intent-filter>
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="com.wellnesscoach.app"/>
+      </intent-filter>
+      <!-- 🔥 MANDATORY for Health Connect visibility -->
+      <intent-filter>
         <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+      </intent-filter>
+    </activity>
+    <!-- 🔥 REQUIRED for Android 14+ - ViewPermissionUsageActivity alias -->
+    <activity-alias
+      android:name="ViewPermissionUsageActivity"
+      android:exported="true"
+      android:targetActivity=".MainActivity"
+      android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+        <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+      </intent-filter>
+    </activity-alias>
+
+    <!-- 🔥 Custom Activity for rationale handling -->
+    <activity
+      android:name=".PermissionsRationaleActivity"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
       </intent-filter>
     </activity>
   </application>

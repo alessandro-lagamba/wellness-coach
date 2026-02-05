@@ -395,11 +395,9 @@ const styles = StyleSheet.create({
   smallLabel: {
     fontSize: 15,
     fontFamily: 'Figtree_700Bold',
-    // fontWeight: "800",
     color: "#111827",
     letterSpacing: -0.5,
   },
-
   smallGaugeWrapper: {
     flex: 1,
     alignItems: "center",
@@ -416,7 +414,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   gaugeIconSmall: { width: 38, height: 38 },
-
   smallBottomContainer: {
     marginTop: 4,
     justifyContent: "flex-end",

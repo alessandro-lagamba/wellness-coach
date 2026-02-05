@@ -1836,27 +1836,6 @@
         "quickAddPlaceholder": "Example: 200g grilled chicken, 300 kcal...",
         "analyze": "Analyze"
       },
-      "preferences": {
-        "title": "Food Preferences",
-        "subtitle": "Share your taste, favorite ingredients, and allergies to make AI recipes more realistic.",
-        "cuisineLabel": "Preferred cuisine",
-        "favorites": "Favorite ingredients",
-        "favoritePlaceholder": "e.g. fresh basil, salmon...",
-        "allergies": "Allergies or intolerances",
-        "allergyPlaceholder": "e.g. peanuts, gluten...",
-        "saveError": "Could not save preferences",
-        "cuisines": {
-          "none": "Any",
-          "italian": "Italian",
-          "mediterranean": "Mediterranean",
-          "asian": "Asian",
-          "latin": "Latin American",
-          "middleEastern": "Middle Eastern",
-          "american": "American",
-          "vegetarian": "Vegetarian",
-          "vegan": "Vegan"
-        }
-      },
       "fridge": {
         "title": "What's in Your Fridge?",
         "subtitle": "Get personalized recipe suggestions based on your ingredients",
@@ -2018,6 +1997,7 @@
         "infoBanner": "Review and edit the identified foods before proceeding with the full nutritional analysis.",
         "addFood": "Add food",
         "newFood": "New food",
+        "foodName": "Food name",
         "foodNamePlaceholder": "Food name (e.g. Tomato pasta)",
         "add": "Add",
         "cancel": "Cancel",

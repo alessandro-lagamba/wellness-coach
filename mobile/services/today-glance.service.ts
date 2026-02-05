@@ -30,6 +30,8 @@ export interface HealthData {
   sleepQuality: number; // 0-100
   analysesCompleted: number;
   analysesGoal: number;
+  bedtime?: string;
+  waketime?: string;
 }
 
 export class TodayGlanceService {
@@ -67,6 +69,8 @@ export class TodayGlanceService {
             sleepQuality: realData.sleepQuality,
             analysesCompleted: 0, // This will be fetched separately
             analysesGoal: 2,
+            bedtime: realData.bedtime,
+            waketime: realData.waketime,
           };
         }
 
@@ -90,6 +94,8 @@ export class TodayGlanceService {
                 sleepQuality: latestData.data.sleepQuality,
                 analysesCompleted: 0,
                 analysesGoal: 2,
+                bedtime: latestData.data.bedtime,
+                waketime: latestData.data.waketime,
               };
             }
           }
@@ -218,11 +224,11 @@ export class TodayGlanceService {
           category: 'health',
           details: {
             goal: 8,
-            deepSleep: '2h 15m',
-            remSleep: '1h 45m',
-            lightSleep: '4h 30m',
-            bedtime: '11:30 PM',
-            wakeTime: '7:30 AM'
+            deepSleep: '—',
+            remSleep: '—',
+            lightSleep: '—',
+            bedtime: healthData.bedtime || '—',
+            wakeTime: healthData.waketime || '—'
           }
         },
         {

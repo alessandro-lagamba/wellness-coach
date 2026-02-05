@@ -21,6 +21,8 @@ export interface HealthData {
   bodyFat?: number; // percentage
   hydration?: number; // ml
   mindfulnessMinutes?: number;
+  bedtime?: string;
+  waketime?: string;
 }
 
 export interface HealthDataPoint {

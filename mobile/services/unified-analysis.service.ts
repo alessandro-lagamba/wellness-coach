@@ -226,6 +226,36 @@ export class UnifiedAnalysisService {
   }
 
   /**
+   * Analyze food from text
+   */
+  async analyzeFoodFromText(
+    text: string,
+    mealType?: string,
+    options?: AnalysisOptions
+  ): Promise<AnalysisResponse<FoodAnalysisResult>> {
+    return traceAnalysis<FoodAnalysisResult>(
+      'food',
+      async () => {
+        try {
+          const result = await this.openaiService.analyzeFoodFromText(text, mealType);
+          return result;
+        } catch (error) {
+          console.error('Unified food text analysis failed:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
+            timestamp: new Date(),
+          };
+        }
+      },
+      {
+        source: options?.source || 'manual',
+        featureName: 'food_text_analysis',
+      }
+    );
+  }
+
+  /**
    * Get analysis history
    */
   async getAnalysisHistory(): Promise<AnalysisHistory[]> {

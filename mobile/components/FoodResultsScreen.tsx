@@ -342,7 +342,33 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
       );
     }
 
-    return tips;
+    // Combine localized static tips with AI recommendations
+    // Prioritize AI recommendations as the user liked them
+    const allTips = [];
+
+    // Add AI recommendations from results (strings) converted to tip format
+    if (results.recommendations && results.recommendations.length > 0) {
+      results.recommendations.forEach((recText, idx) => {
+        allTips.push({
+          id: `ai-rec-${idx}`,
+          title: language === 'it' ? 'Suggerimento' : 'Tip',
+          description: recText,
+          priority: 'medium',
+        });
+      });
+    }
+
+    // Add static tips if we don't have enough AI suggestions
+    if (allTips.length < 2) {
+      tips.forEach((tip) => {
+        if (allTips.length < 2) {
+          allTips.push(tip);
+        }
+      });
+    }
+
+    // Always limit to exactly 2 as requested
+    return allTips.slice(0, 2);
   }, [
     identifiedFoods,
     language,
@@ -351,6 +377,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
     fatsBucket.status,
     carbsBucket.status,
     results.calories,
+    results.recommendations,
   ]);
 
   const recommendations = personalizedRecommendations;

@@ -64,6 +64,7 @@ interface AnalysisStore {
   addSkinCapture: (capture: SkinCapture) => void;
   addEmotionSession: (session: EmotionSession) => void;
   addFoodSession: (session: FoodSession) => void;
+  removeFoodSession: (id: string) => void;
   setFoodSessions: (sessions: FoodSession[]) => void;
   clearHistory: () => void;
 
@@ -111,6 +112,20 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       return {
         latestFoodSession: shouldUpdateLatest ? session : state.latestFoodSession,
         foodHistory: updatedHistory,
+      };
+    });
+  },
+
+  removeFoodSession: (id: string) => {
+    set((state) => {
+      const updatedHistory = state.foodHistory.filter((item) => item.id !== id);
+      const isLatestDeleted = state.latestFoodSession?.id === id;
+
+      return {
+        foodHistory: updatedHistory,
+        latestFoodSession: isLatestDeleted
+          ? (updatedHistory.length > 0 ? updatedHistory[0] : null)
+          : state.latestFoodSession
       };
     });
   },

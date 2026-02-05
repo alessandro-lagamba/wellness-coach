@@ -62,6 +62,7 @@ export class FoodAnalysisService {
       confidence: number;
       analysisData?: Record<string, any>;
       imageUrl?: string;
+      date?: string;
     }
   ): Promise<FoodAnalysis | null> {
     // 🔥 FIX: Carica l'immagine in Supabase Storage se fornita
@@ -132,6 +133,7 @@ export class FoodAnalysisService {
                   confidence: analysis.confidence,
                   analysis_data: analysis.analysisData || {},
                   image_url: finalImageUrl, // 🔥 FIX: Usa l'URL pubblico di Supabase Storage
+                  created_at: analysis.date ? new Date(analysis.date).toISOString() : new Date().toISOString(),
                 })
                 .select()
                 .single();
@@ -506,5 +508,30 @@ export class FoodAnalysisService {
       EnhancedLoggingService.logDatabaseOperation('delete', 'food_analysis', false);
       return false;
     }
+  }
+
+  /**
+   * Aggiorna la data di un set di analisi (es. per spostamento nel planner)
+   */
+  static async updateFoodAnalysesDate(userId: string, analysisIds: string[], newDate: string): Promise<void> {
+    if (!analysisIds || analysisIds.length === 0) return;
+
+    // Usiamo lo start della giornata per mantenere coerenza con le query gte/lte
+    const targetDate = new Date(newDate);
+    targetDate.setHours(12, 0, 0, 0); // Impostiamo a mezzogiorno per sicurezza
+    const isoDate = targetDate.toISOString();
+
+    const { error } = await supabase
+      .from(Tables.FOOD_ANALYSES)
+      .update({ created_at: isoDate })
+      .eq('user_id', userId)
+      .in('id', analysisIds);
+
+    if (error) {
+      console.error('[FoodAnalysis] updateFoodAnalysesDate error:', error);
+      throw error;
+    }
+
+    await cacheService.invalidatePrefix(`food:${userId}`);
   }
 }

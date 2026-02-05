@@ -487,22 +487,6 @@ export class HealthDataService {
       this.isSyncInProgress = true;
       safeTime('HealthDataService_Sync_Total');
 
-      // 🔥 DIAGNOSTIC: Log all critical dependencies to find the undefined function
-      console.log('[DIAG] === RELEASE DEBUG START ===');
-      console.log('[DIAG] Platform.OS:', Platform.OS);
-      console.log('[DIAG] getAuthService:', typeof getAuthService);
-      console.log('[DIAG] getHealthDataSyncService:', typeof getHealthDataSyncService);
-      console.log('[DIAG] AppleHealthKit:', AppleHealthKit ? 'exists' : 'null/undefined');
-      console.log('[DIAG] AppleHealthKit keys:', AppleHealthKit ? Object.keys(AppleHealthKit).slice(0, 30) : null);
-      console.log('[DIAG] initHealthKit type:', typeof AppleHealthKit?.initHealthKit);
-      console.log('[DIAG] getStepCount type:', typeof AppleHealthKit?.getStepCount);
-      console.log('[DIAG] getHeartRateSamples type:', typeof AppleHealthKit?.getHeartRateSamples);
-      console.log('[DIAG] getSleepSamples type:', typeof AppleHealthKit?.getSleepSamples);
-      console.log('[DIAG] getHeartRateVariabilitySamples type:', typeof AppleHealthKit?.getHeartRateVariabilitySamples);
-      console.log('[DIAG] HealthConnect:', HealthConnect ? 'exists' : 'null/undefined');
-      console.log('[DIAG] NativeModules keys:', Object.keys(NativeModules || {}).filter(k => k.toLowerCase().includes('health') || k.toLowerCase().includes('apple')));
-      console.log('[DIAG] === RELEASE DEBUG END ===');
-
       const hasAnyPermission = Object.values(this.permissions).some(Boolean);
 
       // 🔥 FIX: Use consistent module resolution for shouldUseRealData
@@ -511,14 +495,6 @@ export class HealthDataService {
         ((Platform.OS === 'ios' && AppleHealthKit && !!nativeHKForCheck) ||
           (Platform.OS === 'android' && HealthConnect));
 
-      // 🔥 Release diagnostic logging
-      console.log('[HealthKit] 📊 Release Diagnostics:', {
-        hasAnyPermission,
-        hasAppleHealthKit: !!AppleHealthKit,
-        nativeModuleFound: !!nativeHKForCheck,
-        initHealthKitType: typeof AppleHealthKit?.initHealthKit,
-        shouldUseRealData
-      });
 
       let healthData: HealthData;
 
@@ -528,7 +504,6 @@ export class HealthDataService {
       const nativeHK = getHealthKitNativeModule();
 
       if (Platform.OS === 'ios' && AppleHealthKit && nativeHK) {
-        console.log('[DIAG] About to call this.syncHealthKitData, typeof:', typeof this.syncHealthKitData);
         const result = await this.syncHealthKitData();
         if (result.success && result.data) {
           healthData = result.data;
@@ -1060,7 +1035,6 @@ export class HealthDataService {
       }
 
       // HRV - SOLO OGGI
-      console.log('[DEBUG] HRV Permission Check:', this.permissions.hrv);
 
       if (this.permissions.hrv && HealthConnect.readRecords) {
         try {
@@ -1263,50 +1237,51 @@ export class HealthDataService {
             const cutoff = now.getTime() - 24 * 60 * 60 * 1000;
 
             sleepRecords.forEach((record: any) => {
-              const startDate = new Date(record.startTime || record.start);
-              const endDate = new Date(record.endTime || record.end);
+              const startDate = new Date(record.startTime || record.start || record.startTimeMillis);
+              const endDate = new Date(record.endTime || record.end || record.endTimeMillis);
               const startMs = startDate.getTime();
               const endMs = endDate.getTime();
 
               if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
-                return;
-              }
-
-              if (endMs < cutoff || endMs < startOfDay.getTime()) {
+                if (__DEV__) console.warn('⚠️ [SLEEP DEBUG] Invalid dates in record:', record);
                 return;
               }
 
               const sessionKey = `${startMs}-${endMs}`;
-              if (seenSleepSessions.has(sessionKey)) {
+              if (seenSleepSessions.has(sessionKey)) return;
+              seenSleepSessions.add(sessionKey);
+
+              // Solo sessione che finisce oggi o nelle ultime 24 ore
+              if (endMs < cutoff || endMs < startOfDay.getTime()) {
+                if (__DEV__) console.log('🔍 [SLEEP DEBUG] Skipping old session ending at:', endDate.toLocaleTimeString());
                 return;
               }
-              seenSleepSessions.add(sessionKey);
 
               const durationMinutes = Math.max(0, (endMs - startMs) / (1000 * 60));
               if (durationMinutes > 0) {
                 totalSleepMinutes += durationMinutes;
+                if (__DEV__) console.log(`🔍 [SLEEP DEBUG] Session: ${startDate.toLocaleTimeString()} -> ${endDate.toLocaleTimeString()} (${durationMinutes.toFixed(1)} min)`);
 
-                // 🔥 NEW: Track earliest bedtime and latest waketime
-                if (!earliestBedtime || startDate < earliestBedtime) {
-                  earliestBedtime = startDate;
-                }
-                if (!latestWaketime || endDate > latestWaketime) {
-                  latestWaketime = endDate;
-                }
+                if (!earliestBedtime || startDate < earliestBedtime) earliestBedtime = startDate;
+                if (!latestWaketime || endDate > latestWaketime) latestWaketime = endDate;
               }
             });
 
-            if (totalSleepMinutes > 0) {
-              healthData.sleepHours = Math.round((totalSleepMinutes / 60) * 10) / 10;
+            if (earliestBedtime && latestWaketime) {
+              const totalMs = latestWaketime.getTime() - earliestBedtime.getTime();
+              const windowHours = totalMs / (1000 * 60 * 60);
+              healthData.sleepHours = Math.max(0, windowHours);
 
-              // 🔥 Format bedtime and waketime as locale time strings
-              if (earliestBedtime) {
-                (healthData as any).bedtime = earliestBedtime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-              }
-              if (latestWaketime) {
-                (healthData as any).waketime = latestWaketime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-              }
+              healthData.bedtime = earliestBedtime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+              healthData.waketime = latestWaketime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+
+              if (__DEV__) console.log(`✅ [SLEEP DEBUG] Window: ${healthData.bedtime} - ${healthData.waketime} (${healthData.sleepHours.toFixed(2)}h)`);
+            } else if (totalSleepMinutes > 0) {
+              healthData.sleepHours = totalSleepMinutes / 60;
+              if (__DEV__) console.log(`⚠️ [SLEEP DEBUG] Fallback to totalSleepMinutes: ${healthData.sleepHours.toFixed(2)}h`);
             }
+
+
           }
         } catch (error) {
           console.error('❌ Error reading SleepSession:', error);
@@ -1392,6 +1367,8 @@ export class HealthDataService {
         bodyFat: record.body_fat ?? undefined,
         hydration: record.hydration ?? 0,
         mindfulnessMinutes: record.mindfulness_minutes ?? 0,
+        bedtime: record.bedtime ?? undefined,
+        waketime: record.waketime ?? undefined,
       };
 
       const syncedAt =

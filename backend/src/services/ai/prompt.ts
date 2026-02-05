@@ -53,10 +53,12 @@ Nel JSON di output (schema "meal_draft") DEVI includere, in modo coerente con lo
   - "high_sugar" (molto zucchero semplice)
   - "balanced" (profilo complessivamente equilibrato)
   Usa solo le etichette che descrivono DAVVERO il piatto, senza inventare.
-- suggestions: 2–4 frasi brevi e pratiche (nella lingua dell'utente) su come:
-  - migliorare l'equilibrio del piatto,
+- suggestions: 2–4 frasi brevi, pratiche e SPECIFICHE (nella lingua dell'utente) su come:
+  - migliorare l'equilibrio del piatto con ingredienti concreti (es. invece di "aggiungi proteine", "aggiungi 30g di parmigiano o un uovo"),
+  - offrire curiosità nutrizionali o benefici specifici degli ingredienti identificati,
   - abbinarlo al resto della giornata,
-  - oppure confermare che è già ben bilanciato.
+  - EVITARE consigli generici e ripetitivi: sii creativo e varia i suggerimenti tra analisi diverse.
+  - se il piatto è già bilanciato, suggerisci una variante o un consiglio sulla cottura/conservazione.
 
 Usa valori nutrizionali standard per alimenti comuni. Se incerto sulla quantità o su qualche alimento, abbassa la confidence e spiega l'incertezza in modo sintetico.
 
@@ -102,10 +104,12 @@ Nel JSON di output (schema "meal_draft") DEVI includere, in modo coerente con lo
   - "high_sugar" (molto zucchero semplice)
   - "balanced" (profilo complessivamente equilibrato)
   Usa solo le etichette che descrivono DAVVERO il piatto, senza inventare.
-- suggestions: 2–4 frasi brevi e pratiche (nella lingua dell'utente) su come:
-  - migliorare l'equilibrio del piatto,
+- suggestions: 2–4 frasi brevi, pratiche e SPECIFICHE (nella lingua dell'utente) su come:
+  - migliorare l'equilibrio del piatto con ingredienti concreti (es. invece di "aggiungi proteine", "aggiungi 30g di parmigiano o un uovo"),
+  - offrire curiosità nutrizionali o benefici specifici degli ingredienti identificati,
   - abbinarlo al resto della giornata,
-  - oppure confermare che è già ben bilanciato.
+  - EVITARE consigli generici e ripetitivi: sii creativo e varia i suggerimenti tra analisi diverse.
+  - se il piatto è già bilanciato, suggerisci una variante o un consiglio sulla cottura/conservazione.
 
 Usa valori nutrizionali standard per alimenti comuni. Se la descrizione è vaga, usa porzioni standard medie e abbassa la confidence.
 
@@ -460,4 +464,3 @@ ${styleHints}
 Output JSON secondo schema. Locale: ${params.locale ?? "it-IT"}.
 `;
 };
-
