@@ -877,7 +877,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                   {!generatedRecipe ? (
                     <>
                       <View style={styles.infoSection}>
-                        <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+                        <Text style={[styles.infoText, { fontFamily: 'Figtree_500Medium', color: colors.textSecondary }]}>
                           {t('analysis.food.fridge.modalDesc')}
                         </Text>
                       </View>
@@ -1095,8 +1095,8 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                               onPress={confirmChips}
                               style={[styles.confirmChipsButton, { backgroundColor: colors.primary }]}
                             >
-                              <FontAwesome name="check" size={14} color={colors.textInverse} />
-                              <Text style={[styles.confirmChipsText, { color: colors.textInverse }]}>
+                              <FontAwesome name="check" size={14} color="#ffffff" />
+                              <Text style={[styles.confirmChipsText, { color: '#ffffff' }]}>
                                 {t('analysis.food.fridge.addAll')}
                               </Text>
                             </TouchableOpacity>
@@ -1582,7 +1582,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     flex: 1,
   },
   closeButton: {
@@ -1656,7 +1656,7 @@ const styles = StyleSheet.create({
   },
   cuisineDropdownText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
     flex: 1,
   },
   cuisineDropdownMenu: {
@@ -1680,7 +1680,7 @@ const styles = StyleSheet.create({
   },
   cuisineDropdownItemText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   preferenceRow: {
     marginTop: 8, // Ridotto da 12
@@ -1688,6 +1688,7 @@ const styles = StyleSheet.create({
   preferenceInput: {
     flex: 1,
     fontSize: 14,
+    fontFamily: 'Figtree_500Medium',
   },
   // Nuovi stili moderni
   preferencesIconWrapper: {
@@ -1733,7 +1734,7 @@ const styles = StyleSheet.create({
   },
   preferenceChipTextModern: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   chipRemoveModern: {
     width: 20,
@@ -1743,7 +1744,7 @@ const styles = StyleSheet.create({
   },
   chipRemoveText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     lineHeight: 18,
   },
   addChipButton: {
@@ -1755,7 +1756,7 @@ const styles = StyleSheet.create({
   },
   addChipButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   preferenceInputWrapperModern: {
     flexDirection: 'row',
@@ -1793,6 +1794,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Figtree_700Bold',
     flex: 1,
+    color: '#ffffff', // Explicitly white for dark theme surface
   },
   savedIngredientActions: {
     flexDirection: 'row',
@@ -1917,9 +1919,11 @@ const styles = StyleSheet.create({
   },
   input: {
     fontSize: 16,
+    fontFamily: 'Figtree_500Medium',
   },
   helperText: {
     fontSize: 12,
+    fontFamily: 'Figtree_500Medium',
     marginTop: 6,
   },
   removeButton: {
@@ -2110,7 +2114,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
-    fontFamily: 'Figtree_700Bold', // Was 700
+    fontFamily: 'Figtree_700Bold',
   },
   generateButton: {
     flex: 1,
@@ -2123,7 +2127,8 @@ const styles = StyleSheet.create({
   },
   generateButtonText: {
     fontSize: 16,
-    fontFamily: 'Figtree_700Bold', // Was 700
+    fontFamily: 'Figtree_700Bold',
+    color: '#ffffff',
   },
   recipeActions: {
     flexDirection: 'row',
@@ -2199,6 +2204,7 @@ const styles = StyleSheet.create({
   },
   saveRecipeSubtitle: {
     fontSize: 14,
+    fontFamily: 'Figtree_500Medium',
     lineHeight: 20,
   },
   saveRecipeField: {
@@ -2214,7 +2220,7 @@ const styles = StyleSheet.create({
   },
   saveRecipeInput: {
     fontSize: 14,
-    fontFamily: 'Figtree_500Medium', // Was 500
+    fontFamily: 'Figtree_500Medium',
   },
   saveRecipeTextarea: {
     minHeight: 80,

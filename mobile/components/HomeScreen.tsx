@@ -1138,7 +1138,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
       case 'hrv': {
         const rawValue = Number(info.hrv?.value ?? info.hrv?.avgHRV ?? 0);
         if (!Number.isFinite(rawValue) || rawValue <= 0) {
-          return t('home.hrv.value', { value: 0 });
+          return '--';
         }
         const formatted =
           rawValue >= 100
@@ -1221,7 +1221,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
           { icon: 'alarm', label: t('home.sleep.wakeTime') || 'Sveglia', value: info.sleep?.wakeTime ?? '—' },
         ];
       case 'hrv':
-        // 🔥 FIX: Mostra solo frequenza attuale (rimosso restingHR)
+        // 🔥 FIX: Mostra frequenza attuale e a riposo con fallback '--' se 0
         return [
           {
             icon: 'heart-pulse',
@@ -1229,7 +1229,15 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
             value:
               info.hrv?.currentHR && info.hrv.currentHR > 0
                 ? `${info.hrv.currentHR} ${t('home.bpm')}`
-                : '—',
+                : '--',
+          },
+          {
+            icon: 'heart-outline',
+            label: t('home.hrv.restingHR'),
+            value:
+              info.hrv?.restingHR && info.hrv.restingHR > 0
+                ? `${info.hrv.restingHR} ${t('home.bpm')}`
+                : '--',
           },
         ];
       case 'cycle':

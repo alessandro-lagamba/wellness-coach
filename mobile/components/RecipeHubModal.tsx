@@ -530,7 +530,7 @@ export const RecipeHubModal: React.FC<RecipeHubModalProps> = ({
                                     <Text style={[styles.modalTitle, { color: colors.text }]} allowFontScaling={false}>
                                         {t('analysis.food.recipes.hubTitle') || 'Ricettario'}
                                     </Text>
-                                    <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+                                    <Text style={[styles.modalSubtitle, { fontFamily: 'Figtree_500Medium', color: colors.textSecondary }]}>
                                         {t('analysis.food.recipes.hubSubtitle') || 'Gestisci libreria, pianificazione dei pasti e suggerimenti AI in un unico posto.'}
                                     </Text>
                                 </View>

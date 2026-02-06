@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
   Modal,
+  BackHandler,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { AuthService } from '../../services/auth.service';
@@ -38,7 +39,7 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
     full_name: '',
     email: '',
     age: '',
-    gender: 'prefer_not_to_say' as 'male' | 'female' | 'prefer_not_to_say',
+    gender: 'prefer_not_to_say' as 'male' | 'female' | 'prefer_not_to_say' | 'other',
     weight: '',
     height: '',
     activity_level: 'sedentary' as 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extremely_active',
@@ -49,6 +50,16 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
     loadProfile();
   }, []);
 
+  useEffect(() => {
+    const onBackPress = () => {
+      onBack();
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [onBack]);
+
   const loadProfile = async () => {
     setIsLoading(true);
     try {
@@ -58,7 +69,7 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
           full_name: userProfile.full_name || '',
           email: userProfile.email || user.email || '',
           age: userProfile.age ? userProfile.age.toString() : '',
-          gender: userProfile.gender || 'prefer_not_to_say',
+          gender: (userProfile.gender === 'male' || userProfile.gender === 'female' || userProfile.gender === 'prefer_not_to_say' || userProfile.gender === 'other') ? userProfile.gender : 'prefer_not_to_say',
           weight: userProfile.weight ? userProfile.weight.toString() : '',
           height: userProfile.height ? userProfile.height.toString() : '',
           activity_level: userProfile.activity_level || 'sedentary',
@@ -384,6 +395,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
+    fontFamily: 'Figtree_500Medium',
   },
   scrollView: {
     flex: 1,
@@ -405,7 +417,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Figtree_700Bold',
   },
   placeholder: {
     width: 36,
@@ -419,7 +431,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 8,
   },
   inputWrapper: {
@@ -438,20 +450,23 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
+    fontFamily: 'Figtree_500Medium',
   },
   inputText: {
     flex: 1,
     fontSize: 16,
+    fontFamily: 'Figtree_500Medium',
   },
   helpText: {
     fontSize: 12,
     marginTop: 4,
     fontStyle: 'italic',
+    fontFamily: 'Figtree_500Medium',
   },
   unitText: {
     fontSize: 14,
     marginLeft: 8,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   saveButton: {
     flexDirection: 'row',
@@ -468,7 +483,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   // Modal Styles
   modalBackdrop: {
@@ -492,7 +507,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   modalBody: {
     padding: 20,
@@ -509,7 +524,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
 });
 

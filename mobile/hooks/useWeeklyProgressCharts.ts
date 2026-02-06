@@ -282,8 +282,8 @@ export function useWeeklyProgressCharts({
                         icon: meta.icon,
                         iconImage: meta.iconImage,
                         color: meta.color,
-                        valueText: rawValue >= 100 ? Math.round(rawValue).toString() : (Math.round(rawValue * 10) / 10).toString(),
-                        unitText: 'ms',
+                        valueText: (rawValue <= 0) ? '--' : (rawValue >= 100 ? Math.round(rawValue).toString() : (Math.round(rawValue * 10) / 10).toString()),
+                        unitText: (rawValue <= 0) ? '' : 'ms',
                         subtitleText: t('home.weeklyProgress.current'),
                         trendData,
                         maxValue,
@@ -305,8 +305,8 @@ export function useWeeklyProgressCharts({
                         : placeholderChartSamples.heartRate.max;
 
                     const restingHR = healthData?.restingHeartRate;
-                    const subtitleText = restingHR
-                        ? `${t('home.hrv.restingHR')}: ${Math.round(restingHR)} ${t('home.bpm')}`
+                    const subtitleText = (restingHR !== undefined && restingHR !== null)
+                        ? `${t('home.hrv.restingHR')}: ${restingHR > 0 ? Math.round(restingHR) : '--'} ${t('home.bpm')}`
                         : t('home.weeklyProgress.current');
 
                     return {

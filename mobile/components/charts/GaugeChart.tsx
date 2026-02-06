@@ -168,8 +168,10 @@ export const GaugeChart: React.FC<GaugeChartProps> = memo(({
               {/* Center text - numero + unit centrati insieme */}
               <SvgText
                 x={centerX}
-                y="52"
+                y={centerX}
                 textAnchor="middle"
+                alignmentBaseline="middle"
+                dy={0.5}
                 fill={getScoreColor(percentageForLabel)}
               >
                 <TSpan fontSize={valueFontSize} fontFamily="Figtree_700Bold">
@@ -180,7 +182,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = memo(({
                     fontSize={valueFontSize * 0.55}
                     fontFamily="Figtree_500Medium"
                     dx={valueStr.endsWith('0') ? '0' : (valueStr.endsWith('1') && valueStr.length > 1 ? '1' : '0.5')}
-                    dy="-1"
+                    dy="1"
                   >
                     {unit}
                   </TSpan>

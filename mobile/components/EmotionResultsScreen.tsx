@@ -461,20 +461,32 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
         title: language === 'it' ? 'Pausa Musicale Calmante' : 'Calming Music Break',
       },
       {
-        keywords: ['scrivi', 'journal', 'diario', 'gratitude', 'gratitudine'],
+        keywords: ['scrivi', 'journal', 'diario', 'gratitude', 'gratitudine', 'rifletti', 'pensa', 'pensiero'],
         title: language === 'it' ? 'Mini Sessione di Journaling' : 'Quick Journaling Ritual',
       },
       {
-        keywords: ['stretch', 'allunga', 'yoga', 'postura'],
+        keywords: ['stretch', 'allunga', 'yoga', 'postura', 'muscoli'],
         title: language === 'it' ? 'Stretching di Rilascio' : 'Release Stretch',
       },
       {
-        keywords: ['bere', 'acqua', 'idrata', 'drink'],
+        keywords: ['bere', 'acqua', 'idrata', 'drink', 'bicchiere'],
         title: language === 'it' ? 'Idratazione Mirata' : 'Hydration Reminder',
       },
       {
-        keywords: ['sole', 'luce', 'sun', 'outdoor'],
+        keywords: ['sole', 'luce', 'sun', 'outdoor', 'aria'],
         title: language === 'it' ? 'Dose di Luce Naturale' : 'Sunlight Boost',
+      },
+      {
+        keywords: ['creat', 'disegn', 'diping', 'arte', 'hobby'],
+        title: language === 'it' ? 'Momento Creativo' : 'Creative Moment',
+      },
+      {
+        keywords: ['amici', 'condividi', 'chiama', 'social', 'parla', 'sorriso', 'sorridi'],
+        title: language === 'it' ? 'Connessione Sociale' : 'Social Connection',
+      },
+      {
+        keywords: ['aiuta', 'gentil', 'altruismo', 'regala'],
+        title: language === 'it' ? 'Atto di Gentilezza' : 'Act of Kindness',
       },
     ],
     [language],
@@ -507,18 +519,49 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
     [language],
   );
 
-  // Generate actions from tips
-  const actions = useMemo(() => {
-    return emotionData.tips.map((tip, index) => ({
-      id: `tip-${index}`,
-      title: getRecommendationTitle(tip, index),
+  // 🔥 FIX: Unified recommendations to prevent duplication
+  const combinedRecommendations = useMemo(() => {
+    const aiRecs = (fullAnalysisResult?.recommendations || []).map((rec: string, index: number) => ({
+      id: `ai-rec-${index}`,
+      title: getRecommendationTitle(rec, index),
+      description: capitalizeFirst(rec),
+      category: 'emotional' as const,
+      priority: index === 0 ? 'high' : (index === 1 ? 'medium' : 'low') as any,
+      actionable: true,
+      estimatedTime: '3 min',
+    }));
+
+    // If we have AI recs, we only pick static tips that are substantially different or if we have space
+    const staticTips = emotionData.tips.map((tip, index) => ({
+      id: `static-tip-${index}`,
+      title: getRecommendationTitle(tip, index + 10),
       description: tip,
-      category: 'emotional',
-      priority: index === 0 ? 'high' : 'medium',
+      category: 'emotional' as const,
+      priority: 'medium' as const,
       actionable: true,
       estimatedTime: '5 min',
     }));
-  }, [emotionData.tips, getRecommendationTitle]);
+
+    // Strategy: AI recommendations first, then fill with static tips up to 4 total, avoiding duplicates
+    const final = [...aiRecs];
+
+    // Simple deduplication based on titles or description substrings
+    for (const tip of staticTips) {
+      if (final.length >= 4) break;
+
+      const isDuplicate = final.some(r =>
+        r.title === tip.title ||
+        r.description.toLowerCase().includes(tip.description.toLowerCase().substring(0, 10)) ||
+        tip.description.toLowerCase().includes(r.description.toLowerCase().substring(0, 10))
+      );
+
+      if (!isDuplicate) {
+        final.push(tip);
+      }
+    }
+
+    return final;
+  }, [fullAnalysisResult?.recommendations, emotionData.tips, getRecommendationTitle]);
 
   if (!currentEmotion) return null;
 
@@ -629,39 +672,18 @@ export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
             </View>
           )}
 
-          {/* Recommendations / Tips */}
-          {actions.map((action) => (
+          {/* Unified Recommendations Section */}
+          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
+            {wellnessRecommendationsTitle}
+          </Text>
+
+          {combinedRecommendations.map((action) => (
             <ActionCard
               key={action.id}
               action={action}
               onComplete={() => { }}
             />
           ))}
-
-          {/* AI Recommendations Section - Using ActionCard format like Skin */}
-          {fullAnalysisResult?.recommendations && fullAnalysisResult.recommendations.length > 0 && (
-            <>
-              <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>
-                {wellnessRecommendationsTitle}
-              </Text>
-
-              {fullAnalysisResult.recommendations.map((rec: string, index: number) => (
-                <ActionCard
-                  key={`ai-rec-${index}`}
-                  action={{
-                    id: `ai-recommendation-${index}`,
-                    title: getRecommendationTitle(rec, index),
-                    description: capitalizeFirst(rec),
-                    category: 'emotional',
-                    priority: index === 0 ? 'high' : index === 1 ? 'medium' : 'low',
-                    actionable: true,
-                    estimatedTime: '2 min',
-                  }}
-                  onComplete={() => { }}
-                />
-              ))}
-            </>
-          )}
 
           {/* Bottom spacer for FAB */}
           <View style={{ height: 140 }} />

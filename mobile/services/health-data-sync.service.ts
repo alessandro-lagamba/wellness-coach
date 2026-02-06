@@ -11,7 +11,7 @@ export interface HealthDataRecord {
   active_minutes: number;
   heart_rate: number; // bpm
   resting_heart_rate: number; // bpm
-  hrv: number; // Heart Rate Variability in ms
+  hrv: number; // Heart Rate Variability in ms (numeric in DB)
   sleep_hours: number;
   sleep_quality: number; // 0-100
   deep_sleep_minutes: number;
@@ -51,6 +51,34 @@ export class HealthDataSyncService {
    * Sync health data to Supabase
    * 🔥 Simplified: removed source parameter since column was dropped
    */
+  private calculateSleepHoursFromTimes(bedtime?: string, waketime?: string): number {
+    if (!bedtime || !waketime) return 0;
+
+    try {
+      // Formato atteso: "HH:mm"
+      const [bHour, bMin] = bedtime.split(':').map(Number);
+      const [wHour, wMin] = waketime.split(':').map(Number);
+
+      if (isNaN(bHour) || isNaN(bMin) || isNaN(wHour) || isNaN(wMin)) return 0;
+
+      // Crea date fittizie per calcolare la differenza
+      const bDate = new Date(2024, 0, 1, bHour, bMin);
+      let wDate = new Date(2024, 0, 1, wHour, wMin);
+
+      // Se l'orario di sveglia è "prima" di quello per andare a letto, 
+      // assumiamo che sia il giorno successivo (sonno notturno)
+      if (wDate <= bDate) {
+        wDate = new Date(2024, 0, 2, wHour, wMin);
+      }
+
+      const diffMs = wDate.getTime() - bDate.getTime();
+      return parseFloat((diffMs / (1000 * 60 * 60)).toFixed(2));
+    } catch (e) {
+      console.warn('⚠️ [SYNC] Error calculating sleep duration from times:', e);
+      return 0;
+    }
+  }
+
   async syncHealthData(
     userId: string,
     healthData: HealthData
@@ -103,44 +131,48 @@ export class HealthDataSyncService {
 
         // Dati istantanei: usa il nuovo se disponibile (>0), altrimenti tieni il vecchio
         heart_rate: pickOrKeep(
-          healthData.heartRate !== undefined ? roundInt(healthData.heartRate) : undefined,
+          (healthData.heartRate !== undefined && healthData.heartRate > 0) ? roundInt(healthData.heartRate) : undefined,
           existingRecord?.heart_rate,
           0
         ),
         resting_heart_rate: pickOrKeep(
-          healthData.restingHeartRate !== undefined ? roundInt(healthData.restingHeartRate) : undefined,
+          (healthData.restingHeartRate !== undefined && healthData.restingHeartRate > 0) ? roundInt(healthData.restingHeartRate) : undefined,
           existingRecord?.resting_heart_rate,
           0
         ),
         hrv: pickOrKeep(
-          healthData.hrv !== undefined ? roundInt(healthData.hrv) : undefined,
+          (healthData.hrv !== undefined && healthData.hrv > 0) ? toDecimal(healthData.hrv) : undefined,
           existingRecord?.hrv,
           0
         ),
 
         // Sonno
         sleep_hours: pickOrKeep(
-          healthData.sleepHours !== undefined ? toDecimal(healthData.sleepHours) : undefined,
+          (healthData.sleepHours !== undefined && healthData.sleepHours > 0)
+            ? toDecimal(healthData.sleepHours)
+            : (healthData.bedtime && healthData.waketime)
+              ? this.calculateSleepHoursFromTimes(healthData.bedtime, healthData.waketime)
+              : undefined,
           existingRecord?.sleep_hours,
           0
         ),
         sleep_quality: pickOrKeep(
-          healthData.sleepQuality !== undefined ? roundInt(healthData.sleepQuality) : undefined,
+          (healthData.sleepQuality !== undefined && healthData.sleepQuality > 0) ? roundInt(healthData.sleepQuality) : undefined,
           existingRecord?.sleep_quality,
           0
         ),
         deep_sleep_minutes: pickOrKeep(
-          healthData.deepSleepMinutes !== undefined ? roundInt(healthData.deepSleepMinutes) : undefined,
+          (healthData.deepSleepMinutes !== undefined && healthData.deepSleepMinutes > 0) ? roundInt(healthData.deepSleepMinutes) : undefined,
           existingRecord?.deep_sleep_minutes,
           0
         ),
         rem_sleep_minutes: pickOrKeep(
-          healthData.remSleepMinutes !== undefined ? roundInt(healthData.remSleepMinutes) : undefined,
+          (healthData.remSleepMinutes !== undefined && healthData.remSleepMinutes > 0) ? roundInt(healthData.remSleepMinutes) : undefined,
           existingRecord?.rem_sleep_minutes,
           0
         ),
         light_sleep_minutes: pickOrKeep(
-          healthData.lightSleepMinutes !== undefined ? roundInt(healthData.lightSleepMinutes) : undefined,
+          (healthData.lightSleepMinutes !== undefined && healthData.lightSleepMinutes > 0) ? roundInt(healthData.lightSleepMinutes) : undefined,
           existingRecord?.light_sleep_minutes,
           0
         ),

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator, useColorScheme, Modal, TextInput, Platform } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator, useColorScheme, Modal, TextInput, Platform, BackHandler, Switch, FlatList, ListRenderItem } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SafeAreaWrapper } from './shared/SafeAreaWrapper';
+import { NotificationsSettingsScreen } from './settings/NotificationsSettingsScreen';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AuthService } from '../services/auth.service';
@@ -14,7 +15,6 @@ import { useHealthData } from '../hooks/useHealthData';
 import { useTranslation } from '../hooks/useTranslation';
 import { saveLanguage } from '../i18n';
 import { DailyJournalDBService } from '../services/daily-journal-db-local.service';
-import { Switch } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext'; // 🆕 Theme hook
 import { EmptyStateCard } from './EmptyStateCard';
 import WellnessSyncService from '../services/wellness-sync.service';
@@ -147,161 +147,130 @@ const SettingsSection = ({
   );
 };
 
-// ---------------- Notifications Settings Subscreen ----------------
-const NotificationsSettings = ({ onBack }: { onBack: () => void }) => {
-  const { t } = useTranslation();
+// ---------------- Custom Wheel Time Picker ----------------
+const WheelTimePicker = ({
+  visible,
+  onClose,
+  initialTime,
+  onConfirm
+}: {
+  visible: boolean;
+  onClose: () => void;
+  initialTime: Date;
+  onConfirm: (date: Date) => void;
+}) => {
   const { colors } = useTheme();
-  const [loading, setLoading] = useState(false);
+  const [selectedHour, setSelectedHour] = useState(initialTime.getHours());
+  const [selectedMinute, setSelectedMinute] = useState(initialTime.getMinutes());
 
-  // Toggles
-  const [emotionSkin, setEmotionSkin] = useState(true);
-  const [diary, setDiary] = useState(true);
-  const [fridgeExpiry, setFridgeExpiry] = useState(true);
-  const [breathing, setBreathing] = useState(true);
-  const [hydration, setHydration] = useState(false);
-  const [morningGreeting, setMorningGreeting] = useState(false);
-  const [eveningWinddown, setEveningWinddown] = useState(false);
-  const [sleepPreparation, setSleepPreparation] = useState(false);
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const minutes = Array.from({ length: 60 }, (_, i) => i);
 
-  // Simple time customization: Diary time (HH:MM)
-  const [diaryHour, setDiaryHour] = useState(21);
-  const [diaryMinute, setDiaryMinute] = useState(30);
+  // Constants for wheel styling
+  const ITEM_HEIGHT = 44;
+  const VISIBLE_ITEMS = 5;
 
-  const inc = (setter: (v: number) => void, value: number, max: number) => setter((value + 1) > max ? 0 : (value + 1));
-  const dec = (setter: (v: number) => void, value: number, max: number) => setter((value - 1) < 0 ? max : (value - 1));
+  const renderItem = (item: number, isHour: boolean) => {
+    const isSelected = isHour ? item === selectedHour : item === selectedMinute;
+    return (
+      <View style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{
+          fontSize: isSelected ? 22 : 18,
+          fontFamily: isSelected ? 'Figtree_700Bold' : 'Figtree_500Medium',
+          color: isSelected ? colors.primary : colors.textTertiary,
+          opacity: isSelected ? 1 : 0.5
+        }}>
+          {item < 10 ? `0${item}` : item}
+        </Text>
+      </View>
+    );
+  };
 
-  const format2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-
-  const handleSave = async () => {
-    try {
-      setLoading(true);
-      const { NotificationService } = await import('../services/notifications.service');
-      await NotificationService.initialize();
-      await NotificationService.cancelAll();
-
-      // Schedule selected
-      if (emotionSkin) await NotificationService.scheduleEmotionSkinWeekly();
-      if (diary) {
-        // Custom diary time
-        await NotificationService.schedule(
-          'journal_reminder',
-          t('settings.notifications.diaryTitle') || 'Diario',
-          t('settings.notifications.diaryBody') || 'Ti va di scrivere una breve voce nel diario?',
-          { hour: diaryHour, minute: diaryMinute, repeats: true },
-          { screen: 'journal' }
-        );
-      }
-      if (fridgeExpiry) await NotificationService.scheduleFridgeExpiryCheck(); // Daily check at 18:00
-      if (breathing) await NotificationService.scheduleBreathingNudges();
-      if (hydration) await NotificationService.scheduleHydrationReminders();
-      if (morningGreeting) await NotificationService.scheduleMorningGreeting();
-      if (eveningWinddown) await NotificationService.scheduleEveningWinddown();
-      if (sleepPreparation) await NotificationService.scheduleSleepPreparation();
-
-      Alert.alert(t('common.success'), t('settings.notifications.saved') || 'Notifiche aggiornate');
-      onBack();
-    } catch (e) {
-      Alert.alert(t('common.error'), (e as any)?.message || 'Impossibile aggiornare le notifiche');
-    } finally {
-      setLoading(false);
-    }
+  const handleConfirm = () => {
+    const newDate = new Date();
+    newDate.setHours(selectedHour);
+    newDate.setMinutes(selectedMinute);
+    onConfirm(newDate);
+    onClose();
   };
 
   return (
-    <SafeAreaWrapper style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]} allowFontScaling={false}>{t('settings.notificationsTitle')}</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {t('settings.notificationsDescription')}
-        </Text>
-      </View>
-
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          {/* Category toggles */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>{t('settings.notificationsCategories') || 'Categorie'}</Text>
-
-            {[{ id: 'emotionSkin', label: t('settings.notifications.emotionSkin') || 'Analisi Emozioni/Pelle', value: emotionSkin, setter: setEmotionSkin },
-            { id: 'diary', label: t('settings.notifications.diary') || 'Diario', value: diary, setter: setDiary },
-            { id: 'fridge', label: t('settings.notifications.fridgeExpiry') || 'Ingredienti in scadenza', value: fridgeExpiry, setter: setFridgeExpiry },
-            { id: 'breathing', label: t('settings.notifications.breathing') || 'Pausa/Respirazione', value: breathing, setter: setBreathing },
-            { id: 'hydration', label: t('settings.notifications.hydration') || 'Idratazione', value: hydration, setter: setHydration },
-            { id: 'morning', label: t('settings.notifications.morningGreeting') || 'Saluto mattutino', value: morningGreeting, setter: setMorningGreeting },
-            { id: 'evening', label: t('settings.notifications.eveningWinddown') || 'Buona serata', value: eveningWinddown, setter: setEveningWinddown },
-            { id: 'sleep', label: t('settings.notifications.sleepPreparation') || 'Preparazione al sonno', value: sleepPreparation, setter: setSleepPreparation },
-            ].map((row) => (
-              <View key={row.id} style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <View style={styles.rowCopy}>
-                  <Text style={[styles.rowTitle, { color: colors.text }]}>{row.label}</Text>
-                </View>
-                <Switch
-                  value={row.value}
-                  onValueChange={() => row.setter(!row.value)}
-                  trackColor={{ false: colors.border, true: colors.primaryMuted }}
-                  thumbColor={row.value ? colors.primary : colors.textSecondary}
-                />
-              </View>
-            ))}
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+        <TouchableOpacity style={{ flex: 1 }} onPress={onClose} activeOpacity={1} />
+        <View style={{
+          backgroundColor: colors.surface,
+          borderTopLeftRadius: 32,
+          borderTopRightRadius: 32,
+          paddingBottom: 40,
+          paddingTop: 20,
+          borderWidth: 1,
+          borderColor: colors.border
+        }}>
+          {/* Picker Header */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 20 }}>
+            <TouchableOpacity onPress={onClose}>
+              <Text style={{ color: colors.textSecondary, fontFamily: 'Figtree_500Medium', fontSize: 16 }}>Annulla</Text>
+            </TouchableOpacity>
+            <Text style={{ color: colors.text, fontFamily: 'Figtree_700Bold', fontSize: 18 }}>Imposta Orario</Text>
+            <TouchableOpacity onPress={handleConfirm}>
+              <Text style={{ color: colors.primary, fontFamily: 'Figtree_700Bold', fontSize: 16 }}>Applica</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Diary time customization */}
-          {diary && (
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>{t('settings.notifications.diaryTimeTitle') || 'Orario Diario'}</Text>
-              <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border, justifyContent: 'space-between' }]}>
-                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>
-                  {format2(diaryHour)}:{format2(diaryMinute)}
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 12 }}>
-                  <TouchableOpacity onPress={() => inc(setDiaryHour, diaryHour, 23)} style={[styles.smallBtn, { borderColor: colors.border }]}>
-                    <Text style={{ color: colors.text }}>+H</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => dec(setDiaryHour, diaryHour, 23)} style={[styles.smallBtn, { borderColor: colors.border }]}>
-                    <Text style={{ color: colors.text }}>-H</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => inc(setDiaryMinute, diaryMinute, 59)} style={[styles.smallBtn, { borderColor: colors.border }]}>
-                    <Text style={{ color: colors.text }}>+M</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => dec(setDiaryMinute, diaryMinute, 59)} style={[styles.smallBtn, { borderColor: colors.border }]}>
-                    <Text style={{ color: colors.text }}>
-                      -M
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+          {/* Wheel area */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: ITEM_HEIGHT * VISIBLE_ITEMS }}>
+            {/* Selection overlay */}
+            <View style={{
+              position: 'absolute',
+              height: ITEM_HEIGHT,
+              width: '80%',
+              backgroundColor: colors.primaryMuted,
+              borderRadius: 12,
+              opacity: 0.1
+            }} />
+
+            {/* Hours */}
+            <View style={{ width: 80 }}>
+              <FlatList
+                data={hours}
+                keyExtractor={(item) => `hour-${item}`}
+                renderItem={({ item }) => renderItem(item, true)}
+                showsVerticalScrollIndicator={false}
+                snapToInterval={ITEM_HEIGHT}
+                onMomentumScrollEnd={(e) => {
+                  const index = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
+                  setSelectedHour(hours[index]);
+                }}
+                initialScrollIndex={selectedHour}
+                getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
+                contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
+              />
             </View>
-          )}
 
-          {/* Actions */}
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
-            <TouchableOpacity
-              style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.primary + '40' }]}
-              onPress={handleSave}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <>
-                  <FontAwesome name="check" size={16} color={colors.primary} />
-                  <Text style={[styles.logoutText, { color: colors.primary }]} allowFontScaling={false}>{t('common.save')}</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            <Text style={{ fontSize: 24, fontFamily: 'Figtree_700Bold', color: colors.text, marginHorizontal: 10, marginTop: -4 }}>:</Text>
 
-            <TouchableOpacity
-              style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={onBack}
-              disabled={loading}
-            >
-              <FontAwesome name="chevron-left" size={16} color={colors.textSecondary} />
-              <Text style={[styles.logoutText, { color: colors.textSecondary }]} allowFontScaling={false}>{t('common.back')}</Text>
-            </TouchableOpacity>
+            {/* Minutes */}
+            <View style={{ width: 80 }}>
+              <FlatList
+                data={minutes}
+                keyExtractor={(item) => `min-${item}`}
+                renderItem={({ item }) => renderItem(item, false)}
+                showsVerticalScrollIndicator={false}
+                snapToInterval={ITEM_HEIGHT}
+                onMomentumScrollEnd={(e) => {
+                  const index = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
+                  setSelectedMinute(minutes[index]);
+                }}
+                initialScrollIndex={selectedMinute}
+                getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
+                contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
+              />
+            </View>
           </View>
         </View>
-      </ScrollView>
-    </SafeAreaWrapper>
+      </View>
+    </Modal>
   );
 };
 
@@ -898,7 +867,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
     return <PersonalInformationScreen user={resolvedUser || user} onBack={handleBackToMain} />;
   }
   if (currentScreen === 'notifications') {
-    return <NotificationsSettings onBack={handleBackToMain} />;
+    return <NotificationsSettingsScreen onBack={handleBackToMain} />;
   }
   if (currentScreen === 'menstrual-cycle') {
     return <MenstrualCycleSettings user={resolvedUser || user} onBack={handleBackToMain} />;

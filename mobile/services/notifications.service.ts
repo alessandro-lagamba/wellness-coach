@@ -16,7 +16,8 @@ export type NotificationCategory =
   | 'goal_progress'
   | 'streak_celebration'
   | 'sleep_preparation'
-  | 'weight_reminder';
+  | 'weight_reminder'
+  | 'daily_copilot';
 
 export interface ScheduleOptions {
   // For time-based triggers
@@ -306,6 +307,23 @@ export const NotificationService = {
     return ids;
   },
 
+  async scheduleDailyCopilot(hour: number = 18, minute: number = 0) {
+    // Prima cancella eventuali notifiche della stessa categoria per evitare doppioni
+    const all = await Notifications.getAllScheduledNotificationsAsync();
+    const existing = all.filter(n => n.content.data?.category === 'daily_copilot');
+    for (const n of existing) {
+      await this.cancel(n.identifier);
+    }
+
+    return this.schedule(
+      'daily_copilot',
+      'Daily Copilot: Il tuo piano 🎯',
+      'Le tue raccomandazioni per domani sono pronte! Scopri come ottimizzare la tua giornata. 💡',
+      { hour, minute, repeats: true },
+      { screen: 'home', tab: 'dashboard' }
+    );
+  },
+
   // Schedule daily fridge expiry check (default: 18:00)
   async scheduleFridgeExpiryCheck(hour: number = 18, minute: number = 0) {
     return this.schedule(
@@ -478,6 +496,29 @@ export const NotificationService = {
     ids.push(...(await this.scheduleHydrationReminders()));
     ids.push(await this.scheduleMorningGreeting());
     ids.push(await this.scheduleEveningWinddown());
+
+    // 4) Daily Copilot - Recupera orario preferito (default 18:00)
+    try {
+      const { AuthService } = await import('./auth.service');
+      const user = await AuthService.getCurrentUser();
+      if (user) {
+        const { supabase } = await import('../lib/supabase');
+        const { data } = await supabase
+          .from('user_profiles')
+          .select('recommendation_time')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        const preferredHour = data?.recommendation_time ?? 18;
+        ids.push(await this.scheduleDailyCopilot(preferredHour, 0));
+      } else {
+        ids.push(await this.scheduleDailyCopilot(18, 0));
+      }
+    } catch (e) {
+      console.warn('[NotificationService] Failed to schedule Daily Copilot with custom time, using default:', e);
+      ids.push(await this.scheduleDailyCopilot(18, 0));
+    }
+
     // ✅ OPTIMIZED: Removed scheduleSleepPreparation - now unified with scheduleEveningWinddown
     // ❌ REMOVED: Fridge Expiry Check - rimossa su richiesta utente
     // ids.push(await this.scheduleFridgeExpiryCheck());
@@ -499,5 +540,3 @@ export const NotificationService = {
     debug('All notifications cancelled, flag reset');
   },
 };
-
-

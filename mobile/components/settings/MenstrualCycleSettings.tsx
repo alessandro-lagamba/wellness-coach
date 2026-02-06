@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  BackHandler,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -41,6 +42,16 @@ export const MenstrualCycleSettings: React.FC<MenstrualCycleSettingsProps> = ({
   useEffect(() => {
     loadCycleData();
   }, []);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      onBack();
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [onBack]);
 
   const loadCycleData = async () => {
     setIsLoading(true);
@@ -240,6 +251,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
+    fontFamily: 'Figtree_500Medium',
   },
   scrollView: {
     flex: 1,
@@ -261,7 +273,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Figtree_700Bold',
   },
   placeholder: {
     width: 36,
@@ -281,6 +293,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 18,
+    fontFamily: 'Figtree_500Medium',
   },
   form: {
     paddingHorizontal: 20,
@@ -291,7 +304,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 8,
   },
   inputWrapper: {
@@ -310,20 +323,23 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
+    fontFamily: 'Figtree_500Medium',
   },
   inputText: {
     flex: 1,
     fontSize: 16,
+    fontFamily: 'Figtree_500Medium',
   },
   helpText: {
     fontSize: 12,
     marginTop: 4,
     fontStyle: 'italic',
+    fontFamily: 'Figtree_500Medium',
   },
   unitText: {
     fontSize: 14,
     marginLeft: 8,
-    fontWeight: '500',
+    fontFamily: 'Figtree_500Medium',
   },
   saveButton: {
     flexDirection: 'row',
@@ -340,7 +356,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
 });
 

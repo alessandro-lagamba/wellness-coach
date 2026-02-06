@@ -331,6 +331,16 @@ class DailyCopilotService {
         console.error('Error updating recommendation time:', error);
         return false;
       }
+
+      // 🔥 FIX: Update local notification schedule
+      try {
+        const { NotificationService } = await import('./notifications.service');
+        await NotificationService.scheduleDailyCopilot(time, 0);
+        console.log(`✅ Daily Copilot notification rescheduled to ${time}:00`);
+      } catch (notifError) {
+        console.warn('⚠️ Failed to reschedule Daily Copilot notification:', notifError);
+      }
+
       return true;
     } catch (error) {
       console.error('Error in updateRecommendationTime:', error);
@@ -530,11 +540,11 @@ class DailyCopilotService {
         // Use nullish coalescing (??) to preserve 0 values, return null only if truly absent
         const result = {
           steps: healthData.steps ?? null,
-          hrv: healthData.hrv ?? null,
+          hrv: (healthData.hrv && healthData.hrv > 0) ? healthData.hrv : null,
           hydration: healthData.hydration != null ? Math.round(healthData.hydration / 250) : null,
           calories: healthData.calories ?? null,
           meditationMinutes: healthData.mindfulness_minutes ?? null,
-          restingHR: healthData.resting_heart_rate ?? null
+          restingHR: (healthData.resting_heart_rate && healthData.resting_heart_rate > 0) ? healthData.resting_heart_rate : null
         };
 
         console.log('✅ Daily Copilot: Using real health data from database:', result);
@@ -551,11 +561,11 @@ class DailyCopilotService {
           const data = syncResult.data;
           const result = {
             steps: data.steps ?? null,
-            hrv: data.hrv ?? null,
+            hrv: (data.hrv && data.hrv > 0) ? data.hrv : null,
             hydration: data.hydration != null ? Math.round(data.hydration / 250) : null,
             calories: data.calories ?? null,
             meditationMinutes: data.mindfulnessMinutes ?? null,
-            restingHR: data.restingHeartRate ?? null
+            restingHR: (data.restingHeartRate && data.restingHeartRate > 0) ? data.restingHeartRate : null
           };
 
           console.log('✅ Daily Copilot: Using real health data from HealthDataService:', result);
@@ -569,11 +579,11 @@ class DailyCopilotService {
       if (aiContext?.currentHealth) {
         return {
           steps: aiContext.currentHealth.steps ?? null,
-          hrv: aiContext.currentHealth.hrv ?? null,
+          hrv: (aiContext.currentHealth.hrv && aiContext.currentHealth.hrv > 0) ? aiContext.currentHealth.hrv : null,
           hydration: aiContext.currentHealth.hydration ?? null,
           calories: aiContext.currentHealth.calories ?? null,
           meditationMinutes: aiContext.currentHealth.mindfulnessMinutes ?? null,
-          restingHR: aiContext.currentHealth.restingHR ?? null
+          restingHR: (aiContext.currentHealth.restingHR && aiContext.currentHealth.restingHR > 0) ? aiContext.currentHealth.restingHR : null
         };
       }
 
@@ -1127,6 +1137,10 @@ OUTPUT FORMAT(return ONLY valid JSON):
     const safeHrv = data.healthMetrics.hrv ?? 50;
     const safeHydration = data.healthMetrics.hydration ?? 0;
 
+    const displayHrv = (data.healthMetrics.hrv !== null && data.healthMetrics.hrv > 0)
+      ? `${data.healthMetrics.hrv}ms`
+      : '--';
+
     // Mood basso (only if mood data is actually provided)
     if (data.mood !== null && data.mood <= 2) {
       recommendations.push({
@@ -1205,8 +1219,8 @@ OUTPUT FORMAT(return ONLY valid JSON):
       });
     }
 
-    // HRV basso (only if hrv data is provided)
-    if (data.healthMetrics.hrv !== null && data.healthMetrics.hrv < 30) {
+    // HRV basso (only if hrv data is provided and > 0)
+    if (data.healthMetrics.hrv !== null && data.healthMetrics.hrv > 0 && data.healthMetrics.hrv < 30) {
       recommendations.push({
         id: 'stress-reduction',
         priority: 'high' as const,
@@ -1271,7 +1285,7 @@ OUTPUT FORMAT(return ONLY valid JSON):
         actionable: true,
         detailedExplanation: `La respirazione profonda attiva il sistema nervoso parasimpatico, riducendo cortisolo e stress. Bastano 5 minuti di respiro consapevole per migliorare la chiarezza mentale e ridurre la tensione accumulata. Questa pratica può aumentare la variabilità della frequenza cardiaca (HRV) e migliorare la resilienza allo stress.`,
         correlations: [
-          `Pratiche di mindfulness possono migliorare l'HRV (attualmente ${data.healthMetrics.hrv}ms)`,
+          `Pratiche di mindfulness possono migliorare l'HRV (attualmente ${displayHrv})`,
           `La respirazione profonda riduce la pressione sanguigna`,
           `Momenti di calma migliorano la qualità del sonno`
         ],
@@ -1335,10 +1349,10 @@ OUTPUT FORMAT(return ONLY valid JSON):
         icon: '☀️',
         estimatedTime: '10 min',
         actionable: true,
-        detailedExplanation: `I tuoi parametri mostrano un buon equilibrio: umore ${data.mood}/5, sonno ${data.sleep.hours}h con qualità ${data.sleep.quality}%, HRV ${data.healthMetrics.hrv}ms. Una passeggiata al sole può ottimizzare ulteriormente questi valori. L'esposizione alla luce naturale regola il ritmo circadiano, aumenta la produzione di vitamina D e migliora l'umore.`,
+        detailedExplanation: `I tuoi parametri mostrano un buon equilibrio: umore ${data.mood}/5, sonno ${data.sleep.hours}h con qualità ${data.sleep.quality}%, HRV ${displayHrv}. Una passeggiata al sole può ottimizzare ulteriormente questi valori. L'esposizione alla luce naturale regola il ritmo circadiano, aumenta la produzione di vitamina D e migliora l'umore.`,
         correlations: [
           `Mood positivo (${data.mood}/5) supportato da buon sonno`,
-          `HRV ${data.healthMetrics.hrv}ms indica buon recupero`,
+          `HRV ${displayHrv} indica buon recupero`,
           `La luce solare regola il ritmo circadiano`
         ],
         expectedBenefits: [
