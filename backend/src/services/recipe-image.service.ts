@@ -118,9 +118,9 @@ export async function generateRecipeImageFromTitle(
   title: string
 ): Promise<string | null> {
   console.log("[RecipeImage] 🚀 generateRecipeImageFromTitle called for:", title);
-  const apiKey = process.env.EXPO_DEAPI_API_KEY;
+  const apiKey = process.env.DEAPI_API_KEY;
   if (!apiKey) {
-    console.warn("[RecipeImage] EXPO_DEAPI_API_KEY not configured, skipping image generation");
+    console.warn("[RecipeImage] DEAPI_API_KEY not configured, skipping image generation");
     return null;
   }
 
