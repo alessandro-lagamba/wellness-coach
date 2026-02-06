@@ -5,6 +5,7 @@
 
 // Note: In fly.io, environment variables are available via process.env
 // No need to load dotenv in production
+import 'dotenv/config';
 import express from 'express';
 import expressWs from 'express-ws';
 import cors from 'cors';

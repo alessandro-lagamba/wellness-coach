@@ -1794,7 +1794,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Figtree_700Bold',
     flex: 1,
-    color: '#ffffff', // Explicitly white for dark theme surface
   },
   savedIngredientActions: {
     flexDirection: 'row',

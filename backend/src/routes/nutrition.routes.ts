@@ -11,6 +11,7 @@ import {
   generateRestaurantRecipe,
   parseIngredients,
   calculateNutrition,
+  generateRecipeImage,
 } from "../controllers/nutrition.controller";
 import { strictRateLimiter } from "../middleware/rate-limiter";
 
@@ -39,5 +40,7 @@ router.post("/parse-ingredients", parseIngredients);
 // POST /api/nutrition/calculate-nutrition - Calculate nutrition from ingredients
 router.post("/calculate-nutrition", calculateNutrition);
 
-export default router;
+// POST /api/nutrition/generate-image - Generate illustrative image for a recipe title
+router.post("/generate-image", generateRecipeImage);
 
+export default router;

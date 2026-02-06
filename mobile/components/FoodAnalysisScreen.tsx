@@ -2952,7 +2952,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                         <Text allowFontScaling={false} style={{ fontSize: 18, fontFamily: 'Figtree_700Bold', color: 'white', lineHeight: 22, marginBottom: 4 }}>
                           {t('analysis.food.recipes.openHubTitle') || t('food.recipeHub.title')}
                         </Text>
-                        <Text allowFontScaling={false} style={{ fontSize: 14, fontFamily: 'Figtree_500Medium', color: 'rgba(255,255,255,0.8)', lineHeight: 18 }} numberOfLines={5}>
+                        <Text allowFontScaling={false} style={{ fontSize: 13, fontFamily: 'Figtree_500Medium', color: 'rgba(255,255,255,0.8)', lineHeight: 18 }} numberOfLines={5}>
                           {t('analysis.food.recipes.openHubSubtitle') || t('food.recipeHub.subtitle')}
                         </Text>
                       </View>
@@ -2985,7 +2985,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     <Text allowFontScaling={false} style={{ fontSize: 18, fontFamily: 'Figtree_700Bold', color: 'white', lineHeight: 22, marginBottom: 4 }}>
                       {t('analysis.food.fridge.cardTitle')}
                     </Text>
-                    <Text allowFontScaling={false} style={{ fontSize: 14, fontFamily: 'Figtree_500Medium', color: 'rgba(255,255,255,0.8)', lineHeight: 18 }} numberOfLines={5}>
+                    <Text allowFontScaling={false} style={{ fontSize: 13, fontFamily: 'Figtree_500Medium', color: 'rgba(255,255,255,0.8)', lineHeight: 18 }} numberOfLines={5}>
                       {t('analysis.food.fridge.cardDesc')}
                     </Text>
                   </View>

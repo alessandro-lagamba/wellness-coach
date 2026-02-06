@@ -17,108 +17,7 @@ import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useTheme } from '../../contexts/ThemeContext';
 
-// ---------------- Custom Wheel Time Picker ----------------
-const WheelTimePicker = ({
-    visible,
-    onClose,
-    initialTime,
-    onConfirm
-}: {
-    visible: boolean;
-    onClose: () => void;
-    initialTime: Date;
-    onConfirm: (date: Date) => void;
-}) => {
-    const { colors } = useTheme();
-    const [selectedHour, setSelectedHour] = useState(initialTime.getHours());
-    const [selectedMinute, setSelectedMinute] = useState(initialTime.getMinutes());
-
-    const hours = Array.from({ length: 24 }, (_, i) => i);
-    const minutes = Array.from({ length: 60 }, (_, i) => i);
-
-    const ITEM_HEIGHT = 44;
-    const VISIBLE_ITEMS = 5;
-
-    const renderItem = (item: number, isHour: boolean) => {
-        const isSelected = isHour ? item === selectedHour : item === selectedMinute;
-        return (
-            <View style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{
-                    fontSize: isSelected ? 22 : 18,
-                    fontFamily: isSelected ? 'Figtree_700Bold' : 'Figtree_500Medium',
-                    color: isSelected ? colors.primary : colors.textTertiary,
-                    opacity: isSelected ? 1 : 0.5
-                }}>
-                    {item < 10 ? `0${item}` : item}
-                </Text>
-            </View>
-        );
-    };
-
-    const handleConfirm = () => {
-        const newDate = new Date();
-        newDate.setHours(selectedHour);
-        newDate.setMinutes(selectedMinute);
-        onConfirm(newDate);
-        onClose();
-    };
-
-    return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-            <View style={styles.modalBackdrop}>
-                <TouchableOpacity style={{ flex: 1 }} onPress={onClose} activeOpacity={1} />
-                <View style={[styles.wheelModalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <View style={styles.pickerHeader}>
-                        <TouchableOpacity onPress={onClose}>
-                            <Text style={{ color: colors.textSecondary, fontFamily: 'Figtree_500Medium', fontSize: 16 }}>Annulla</Text>
-                        </TouchableOpacity>
-                        <Text style={{ color: colors.text, fontFamily: 'Figtree_700Bold', fontSize: 18 }}>Imposta Orario</Text>
-                        <TouchableOpacity onPress={handleConfirm}>
-                            <Text style={{ color: colors.primary, fontFamily: 'Figtree_700Bold', fontSize: 16 }}>Applica</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View style={[styles.wheelArea, { height: ITEM_HEIGHT * VISIBLE_ITEMS }]}>
-                        <View style={[styles.selectionOverlay, { height: ITEM_HEIGHT, backgroundColor: colors.primaryMuted }]} />
-                        <View style={{ width: 80 }}>
-                            <FlatList
-                                data={hours}
-                                keyExtractor={(item) => `hour-${item}`}
-                                renderItem={({ item }) => renderItem(item, true)}
-                                showsVerticalScrollIndicator={false}
-                                snapToInterval={ITEM_HEIGHT}
-                                onMomentumScrollEnd={(e) => {
-                                    const index = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
-                                    setSelectedHour(hours[index]);
-                                }}
-                                initialScrollIndex={selectedHour}
-                                getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
-                                contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
-                            />
-                        </View>
-                        <Text style={[styles.separator, { color: colors.text }]}>:</Text>
-                        <View style={{ width: 80 }}>
-                            <FlatList
-                                data={minutes}
-                                keyExtractor={(item) => `min-${item}`}
-                                renderItem={({ item }) => renderItem(item, false)}
-                                showsVerticalScrollIndicator={false}
-                                snapToInterval={ITEM_HEIGHT}
-                                onMomentumScrollEnd={(e) => {
-                                    const index = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
-                                    setSelectedMinute(minutes[index]);
-                                }}
-                                initialScrollIndex={selectedMinute}
-                                getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
-                                contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
-                            />
-                        </View>
-                    </View>
-                </View>
-            </View>
-        </Modal>
-    );
-};
+import { TimePickerModal } from '../TimePickerModal';
 
 // ---------------- Notifications Settings Screen ----------------
 export const NotificationsSettingsScreen = ({ onBack }: { onBack: () => void }) => {
@@ -206,8 +105,6 @@ export const NotificationsSettingsScreen = ({ onBack }: { onBack: () => void }) 
                     </View>
 
                     <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('settings.notificationsCategories') || 'Categorie'}</Text>
-
                         {[
                             { id: 'emotionSkin', label: t('settings.notifications.emotionSkin') || 'Analisi Emozioni/Pelle', value: emotionSkin, setter: setEmotionSkin },
                             { id: 'diary', label: t('settings.notifications.diary') || 'Diario', value: diary, setter: setDiary },
@@ -269,7 +166,7 @@ export const NotificationsSettingsScreen = ({ onBack }: { onBack: () => void }) 
                 </View>
             </ScrollView>
 
-            <WheelTimePicker
+            <TimePickerModal
                 visible={showDiaryTimePicker}
                 onClose={() => setShowDiaryTimePicker(false)}
                 initialTime={diaryTime}
@@ -354,7 +251,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         paddingVertical: 16,
         marginTop: 30,
-        marginBottom: 40, // Ensure it's not cut off
+        marginBottom: 80, // Increased from 40 for better spacing at the bottom
     },
     buttonIcon: {
         marginRight: 8,
@@ -363,41 +260,4 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontFamily: 'Figtree_700Bold',
     },
-    // Modal styles
-    modalBackdrop: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        justifyContent: 'flex-end',
-    },
-    wheelModalContent: {
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        paddingBottom: 40,
-        paddingTop: 20,
-        borderWidth: 1,
-    },
-    pickerHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 24,
-        marginBottom: 20
-    },
-    wheelArea: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    selectionOverlay: {
-        position: 'absolute',
-        width: '80%',
-        borderRadius: 12,
-        opacity: 0.1
-    },
-    separator: {
-        fontSize: 24,
-        fontFamily: 'Figtree_700Bold',
-        marginHorizontal: 10,
-        marginTop: -4
-    }
 });

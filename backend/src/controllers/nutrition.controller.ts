@@ -295,3 +295,43 @@ export const calculateNutrition = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * POST /api/nutrition/generate-image
+ * Generate illustrative image for a recipe title
+ */
+export const generateRecipeImage = async (req: Request, res: Response) => {
+  try {
+    const { title } = req.body;
+    console.log("[Nutrition] 🖼️ Richiesta generazione immagine per:", title);
+
+    if (!title || typeof title !== "string") {
+      return res.status(400).json({
+        success: false,
+        error: "title is required",
+      });
+    }
+
+    // Importazione dinamica o diretta del servizio immagine
+    const { generateRecipeImageFromTitle } = await import("../services/recipe-image.service");
+
+    const imageUrl = await generateRecipeImageFromTitle(title);
+
+    if (imageUrl) {
+      res.json({
+        success: true,
+        data: { imageUrl },
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: "Failed to generate image",
+      });
+    }
+  } catch (error: any) {
+    console.error("[Nutrition] ❌ generateRecipeImage controller error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Internal server error",
+    });
+  }
+};

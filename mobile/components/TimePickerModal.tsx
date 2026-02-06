@@ -1,17 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   Modal,
   TouchableOpacity,
   StyleSheet,
-  Platform,
+  FlatList,
+  ScrollView,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../hooks/useTranslation';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { getUserLocale } from '../utils/locale-formatters';
 
 interface TimePickerModalProps {
   visible: boolean;
@@ -29,36 +27,94 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
   initialTime,
 }) => {
   const { colors } = useTheme();
-  const { t, language } = useTranslation();
-  const [selectedTime, setSelectedTime] = useState<Date>(
-    initialTime || new Date()
-  );
-  const [showPicker, setShowPicker] = useState(Platform.OS === 'ios');
+  const { t } = useTranslation();
+
+  const [selectedHour, setSelectedHour] = useState((initialTime || new Date()).getHours());
+  const [selectedMinute, setSelectedMinute] = useState((initialTime || new Date()).getMinutes());
+
+  const hourScrollRef = useRef<ScrollView>(null);
+  const minuteScrollRef = useRef<ScrollView>(null);
+
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const minutes = Array.from({ length: 60 }, (_, i) => i);
+
+  const ITEM_HEIGHT = 50;
+  const VISIBLE_ITEMS = 5;
+  const CONTAINER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
+
+  // Centra automaticamente quando il modal diventa visibile
+  useEffect(() => {
+    if (visible) {
+      const h = initialTime ? initialTime.getHours() : new Date().getHours();
+      const m = initialTime ? initialTime.getMinutes() : new Date().getMinutes();
+
+      setSelectedHour(h);
+      setSelectedMinute(m);
+
+      // Scroll immediato alla posizione corretta
+      setTimeout(() => {
+        hourScrollRef.current?.scrollTo({
+          y: h * ITEM_HEIGHT,
+          animated: false,
+        });
+        minuteScrollRef.current?.scrollTo({
+          y: m * ITEM_HEIGHT,
+          animated: false,
+        });
+      }, 50);
+    }
+  }, [visible, initialTime]);
+
+  const handleHourScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const clampedIndex = Math.max(0, Math.min(23, index));
+    if (clampedIndex !== selectedHour) {
+      setSelectedHour(clampedIndex);
+    }
+  };
+
+  const handleMinuteScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const clampedIndex = Math.max(0, Math.min(59, index));
+    if (clampedIndex !== selectedMinute) {
+      setSelectedMinute(clampedIndex);
+    }
+  };
+
+  const renderTimeItem = (value: number, isSelected: boolean) => {
+    return (
+      <View
+        key={value}
+        style={[
+          styles.timeItem,
+          { height: ITEM_HEIGHT },
+        ]}
+      >
+        <Text
+          style={[
+            styles.timeText,
+            {
+              color: isSelected ? colors.primary : colors.textTertiary,
+              fontSize: isSelected ? 28 : 20,
+              fontFamily: isSelected ? 'Figtree_700Bold' : 'Figtree_500Medium',
+              opacity: isSelected ? 1 : 0.4,
+            },
+          ]}
+        >
+          {value.toString().padStart(2, '0')}
+        </Text>
+      </View>
+    );
+  };
 
   const handleConfirm = () => {
-    onConfirm(selectedTime);
+    const newDate = initialTime ? new Date(initialTime) : new Date();
+    newDate.setHours(selectedHour);
+    newDate.setMinutes(selectedMinute);
+    onConfirm(newDate);
     onClose();
-  };
-
-  const locale = getUserLocale(language);
-
-  const formatTime = (date: Date): string => {
-    return new Intl.DateTimeFormat(locale, {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: undefined, // Let system decide
-    }).format(date);
-  };
-
-  // Detect 24-hour format preference
-  const use24Hour = (): boolean => {
-    try {
-      const testDate = new Date();
-      const testString = testDate.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
-      return !testString.match(/AM|PM/i);
-    } catch {
-      return false; // Default to 12-hour
-    }
   };
 
   return (
@@ -70,73 +126,103 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
     >
       <View style={styles.overlay}>
         <View style={[styles.modal, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>
+            <Text
+              style={[styles.title, { color: colors.text }]}
+              numberOfLines={1}
+            >
               {title || t('timePicker.title') || 'Seleziona orario'}
             </Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <FontAwesome name="times" size={18} color={colors.textSecondary} />
-            </TouchableOpacity>
           </View>
 
-          <View style={styles.content}>
-            {Platform.OS === 'ios' ? (
-              <DateTimePicker
-                value={selectedTime}
-                mode="time"
-                is24Hour={use24Hour()}
-                display="spinner"
-                onChange={(event, date) => {
-                  if (date) setSelectedTime(date);
-                }}
-                style={styles.picker}
-                textColor={colors.text}
+          {/* Wheel Area */}
+          <View style={[styles.wheelContainer, { backgroundColor: colors.surfaceElevated }]}>
+            <View style={[styles.wheelArea, { height: CONTAINER_HEIGHT }]}>
+              {/* Selection Highlight */}
+              <View
+                style={[
+                  styles.selectionOverlay,
+                  {
+                    height: ITEM_HEIGHT,
+                    backgroundColor: colors.primary + '0A',
+                    borderColor: colors.primary + '30',
+                    borderWidth: 1.5,
+                    top: ITEM_HEIGHT * 2,
+                  },
+                ]}
               />
-            ) : (
-              <>
-                {!showPicker && (
-                  <TouchableOpacity
-                    style={[styles.timeButton, { backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
-                    onPress={() => setShowPicker(true)}
-                  >
-                    <FontAwesome name="clock-o" size={20} color={colors.primary} />
-                    <Text style={[styles.timeText, { color: colors.text }]}>
-                      {formatTime(selectedTime)}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {showPicker && (
-                  <DateTimePicker
-                    value={selectedTime}
-                    mode="time"
-                    is24Hour={use24Hour()}
-                    display="default"
-                    onChange={(event, date) => {
-                      setShowPicker(false);
-                      if (date) setSelectedTime(date);
-                    }}
-                    textColor={colors.text}
-                  />
-                )}
-              </>
-            )}
+
+              {/* Hour Picker */}
+              <View style={styles.pickerColumn}>
+                <ScrollView
+                  ref={hourScrollRef}
+                  showsVerticalScrollIndicator={false}
+                  snapToInterval={ITEM_HEIGHT}
+                  snapToAlignment="start"
+                  decelerationRate="fast"
+                  onMomentumScrollEnd={handleHourScroll}
+                  scrollEventThrottle={16}
+                  contentContainerStyle={{
+                    paddingVertical: ITEM_HEIGHT * 2,
+                  }}
+                >
+                  {hours.map((hour) => renderTimeItem(hour, hour === selectedHour))}
+                </ScrollView>
+              </View>
+
+              {/* Separator */}
+              <Text style={[styles.separator, { color: colors.primary }]}>:</Text>
+
+              {/* Minute Picker */}
+              <View style={styles.pickerColumn}>
+                <ScrollView
+                  ref={minuteScrollRef}
+                  showsVerticalScrollIndicator={false}
+                  snapToInterval={ITEM_HEIGHT}
+                  snapToAlignment="start"
+                  decelerationRate="fast"
+                  onMomentumScrollEnd={handleMinuteScroll}
+                  scrollEventThrottle={16}
+                  contentContainerStyle={{
+                    paddingVertical: ITEM_HEIGHT * 2,
+                  }}
+                >
+                  {minutes.map((minute) => renderTimeItem(minute, minute === selectedMinute))}
+                </ScrollView>
+              </View>
+            </View>
           </View>
 
-          <View style={styles.footer}>
+          {/* Action Buttons */}
+          <View style={styles.actionsContainer}>
             <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: colors.border }]}
               onPress={onClose}
+              style={[
+                styles.actionButton,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderWidth: 1.5,
+                },
+              ]}
             >
-              <Text style={[styles.cancelText, { color: colors.textSecondary }]}>
+              <Text style={[styles.actionButtonText, { color: colors.textSecondary }]}>
                 {t('common.cancel') || 'Annulla'}
               </Text>
             </TouchableOpacity>
+
             <TouchableOpacity
-              style={[styles.confirmButton, { backgroundColor: colors.primary }]}
               onPress={handleConfirm}
+              style={[
+                styles.actionButton,
+                {
+                  backgroundColor: colors.primary,
+                },
+              ]}
             >
-              <Text style={styles.confirmText}>
-                {t('common.confirm') || 'Conferma'}
+              <Text style={[styles.actionButtonText, { color: '#FFFFFF' }]}>
+                {t('common.apply') || 'Applica'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -149,82 +235,81 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
   modal: {
     width: '100%',
-    maxWidth: 400,
-    borderRadius: 20,
+    maxWidth: 380,
+    borderRadius: 28,
     borderWidth: 1,
-    padding: 20,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 10,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
-    paddingRight: 4, // 🆕 Aggiungi padding per evitare che la X sia troppo a destra
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: 'Figtree_700Bold',
-    flex: 1, // 🆕 Permetti al titolo di occupare lo spazio disponibile
+    textAlign: 'center',
   },
-  closeButton: {
-    padding: 4,
-    marginLeft: 12, // 🆕 Aggiungi margine sinistro per spostare la X più a sinistra
+  wheelContainer: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 20,
   },
-  content: {
-    marginVertical: 20,
-    alignItems: 'center',
-    minHeight: 200,
-    justifyContent: 'center',
-  },
-  picker: {
-    width: '100%',
-    height: 200,
-  },
-  timeButton: {
+  wheelArea: {
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 12,
+    position: 'relative',
+  },
+  selectionOverlay: {
+    position: 'absolute',
+    width: '90%',
+    borderRadius: 14,
+    zIndex: 1,
+    pointerEvents: 'none',
+  },
+  pickerColumn: {
+    width: 90,
+    overflow: 'hidden',
+  },
+  timeItem: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   timeText: {
-    fontSize: 18,
-    fontFamily: 'Figtree_600SemiBold',
+    textAlign: 'center',
   },
-  footer: {
+  separator: {
+    fontSize: 32,
+    fontFamily: 'Figtree_700Bold',
+    marginHorizontal: 16,
+    marginTop: -4,
+  },
+  actionsContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 20,
   },
-  cancelButton: {
+  actionButton: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  cancelText: {
+  actionButtonText: {
     fontSize: 16,
-    fontFamily: 'Figtree_600SemiBold',
-  },
-  confirmButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  confirmText: {
-    fontSize: 16,
-    fontFamily: 'Figtree_600SemiBold',
-    color: '#ffffff',
+    fontFamily: 'Figtree_700Bold',
   },
 });
-

@@ -18,7 +18,6 @@ function normalizeTitle(title: string): string {
 /**
  * Generate (or reuse) a recipe image using deAPI txt2img endpoint.
  * Global cache per titolo nella tabella public.recipe_image_cache.
- * Usa DEAPI_API_KEY dall'ambiente.
  * 
  * DEAPI is async - it returns a request_id and we need to poll for the result.
  */
@@ -118,9 +117,10 @@ async function pollForResult(requestId: string, apiKey: string): Promise<string 
 export async function generateRecipeImageFromTitle(
   title: string
 ): Promise<string | null> {
-  const apiKey = process.env.DEAPI_API_KEY;
+  console.log("[RecipeImage] 🚀 generateRecipeImageFromTitle called for:", title);
+  const apiKey = process.env.EXPO_DEAPI_API_KEY;
   if (!apiKey) {
-    console.warn("[RecipeImage] DEAPI_API_KEY not configured, skipping image generation");
+    console.warn("[RecipeImage] EXPO_DEAPI_API_KEY not configured, skipping image generation");
     return null;
   }
 

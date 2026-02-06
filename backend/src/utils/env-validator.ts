@@ -33,6 +33,7 @@ export function validateEnvironment(): EnvValidationResult {
     'LIVEKIT_API_KEY',
     'LIVEKIT_API_SECRET',
     'SUPABASE_AVATAR_BUCKET',
+    'EXPO_DEAPI_API_KEY', // Usato per generazione immagini ricette
   ];
 
   // Verifica critiche
@@ -82,6 +83,3 @@ export function validateAndExit(): void {
 
   console.log('✅ Environment variables validated successfully');
 }
-
-
-
