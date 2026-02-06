@@ -120,18 +120,41 @@
     "languageChanged": "Language changed to {{lang}}",
     "notificationsCategories": "Notification Categories",
     "notifications": {
-      "emotionSkin": "Emotion/Skin Analysis",
+      "dailyCheckIn": "Daily Check-in",
       "diary": "Diary",
-      "fridgeExpiry": "Fridge Expiry",
-      "breathing": "Breathing/Break",
+      "breathing": "Breathing Break",
       "hydration": "Hydration",
       "morningGreeting": "Morning Greeting",
-      "eveningWinddown": "Evening Winddown",
-      "sleepPreparation": "Sleep Preparation",
       "diaryTimeTitle": "Diary Time",
       "diaryTitle": "Diary",
       "diaryBody": "Would you like to write a brief journal entry?",
-      "saved": "Notifications updated successfully"
+      "saved": "Notifications updated successfully",
+      "content": {
+        "dailyCheckIn": {
+          "title": "Wellness Analysis",
+          "body": "Remember to do your daily check-in! ✨"
+        },
+        "diary": {
+          "title": "Diary",
+          "body": "Would you like to write a brief journal entry?"
+        },
+        "breathing": {
+          "title": "Breathing Break",
+          "body": "Take 1 minute to breathe deeply"
+        },
+        "hydration": {
+          "title": "💧 Hydration",
+          "body": "Remember to drink a glass of water!"
+        },
+        "morningGreeting": {
+          "title": "Good Morning! ☀️",
+          "body": "How are you feeling today? Start your day with a wellness check"
+        },
+        "dailyCopilot": {
+          "title": "Daily Copilot: Your Plan 🎯",
+          "body": "Your recommendations for tomorrow are ready! Discover how to optimize your day. 💡"
+        }
+      }
     },
     "menstrualCycle": "Menstrual Cycle",
     "menstrualCycleDescription": "Configure and monitor your menstrual cycle",

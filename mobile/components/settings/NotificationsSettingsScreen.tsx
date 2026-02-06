@@ -20,19 +20,17 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { TimePickerModal } from '../TimePickerModal';
 
 // ---------------- Notifications Settings Screen ----------------
+// ---------------- Notifications Settings Screen ----------------
 export const NotificationsSettingsScreen = ({ onBack }: { onBack: () => void }) => {
     const { t } = useTranslation();
     const { colors } = useTheme();
     const [loading, setLoading] = useState(false);
 
-    const [emotionSkin, setEmotionSkin] = useState(true);
+    const [dailyCheckIn, setDailyCheckIn] = useState(true); // Renamed from emotionSkin
     const [diary, setDiary] = useState(true);
-    const [fridgeExpiry, setFridgeExpiry] = useState(true);
     const [breathing, setBreathing] = useState(true);
-    const [hydration, setHydration] = useState(false);
-    const [morningGreeting, setMorningGreeting] = useState(false);
-    const [eveningWinddown, setEveningWinddown] = useState(false);
-    const [sleepPreparation, setSleepPreparation] = useState(false);
+    const [hydration, setHydration] = useState(true);
+    const [morningGreeting, setMorningGreeting] = useState(true);
 
     const [showDiaryTimePicker, setShowDiaryTimePicker] = useState(false);
     const [diaryTime, setDiaryTime] = useState(new Date(2024, 0, 1, 21, 30));
@@ -46,31 +44,51 @@ export const NotificationsSettingsScreen = ({ onBack }: { onBack: () => void }) 
         return () => subscription.remove();
     }, [onBack]);
 
+    useEffect(() => {
+        const loadPrefs = async () => {
+            try {
+                const { NotificationService } = await import('../../services/notifications.service');
+                const prefs = await NotificationService.getPreferences();
+
+                // Map preferences to state
+                setDailyCheckIn(prefs.dailyCheckIn ?? true);
+                setDiary(prefs.diary ?? true);
+                setBreathing(prefs.breathing ?? true);
+                setHydration(prefs.hydration ?? true);
+                setMorningGreeting(prefs.morningGreeting ?? true);
+
+                if (prefs.diaryTime) {
+                    const d = new Date();
+                    d.setHours(prefs.diaryTime.hour);
+                    d.setMinutes(prefs.diaryTime.minute);
+                    setDiaryTime(d);
+                }
+            } catch (e) {
+                console.warn('[NotificationsSettings] Failed to load preferences:', e);
+            }
+        };
+        loadPrefs();
+    }, []);
+
     const format2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
     const handleSave = async () => {
         try {
             setLoading(true);
             const { NotificationService } = await import('../../services/notifications.service');
-            await NotificationService.initialize();
-            await NotificationService.cancelAll();
 
-            if (emotionSkin) await NotificationService.scheduleEmotionSkinWeekly();
-            if (diary) {
-                await NotificationService.schedule(
-                    'journal_reminder',
-                    t('settings.notifications.diaryTitle') || 'Diario',
-                    t('settings.notifications.diaryBody') || 'Ti va di scrivere una breve voce nel diario?',
-                    { hour: diaryTime.getHours(), minute: diaryTime.getMinutes(), repeats: true },
-                    { screen: 'journal' }
-                );
-            }
-            if (fridgeExpiry) await NotificationService.scheduleFridgeExpiryCheck();
-            if (breathing) await NotificationService.scheduleBreathingNudges();
-            if (hydration) await NotificationService.scheduleHydrationReminders();
-            if (morningGreeting) await NotificationService.scheduleMorningGreeting();
-            if (eveningWinddown) await NotificationService.scheduleEveningWinddown();
-            if (sleepPreparation) await NotificationService.scheduleSleepPreparation();
+            // 🔥 Persistiamo la scelta dell'utente
+            await NotificationService.savePreferences({
+                dailyCheckIn,
+                diary,
+                breathing,
+                hydration,
+                morningGreeting,
+                diaryTime: { hour: diaryTime.getHours(), minute: diaryTime.getMinutes() }
+            });
+
+            // 🔥 Sincronizziamo le notifiche reali con le nuove preferenze
+            await NotificationService.sync();
 
             Alert.alert(t('common.success'), t('settings.notifications.saved') || 'Notifiche aggiornate');
             onBack();
@@ -106,14 +124,11 @@ export const NotificationsSettingsScreen = ({ onBack }: { onBack: () => void }) 
 
                     <View style={styles.section}>
                         {[
-                            { id: 'emotionSkin', label: t('settings.notifications.emotionSkin') || 'Analisi Emozioni/Pelle', value: emotionSkin, setter: setEmotionSkin },
+                            { id: 'dailyCheckIn', label: t('settings.notifications.dailyCheckIn') || 'Check Giornaliero', value: dailyCheckIn, setter: setDailyCheckIn },
                             { id: 'diary', label: t('settings.notifications.diary') || 'Diario', value: diary, setter: setDiary },
-                            { id: 'fridge', label: t('settings.notifications.fridgeExpiry') || 'Ingredienti in scadenza', value: fridgeExpiry, setter: setFridgeExpiry },
-                            { id: 'breathing', label: t('settings.notifications.breathing') || 'Pausa/Respirazione', value: breathing, setter: setBreathing },
+                            { id: 'breathing', label: t('settings.notifications.breathing') || 'Pausa Respiro', value: breathing, setter: setBreathing },
                             { id: 'hydration', label: t('settings.notifications.hydration') || 'Idratazione', value: hydration, setter: setHydration },
                             { id: 'morning', label: t('settings.notifications.morningGreeting') || 'Saluto mattutino', value: morningGreeting, setter: setMorningGreeting },
-                            { id: 'evening', label: t('settings.notifications.eveningWinddown') || 'Buona serata', value: eveningWinddown, setter: setEveningWinddown },
-                            { id: 'sleep', label: t('settings.notifications.sleepPreparation') || 'Preparazione al sonno', value: sleepPreparation, setter: setSleepPreparation },
                         ].map((row) => (
                             <View key={row.id} style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                                 <View style={styles.rowCopy}>

@@ -525,7 +525,8 @@ class DailyCopilotService {
       }
 
       const { supabase } = await import('../lib/supabase');
-      const today = new Date().toISOString().split('T')[0];
+      const todayDate = new Date();
+      const today = todayDate.toISOString().split('T')[0];
 
       const { data: healthData } = await supabase
         .from('health_data')
@@ -535,12 +536,21 @@ class DailyCopilotService {
         .maybeSingle();
 
       if (healthData) {
-        // Use nullish coalescing (??) to preserve 0 values, return null only if truly absent
+        // 🔥 FIX: Use consumed calories from FoodAnalysisService instead of HealthKit burned calories
+        let consumedCalories = null;
+        try {
+          const { FoodAnalysisService } = await import('./food-analysis.service');
+          const intake = await FoodAnalysisService.getDailyIntake(currentUser.id, todayDate);
+          consumedCalories = intake.calories;
+        } catch (e) {
+          console.warn('⚠️ Failed to fetch consumed calories:', e);
+        }
+
         const result = {
           steps: healthData.steps ?? null,
           hrv: (healthData.hrv && healthData.hrv > 0) ? healthData.hrv : null,
           hydration: healthData.hydration != null ? Math.round(healthData.hydration / 250) : null,
-          calories: healthData.calories ?? null,
+          calories: consumedCalories, // Now uses consumed calories
           meditationMinutes: healthData.mindfulness_minutes ?? null,
           restingHR: (healthData.resting_heart_rate && healthData.resting_heart_rate > 0) ? healthData.resting_heart_rate : null,
           sleepHours: (healthData.sleep_hours && healthData.sleep_hours > 0) ? healthData.sleep_hours : null,

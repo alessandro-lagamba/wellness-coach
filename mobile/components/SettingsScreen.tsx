@@ -679,6 +679,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   const handleLanguageChange = async (newLang: 'it' | 'en') => {
     await saveLanguage(newLang);
     await changeLanguage(newLang);
+
+    // 🆕 Aggiorna notifiche con la nuova lingua
+    try {
+      const { NotificationService } = await import('../services/notifications.service');
+      await NotificationService.updateLocalization();
+    } catch (e) {
+      console.error('Failed to update notifications localization:', e);
+    }
+
     Alert.alert(
       t('common.success'),
       t('settings.languageChanged', { lang: newLang === 'it' ? 'Italiano' : 'English' })

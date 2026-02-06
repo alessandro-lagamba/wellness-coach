@@ -162,7 +162,7 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -376,7 +376,7 @@ export const PersonalInformationScreen: React.FC<PersonalInformationScreenProps>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 

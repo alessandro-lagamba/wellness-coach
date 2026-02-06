@@ -4,19 +4,14 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fridgeItemsService } from './fridge-items.service';
 import { AuthService } from './auth.service';
+import i18n from '../i18n';
 
 export type NotificationCategory =
-  | 'emotion_skin_reminder'
+  | 'daily_check_in' // Renamed from emotion_skin_reminder
   | 'journal_reminder'
-  | 'fridge_expiry'
   | 'breathing_break'
   | 'hydration_reminder'
   | 'morning_greeting'
-  | 'evening_winddown'
-  | 'goal_progress'
-  | 'streak_celebration'
-  | 'sleep_preparation'
-  | 'weight_reminder'
   | 'daily_copilot';
 
 export interface ScheduleOptions {
@@ -33,6 +28,25 @@ export interface ScheduleOptions {
 // 👇 Idempotenza: util per "unique scheduling"
 const UNIQUE_KEY = 'key';
 const DEFAULTS_FLAG = '@notifications:defaults_scheduled';
+const PREFERENCES_KEY = '@notifications:preferences';
+
+export interface NotificationPreferences {
+  dailyCheckIn: boolean; // Renamed from emotionSkin
+  diary: boolean;
+  breathing: boolean;
+  hydration: boolean;
+  morningGreeting: boolean;
+  diaryTime?: { hour: number; minute: number };
+}
+
+const DEFAULT_PREFERENCES: NotificationPreferences = {
+  dailyCheckIn: true,
+  diary: true,
+  breathing: true, // Changed default to true as it's less spammy now
+  hydration: true,
+  morningGreeting: true,
+  diaryTime: { hour: 21, minute: 30 }
+};
 
 // Debug helper (opzionale, attiva solo in dev se necessario)
 const DEBUG_NOTIF = __DEV__ && false;
@@ -245,60 +259,41 @@ export const NotificationService = {
 
   // Presets
   // ⚠️ NOTA: Expo weekday: 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 7=Sun
-  async scheduleEmotionSkinWeekly() {
-    // Default: Tue (2) and Fri (5) at 19:00
-    const ids: string[] = [];
-    ids.push(
-      await this.schedule(
-        'emotion_skin_reminder',
-        'Analisi benessere',
-        'È ora di fare un check su emozioni o pelle ✨',
-        { hour: 19, minute: 0, weekday: 2, repeats: true }, // Tuesday
-        { screen: 'analysis' }
-      )
+
+  // 🔥 UPDATED: Replaces scheduleEmotionSkinWeekly
+  // Daily at 13:30 with custom text
+  async scheduleDailyCheckIn() {
+    return this.schedule(
+      'daily_check_in',
+      i18n.t('notifications.content.dailyCheckIn.title', { defaultValue: 'Analisi benessere' }),
+      i18n.t('notifications.content.dailyCheckIn.body', { defaultValue: 'Ricordati di fare il tuo check giornaliero! ✨' }),
+      { hour: 13, minute: 30, repeats: true },
+      { screen: 'analysis' }
     );
-    ids.push(
-      await this.schedule(
-        'emotion_skin_reminder',
-        'Analisi benessere',
-        'Piccolo promemoria per la tua analisi 🧘‍♀️',
-        { hour: 19, minute: 0, weekday: 5, repeats: true }, // Friday
-        { screen: 'analysis' }
-      )
-    );
-    return ids;
   },
 
   async scheduleDiaryDaily() {
     // Default: daily 21:30
     return this.schedule(
       'journal_reminder',
-      'Diario',
-      'Ti va di scrivere una breve voce nel diario?',
+      i18n.t('notifications.content.diary.title', { defaultValue: 'Diario' }),
+      i18n.t('notifications.content.diary.body', { defaultValue: 'Ti va di scrivere una breve voce nel diario?' }),
       { hour: 21, minute: 30, repeats: true },
       { screen: 'journal' }
     );
   },
 
+  // 🔥 UPDATED: Single daily breathing notification, no meditation logic
   async scheduleBreathingNudges() {
-    // Weekdays 11:30 and 16:00
-    // ⚠️ NOTA: Expo weekday: 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 7=Sun
+    // Weekdays at 16:00 (single)
+    // ⚠️ NOTA: Expo weekday: 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri
     const ids: string[] = [];
     for (const weekday of [1, 2, 3, 4, 5]) { // Monday to Friday
       ids.push(
         await this.schedule(
           'breathing_break',
-          'Pausa respiro',
-          '1 minuto di respirazione guidata?',
-          { hour: 11, minute: 30, weekday, repeats: true },
-          { screen: 'breathing' }
-        )
-      );
-      ids.push(
-        await this.schedule(
-          'breathing_break',
-          'Reset pomeridiano',
-          '2 minuti di respirazione/meditazione?',
+          i18n.t('notifications.content.breathing.title', { defaultValue: 'Pausa respiro' }),
+          i18n.t('notifications.content.breathing.body', { defaultValue: 'Prenditi 1 minuto per respirare profondamente 🌬️' }),
           { hour: 16, minute: 0, weekday, repeats: true },
           { screen: 'breathing' }
         )
@@ -317,190 +312,121 @@ export const NotificationService = {
 
     return this.schedule(
       'daily_copilot',
-      'Daily Copilot: Il tuo piano 🎯',
-      'Le tue raccomandazioni per domani sono pronte! Scopri come ottimizzare la tua giornata. 💡',
+      i18n.t('notifications.content.dailyCopilot.title', { defaultValue: 'Daily Copilot: Il tuo piano 🎯' }),
+      i18n.t('notifications.content.dailyCopilot.body', { defaultValue: 'Le tue raccomandazioni per domani sono pronte! Scopri come ottimizzare la tua giornata. 💡' }),
       { hour, minute, repeats: true },
       { screen: 'home', tab: 'dashboard' }
     );
-  },
-
-  // Schedule daily fridge expiry check (default: 18:00)
-  async scheduleFridgeExpiryCheck(hour: number = 18, minute: number = 0) {
-    return this.schedule(
-      'fridge_expiry',
-      'Controllo ingredienti',
-      'Verifica ingredienti in scadenza',
-      { hour, minute, repeats: true },
-      { screen: 'food', action: 'CHECK_FRIDGE' }
-    );
-  },
-
-  // Check fridge expiries and notify (called by scheduled notification or manually)
-  async notifyFridgeExpiries() {
-    const user = await AuthService.getCurrentUser();
-    if (!user) return [];
-
-    const items = await fridgeItemsService.getFridgeItems(user.id);
-    const now = new Date();
-    const soon = new Date();
-    soon.setDate(now.getDate() + 3);
-
-    const expiring = (items || []).filter((it: any) => it.expiry_date && new Date(it.expiry_date) <= soon);
-    if (!expiring.length) return [];
-
-    const top3 = expiring
-      .sort((a: any, b: any) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime())
-      .slice(0, 3);
-    const list = top3.map((i: any) => `${i.name} (${new Date(i.expiry_date).toLocaleDateString()})`).join(', ');
-
-    // 🔧 FIX #4: Invia immediatamente, senza delay randomizzato
-    // Il delay causava notifiche perse se l'app veniva chiusa prima del timeout
-    return this.schedule(
-      'fridge_expiry',
-      'Ingredienti in scadenza',
-      `Stanno per scadere: ${list}. Vuoi una ricetta?`,
-      { secondsFromNow: 1 },
-      { screen: 'food', action: 'OPEN_FRIDGE_RECIPES' }
-    );
-  },
-
-  async scheduleHydrationReminders() {
-    // ✅ OPTIMIZED: Reduced from 6 to 4 reminders per day (less invasive)
-    // Strategic times: morning, lunch, afternoon, evening
-    const ids: string[] = [];
-    const hours = [9, 13, 17, 20]; // Reduced from [9, 11, 14, 16, 18, 20]
-    for (const hour of hours) {
-      ids.push(
-        await this.schedule(
-          'hydration_reminder',
-          '💧 Idratazione',
-          'Ricorda di bere un bicchiere d\'acqua!',
-          { hour, minute: 0, repeats: true },
-          { screen: 'hydration' }
-        )
-      );
-    }
-    return ids;
   },
 
   async scheduleMorningGreeting() {
     // Daily at 8:00
     return this.schedule(
       'morning_greeting',
-      'Buongiorno! ☀️',
-      'Come ti senti oggi? Inizia la giornata con un check del benessere',
+      i18n.t('notifications.content.morningGreeting.title', { defaultValue: 'Buongiorno! ☀️' }),
+      i18n.t('notifications.content.morningGreeting.body', { defaultValue: 'Come ti senti oggi? Inizia la giornata con un check del benessere' }),
       { hour: 8, minute: 0, repeats: true },
       { screen: 'home' }
     );
   },
 
-  async scheduleEveningWinddown() {
-    // ✅ OPTIMIZED: Unified evening winddown and sleep preparation into one notification
-    // Daily at 22:00 - combines journal reminder and sleep preparation
-    return this.schedule(
-      'evening_winddown',
-      'Buona serata 🌙',
-      'Preparati per il riposo. Vuoi scrivere nel diario o fare una breve meditazione?',
-      { hour: 22, minute: 0, repeats: true },
-      { screen: 'journal' }
-    );
-  },
+  // 🔥 NEW: Reschedule all notifications with updated language
+  async updateLocalization() {
+    try {
+      const hasPermission = await this.getPermissionStatus();
+      if (!hasPermission) return;
 
-  // ⚠️ DEPRECATED: scheduleSleepPreparation - now unified with scheduleEveningWinddown
-  // Keeping for backward compatibility but not scheduling by default
-  async scheduleSleepPreparation() {
-    // This is now handled by scheduleEveningWinddown to avoid duplicate notifications
-    // Daily 1 hour before average bedtime (default 23:00, so 22:00)
-    // ⚠️ NOTE: This is NOT called in scheduleDefaults() anymore
-    return this.schedule(
-      'sleep_preparation',
-      'Preparati per dormire 😴',
-      'È quasi ora di andare a letto. Spegni gli schermi e rilassati',
-      { hour: 22, minute: 30, repeats: true },
-      { screen: 'breathing' }
-    );
-  },
+      // 1. Get current preferences
+      const saved = await AsyncStorage.getItem(PREFERENCES_KEY);
+      const preferences: NotificationPreferences = saved
+        ? { ...DEFAULT_PREFERENCES, ...JSON.parse(saved) }
+        : DEFAULT_PREFERENCES;
 
-  // Dynamic notifications (call when events happen)
-  async notifyGoalProgress(metric: 'calories' | 'protein' | 'carbs' | 'fats', current: number, target: number) {
-    const percent = Math.round((current / target) * 100);
-    if (percent >= 75 && percent < 100) {
-      return this.schedule(
-        'goal_progress',
-        'Obiettivo in arrivo! 🎯',
-        `Hai raggiunto il ${percent}% del tuo obiettivo ${metric === 'calories' ? 'calorico' : metric === 'protein' ? 'proteico' : metric === 'carbs' ? 'di carboidrati' : 'di grassi'} oggi!`,
-        { secondsFromNow: 1 },
-        { screen: 'food', metric }
-      );
+      // 2. Cancel all scheduled notifications to avoid duplicates/wrong language
+      // Note: This cancels ALL notifications from the app.
+      // If there are specific ones we want to keep (e.g. pending alarms), we should filter.
+      // But for language switch, a full reset is safer and cleaner.
+      await Notifications.cancelAllScheduledNotificationsAsync();
+
+      // 3. Reschedule active ones
+      if (preferences.dailyCheckIn) await this.scheduleDailyCheckIn();
+      if (preferences.diary) await this.scheduleDiaryDaily();
+      if (preferences.breathing) await this.scheduleBreathingNudges(); // Includes weekday logic
+      if (preferences.hydration) await this.scheduleHydrationReminders();
+      if (preferences.morningGreeting) await this.scheduleMorningGreeting();
+      // Daily Copilot is usually triggered by analysis, but if we have a default daily schedule logic:
+      await this.scheduleDailyCopilot();
+
+      console.log('[NotificationService] ✅ Notifications updated with new language');
+    } catch (error) {
+      console.error('[NotificationService] ❌ Error updating localization:', error);
     }
-    return null;
   },
 
-  async notifyStreak(streakType: 'journal' | 'analysis', days: number) {
-    if (days % 7 === 0 && days > 0) {
-      return this.schedule(
-        'streak_celebration',
-        `Streak di ${days} giorni! 🎉`,
-        `Incredibile! Hai mantenuto la tua abitudine per ${days} giorni consecutivi. Continua così!`,
-        { secondsFromNow: 1 },
-        { screen: streakType === 'journal' ? 'journal' : 'analysis' }
-      );
+
+  // Preferences Management
+  async getPreferences(): Promise<NotificationPreferences> {
+    try {
+      const saved = await AsyncStorage.getItem(PREFERENCES_KEY);
+      if (saved) {
+        return { ...DEFAULT_PREFERENCES, ...JSON.parse(saved) };
+      }
+    } catch (e) {
+      console.warn('[NotificationService] Failed to load preferences:', e);
     }
-    return null;
+    return DEFAULT_PREFERENCES;
   },
 
-  async scheduleWeightReminder() {
-    // Cancel existing weight reminders first
-    const all = await Notifications.getAllScheduledNotificationsAsync();
-    const weightNotifs = all.filter(n => n.content.data?.category === 'weight_reminder');
-    for (const n of weightNotifs) {
-      await this.cancel(n.identifier);
+  async savePreferences(prefs: Partial<NotificationPreferences>) {
+    try {
+      const current = await this.getPreferences();
+      const updated = { ...current, ...prefs };
+      await AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(updated));
+      return updated;
+    } catch (e) {
+      console.error('[NotificationService] Failed to save preferences:', e);
+      throw e;
     }
-
-    // Schedule new reminder for 7 days from now
-    // 7 days * 24 hours * 60 minutes * 60 seconds
-    const secondsIn7Days = 7 * 24 * 60 * 60;
-
-    return this.schedule(
-      'weight_reminder',
-      'Aggiornamento Peso ⚖️',
-      'È passata una settimana. Aggiorna il tuo peso per tracciare i progressi!',
-      { secondsFromNow: secondsIn7Days },
-      { screen: 'profile' }
-    );
   },
 
-  // Bundle of defaults - schedules all notifications at their specific times
-  // Protegge da duplicazioni: non viene rilanciato se già eseguito (persistente in AsyncStorage)
-  async scheduleDefaults() {
-    await this.initialize();
+  /**
+   * Sincronizza le notifiche schedulate con le preferenze dell'utente.
+   * Cancella tutto e rischedula solo ciò che è abilitato.
+   */
+  async sync() {
+    debug('Syncing notifications with preferences...');
+    const prefs = await this.getPreferences();
+    await this.cancelAll();
 
-    // 1) Controllo persistente (sopravvive ai riavvii)
-    const persisted = await AsyncStorage.getItem(DEFAULTS_FLAG);
-    if (persisted === '1' || defaultsScheduled) {
-      debug('Defaults already scheduled, skipping');
-      return [];
-    }
-
-    // 2) Segna subito (best-effort) per evitare race conditions
-    defaultsScheduled = true;
+    // Segnamo come "defaults scheduled" per evitare che scheduleDefaults sovrascriva tutto
     await AsyncStorage.setItem(DEFAULTS_FLAG, '1');
+    defaultsScheduled = true;
 
-    debug('Scheduling defaults...');
     const ids: string[] = [];
-    ids.push(...(await this.scheduleEmotionSkinWeekly()));
-    // ❌ REMOVED: Journal Reminder - rimossa su richiesta utente
-    // ids.push(await this.scheduleDiaryDaily());
-    // ❌ REMOVED: Breathing Nudges - rimossa su richiesta utente
-    // ids.push(...(await this.scheduleBreathingNudges()));
-    ids.push(...(await this.scheduleHydrationReminders()));
-    ids.push(await this.scheduleMorningGreeting());
-    ids.push(await this.scheduleEveningWinddown());
 
-    // 4) Daily Copilot - Recupera orario preferito (default 18:00)
+    // 🔥 UPDATED: Schedule daily check-in instead of weekly emotion/skin
+    if (prefs.dailyCheckIn) ids.push(await this.scheduleDailyCheckIn());
+
+    if (prefs.diary && prefs.diaryTime) {
+      ids.push(await this.schedule(
+        'journal_reminder',
+        'Diario',
+        'Ti va di scrivere una breve voce nel diario?',
+        { hour: prefs.diaryTime.hour, minute: prefs.diaryTime.minute, repeats: true },
+        { screen: 'journal' }
+      ));
+    }
+
+    // Removed Fridge Expiry Check, Evening Winddown, Sleep Preparation as per request
+    if (prefs.breathing) ids.push(...(await this.scheduleBreathingNudges()));
+    if (prefs.hydration) ids.push(...(await this.scheduleHydrationReminders()));
+    if (prefs.morningGreeting) ids.push(await this.scheduleMorningGreeting());
+
+    // Daily Copilot - recupera orario
     try {
       const { AuthService } = await import('./auth.service');
       const user = await AuthService.getCurrentUser();
+      let preferredHour = 18;
       if (user) {
         const { supabase } = await import('../lib/supabase');
         const { data } = await supabase
@@ -508,24 +434,29 @@ export const NotificationService = {
           .select('recommendation_time')
           .eq('id', user.id)
           .maybeSingle();
-
-        const preferredHour = data?.recommendation_time ?? 18;
-        ids.push(await this.scheduleDailyCopilot(preferredHour, 0));
-      } else {
-        ids.push(await this.scheduleDailyCopilot(18, 0));
+        preferredHour = data?.recommendation_time ?? 18;
       }
+      ids.push(await this.scheduleDailyCopilot(preferredHour, 0));
     } catch (e) {
-      console.warn('[NotificationService] Failed to schedule Daily Copilot with custom time, using default:', e);
+      console.warn('[NotificationService] Failed to schedule Daily Copilot with custom time during sync, using default:', e);
       ids.push(await this.scheduleDailyCopilot(18, 0));
     }
 
-    // ✅ OPTIMIZED: Removed scheduleSleepPreparation - now unified with scheduleEveningWinddown
-    // ❌ REMOVED: Fridge Expiry Check - rimossa su richiesta utente
-    // ids.push(await this.scheduleFridgeExpiryCheck());
-    // ❌ REMOVED: Weight Reminder - rimossa su richiesta utente (non era nemmeno qui)
-
-    debug('Defaults scheduled:', ids.length, 'notifications');
+    debug('Sync complete. Scheduled:', ids.length);
     return ids;
+  },
+
+  // Bundle of defaults
+  async scheduleDefaults() {
+    await this.initialize();
+
+    const persisted = await AsyncStorage.getItem(DEFAULTS_FLAG);
+    if (persisted === '1' || defaultsScheduled) {
+      debug('Defaults already scheduled, skipping');
+      return [];
+    }
+
+    return this.sync();
   },
 
   // Cancel all scheduled notifications
@@ -534,7 +465,6 @@ export const NotificationService = {
     for (const notif of all) {
       await this.cancel(notif.identifier);
     }
-    // Reset flag quando tutte le notifiche vengono cancellate (sia in RAM che persistente)
     defaultsScheduled = false;
     await AsyncStorage.removeItem(DEFAULTS_FLAG);
     debug('All notifications cancelled, flag reset');

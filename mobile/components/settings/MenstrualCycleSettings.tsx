@@ -114,15 +114,15 @@ export const MenstrualCycleSettings: React.FC<MenstrualCycleSettingsProps> = ({
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]} edges={['top']}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('settings.menstrualCycleSettings.loading') || 'Caricamento...'}</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -232,7 +232,7 @@ export const MenstrualCycleSettings: React.FC<MenstrualCycleSettingsProps> = ({
           }}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 

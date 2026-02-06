@@ -124,18 +124,57 @@
     "languageChanged": "Lingua cambiata in {{lang}}",
     "notificationsCategories": "Categorie Notifiche",
     "notifications": {
-      "emotionSkin": "Analisi Emozioni/Pelle",
+      "dailyCheckIn": "Check Giornaliero",
       "diary": "Diario",
-      "fridgeExpiry": "Ingredienti in Scadenza",
-      "breathing": "Pausa/Respirazione",
+      "breathing": "Pausa Respiro",
       "hydration": "Idratazione",
       "morningGreeting": "Saluto Mattutino",
-      "eveningWinddown": "Buona Serata",
-      "sleepPreparation": "Preparazione al Sonno",
       "diaryTimeTitle": "Orario Diario",
       "diaryTitle": "Diario",
       "diaryBody": "Ti va di scrivere una breve voce nel diario?",
-      "saved": "Notifiche aggiornate con successo"
+      "saved": "Notifiche aggiornate con successo",
+      "content": {
+        "dailyCheckIn": {
+          "title": "Analisi benessere",
+          "body": "Ricordati di fare il tuo check giornaliero! ✨"
+        },
+        "diary": {
+          "title": "Diario",
+          "body": "Ti va di scrivere una breve voce nel diario?"
+        },
+        "breathing": {
+          "title": "Pausa respiro",
+          "body": "Prenditi 1 minuto per respirare profondamente"
+        },
+        "hydration": {
+          "title": "💧 Idratazione",
+          "body": "Ricorda di bere un bicchiere d'acqua!"
+        },
+        "morningGreeting": {
+          "title": "Buongiorno! ☀️",
+          "body": "Come ti senti oggi? Inizia la giornata con un check del benessere"
+        },
+        "dailyCopilot": {
+          "title": "Daily Copilot: Il tuo piano 🎯",
+          "body": "Le tue raccomandazioni per domani sono pronte! Scopri come ottimizzare la tua giornata. 💡"
+        },
+        "fridgeExpiry": {
+          "title": "Ingredienti in scadenza",
+          "body": "Stanno per scadere: {{items}}. Vuoi una ricetta?"
+        },
+        "goalProgress": {
+          "title": "Obiettivo in arrivo! 🎯",
+          "body": "Hai raggiunto il {{percent}}% del tuo obiettivo {{metric}} oggi!"
+        },
+        "streak": {
+          "title": "Streak di {{days}} giorni! 🎉",
+          "body": "Incredibile! Hai mantenuto la tua abitudine per {{days}} giorni consecutivi. Continua così!"
+        },
+        "weightReminder": {
+          "title": "Aggiornamento Peso ⚖️",
+          "body": "È passata una settimana. Aggiorna il tuo peso per tracciare i progressi!"
+        }
+      }
     },
     "menstrualCycle": "Ciclo Mestruale",
     "menstrualCycleDescription": "Configura e monitora il tuo ciclo mestruale",

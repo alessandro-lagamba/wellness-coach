@@ -233,6 +233,175 @@ Rules for recommendations (EXACTLY 3):
   }
 
   /**
+   * Complete recipe details using AI
+   */
+  async completeRecipeDetails(
+    partialRecipe: {
+      title: string;
+      ingredients?: string;
+      steps?: string;
+      mealTypes?: string[];
+    },
+    language: string = 'it'
+  ): Promise<{
+    title: string;
+    description: string;
+    ingredients: string[];
+    steps: string[];
+    readyInMinutes: number;
+    servings: number;
+    calories: number;
+    macros: {
+      protein: number;
+      carbs: number;
+      fat: number;
+      fiber: number;
+      sugar: number;
+    };
+    image?: string;
+  }> {
+    if (!this.apiKey) throw new Error('OpenAI API key not initialized');
+
+    const prompt = `
+    You are a professional chef and nutritionist.
+    Complete the following recipe details based on the provided information.
+
+    Provided Info:
+    Title: ${partialRecipe.title}
+    ${partialRecipe.ingredients ? `Ingredients Hint: ${partialRecipe.ingredients}` : ''}
+    ${partialRecipe.steps ? `Steps Hint: ${partialRecipe.steps}` : ''}
+
+    Task:
+    1. Generate a complete list of ingredients with quantities (metric system).
+    2. Generate step-by-step cooking instructions.
+    3. Estimate preparation time and servings.
+    4. Calculate precise nutritional values per serving.
+    5. Write a short, appetizing description.
+
+    Respond in ${language === 'it' ? 'Italian' : 'English'}.
+
+    Return STRICT JSON:
+    {
+      "title": "Recipe Title",
+      "description": "Short description",
+      "ingredients": ["100g pasta", "2 eggs", ...],
+      "steps": ["Step 1...", "Step 2..."],
+      "readyInMinutes": 30,
+      "servings": 2,
+      "calories": 500,
+      "macros": {
+        "protein": 20,
+        "carbs": 60,
+        "fat": 15,
+        "fiber": 5,
+        "sugar": 2
+      },
+      "image": "Description of the dish for image generation"
+    }
+    `;
+
+    const response = await this.sendRequest({
+      messages: [
+        { role: 'system', content: 'You are a helpful culinary AI. Return valid JSON only.' },
+        { role: 'user', content: prompt }
+      ],
+      model: this.primaryModel,
+      response_format: { type: 'json_object' }
+    });
+
+    return JSON.parse(response);
+  }
+
+  /**
+   * Recalculate nutrition facts based on ingredients
+   */
+  async recalculateRecipeNutrition(
+    ingredients: string[],
+    servings: number = 1
+  ): Promise<{
+    calories: number;
+    macros: {
+      protein: number;
+      carbs: number;
+      fat: number;
+      fiber: number;
+      sugar: number;
+    };
+    confidence: number;
+  }> {
+    if (!this.apiKey) throw new Error('OpenAI API key not initialized');
+
+    const prompt = `
+    Calculate the total nutritional value per serving for these ingredients:
+    ${ingredients.join('\n')}
+
+    Servings: ${servings} (Divide total by this number)
+
+    Task:
+    1. Estimate the total calories and macros for the entire recipe based on ingredients quantities.
+    2. Divide by the number of servings (${servings}).
+    3. Return 0 for missing values.
+
+    Return STRICT JSON:
+    {
+      "calories": number, // per serving
+      "macros": {
+        "protein": number, // per serving
+        "carbs": number,
+        "fat": number,
+        "fiber": number,
+        "sugar": number
+      },
+      "confidence": number // 0.0 to 1.0
+    }
+    `;
+
+    const response = await this.sendRequest({
+      messages: [
+        { role: 'system', content: 'You are a precise nutritionist AI. Return valid JSON only.' },
+        { role: 'user', content: prompt }
+      ],
+      model: this.primaryModel,
+      response_format: { type: 'json_object' }
+    });
+
+    return JSON.parse(response);
+  }
+
+  private async sendRequest(params: {
+    messages: any[];
+    model: string;
+    temperature?: number;
+    response_format?: any;
+    max_tokens?: number;
+  }): Promise<string> {
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: params.model,
+        messages: params.messages,
+        max_tokens: params.max_tokens || API_CONFIG.OPENAI.MAX_TOKENS,
+        temperature: params.temperature || API_CONFIG.OPENAI.TEMPERATURE,
+        response_format: params.response_format,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText} - ${errorData.error?.message || 'Unknown error'}`,
+      );
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '{}';
+  }
+
+  /**
    * Analyze emotion from image
    */
   async analyzeEmotion(request: AnalysisRequest): Promise<AnalysisResponse<EmotionAnalysisResult>> {
