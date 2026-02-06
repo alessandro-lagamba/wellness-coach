@@ -44,3 +44,4 @@ router.post("/calculate-nutrition", calculateNutrition);
 router.post("/generate-image", generateRecipeImage);
 
 export default router;
+

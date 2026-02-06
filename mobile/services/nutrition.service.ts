@@ -92,6 +92,7 @@ export interface GenerateRecipeResponse {
     };
     caloriesPerServing: number;
     shoppingGaps?: string[];
+    image?: string; // ✅ URL immagine generata
   };
   error?: string;
 }
@@ -365,6 +366,55 @@ export class NutritionServiceClass {
         return {
           success: false,
           error: data.error || 'Failed to parse ingredients',
+        };
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      };
+    }
+  }
+
+  /**
+   * Generate an illustrative image for a recipe title
+   */
+  async generateRecipeImage(title: string): Promise<{
+    success: boolean;
+    data?: { imageUrl: string };
+    error?: string;
+  }> {
+    try {
+      const backendURL = await getBackendURL();
+      console.log(`[NutritionService] 📡 Chiamata a: ${backendURL}/api/nutrition/generate-image`);
+
+      const response = await fetch(`${backendURL}/api/nutrition/generate-image`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title }),
+      });
+
+      console.log(`[NutritionService] 📥 Risposta backend status: ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          `Backend request failed: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`
+        );
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        return {
+          success: false,
+          error: data.error || 'Failed to generate image',
         };
       }
 
