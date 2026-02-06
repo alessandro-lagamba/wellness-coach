@@ -3157,17 +3157,17 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
         onRequestClose={() => setShowTimeModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: themeColors.surface }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
+              <Text style={[styles.modalTitle, { color: themeColors.text }]}>
                 {t('home.dailyCopilot.schedule.title')}
               </Text>
               <TouchableOpacity onPress={() => setShowTimeModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#6b7280" />
+                <MaterialCommunityIcons name="close" size={24} color={themeColors.text} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.modalDescription}>
+            <Text style={[styles.modalDescription, { color: themeColors.text }]}>
               {t('home.dailyCopilot.schedule.intro')}
             </Text>
 
@@ -3177,22 +3177,30 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                   key={hour}
                   style={[
                     styles.modalTimeOption,
-                    selectedTime === hour && styles.modalSelectedTimeOption
+                    { borderColor: themeColors.border },
+                    selectedTime === hour && {
+                      borderColor: themeColors.primary,
+                      backgroundColor: themeColors.primary + '15'
+                    }
                   ]}
                   onPress={() => handleSaveTime(hour)}
                   disabled={savingTime}
                 >
                   <Text style={[
                     styles.modalTimeText,
-                    selectedTime === hour && styles.modalSelectedTimeText
+                    { color: themeColors.text },
+                    selectedTime === hour && {
+                      color: themeColors.primary,
+                      fontFamily: 'Figtree_700Bold'
+                    }
                   ]}>
                     {hour}:00
                   </Text>
                   {selectedTime === hour && !savingTime && (
-                    <MaterialCommunityIcons name="check" size={20} color="#8b5cf6" />
+                    <MaterialCommunityIcons name="check" size={20} color={themeColors.primary} />
                   )}
                   {selectedTime === hour && savingTime && (
-                    <ActivityIndicator size="small" color="#8b5cf6" />
+                    <ActivityIndicator size="small" color={themeColors.primary} />
                   )}
                 </TouchableOpacity>
               ))}

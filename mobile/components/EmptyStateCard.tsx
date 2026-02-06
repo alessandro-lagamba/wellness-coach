@@ -81,7 +81,7 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({
       case 'copilot':
         return {
           icon: 'head-cog',
-          gradient: ['#8b5cf6', '#a855f7'],
+          gradient: ['#060efdff', '#0084ffff'],
           title: customTitle || t('emptyStates.copilot.title'),
           subtitle: customSubtitle || t('emptyStates.copilot.subtitle'),
           actionText: customActionText || t('emptyStates.copilot.action'),

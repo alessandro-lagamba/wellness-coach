@@ -83,6 +83,8 @@ export interface CopilotAnalysisRequest {
     calories: number | null;
     meditationMinutes: number | null;
     restingHR: number | null;
+    sleepHours: number | null;
+    sleepQuality: number | null;
   };
   activityLevel?: ActivityLevel;  // Context for AI recommendations, not used in score
   timestamp: string;
@@ -408,7 +410,7 @@ class DailyCopilotService {
       return {
         mood: null,
         sleep: null,
-        healthMetrics: { steps: null, hrv: null, hydration: null, calories: null, meditationMinutes: null, restingHR: null },
+        healthMetrics: { steps: null, hrv: null, hydration: null, calories: null, meditationMinutes: null, restingHR: null, sleepHours: null, sleepQuality: null },
         timestamp: new Date().toISOString()
       };
     }
@@ -458,6 +460,9 @@ class DailyCopilotService {
 
   /**
    * Ottiene i dati del sonno per l'analisi (SOLO oggi)
+   * 1. Check-in Manuale (daily_copilot_analyses)
+   * 2. Dati Automatici (health_data)
+   * 3. Fallback AsyncStorage
    */
   private async getTodaySleep(): Promise<{ hours: number; quality: number; } | null> {
     try {
@@ -467,9 +472,10 @@ class DailyCopilotService {
       }
 
       const { supabase } = await import('../lib/supabase');
-      const today = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-      // 🔥 FIX: Leggi SOLO i dati di OGGI
+      // 1. Check-in Manuale
       const { data: todayCheckin } = await supabase
         .from('daily_copilot_analyses')
         .select('sleep_hours, sleep_quality')
@@ -478,7 +484,7 @@ class DailyCopilotService {
         .maybeSingle();
 
       if (todayCheckin && (todayCheckin.sleep_hours || todayCheckin.sleep_quality)) {
-        console.log('✅ Daily Copilot: Using today\'s sleep:', {
+        console.log('✅ Daily Copilot: Using today\'s MANUAL check-in sleep:', {
           hours: todayCheckin.sleep_hours,
           quality: todayCheckin.sleep_quality
         });
@@ -488,18 +494,8 @@ class DailyCopilotService {
         };
       }
 
-      // Fallback ad AsyncStorage per retrocompatibilità (solo se di oggi)
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-      const savedSleep = await AsyncStorage.getItem(`checkin:sleep:${today}`);
 
-      if (savedSleep) {
-        return {
-          hours: 7.5,
-          quality: parseInt(savedSleep, 10)
-        };
-      }
-
-      console.log('⚠️ Daily Copilot: No sleep data found for today');
+      console.log('⚠️ Daily Copilot: No sleep data found for today (Manual)');
       return null;
     } catch (error) {
       console.error('❌ Error getting sleep:', error);
@@ -518,12 +514,14 @@ class DailyCopilotService {
     calories: number | null;
     meditationMinutes: number | null;
     restingHR: number | null;
+    sleepHours: number | null;
+    sleepQuality: number | null;
   }> {
     try {
       const currentUser = await AuthService.getCurrentUser();
       if (!currentUser?.id) {
         // NO MOCK DATA - return all null
-        return { steps: null, hrv: null, hydration: null, calories: null, meditationMinutes: null, restingHR: null };
+        return { steps: null, hrv: null, hydration: null, calories: null, meditationMinutes: null, restingHR: null, sleepHours: null, sleepQuality: null };
       }
 
       const { supabase } = await import('../lib/supabase');
@@ -531,7 +529,7 @@ class DailyCopilotService {
 
       const { data: healthData } = await supabase
         .from('health_data')
-        .select('steps, hrv, hydration, calories, resting_heart_rate, mindfulness_minutes')
+        .select('steps, hrv, hydration, calories, resting_heart_rate, mindfulness_minutes, sleep_hours, sleep_quality')
         .eq('user_id', currentUser.id)
         .eq('date', today)
         .maybeSingle();
@@ -544,7 +542,9 @@ class DailyCopilotService {
           hydration: healthData.hydration != null ? Math.round(healthData.hydration / 250) : null,
           calories: healthData.calories ?? null,
           meditationMinutes: healthData.mindfulness_minutes ?? null,
-          restingHR: (healthData.resting_heart_rate && healthData.resting_heart_rate > 0) ? healthData.resting_heart_rate : null
+          restingHR: (healthData.resting_heart_rate && healthData.resting_heart_rate > 0) ? healthData.resting_heart_rate : null,
+          sleepHours: (healthData.sleep_hours && healthData.sleep_hours > 0) ? healthData.sleep_hours : null,
+          sleepQuality: (healthData.sleep_quality && healthData.sleep_quality > 0) ? healthData.sleep_quality : null
         };
 
         console.log('✅ Daily Copilot: Using real health data from database:', result);
@@ -565,7 +565,9 @@ class DailyCopilotService {
             hydration: data.hydration != null ? Math.round(data.hydration / 250) : null,
             calories: data.calories ?? null,
             meditationMinutes: data.mindfulnessMinutes ?? null,
-            restingHR: (data.restingHeartRate && data.restingHeartRate > 0) ? data.restingHeartRate : null
+            restingHR: (data.restingHeartRate && data.restingHeartRate > 0) ? data.restingHeartRate : null,
+            sleepHours: (data.sleepHours && data.sleepHours > 0) ? data.sleepHours : null,
+            sleepQuality: (data.sleepQuality && data.sleepQuality > 0) ? data.sleepQuality : null
           };
 
           console.log('✅ Daily Copilot: Using real health data from HealthDataService:', result);
@@ -583,17 +585,19 @@ class DailyCopilotService {
           hydration: aiContext.currentHealth.hydration ?? null,
           calories: aiContext.currentHealth.calories ?? null,
           meditationMinutes: aiContext.currentHealth.mindfulnessMinutes ?? null,
-          restingHR: (aiContext.currentHealth.restingHR && aiContext.currentHealth.restingHR > 0) ? aiContext.currentHealth.restingHR : null
+          restingHR: (aiContext.currentHealth.restingHR && aiContext.currentHealth.restingHR > 0) ? aiContext.currentHealth.restingHR : null,
+          sleepHours: aiContext.currentHealth.sleep?.hours ?? null,
+          sleepQuality: aiContext.currentHealth.sleep?.quality ?? null
         };
       }
 
       // NO MOCK DATA - return all null
       console.log('⚠️ Daily Copilot: No health data available for today');
-      return { steps: null, hrv: null, hydration: null, calories: null, meditationMinutes: null, restingHR: null };
+      return { steps: null, hrv: null, hydration: null, calories: null, meditationMinutes: null, restingHR: null, sleepHours: null, sleepQuality: null };
     } catch (error) {
       console.error('❌ Error getting health metrics:', error);
       // NO MOCK DATA - return all null on error
-      return { steps: null, hrv: null, hydration: null, calories: null, meditationMinutes: null, restingHR: null };
+      return { steps: null, hrv: null, hydration: null, calories: null, meditationMinutes: null, restingHR: null, sleepHours: null, sleepQuality: null };
     }
   }
 
@@ -1013,7 +1017,8 @@ OUTPUT FORMAT(return ONLY valid JSON):
       hydration: 15,
       hrv: 15,
       calories: 15,
-      meditation: 10
+      meditation: 10,
+      sleep_auto: 15 // Automated sleep data (e.g. Apple Health) treated as separate factor
     };
 
     const breakdown: Record<string, ScoreItem> = {};
@@ -1033,7 +1038,7 @@ OUTPUT FORMAT(return ONLY valid JSON):
       missingData.push('mood');
     }
 
-    // Sleep (15%) - only if not null AND hours > 0
+    // Sleep Manual (15%) - only if not null AND hours > 0
     if (data.sleep !== null && data.sleep.hours > 0) {
       const goal = goals.sleep || 8;
       const score = (this.clamp01(data.sleep.hours / goal) * 70) + (data.sleep.quality * 0.3);
@@ -1043,6 +1048,25 @@ OUTPUT FORMAT(return ONLY valid JSON):
       availableCategories.push('sleep');
     } else {
       missingData.push('sleep');
+    }
+
+    // Sleep Automated (15%) - NEW FACTOR - from Health Data (if manual is missing or present, both count)
+    // We treat this as an additional factor ("sleep_auto")
+    if (data.healthMetrics.sleepHours !== null && data.healthMetrics.sleepHours > 0) {
+      const goal = goals.sleep || 8;
+      // Calculate score based on hours (primary) and quality (if available, otherwise estimate)
+      // Similar to manual sleep logic
+      // If quality is null/0, we assume a decent default or calc from hours for scoring purposes
+      const quality = data.healthMetrics.sleepQuality || (data.healthMetrics.sleepHours >= 7 ? 80 : 60);
+
+      const score = (this.clamp01(data.healthMetrics.sleepHours / goal) * 70) + (quality * 0.3);
+
+      breakdown['sleep_auto'] = { score, weight: WEIGHTS.sleep_auto, value: data.healthMetrics.sleepHours, goal };
+      totalPoints += (score * WEIGHTS.sleep_auto) / 100;
+      totalWeight += WEIGHTS.sleep_auto;
+      availableCategories.push('sleep_auto');
+    } else {
+      missingData.push('sleep_auto');
     }
 
     // Steps (15%) - only if enabled AND not null AND > 0

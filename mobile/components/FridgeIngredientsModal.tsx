@@ -1192,7 +1192,7 @@ export const FridgeIngredientsModal: React.FC<FridgeIngredientsModalProps> = ({
                             .filter(item => categoryFilter === null || item.category === categoryFilter)
                             .map((item) => (
                               <View key={item.id} style={[styles.savedIngredientCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                                <Text style={styles.savedIngredientName}>{item.name}</Text>
+                                <Text style={[styles.savedIngredientName, { color: colors.text }]}>{item.name}</Text>
                                 <View style={styles.savedIngredientActions}>
                                   <TouchableOpacity
                                     onPress={() => toggleExcludeIngredient(item.id)}

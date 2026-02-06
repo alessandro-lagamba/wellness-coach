@@ -26,6 +26,26 @@ export default function Home() {
   ]
 
   const [platform, setPlatform] = useState<"android" | "ios">("android")
+  const [formStatus, setFormStatus] = useState<"idle" | "submitting" | "success" | "error">("idle")
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setFormStatus("submitting")
+
+    const formData = new FormData(e.currentTarget)
+
+    try {
+      await fetch("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(formData as any).toString(),
+      })
+      setFormStatus("success")
+    } catch (error) {
+      console.error("Netlify form submission error:", error)
+      setFormStatus("error")
+    }
+  }
 
   // Reordered: Live Coaching, Emotion Hub, Skin Analysis, Nutrition AI
   const features = [
@@ -38,7 +58,7 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-between font-sans selection:bg-emerald-100 selection:text-emerald-900">
       {/* Hero Section with premium background */}
-      <section className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 pt-20 pb-32 overflow-hidden bg-white">
+      <section className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 pt-32 md:pt-20 pb-32 overflow-hidden bg-white">
         {/* Animated gradient background layers */}
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/50" />
         <motion.div
@@ -60,15 +80,15 @@ export default function Home() {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8 }}
-          className="absolute top-8 left-8 md:top-12 md:left-12 z-20"
+          className="absolute top-4 left-4 md:top-12 md:left-12 z-20"
         >
-          <div className="relative group p-1 bg-white rounded-3xl shadow-2xl border border-emerald-100/50">
+          <div className="relative group p-1 bg-white rounded-2xl md:rounded-3xl shadow-2xl border border-emerald-100/50">
             <Image
               src="/screenshots/icona.png"
               alt="WellnessCoach Icon"
-              width={72}
-              height={72}
-              className="rounded-2xl transition-transform group-hover:scale-105"
+              width={56}
+              height={56}
+              className="rounded-xl md:rounded-2xl transition-transform group-hover:scale-105 md:w-[72px] md:h-[72px]"
             />
           </div>
         </motion.div>
@@ -84,13 +104,12 @@ export default function Home() {
             <span>Nuovo: Analisi della pelle AI 2.0</span>
           </motion.div>
 
-          <h1 className="text-5xl md:text-9xl font-black tracking-tight leading-[1.05] text-gray-900">
+          <h1 className="text-5xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-[0.9] text-gray-900">
             Monitora <br />
-            <div className="h-[1.2em] flex items-center justify-center">
+            <div className="inline-block text-emerald-600 drop-shadow-sm mt-2 md:mt-4">
               <Typewriter
                 text={typewriterTexts}
                 speed={70}
-                className="text-emerald-600 drop-shadow-sm"
                 waitTime={2000}
                 deleteSpeed={40}
                 cursorChar={"_"}
@@ -142,10 +161,15 @@ export default function Home() {
                   className="flex flex-col md:flex-row items-center justify-center gap-12 w-full"
                 >
                   <div className="flex flex-col items-center space-y-4">
-                    <button className="px-12 py-8 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-[3rem] font-black text-2xl md:text-3xl hover:scale-105 active:scale-95 transition-all shadow-[0_25px_60px_-15px_rgba(16,185,129,0.4)] flex items-center gap-4">
+                    <a
+                      href="https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/WellnessCoach.apk"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-12 py-8 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-[3rem] font-black text-2xl md:text-3xl hover:scale-105 active:scale-95 transition-all shadow-[0_25px_60px_-15px_rgba(16,185,129,0.4)] flex items-center gap-4 no-underline"
+                    >
                       <Smartphone size={32} strokeWidth={3} />
                       Scarica ora l&apos;App
-                    </button>
+                    </a>
                     <div className="flex flex-col items-center">
                       <p className="text-gray-400 font-bold flex items-center gap-2">
                         <Smartphone size={16} className="text-emerald-500" />
@@ -167,7 +191,7 @@ export default function Home() {
                     </div>
                     <div className="relative p-2 bg-white rounded-2xl border-4 border-emerald-500">
                       <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://wellnesscoach.app&bgcolor=FFFFFF&color=059669`}
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/WellnessCoach.apk&bgcolor=FFFFFF&color=059669`}
                         alt="Scan QR Code"
                         className="w-40 h-40 rounded-lg"
                       />
@@ -196,32 +220,77 @@ export default function Home() {
                         <Zap size={10} fill="currentColor" />
                         <span>Accesso Anticipato</span>
                       </div>
-                      <h3 className="text-3xl md:text-4xl font-black text-gray-900 leading-none tracking-tight">Diventa un Beta Tester</h3>
+                      <h3 className="text-3xl md:text-4xl font-black text-gray-900 leading-none tracking-tight text-balance">
+                        {formStatus === "success" ? "Richiesta Inviata! ✨" : "Diventa un Beta Tester"}
+                      </h3>
                       <p className="text-gray-500 font-medium text-base md:text-lg leading-snug">
-                        La versione iOS è in fase di test privato. Compila il form per farti aggiungere al gruppo ufficiale su <strong>TestFlight</strong>.
+                        {formStatus === "success"
+                          ? "Grazie per l'interesse! Controlla la tua email nei prossimi giorni per l'invito ufficiale a TestFlight."
+                          : "La versione iOS è in fase di test privato. Compila il form per farti aggiungere al gruppo ufficiale su TestFlight."}
                       </p>
                     </div>
 
-                    <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={(e) => e.preventDefault()}>
-                      <div className="space-y-1.5 flex flex-col">
-                        <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Nome</label>
-                        <input type="text" placeholder="Esempio: Mario" className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-bold placeholder:text-gray-300 placeholder:font-normal" />
-                      </div>
-                      <div className="space-y-1.5 flex flex-col">
-                        <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Cognome</label>
-                        <input type="text" placeholder="Esempio: Rossi" className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-bold placeholder:text-gray-300 placeholder:font-normal" />
-                      </div>
-                      <div className="md:col-span-2 space-y-1.5 flex flex-col">
-                        <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Email (Apple ID)</label>
-                        <input type="email" placeholder="latuamail@icloud.com" className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-bold placeholder:text-gray-300 placeholder:font-normal" />
-                      </div>
-                      <div className="md:col-span-2 pt-4">
-                        <button className="w-full py-6 bg-gray-900 text-white rounded-[2rem] font-black text-xl hover:bg-emerald-600 hover:scale-[1.02] active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-3">
-                          Richiedi accesso Beta
-                          <ArrowRight size={24} strokeWidth={3} />
-                        </button>
-                      </div>
-                    </form>
+                    <AnimatePresence mode="wait">
+                      {formStatus !== "success" ? (
+                        <motion.form
+                          key="ios-form"
+                          initial={{ opacity: 1 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                          onSubmit={handleSubmit}
+                          name="ios-beta-testers"
+                          method="POST"
+                        >
+                          {/* Hidden Netlify Inputs */}
+                          <input type="hidden" name="form-name" value="ios-beta-testers" />
+                          <p className="hidden">
+                            <label>Non compilare: <textarea name="bot-field"></textarea></label>
+                          </p>
+
+                          <div className="space-y-1.5 flex flex-col">
+                            <label htmlFor="nome" className="text-[14px] font-black text-emerald-600 uppercase tracking-widest ml-1">Nome</label>
+                            <input id="nome" name="nome" type="text" required placeholder="Esempio: Mario" className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-bold placeholder:text-gray-300 placeholder:font-normal" />
+                          </div>
+                          <div className="space-y-1.5 flex flex-col">
+                            <label htmlFor="cognome" className="text-[14px] font-black text-emerald-600 uppercase tracking-widest ml-1">Cognome</label>
+                            <input id="cognome" name="cognome" type="text" required placeholder="Esempio: Rossi" className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-bold placeholder:text-gray-300 placeholder:font-normal" />
+                          </div>
+                          <div className="md:col-span-2 space-y-1.5 flex flex-col">
+                            <label htmlFor="email" className="text-[14px] font-black text-emerald-600 uppercase tracking-widest ml-1">E-mail del tuo Apple ID</label>
+                            <input id="email" name="email" type="email" required placeholder="latuamail@icloud.com" className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-bold placeholder:text-gray-300 placeholder:font-normal" />
+                          </div>
+                          <div className="md:col-span-2 pt-4">
+                            <button
+                              type="submit"
+                              disabled={formStatus === "submitting"}
+                              className="w-full py-6 bg-gray-900 text-white rounded-[2rem] font-black text-xl hover:bg-emerald-600 hover:scale-[1.02] active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {formStatus === "submitting" ? "Invio in corso..." : "Richiedi accesso Beta"}
+                              <ArrowRight size={24} strokeWidth={3} />
+                            </button>
+                            {formStatus === "error" && (
+                              <p className="text-red-500 text-xs font-bold mt-2 text-center">Si è verificato un errore. Riprova più tardi.</p>
+                            )}
+                          </div>
+                        </motion.form>
+                      ) : (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="py-10 text-center"
+                        >
+                          <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Zap size={40} fill="currentColor" />
+                          </div>
+                          <button
+                            onClick={() => setFormStatus("idle")}
+                            className="text-emerald-600 font-bold text-sm hover:underline"
+                          >
+                            Invia un&apos;altra richiesta
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     <div className="p-5 bg-emerald-50 rounded-3xl border border-emerald-100 flex items-start gap-3">
                       <div className="w-10 h-10 rounded-full bg-white flex-shrink-0 flex items-center justify-center shadow-sm">
@@ -329,10 +398,15 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-10">
-            <button className="px-14 py-8 bg-white text-emerald-600 rounded-[3rem] font-black text-2xl hover:scale-105 active:scale-95 transition-all shadow-[0_30px_60px_-10px_rgba(0,0,0,0.3)] flex items-center gap-4">
+            <a
+              href="https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/WellnessCoach.apk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-14 py-8 bg-white text-emerald-600 rounded-[3rem] font-black text-2xl hover:scale-105 active:scale-95 transition-all shadow-[0_30px_60px_-10px_rgba(0,0,0,0.3)] flex items-center gap-4 no-underline"
+            >
               <Smartphone size={32} />
               Scarica gratis
-            </button>
+            </a>
             <div className="flex flex-col items-center space-y-4 p-6 rounded-[3rem] bg-white/10 backdrop-blur-xl border border-white/20">
               <div className="flex items-center gap-3 text-white">
                 <ScanLine size={20} />
@@ -340,7 +414,7 @@ export default function Home() {
               </div>
               <div className="p-2 bg-white rounded-2xl">
                 <img
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://wellnesscoach.app&bgcolor=FFFFFF&color=059669"
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/WellnessCoach.apk&bgcolor=FFFFFF&color=059669"
                   alt="Scan QR Code"
                   className="w-32 h-32 rounded-lg"
                 />
