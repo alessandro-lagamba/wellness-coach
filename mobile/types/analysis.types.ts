@@ -128,6 +128,7 @@ export interface FoodAnalysisResult {
   recommendations: string[]; // max 6 items
   observations: string[]; // max 5 items
   confidence: number; // 0 to 1
+  image_url?: string; // Generated image URL
   version: string;
 }
 

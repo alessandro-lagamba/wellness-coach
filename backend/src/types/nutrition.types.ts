@@ -50,6 +50,7 @@ export interface MealDraft {
   qualityTags?: string[]; // e.g., ["high_protein", "ultra_processed"]
   confidence: number;
   suggestions?: string[];
+  image?: string; // Generated image URL
 }
 
 export interface Suggestion {
@@ -211,11 +212,11 @@ export interface CoachSuggestion {
   cta?: {
     label: string; // "Suggest me a snack"
     action:
-      | "SUGGEST_MEAL"
-      | "LOG_WATER"
-      | "START_BREATHING"
-      | "SCHEDULE_MEAL"
-      | "OPEN_RECIPE";
+    | "SUGGEST_MEAL"
+    | "LOG_WATER"
+    | "START_BREATHING"
+    | "SCHEDULE_MEAL"
+    | "OPEN_RECIPE";
     payload?: any; // e.g., { wantType:"snack", remainingMacros, pantry }
   };
   expireAt?: string; // for dedup

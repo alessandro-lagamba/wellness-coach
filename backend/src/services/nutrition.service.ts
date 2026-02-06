@@ -172,9 +172,22 @@ export async function analyzeTextHook(
       suggestions: data.suggestions,
     };
 
+    // Generate illustrative image for the meal using deAPI
+    try {
+      const ingredientNames = meal.items.map(i => i.name);
+      // Use the provided text description as the title/prompt base
+      const imageUrl = await generateRecipeImageFromTitle(body.text, ingredientNames);
+      if (imageUrl) {
+        meal.image = imageUrl;
+      }
+    } catch (imgError) {
+      console.warn("[Nutrition] ⚠️ Failed to generate image for text analysis:", imgError);
+    }
+
     console.log("[Nutrition] ✅ Text analysis complete:", {
       items: meal.items.length,
       confidence: meal.confidence,
+      hasImage: !!meal.image
     });
 
     return { success: true, meal };
@@ -269,7 +282,9 @@ export async function generateRecipeFromIngredientsHook(
 
     // Generate illustrative image for the recipe title using deAPI (best-effort).
     try {
-      const imageUrl = await generateRecipeImageFromTitle(data.title);
+      const ingredientNames = data.ingredients.map(i => i.name);
+      // We don't have a concise description, but we can pass ingredients
+      const imageUrl = await generateRecipeImageFromTitle(data.title, ingredientNames);
       if (imageUrl) {
         data.image = imageUrl;
       }
@@ -337,7 +352,8 @@ export async function generateRestaurantRecipeHook(
 
     // Generate image from restaurant dish name/title (best-effort).
     try {
-      const imageUrl = await generateRecipeImageFromTitle(data.title);
+      const ingredientNames = data.ingredients.map(i => i.name);
+      const imageUrl = await generateRecipeImageFromTitle(data.title, ingredientNames);
       if (imageUrl) {
         data.image = imageUrl;
       }

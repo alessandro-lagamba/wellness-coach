@@ -1555,6 +1555,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
             observations: data.observations || [],
             confidence: data.confidence || 0.8,
             analysisData: data,
+            imageUrl: data.image_url, // ✅ Pass generated image to save service
           });
 
           // 2. Aggiungi direttamente allo slot del Meal Planner
@@ -2378,30 +2379,35 @@ const FoodAnalysisScreenContent: React.FC = () => {
         }}
         onDone={async () => {
           // 🆕 "Aggiungi ai pasti" - Salva l'analisi nel database
-          if (pendingAnalysisData) {
+          // 🆕 "Aggiungi ai pasti" - Salva l'analisi nel database
+          // Usa pendingAnalysisData (camera) o fullAnalysisResult (testo/manuale)
+          const resultData = pendingAnalysisData?.analysisResult || fullAnalysisResult;
+          const resultImage = pendingAnalysisData?.imageUri || fullAnalysisResult?.image_url;
+
+          if (resultData) {
             try {
               const currentUser = await AuthService.getCurrentUser();
               if (currentUser) {
                 const savedAnalysis = await FoodAnalysisService.saveFoodAnalysis(currentUser.id, {
-                  mealType: pendingAnalysisData.analysisResult.meal_type || 'other',
-                  identifiedFoods: pendingAnalysisData.analysisResult.identified_foods || [],
-                  calories: pendingAnalysisData.analysisResult.macronutrients?.calories || 0,
-                  carbohydrates: pendingAnalysisData.analysisResult.macronutrients?.carbohydrates || 0,
-                  proteins: pendingAnalysisData.analysisResult.macronutrients?.proteins || 0,
-                  fats: pendingAnalysisData.analysisResult.macronutrients?.fats || 0,
-                  fiber: pendingAnalysisData.analysisResult.macronutrients?.fiber || 0,
-                  vitamins: pendingAnalysisData.analysisResult.vitamins || {},
-                  minerals: pendingAnalysisData.analysisResult.minerals || {},
-                  healthScore: pendingAnalysisData.analysisResult.health_score || 70,
-                  recommendations: pendingAnalysisData.analysisResult.recommendations || [],
-                  observations: pendingAnalysisData.analysisResult.observations || [],
-                  confidence: pendingAnalysisData.analysisResult.confidence || 0.8,
+                  mealType: resultData.meal_type || 'other',
+                  identifiedFoods: resultData.identified_foods || [],
+                  calories: resultData.macronutrients?.calories || 0,
+                  carbohydrates: resultData.macronutrients?.carbohydrates || 0,
+                  proteins: resultData.macronutrients?.proteins || 0,
+                  fats: resultData.macronutrients?.fats || 0,
+                  fiber: resultData.macronutrients?.fiber || 0,
+                  vitamins: resultData.vitamins || {},
+                  minerals: resultData.minerals || {},
+                  healthScore: resultData.health_score || 70,
+                  recommendations: resultData.recommendations || [],
+                  observations: resultData.observations || [],
+                  confidence: resultData.confidence || 0.8,
                   analysisData: {
-                    ...pendingAnalysisData.analysisResult,
-                    version: pendingAnalysisData.analysisResult.version || '1.0.0',
-                    confidence: pendingAnalysisData.analysisResult.confidence || 0.8,
+                    ...resultData,
+                    version: resultData.version || '1.0.0',
+                    confidence: resultData.confidence || 0.8,
                   },
-                  imageUrl: pendingAnalysisData.imageUri,
+                  imageUrl: resultImage,
                 });
 
                 if (savedAnalysis) {
@@ -2411,7 +2417,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
                   try {
                     // 🔥 FIX: Use slot info if available, otherwise fallback to now
                     const planMealType = slotPicker.mealType || normalizeMealType(
-                      pendingAnalysisData.analysisResult.meal_type,
+                      resultData.meal_type,
                       inferMealTypeFromTime(new Date())
                     );
 
@@ -2425,18 +2431,18 @@ const FoodAnalysisScreenContent: React.FC = () => {
                     };
 
                     const customRecipe = {
-                      title: capitalizeTitle(pendingAnalysisData.analysisResult.identified_foods || []),
+                      title: capitalizeTitle(resultData.identified_foods || []),
                       source: 'food_analysis',
                       analysis_id: savedAnalysis.id,
-                      calories: pendingAnalysisData.analysisResult.macronutrients?.calories || 0,
+                      calories: resultData.macronutrients?.calories || 0,
                       macros: {
-                        protein: pendingAnalysisData.analysisResult.macronutrients?.proteins || 0,
-                        carbs: pendingAnalysisData.analysisResult.macronutrients?.carbohydrates || 0,
-                        fat: pendingAnalysisData.analysisResult.macronutrients?.fats || 0,
-                        fiber: pendingAnalysisData.analysisResult.macronutrients?.fiber || 0,
+                        protein: resultData.macronutrients?.proteins || 0,
+                        carbs: resultData.macronutrients?.carbohydrates || 0,
+                        fat: resultData.macronutrients?.fats || 0,
+                        fiber: resultData.macronutrients?.fiber || 0,
                       },
-                      identified_foods: pendingAnalysisData.analysisResult.identified_foods || [],
-                      health_score: pendingAnalysisData.analysisResult.health_score || 70,
+                      identified_foods: resultData.identified_foods || [],
+                      health_score: resultData.health_score || 70,
                       image_url: savedAnalysis.image_url,
                     };
 

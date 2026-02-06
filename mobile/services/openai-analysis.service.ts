@@ -689,6 +689,7 @@ Rules for recommendations (EXACTLY 3):
       recommendations: mealDraft.suggestions || [],
       observations: mealDraft.items?.map((item: any) => item.notes).filter(Boolean) || [],
       confidence: mealDraft.confidence || 0.7,
+      image_url: mealDraft.image,
       version: '1.0.0',
     };
   }

@@ -410,6 +410,7 @@ export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
           score={results.healthScore}
           color={results.healthScore > 70 ? '#10b981' : results.healthScore > 40 ? '#f59e0b' : '#ef4444'}
           style={styles.hero}
+          imageUri={fullAnalysisResult?.image_url ? { uri: fullAnalysisResult.image_url } : undefined}
         />
 
         <View style={styles.contentContainer}>
