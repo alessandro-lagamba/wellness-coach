@@ -114,6 +114,13 @@ export interface AIContext {
     urgency: 'low' | 'medium' | 'high';
     timing: 'immediate' | 'today' | 'this_week';
   } | null;
+  personalData: {
+    age?: number;
+    gender?: string;
+    weight?: number; // kg
+    height?: number; // cm
+    activityLevel?: string;
+  } | null;
   generatedAt: string;
 }
 
@@ -498,6 +505,14 @@ export class AIContextService {
         timing = 'today';
       }
 
+      const activityMapping: Record<string, string> = {
+        'sedentary': 'Sedentario (poco o nessun esercizio)',
+        'lightly_active': 'Leggermente attivo (esercizio leggero 1-3 giorni/settimana)',
+        'moderately_active': 'Moderatamente attivo (esercizio moderato 3-5 giorni/settimana)',
+        'very_active': 'Molto attivo (esercizio intenso 6-7 giorni/settimana)',
+        'extremely_active': 'Estremamente attivo (lavoro fisico e allenamento intenso)'
+      };
+
       // Costruisci il contesto finale
       const context: AIContext = {
         userId,
@@ -558,6 +573,13 @@ export class AIContextService {
           urgency,
           timing
         } : null,
+        personalData: userProfile ? {
+          age: userProfile.age,
+          gender: userProfile.gender,
+          weight: userProfile.weight,
+          height: userProfile.height,
+          activityLevel: userProfile.activity_level ? (activityMapping[userProfile.activity_level] || userProfile.activity_level) : undefined
+        } : null,
         generatedAt: new Date().toISOString()
       };
 
@@ -605,6 +627,7 @@ export class AIContextService {
           lifestyleIndicators: []
         },
         suggestedWellnessSuggestion: null,
+        personalData: null,
         generatedAt: new Date().toISOString()
       };
     }
@@ -633,6 +656,16 @@ export class AIContextService {
 - Oleosità: ${context.currentSkin.oilinessScore || 'N/A'}/100
 - Texture: ${context.currentSkin.textureScore || 'N/A'}/100
 - Pigmentazione: ${context.currentSkin.pigmentationScore || 'N/A'}/100`;
+    }
+
+    // Dati Personali
+    if (context.personalData) {
+      promptContext += `\n\nDATI PERSONALI UTENTE:`;
+      if (context.personalData.age) promptContext += `\n- Età: ${context.personalData.age} anni`;
+      if (context.personalData.gender) promptContext += `\n- Sesso: ${context.personalData.gender}`;
+      if (context.personalData.weight) promptContext += `\n- Peso: ${context.personalData.weight} kg`;
+      if (context.personalData.height) promptContext += `\n- Altezza: ${context.personalData.height} cm`;
+      if (context.personalData.activityLevel) promptContext += `\n- Livello attività: ${context.personalData.activityLevel}`;
     }
 
     // Storico emozioni
@@ -795,5 +828,3 @@ export class AIContextService {
     }
   }
 }
-
-

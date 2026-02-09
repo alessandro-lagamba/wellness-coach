@@ -3,13 +3,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { findSuggestionById } from '../../../data/wellnessSuggestions';
+import { getSuggestionById } from '../../../data/wellnessSuggestions';
 import Colors from '../../../constants/Colors';
 
 export default function SuggestionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const suggestion = id ? findSuggestionById(id) : undefined;
+  const suggestion = id ? getSuggestionById(id) : undefined;
 
   if (!suggestion) {
     return (
@@ -39,7 +39,7 @@ export default function SuggestionDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Coach Tips</Text>
+          <Text style={styles.sectionTitle}>Yachai Tips</Text>
           {suggestion.tips.map((tip, index) => (
             <View key={index} style={styles.tipRow}>
               <FontAwesome name="check" size={14} color={Colors.palette.primary} />

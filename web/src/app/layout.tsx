@@ -9,8 +9,8 @@ const figtree = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "WellnessCoach - Il tuo assistente per il benessere",
-  description: "Monitora la tua salute, pelle, nutrizione ed emozioni con l'assistente AI definitivo.",
+  title: "Yachai - Il tuo assistente per il benessere",
+  description: "Monitora la tua salute, pelle, nutrizione ed emozioni con Yachai, l'assistente AI definitivo.",
 };
 
 export default function RootLayout({

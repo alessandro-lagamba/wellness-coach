@@ -15,10 +15,6 @@ pluginManagement {
     "../android/expo-gradle-plugin"
   ).absolutePath
   includeBuild(expoPluginsPath)
-
-  include ':react-native-health-connect'
-  // ⚠️ Fix for Monorepo: path must go up 2 levels to reach root node_modules
-  project(':react-native-health-connect').projectDir = new File(rootProject.projectDir, '../../node_modules/react-native-health-connect/android')
 }
 
 plugins {
@@ -35,7 +31,7 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
 }
 expoAutolinking.useExpoModules()
 
-rootProject.name = 'WellnessCoach'
+rootProject.name = 'Yachai'
 
 expoAutolinking.useExpoVersionCatalog()
 

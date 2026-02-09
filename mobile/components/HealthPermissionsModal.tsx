@@ -255,7 +255,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
               t('modals.healthPermissions.iosManualInstructions',
                 'iOS non permette di sapere quali permessi hai concesso.\n\n' +
                 'Se hai già concesso i permessi ma i dati non appaiono, vai in:\n\n' +
-                '📱 Impostazioni → Privacy e sicurezza → Salute → Wellness Coach\n\n' +
+                '📱 Impostazioni → Privacy e sicurezza → Salute → Yachai\n\n' +
                 'E assicurati che tutte le categorie siano attive.'),
               [
                 {

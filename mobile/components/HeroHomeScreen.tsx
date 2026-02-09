@@ -30,7 +30,7 @@ export const HeroHomeScreen: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Benvenuto! Sono il tuo Wellness Coach AI. Posso aiutarti con:',
+      text: 'Benvenuto! Sono Yachai, il tuo coach per il benessere. Posso aiutarti con:',
       isUser: false,
       timestamp: new Date().toLocaleTimeString(),
     },
@@ -54,7 +54,7 @@ export const HeroHomeScreen: React.FC = () => {
       // 🔥 FIX: Ottieni la lingua dell'utente
       const { getUserLanguage } = await import('../services/language.service');
       const userLanguage = await getUserLanguage();
-      
+
       const response = await fetch(`${BACKEND_URL}/api/chat/respond`, {
         method: 'POST',
         headers: {
@@ -106,7 +106,7 @@ export const HeroHomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
-      
+
       {/* Header with Gradient */}
       <LinearGradient
         colors={['#6366f1', '#8b5cf6']}
@@ -120,16 +120,16 @@ export const HeroHomeScreen: React.FC = () => {
             <FontAwesome name="cog" size={20} color="white" />
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.avatarSection}>
           <Avatar onMicPress={handleMicPress} />
-          <Text style={styles.appTitle}>Wellness Coach AI</Text>
+          <Text style={styles.appTitle}>Yachai</Text>
           <View style={styles.connectionStatus}>
             <View style={[styles.statusDot, { backgroundColor: isConnected ? '#10b981' : '#ef4444' }]} />
             <Text style={styles.statusText}>Connesso</Text>
           </View>
         </View>
-        
+
         <TouchableOpacity style={styles.emotionButton}>
           <FontAwesome name="camera" size={16} color="white" />
           <Text style={styles.emotionButtonText}>Analizza Emozioni</Text>
@@ -140,9 +140,9 @@ export const HeroHomeScreen: React.FC = () => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.welcomeCard}>
           <Text style={styles.welcomeText}>
-            👋 Benvenuto! Sono il tuo Wellness Coach AI. Posso aiutarti con:
+            👋 Benvenuto! Sono Yachai, il tuo coach del benessere. Posso aiutarti con:
           </Text>
-          
+
           <View style={styles.featuresList}>
             {features.map((feature, index) => (
               <View key={index} style={styles.featureItem}>
@@ -151,7 +151,7 @@ export const HeroHomeScreen: React.FC = () => {
               </View>
             ))}
           </View>
-          
+
           <Text style={styles.questionText}>Come posso aiutarti oggi?</Text>
           <Text style={styles.timestamp}>{new Date().toLocaleTimeString()}</Text>
         </View>
@@ -189,7 +189,7 @@ export const HeroHomeScreen: React.FC = () => {
             <FontAwesome name="paper-plane" size={16} color="white" />
           </TouchableOpacity>
         </View>
-        
+
         <TouchableOpacity style={styles.voiceButton}>
           <FontAwesome name="microphone" size={16} color="white" />
           <Text style={styles.voiceButtonText}>Registra Voce</Text>

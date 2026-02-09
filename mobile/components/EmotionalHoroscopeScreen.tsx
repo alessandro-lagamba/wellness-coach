@@ -207,6 +207,83 @@ const ActorNoOscarIcon = () => (
     </View>
 );
 
+const RedCarpetStarIcon = () => (
+    <View style={iconStyles.container}>
+        {/* Outer Ring */}
+        <View style={iconStyles.outerRing} />
+
+        {/* Cluster of 3 Stars - Composition inspired by user reference */}
+        <View style={{ width: 80, height: 75, position: 'relative' }}>
+            {/* Primary Star */}
+            <MaterialCommunityIcons name="star-four-points" size={68} color="#d8b4fe" style={{ position: 'absolute', left: 0, top: 4 }} />
+            {/* Secondary Star */}
+            <MaterialCommunityIcons name="star-four-points" size={38} color="#d8b4fe" style={{ position: 'absolute', right: 2, top: 0, opacity: 0.8 }} />
+            {/* Tertiary Star */}
+            <MaterialCommunityIcons name="star-four-points" size={26} color="#d8b4fe" style={{ position: 'absolute', right: 12, bottom: 8, opacity: 0.5 }} />
+
+            {/* Subtle diagonal shimmer line */}
+            <View style={{ position: 'absolute', top: 35, left: 35, width: 35, height: 1.2, backgroundColor: '#d8b4fe', opacity: 0.15, transform: [{ rotate: '-45deg' }] }} />
+        </View>
+
+        {/* Small "Flash" particles for red carpet vibe */}
+        <View style={[iconStyles.particle, { top: 32, left: 38, width: 4, height: 4, opacity: 0.4 }]} />
+        <View style={[iconStyles.particle, { bottom: 35, right: 38, opacity: 0.2 }]} />
+    </View>
+);
+
+const OffSeasonTouristIcon = () => (
+    <View style={iconStyles.container}>
+        {/* Outer Ring */}
+        <View style={iconStyles.outerRing} />
+
+        {/* Umbrella - the central subject */}
+        <MaterialCommunityIcons name="umbrella-beach-outline" size={66} color="#d8b4fe" style={{ opacity: 0.9, marginTop: -8 }} />
+
+        {/* Calm horizon line */}
+        <View style={{ position: 'absolute', bottom: 42, width: 45, height: 1.2, backgroundColor: '#d8b4fe', opacity: 0.2 }} />
+
+        {/* Introspective dot (the "peace") */}
+        <View style={[iconStyles.particle, { bottom: 45, right: 35, width: 3, height: 3, opacity: 0.3 }]} />
+    </View>
+);
+
+const FrontRowSpectatorIcon = () => (
+    <View style={iconStyles.container}>
+        {/* Outer Ring */}
+        <View style={iconStyles.outerRing} />
+
+        {/* The "Lorgnette" (Opera Glasses) - Deeply connected to the front-row experience */}
+        <View style={{ width: 75, height: 75, position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
+            {/* The handle - elegant and diagonal */}
+            <View style={{
+                position: 'absolute',
+                bottom: 12,
+                left: 14,
+                width: 1.2,
+                height: 42,
+                backgroundColor: '#d8b4fe',
+                transform: [{ rotate: '38deg' }],
+                opacity: 0.7
+            }} />
+
+            {/* The Glasses - two elegant rings with a subtle glow */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: -15 }}>
+                <View style={{ width: 25, height: 25, borderRadius: 12.5, borderWidth: 1.8, borderColor: '#d8b4fe', backgroundColor: 'rgba(216, 180, 254, 0.05)' }} />
+                <View style={{ width: 8, height: 1.2, backgroundColor: '#d8b4fe', opacity: 0.5 }} />
+                <View style={{ width: 25, height: 25, borderRadius: 12.5, borderWidth: 1.8, borderColor: '#d8b4fe', backgroundColor: 'rgba(216, 180, 254, 0.05)' }} />
+            </View>
+
+            {/* Radiating 'Wonder' particles (the awe of the spectator) */}
+            <MaterialCommunityIcons name="star-four-points" size={18} color="#d8b4fe" style={{ position: 'absolute', top: 12, right: 18, opacity: 0.9 }} />
+            <MaterialCommunityIcons name="star-four-points" size={10} color="#d8b4fe" style={{ position: 'absolute', top: 22, right: 8, opacity: 0.4 }} />
+
+            {/* A small focus dot to balance the composition */}
+            <View style={[iconStyles.particle, { top: 40, left: 35, width: 3, height: 3, opacity: 0.2 }]} />
+        </View>
+    </View>
+);
+
+
 // =============================================================================
 // ROLE ICON MAPPING
 // =============================================================================
@@ -225,7 +302,11 @@ const ROLE_ICONS: Record<string, RoleIcon> = {
     segnale_infrasuono: { type: 'custom', component: <InfraSignalIcon /> },
     motore_a_propulsione: { type: 'custom', component: <PropulsionIcon /> },
     l_attore_senza_oscar: { type: 'custom', component: <ActorNoOscarIcon /> },
+    la_star_del_red_carpet: { type: 'custom', component: <RedCarpetStarIcon /> },
+    il_turista_fuori_stagione: { type: 'custom', component: <OffSeasonTouristIcon /> },
+    lo_spettatore_in_prima_fila: { type: 'custom', component: <FrontRowSpectatorIcon /> },
 };
+
 
 // =============================================================================
 // COMPONENT

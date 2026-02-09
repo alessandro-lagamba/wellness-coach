@@ -32,7 +32,7 @@ interface InteractiveTutorialProps {
 const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome',
-    title: 'Benvenuto in Wellness Coach',
+    title: 'Ciao! Io sono Yachai',
     description: 'La tua app di benessere completa, alimentata da AI. Scopri come monitorare salute, emozioni e bellezza in un unico posto.',
     icon: '🎯',
     color: ['#667eea', '#764ba2'],
@@ -122,12 +122,12 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'journal',
     title: 'Journal Intelligente e Chat AI',
-    description: 'Il tuo diario personale con AI che analizza i tuoi pensieri. Parla con il nostro AI Coach per ricevere supporto e consigli.',
+    description: 'Il tuo diario personale con AI che analizza i tuoi pensieri. Parla con Yachai per ricevere supporto e consigli.',
     icon: '📝',
     color: ['#667eea', '#764ba2'],
     features: [
       'Scrittura guidata da AI',
-      'Chat con AI Coach 24/7',
+      'Chat con Yachai 24/7',
       'Analisi sentimenti automatica',
       'Tracking del benessere mentale'
     ],
@@ -152,7 +152,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'completato',
     title: 'Sei Pronto a Iniziare!',
-    description: 'Hai imparato tutte le funzionalità principali. Ora inizia il tuo viaggio verso il benessere con Wellness Coach.',
+    description: 'Hai imparato tutte le funzionalità principali. Ora inizia il tuo viaggio verso il benessere con me!',
     icon: '🎉',
     color: ['#667eea', '#764ba2', '#f093fb'],
     features: [

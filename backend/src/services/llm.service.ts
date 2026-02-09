@@ -111,6 +111,13 @@ export interface LLMOptions {
       macros?: any;
       identifiedFoods?: string[];
     } | null;
+    personalData?: {
+      age?: number;
+      gender?: string;
+      weight?: number;
+      height?: number;
+      activityLevel?: string;
+    } | null;
     // 🆕 RAG: Journal context from semantic search
     journalContext?: {
       relevantEntries?: Array<{
@@ -281,6 +288,7 @@ ${actionStepsInstruction}
 - Offri consigli basati su dati reali e pattern identificati
 ${languageInstruction}
 - Celebra i progressi e riconosci le sfide dell'utente
+- N.B. HAI ACCESSO AI DATI FISICI DELL'UTENTE (peso, altezza, età, sesso, stile di vita). Usali per dare consigli precisi e personalizzati.
 
 📊 TIPI DI DATI CHE RICEVI:
 1. STATO ATTUALE: Emozione dominante, valence, arousal, punteggi pelle
@@ -289,6 +297,13 @@ ${languageInstruction}
 4. CONTESTO TEMPORALE: Periodo giornata, giorno settimana, fattori ambientali
 5. INSIGHTS: Indicatori stress, trigger benessere, aree miglioramento, punti forza
 6. SUGGERIMENTI: Wellness suggestions con urgenza e timing specifici
+7. DATI FISICI E PERSONALI: Peso, altezza, età, sesso, livello di attività/stile di vita.
+
+💡 COME UTILIZZARE I DATI FISICI E PERSONALI:
+- Se l'utente ti chiede "Sai quanto peso?" o "Cosa sai di me?", rispondi basandoti sui dati ricevuti.
+- Se ti chiede consigli nutrizionali o fisici, calcola i suggerimenti usando altezza e peso se disponibili.
+- Usa lo stile di vita (es. sedentario vs attivo) per suggerire la durata e l'intensità delle attività.
+- Non essere invadente, usa questi dati per arricchire la conversazione in modo naturale.
 
 💡 WELLNESS SUGGESTIONS DISPONIBILI:
 Puoi riferirti a questi suggerimenti specifici quando lo ritieni appropriato in relazione alla conversazione e ai messaggi che ricevi. Se ritieni che nessun suggerimento sia pertinente NON devi consigliarlo. Ecco la lista dei suggerimenti disponibili:
@@ -381,7 +396,18 @@ Quando l'utente menziona problemi emotivi o della pelle, suggerisci analisi spec
 - "La mia pelle è secca" → "Vedo che hai problemi con la pelle secca. Facciamo un'analisi della pelle per capire esattamente cosa sta succedendo e come migliorarla. 📸 Analizza Pelle"
 - "Non mi sento bene" → "Mi dispiace sentire che non ti senti bene. Per aiutarti al meglio, facciamo entrambe le analisi per avere un quadro completo. 🔍 Analizza Emozioni 📸 Analizza Pelle"`;
 
-  let contextualPrompt = basePrompt;
+  const personalData = userContext?.personalData;
+  const personalDataPrompt = personalData ? `\n\n👤 DATI FISICI E STILE DI VITA DELL'UTENTE:
+${personalData.age ? `- Età: ${personalData.age} anni` : ''}
+${personalData.gender ? `- Sesso: ${personalData.gender}` : ''}
+${personalData.weight ? `- Peso: ${personalData.weight} kg` : ''}
+${personalData.height ? `- Altezza: ${personalData.height} cm` : ''}
+${personalData.activityLevel ? `- Livello di attività/Stile di vita: ${personalData.activityLevel}` : ''}
+
+(IMPORTANTE: Se l'utente ti chiede dati sul suo fisico o stile di vita, usa queste informazioni. NON dire che non hai accesso se i dati sono qui sopra!)
+` : '';
+
+  let contextualPrompt = personalDataPrompt + basePrompt;
 
   // 🔧 Aggiungi nome utente se disponibile
   if (userContext?.userName) {

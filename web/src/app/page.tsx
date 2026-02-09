@@ -4,6 +4,8 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import { Typewriter } from "@/components/ui/typewriter"
+import { MinimalistHero } from "@/components/ui/minimalist-hero"
+import { Mascot } from '@/components/Mascot';
 import {
   Brain,
   Camera,
@@ -56,24 +58,27 @@ export default function Home() {
   ]
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between font-sans selection:bg-emerald-100 selection:text-emerald-900">
+    <main className="flex min-h-screen flex-col items-center justify-between font-sans selection:bg-sky-100 selection:text-sky-900 relative">
+
+
       {/* Hero Section with premium background */}
-      <section className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 pt-32 md:pt-20 pb-32 overflow-hidden bg-white">
+      <section id="monitor" className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 pt-32 md:pt-20 pb-32 overflow-hidden bg-sky-100/60">
         {/* Animated gradient background layers */}
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white via-sky-200/30 to-purple-100/20" />
+
         <motion.div
           animate={{ x: [0, 50, 0], y: [0, -30, 0] }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute top-[-10%] right-[-10%] w-[800px] h-[800px] bg-emerald-200/20 rounded-full blur-[120px]"
+          className="absolute top-[-10%] right-[-10%] w-[800px] h-[800px] bg-sky-300/10 rounded-full blur-[120px]"
         />
         <motion.div
           animate={{ x: [0, -40, 0], y: [0, 60, 0] }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute bottom-[-10%] left-[-10%] w-[700px] h-[700px] bg-teal-200/20 rounded-full blur-[120px]"
+          className="absolute bottom-[-10%] left-[-10%] w-[700px] h-[700px] bg-purple-200/10 rounded-full blur-[120px]"
         />
 
         {/* Superior Fade Overlay for smooth transition to white below */}
-        <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none z-10" />
+        <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-white via-white/40 to-transparent pointer-events-none z-10" />
 
         {/* Floating app icon */}
         <motion.div
@@ -82,31 +87,57 @@ export default function Home() {
           transition={{ duration: 0.8 }}
           className="absolute top-4 left-4 md:top-12 md:left-12 z-20"
         >
-          <div className="relative group p-1 bg-white rounded-2xl md:rounded-3xl shadow-2xl border border-emerald-100/50">
+          <div className="relative group flex items-center gap-4 p-2 pr-6 bg-white/80 backdrop-blur-md rounded-2xl md:rounded-3xl shadow-2xl border border-sky-100/50 hover:bg-white transition-colors">
             <Image
-              src="/screenshots/icona.png"
+              src="/screenshots/yachai-icon.png"
               alt="WellnessCoach Icon"
               width={56}
               height={56}
-              className="rounded-xl md:rounded-2xl transition-transform group-hover:scale-105 md:w-[72px] md:h-[72px]"
+              className="rounded-xl md:rounded-2xl transition-transform group-hover:scale-105 md:w-[64px] md:h-[64px]"
             />
+            <span className="text-2xl md:text-3xl font-black text-sky-900 tracking-tighter">Yachai</span>
           </div>
         </motion.div>
 
         <div className="relative z-10 max-w-5xl w-full text-center space-y-10 px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-full bg-emerald-500/10 text-emerald-700 text-sm font-bold border border-emerald-500/20 shadow-sm"
-          >
-            <Zap size={16} className="fill-emerald-500 text-emerald-500 animate-pulse" />
-            <span>Nuovo: Analisi della pelle AI 2.0</span>
-          </motion.div>
+          {/* Mascot Animation */}
+          {/* Mascot Animation with Minimalist Style */}
+          {/* Mascot Animation - Using Updated Component */}
+          {/* Mascot Image - Positioned above text. Significantly increased negative margin for deep overlap */}
+          <div className="flex justify-center w-full z-20 relative pointer-events-none
+                -mb-20 sm:-mb-32 md:-mb-44 lg:-mb-56
+                -translate-y-2 sm:-translate-y-6 md:-translate-y-12 lg:-translate-y-19
+                -translate-x-1 sm:-translate-x-2 md:-translate-x-4 lg:-translate-x-5">
+            <div className="origin-top">
+              <Mascot
+                state="happy"
+                interactive={true}
+                size={320} // valore base per mobile - modifica qui
+                withGlow={false}
+                className="sm:hidden" // nasconde su schermi più grandi
+              />
+              <Mascot
+                state="happy"
+                interactive={true}
+                size={420}
+                withGlow={false}
+                className="hidden sm:block md:hidden" // solo tablet
+              />
+              <Mascot
+                state="happy"
+                interactive={true}
+                size={550}
+                withGlow={false}
+                className="hidden md:block" // desktop
+              />
+            </div>
+          </div>
+
+
 
           <h1 className="text-5xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-[0.9] text-gray-900">
             Monitora <br />
-            <div className="inline-block text-emerald-600 drop-shadow-sm mt-2 md:mt-4">
+            <div className="inline-block text-sky-500 drop-shadow-sm mt-2 md:mt-4 whitespace-nowrap overflow-hidden">
               <Typewriter
                 text={typewriterTexts}
                 speed={70}
@@ -123,7 +154,7 @@ export default function Home() {
             transition={{ delay: 0.4, duration: 0.8 }}
             className="text-lg md:text-3xl text-gray-500 max-w-3xl mx-auto leading-tight font-medium"
           >
-            WellnessCoach è l&apos;assistente definitivo che ti aiuta a capire il tuo corpo e la tua mente attraverso la tecnologia più avanzata.
+            Yachai è l&apos;assistente definitivo che ti aiuta a capire il tuo corpo e la tua mente attraverso la tecnologia più avanzata.
           </motion.p>
 
           {/* Platform Switcher */}
@@ -135,14 +166,14 @@ export default function Home() {
           >
             <button
               onClick={() => setPlatform("android")}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-xl transition-all font-bold text-base ${platform === "android" ? "bg-white text-emerald-600 shadow-md border border-emerald-100" : "text-gray-500 hover:text-gray-700"}`}
+              className={`flex items-center space-x-2 px-6 py-3 rounded-xl transition-all font-bold text-base ${platform === "android" ? "bg-white text-sky-500 shadow-lg border border-sky-50" : "text-gray-400 hover:text-gray-600"}`}
             >
               <Smartphone size={20} />
               <span>Android</span>
             </button>
             <button
               onClick={() => setPlatform("ios")}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-xl transition-all font-bold text-base ${platform === "ios" ? "bg-white text-emerald-600 shadow-md border border-emerald-100" : "text-gray-500 hover:text-gray-700"}`}
+              className={`flex items-center space-x-2 px-6 py-3 rounded-xl transition-all font-bold text-base ${platform === "ios" ? "bg-white text-sky-500 shadow-lg border border-sky-50" : "text-gray-400 hover:text-gray-600"}`}
             >
               <Apple size={20} />
               <span>iOS (Beta)</span>
@@ -165,14 +196,14 @@ export default function Home() {
                       href="https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/WellnessCoach.apk"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-12 py-8 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-[3rem] font-black text-2xl md:text-3xl hover:scale-105 active:scale-95 transition-all shadow-[0_25px_60px_-15px_rgba(16,185,129,0.4)] flex items-center gap-4 no-underline"
+                      className="px-12 py-8 bg-gradient-to-r from-sky-400 to-indigo-500 text-white rounded-[3rem] font-black text-2xl md:text-3xl hover:scale-105 active:scale-95 transition-all shadow-[0_25px_60px_-15px_rgba(56,189,248,0.4)] flex items-center gap-4 no-underline"
                     >
                       <Smartphone size={32} strokeWidth={3} />
                       Scarica ora l&apos;App
                     </a>
                     <div className="flex flex-col items-center">
                       <p className="text-gray-400 font-bold flex items-center gap-2">
-                        <Smartphone size={16} className="text-emerald-500" />
+                        <Smartphone size={16} className="text-sky-500" />
                         Download diretto per Android
                       </p>
                       <span className="text-xs text-gray-400 font-medium sm:hidden mt-1">👆 Clicca per scaricare</span>
@@ -180,24 +211,24 @@ export default function Home() {
                   </div>
 
                   <div className="hidden md:flex flex-col items-center opacity-30">
-                    <div className="w-px h-16 bg-emerald-500" />
-                    <span className="text-xs text-emerald-700 font-bold py-3 uppercase tracking-widest">o</span>
-                    <div className="w-px h-16 bg-emerald-500" />
+                    <div className="w-px h-16 bg-sky-500" />
+                    <span className="text-xs text-sky-700 font-bold py-3 uppercase tracking-widest">o</span>
+                    <div className="w-px h-16 bg-sky-500" />
                   </div>
 
-                  <div className="flex flex-col items-center space-y-4 p-8 rounded-[4rem] bg-white border-2 border-emerald-50 shadow-2xl scale-110 md:scale-125 origin-center">
-                    <div className="bg-emerald-500 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-1">
+                  <div className="flex flex-col items-center space-y-4 p-8 rounded-[4rem] bg-white border-2 border-sky-50 shadow-2xl scale-110 md:scale-125 origin-center">
+                    <div className="bg-sky-500 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-1">
                       Solo per Android
                     </div>
-                    <div className="relative p-2 bg-white rounded-2xl border-4 border-emerald-500">
+                    <div className="relative p-2 bg-white rounded-2xl border-4 border-sky-500">
                       <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/WellnessCoach.apk&bgcolor=FFFFFF&color=059669`}
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/WellnessCoach.apk&bgcolor=FFFFFF&color=0EA5E9`}
                         alt="Scan QR Code"
                         className="w-40 h-40 rounded-lg"
                       />
                     </div>
                     <div className="flex flex-col items-center text-center">
-                      <span className="text-base font-black text-emerald-600 uppercase tracking-tight">Scansiona QR</span>
+                      <span className="text-base font-black text-sky-500 uppercase tracking-tight">Scansiona QR</span>
                       <span className="text-[10px] text-gray-400 font-bold leading-none uppercase tracking-widest">Usa la fotocamera</span>
                     </div>
                   </div>
@@ -208,10 +239,10 @@ export default function Home() {
                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                  className="max-w-2xl w-full bg-white rounded-[3rem] md:rounded-[4rem] p-8 md:p-14 shadow-[0_40px_100px_rgba(0,0,0,0.08)] border-2 border-emerald-50 relative overflow-hidden group"
+                  className="max-w-2xl w-full bg-white rounded-[3rem] md:rounded-[4rem] p-8 md:p-14 shadow-[0_40px_100px_rgba(0,0,0,0.08)] border-2 border-sky-50 relative overflow-hidden group"
                 >
                   <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12 group-hover:rotate-0 transition-transform duration-700">
-                    <Apple size={120} className="text-emerald-500" />
+                    <Apple size={120} className="text-sky-500" />
                   </div>
 
                   <div className="relative z-10 space-y-8 text-left">
@@ -248,22 +279,22 @@ export default function Home() {
                           </p>
 
                           <div className="space-y-1.5 flex flex-col">
-                            <label htmlFor="nome" className="text-[14px] font-black text-emerald-600 uppercase tracking-widest ml-1">Nome</label>
-                            <input id="nome" name="nome" type="text" required placeholder="Esempio: Mario" className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-bold placeholder:text-gray-300 placeholder:font-normal" />
+                            <label htmlFor="nome" className="text-[14px] font-black text-sky-600 uppercase tracking-widest ml-1">Nome</label>
+                            <input id="nome" name="nome" type="text" required placeholder="Esempio: Mario" className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-sky-500 focus:bg-white rounded-2xl outline-none transition-all font-bold placeholder:text-gray-300 placeholder:font-normal" />
                           </div>
                           <div className="space-y-1.5 flex flex-col">
-                            <label htmlFor="cognome" className="text-[14px] font-black text-emerald-600 uppercase tracking-widest ml-1">Cognome</label>
-                            <input id="cognome" name="cognome" type="text" required placeholder="Esempio: Rossi" className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-bold placeholder:text-gray-300 placeholder:font-normal" />
+                            <label htmlFor="cognome" className="text-[14px] font-black text-sky-600 uppercase tracking-widest ml-1">Cognome</label>
+                            <input id="cognome" name="cognome" type="text" required placeholder="Esempio: Rossi" className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-sky-500 focus:bg-white rounded-2xl outline-none transition-all font-bold placeholder:text-gray-300 placeholder:font-normal" />
                           </div>
                           <div className="md:col-span-2 space-y-1.5 flex flex-col">
-                            <label htmlFor="email" className="text-[14px] font-black text-emerald-600 uppercase tracking-widest ml-1">E-mail del tuo Apple ID</label>
-                            <input id="email" name="email" type="email" required placeholder="latuamail@icloud.com" className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-bold placeholder:text-gray-300 placeholder:font-normal" />
+                            <label htmlFor="email" className="text-[14px] font-black text-sky-600 uppercase tracking-widest ml-1">E-mail del tuo Apple ID</label>
+                            <input id="email" name="email" type="email" required placeholder="latuamail@icloud.com" className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-sky-500 focus:bg-white rounded-2xl outline-none transition-all font-bold placeholder:text-gray-300 placeholder:font-normal" />
                           </div>
                           <div className="md:col-span-2 pt-4">
                             <button
                               type="submit"
                               disabled={formStatus === "submitting"}
-                              className="w-full py-6 bg-gray-900 text-white rounded-[2rem] font-black text-xl hover:bg-emerald-600 hover:scale-[1.02] active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="w-full py-6 bg-gray-900 text-white rounded-[2rem] font-black text-xl hover:bg-sky-600 hover:scale-[1.02] active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {formStatus === "submitting" ? "Invio in corso..." : "Richiedi accesso Beta"}
                               <ArrowRight size={24} strokeWidth={3} />
@@ -279,12 +310,12 @@ export default function Home() {
                           animate={{ opacity: 1, scale: 1 }}
                           className="py-10 text-center"
                         >
-                          <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <div className="w-20 h-20 bg-sky-100 text-sky-600 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Zap size={40} fill="currentColor" />
                           </div>
                           <button
                             onClick={() => setFormStatus("idle")}
-                            className="text-emerald-600 font-bold text-sm hover:underline"
+                            className="text-sky-600 font-bold text-sm hover:underline"
                           >
                             Invia un&apos;altra richiesta
                           </button>
@@ -292,11 +323,11 @@ export default function Home() {
                       )}
                     </AnimatePresence>
 
-                    <div className="p-5 bg-emerald-50 rounded-3xl border border-emerald-100 flex items-start gap-3">
+                    <div className="p-5 bg-sky-50 rounded-3xl border border-sky-100 flex items-start gap-3">
                       <div className="w-10 h-10 rounded-full bg-white flex-shrink-0 flex items-center justify-center shadow-sm">
-                        <Image src="/screenshots/icona.png" width={24} height={24} alt="icon" className="rounded-md" />
+                        <Image src="/screenshots/yachai-icon.png" width={24} height={24} alt="icon" className="rounded-md" />
                       </div>
-                      <p className="text-sm text-emerald-800 font-bold leading-relaxed pt-1">
+                      <p className="text-sm text-sky-800 font-bold leading-relaxed pt-1">
                         Una volta registrato, riceverai un&apos;email di invito da Apple per testare l&apos;app in anteprima su TestFlight.
                       </p>
                     </div>
@@ -314,14 +345,14 @@ export default function Home() {
           transition={{ delay: 1.5, duration: 1.5, repeat: Infinity }}
           className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20"
         >
-          <div className="w-6 h-10 rounded-full border-2 border-emerald-200 flex items-start justify-center pt-2">
-            <div className="w-1 h-2 bg-emerald-400 rounded-full" />
+          <div className="w-6 h-10 rounded-full border-2 border-sky-200 flex items-start justify-center pt-2">
+            <div className="w-1 h-2 bg-sky-400 rounded-full" />
           </div>
         </motion.div>
       </section>
 
-      {/* Features Section with App Screenshots - Smooth gradient transition */}
-      <section className="w-full py-32 px-6 bg-white relative z-20">
+      {/* Features Section with App Screenshots - Smooth gradient transition starting from half height */}
+      <section className="w-full py-32 px-6 bg-gradient-to-b from-white via-white via-60% to-sky-100 relative z-20">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -349,10 +380,10 @@ export default function Home() {
               >
                 {/* Feature icon */}
                 <div className="flex items-center space-x-4 mb-6">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white shadow-xl group-hover:rotate-6 transition-transform">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center text-white shadow-lg group-hover:rotate-6 transition-transform">
                     {feature.icon}
                   </div>
-                  <h3 className="font-black text-xl text-gray-900">{feature.title}</h3>
+                  <h3 className="font-black text-xl text-gray-900 group-hover:text-sky-600 transition-colors">{feature.title}</h3>
                 </div>
 
                 {/* Screenshot - Enhanced size and presentation */}
@@ -371,38 +402,36 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Final CTA Section - Smooth gradient transition */}
-      <section className="w-full py-40 px-6 bg-gradient-to-b from-white via-emerald-600 to-emerald-700 text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_50%,_var(--tw-gradient-stops))] from-white to-transparent" />
+      {/* Final CTA Section - Smooth gradient transition from celeste to muted purple */}
+      <section className="w-full pt-32 pb-40 px-6 bg-gradient-to-b from-sky-100 via-indigo-600/90 to-purple-950 relative z-20 overflow-hidden text-center">
+        {/* Decorative background elements - subtle noise only */}
+        <div className="absolute top-0 left-0 w-full h-full bg-white/5 pointer-events-none" />
 
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="relative z-10 max-w-4xl mx-auto text-center"
-        >
-          <div className="p-3 bg-white w-fit mx-auto rounded-[2.5rem] shadow-2xl mb-10">
+        <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center">
+          {/* App Icon */}
+          <div className="mb-12 p-3 bg-white rounded-[2rem] shadow-xl border border-sky-100/50">
             <Image
-              src="/screenshots/icona.png"
-              alt="WellnessCoach"
+              src="/screenshots/yachai-icon.png"
               width={100}
               height={100}
-              className="rounded-[2rem]"
+              alt="Yachai Icon"
+              className="rounded-2xl"
             />
           </div>
-          <h2 className="text-5xl md:text-7xl font-black mb-8 tracking-tighter">
+
+          <h2 className="text-5xl md:text-7xl font-black mb-8 tracking-tighter text-white drop-shadow-sm">
             Inizia oggi il tuo percorso di benessere
           </h2>
-          <p className="text-xl md:text-2xl text-emerald-50 max-w-2xl mx-auto font-medium mb-16 leading-relaxed">
-            Scarica WellnessCoach gratuitamente e scopri come la tecnologia può trasformare la tua salute.
+          <p className="text-xl md:text-2xl text-sky-50 max-w-2xl mx-auto font-medium mb-16 leading-relaxed">
+            Scarica Yachai gratuitamente e scopri come la tecnologia può trasformare la tua salute.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-10">
             <a
-              href="https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/WellnessCoach.apk"
+              href="https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/Yachai.apk"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-14 py-8 bg-white text-emerald-600 rounded-[3rem] font-black text-2xl hover:scale-105 active:scale-95 transition-all shadow-[0_30px_60px_-10px_rgba(0,0,0,0.3)] flex items-center gap-4 no-underline"
+              className="px-14 py-8 bg-white text-purple-700 rounded-[3rem] font-black text-2xl hover:scale-105 active:scale-95 transition-all shadow-[0_30px_60px_-10px_rgba(0,0,0,0.3)] flex items-center gap-4 no-underline"
             >
               <Smartphone size={32} />
               Scarica gratis
@@ -412,32 +441,33 @@ export default function Home() {
                 <ScanLine size={20} />
                 <span className="text-sm font-black uppercase tracking-widest">Scansiona ora (Android)</span>
               </div>
-              <div className="p-2 bg-white rounded-2xl">
+              <div className="p-2 bg-white rounded-2xl shadow-xl">
                 <img
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/WellnessCoach.apk&bgcolor=FFFFFF&color=059669"
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/Yachai.apk&bgcolor=FFFFFF&color=6366F1"
                   alt="Scan QR Code"
                   className="w-32 h-32 rounded-lg"
                 />
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
       </section>
 
       {/* Footer - Integrated transition */}
       <footer className="w-full py-16 px-6 bg-gray-900 text-center relative z-20">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex items-center justify-center space-x-2">
-            <Image src="/screenshots/icona.png" width={24} height={24} alt="icon" className="rounded-md" />
-            <span className="text-white font-black text-xl tracking-tight">WellnessCoach</span>
+            <Image src="/screenshots/yachai-icon.png" width={24} height={24} alt="icon" className="rounded-md" />
+            <span className="text-white font-black text-xl tracking-tight">Yachai</span>
           </div>
-          <div className="h-px w-20 bg-emerald-500/30 mx-auto" />
-          <p className="text-gray-400 font-medium">© 2026 WellnessCoach. Tutti i diritti riservati.</p>
+          <div className="h-px w-20 bg-purple-500/30 mx-auto" />
+          <p className="text-gray-400 font-medium">© 2026 Yachai. Tutti i diritti riservati.</p>
           <p className="text-gray-500 text-sm font-bold uppercase tracking-[0.2em]">
             Un prodotto di <span className="text-white">LaBella&Partners</span>
           </p>
         </div>
-      </footer>
-    </main>
+      </footer >
+
+    </main >
   )
 }

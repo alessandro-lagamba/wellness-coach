@@ -471,6 +471,7 @@ export const ChatOnlyScreen: React.FC<ChatOnlyScreenProps> = ({ user, onLogout }
                 insights: aiContext.insights,
                 nutritionContext: aiContext.nutritionContext,
                 menstrualCycleContext: aiContext.menstrualCycleContext,
+                personalData: aiContext.personalData,
                 journalEntries: journalEntriesForChat.length > 0 ? journalEntriesForChat : undefined,
                 firstName: currentUserProfile?.first_name || currentUser?.email?.split('@')[0] || 'Utente',
                 language,

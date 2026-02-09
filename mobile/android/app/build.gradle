@@ -179,8 +179,6 @@ dependencies {
     } else {
         implementation jscFlavor
     }
-
-    implementation project(':react-native-health-connect')
 }
 
 apply plugin: 'com.google.gms.google-services'

@@ -46,13 +46,13 @@ export class CalendarService {
     try {
       // Request calendar permissions
       const { status } = await Calendar.requestCalendarPermissionsAsync();
-      
+
       if (status === 'granted') {
         this.hasPermissions = true;
-        
+
         // Get or create a calendar for wellness activities
         await this.setupWellnessCalendar();
-        
+
         console.log('Calendar service initialized successfully');
         return true;
       } else {
@@ -92,20 +92,22 @@ export class CalendarService {
   private async setupWellnessCalendar(): Promise<void> {
     try {
       const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-      
+
       // Look for existing wellness calendar
-      let wellnessCalendar = calendars.find(cal => 
-        cal.title.toLowerCase().includes('wellness') || 
+      const existingCalendar = calendars.find(cal =>
+        cal.title.toLowerCase().includes('wellness') ||
         cal.title.toLowerCase().includes('health')
       );
 
-      if (!wellnessCalendar) {
+      if (existingCalendar) {
+        this.calendarId = existingCalendar.id;
+      } else {
         // Create a new wellness calendar
         const defaultCalendarSource = calendars.find(cal => cal.source.name === 'Default') || calendars[0];
-        
+
         if (defaultCalendarSource) {
-          wellnessCalendar = await Calendar.createCalendarAsync({
-            title: 'Wellness Coach',
+          this.calendarId = await Calendar.createCalendarAsync({
+            title: 'Yachai',
             color: '#6366f1',
             entityType: Calendar.EntityTypes.EVENT,
             sourceId: defaultCalendarSource.source.id,
@@ -116,8 +118,6 @@ export class CalendarService {
           });
         }
       }
-
-      this.calendarId = wellnessCalendar?.id || null;
     } catch (error) {
       console.error('Failed to setup wellness calendar:', error);
     }
@@ -140,7 +140,10 @@ export class CalendarService {
         notes: activity.description,
         location: activity.location,
         recurrenceRule: activity.recurrence ? {
-          frequency: activity.recurrence,
+          frequency: activity.recurrence === 'weekly' ? Calendar.Frequency.WEEKLY :
+            activity.recurrence === 'monthly' ? Calendar.Frequency.MONTHLY :
+              activity.recurrence === 'yearly' ? Calendar.Frequency.YEARLY :
+                Calendar.Frequency.DAILY,
           interval: 1,
         } : undefined,
       });
@@ -201,7 +204,7 @@ export class CalendarService {
       endDate.setDate(endDate.getDate() + days);
 
       const events = await Calendar.getEventsAsync([this.calendarId], startDate, endDate);
-      
+
       return events.map(event => ({
         id: event.id,
         title: event.title,

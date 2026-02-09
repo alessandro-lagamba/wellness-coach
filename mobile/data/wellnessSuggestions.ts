@@ -8,6 +8,8 @@ export interface WellnessSuggestion {
   duration?: string;
   difficulty: 'easy' | 'medium' | 'hard';
   tags: string[];
+  longDescription: string;
+  tips: string[];
 }
 
 export interface WellnessCategory {
@@ -96,7 +98,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[0], // Mind & Body
     duration: '5 minutes',
     difficulty: 'easy',
-    tags: ['stress', 'focus', 'calm']
+    tags: ['stress', 'focus', 'calm'],
+    longDescription: 'Deep breathing exercises help activate your parasympathetic nervous system, effectively reducing stress levels and promoting a state of calm. This practice can improve focus and emotional regulation.',
+    tips: ['Inhale for 4 seconds', 'Hold for 7 seconds', 'Exhale for 8 seconds']
   },
   {
     id: 'take-a-walk',
@@ -106,7 +110,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[0], // Mind & Body
     duration: '15 minutes',
     difficulty: 'easy',
-    tags: ['mood', 'circulation', 'outdoor']
+    tags: ['mood', 'circulation', 'outdoor'],
+    longDescription: 'Walking is a simple yet powerful way to clear your mind and improve physical health. A 15-minute brisk walk can boost your energy for up to two hours.',
+    tips: ['Maintain a brisk pace', 'Swing your arms naturally', 'Keep your head up']
   },
   {
     id: 'stretching',
@@ -116,7 +122,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[0], // Mind & Body
     duration: '10 minutes',
     difficulty: 'easy',
-    tags: ['tension', 'flexibility', 'relaxation']
+    tags: ['tension', 'flexibility', 'relaxation'],
+    longDescription: 'Gentle stretching increases blood flow to your muscles and can help reduce stiffness and pain associated with poor posture.',
+    tips: ['Hold each stretch for 15-30 seconds', 'Do not bounce', 'Breathe deeply']
   },
   {
     id: 'posture-reset',
@@ -126,7 +134,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[0], // Mind & Body
     duration: '3 minutes',
     difficulty: 'easy',
-    tags: ['posture', 'relaxation']
+    tags: ['posture', 'relaxation'],
+    longDescription: 'A quick posture check can prevent back pain and improve breathing. Align your ears with your shoulders and your shoulders with your hips.',
+    tips: ['Stand against a wall', 'Tuck your chin slightly', 'Engage your core']
   },
   {
     id: 'yoga-flow',
@@ -136,7 +146,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[0], // Mind & Body
     duration: '20 minutes',
     difficulty: 'medium',
-    tags: ['flexibility', 'strength', 'balance']
+    tags: ['flexibility', 'strength', 'balance'],
+    longDescription: 'Yoga combines physical postures, breathing techniques, and meditation. It promotes physical strength and mental relaxation.',
+    tips: ['Focus on your breath', 'Listen to your body', 'Move with intention']
   },
 
   // Nutrition
@@ -148,7 +160,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[1], // Nutrition
     duration: 'Ongoing',
     difficulty: 'easy',
-    tags: ['skin', 'health', 'hydration']
+    tags: ['skin', 'health', 'hydration'],
+    longDescription: 'Proper hydration is essential for digestion, skin health, and energy levels. Aim for 8 glasses of water a day.',
+    tips: ['Keep a water bottle nearby', 'Set reminders to drink', 'Infuse with fruit for flavor']
   },
   {
     id: 'healthy-snack',
@@ -158,7 +172,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[1], // Nutrition
     duration: '5 minutes',
     difficulty: 'easy',
-    tags: ['nutrition', 'energy', 'health']
+    tags: ['nutrition', 'energy', 'health'],
+    longDescription: 'Smart snacking maintains blood sugar levels and prevents overeating at meals. Choose whole foods over processed snacks.',
+    tips: ['Pair protein with fiber', 'Plan snacks ahead', 'Eat mindfully']
   },
   {
     id: 'green-tea',
@@ -168,7 +184,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[1], // Nutrition
     duration: '10 minutes',
     difficulty: 'easy',
-    tags: ['antioxidants', 'calm', 'health']
+    tags: ['antioxidants', 'calm', 'health'],
+    longDescription: 'Green tea contains L-theanine, which promotes relaxation without drowsiness. It is also packed with antioxidants.',
+    tips: ['Brew at 80°C', 'Steep for 3 minutes', 'Avoid sweeteners if possible']
   },
 
   // Recovery
@@ -180,7 +198,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[2], // Recovery
     duration: '60 minutes',
     difficulty: 'medium',
-    tags: ['sleep', 'routine', 'rest']
+    tags: ['sleep', 'routine', 'rest'],
+    longDescription: 'A consistent evening routine signals to your body that it is time to wind down, improving sleep quality.',
+    tips: ['Avoid blue light', 'Read a paper book', 'Prepare for the next day']
   },
   {
     id: 'progressive-relaxation',
@@ -190,7 +210,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[2], // Recovery
     duration: '15 minutes',
     difficulty: 'easy',
-    tags: ['relaxation', 'sleep', 'tension']
+    tags: ['relaxation', 'sleep', 'tension'],
+    longDescription: 'PMR helps you distinguish between tension and relaxation, effectively reducing physical stress and anxiety.',
+    tips: ['Start from your feet', 'Tense for 5 seconds', 'Release for 10 seconds']
   },
   {
     id: 'sleep-meditation',
@@ -200,7 +222,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[2], // Recovery
     duration: '20 minutes',
     difficulty: 'easy',
-    tags: ['meditation', 'sleep', 'calm']
+    tags: ['meditation', 'sleep', 'calm'],
+    longDescription: 'Sleep meditation helps quiet the racing mind and relax the body, making it easier to fall asleep.',
+    tips: ['Lie comfortably', 'Close your eyes', 'Let go of the day']
   },
 
   // Mindfulness
@@ -212,7 +236,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[3], // Mindfulness
     duration: '10 minutes',
     difficulty: 'medium',
-    tags: ['mindfulness', 'present', 'awareness']
+    tags: ['mindfulness', 'present', 'awareness'],
+    longDescription: 'Mindfulness improves mental clarity and emotional intelligence by training your attention to the present moment.',
+    tips: ['Observe your thoughts', 'Do not judge', 'Return to your breath']
   },
   {
     id: 'gratitude-practice',
@@ -222,7 +248,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[3], // Mindfulness
     duration: '5 minutes',
     difficulty: 'easy',
-    tags: ['gratitude', 'positivity', 'reflection']
+    tags: ['gratitude', 'positivity', 'reflection'],
+    longDescription: 'Practicing gratitude shifts your focus from what is lacking to what you have, boosting overall happiness.',
+    tips: ['Be specific', 'Feel the emotion', 'Write it down']
   },
   {
     id: 'body-scan',
@@ -232,7 +260,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[3], // Mindfulness
     duration: '15 minutes',
     difficulty: 'medium',
-    tags: ['awareness', 'relaxation', 'body']
+    tags: ['awareness', 'relaxation', 'body'],
+    longDescription: 'A body scan meditation promotes body awareness and releases physical tension you might not be aware of.',
+    tips: ['Start at toes', 'Move slowly up', 'Notice sensations']
   },
 
   // Energy
@@ -244,7 +274,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[4], // Energy
     duration: '10 minutes',
     difficulty: 'easy',
-    tags: ['morning', 'energy', 'motivation']
+    tags: ['morning', 'energy', 'motivation'],
+    longDescription: 'Starting your day with movement wakes up your metabolism and sets a positive tone for the day ahead.',
+    tips: ['Drink water first', 'Stretch upwards', 'Set an intention']
   },
   {
     id: 'power-breathing',
@@ -254,7 +286,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[4], // Energy
     duration: '5 minutes',
     difficulty: 'easy',
-    tags: ['energy', 'focus', 'alertness']
+    tags: ['energy', 'focus', 'alertness'],
+    longDescription: 'Rapid, rhythmic breathing can invigorate your nervous system and increase oxygen flow to the brain.',
+    tips: ['Sit upright', 'Breathe through nose', 'Keep a steady rhythm']
   },
   {
     id: 'dance-break',
@@ -264,7 +298,9 @@ export const WELLNESS_SUGGESTIONS: WellnessSuggestion[] = [
     category: WELLNESS_CATEGORIES[4], // Energy
     duration: '5 minutes',
     difficulty: 'easy',
-    tags: ['fun', 'energy', 'movement']
+    tags: ['fun', 'energy', 'movement'],
+    longDescription: 'Dancing releases endorphins and gets your heart rate up, making it a perfect quick energy booster.',
+    tips: ['Pick an upbeat song', 'Don\'t worry about looks', 'Have fun']
   }
 ];
 

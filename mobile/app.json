@@ -1,9 +1,9 @@
 {
   "expo": {
     "sdkVersion": "54.0.0",
-    "scheme": "wellnesscoach",
-    "name": "Wellness Coach",
-    "slug": "wellness-coach",
+    "scheme": "yachai",
+    "name": "Yachai",
+    "slug": "yachai",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icona.png",
@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/icona.png",
       "resizeMode": "contain",
-      "backgroundColor": "#10b981"
+      "backgroundColor": "#6366f1"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -28,8 +28,8 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSCameraUsageDescription": "This app uses the camera to analyze your skin and detect emotions for personalized wellness coaching.",
-        "NSMicrophoneUsageDescription": "Allow Wellness Coach to access your microphone for voice interactions.",
-        "NSSpeechRecognitionUsageDescription": "Allow Wellness Coach to use speech recognition for voice commands.",
+        "NSMicrophoneUsageDescription": "Allow Yachai to access your microphone for voice interactions.",
+        "NSSpeechRecognitionUsageDescription": "Allow Yachai to use speech recognition for voice commands.",
         "NSHealthShareUsageDescription": "This app accesses health data to provide personalized wellness recommendations.",
         "NSHealthUpdateUsageDescription": "This app writes wellness data to Apple Health for comprehensive health tracking.",
         "NSCalendarsUsageDescription": "This app needs access to your calendar to sync wellness activities and reminders.",
@@ -47,7 +47,7 @@
       },
       "notification": {
         "icon": "./assets/icona.png",
-        "color": "#10b981"
+        "color": "#6366f1"
       },
       "package": "com.wellnesscoach.app",
       "statusBar": {
@@ -102,7 +102,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icona.png"
     },
     "plugins": [
       "expo-router",
@@ -129,28 +129,28 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Wellness Coach to access your camera for skin analysis and emotion detection."
+          "cameraPermission": "Allow Yachai to access your camera for skin analysis and emotion detection."
         }
       ],
       [
         "expo-media-library",
         {
-          "photosPermission": "Allow Wellness Coach to save analysis photos to your photo library.",
-          "savePhotosPermission": "Allow Wellness Coach to save analysis results.",
+          "photosPermission": "Allow Yachai to save analysis photos to your photo library.",
+          "savePhotosPermission": "Allow Yachai to save analysis results.",
           "isAccessMediaLocationEnabled": true
         }
       ],
       [
         "expo-calendar",
         {
-          "calendarPermission": "Allow Wellness Coach to sync wellness activities with your calendar."
+          "calendarPermission": "Allow Yachai to sync wellness activities with your calendar."
         }
       ],
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Allow Wellness Coach to access your microphone for voice interactions.",
-          "speechRecognitionPermission": "Allow Wellness Coach to use speech recognition for voice commands."
+          "microphonePermission": "Allow Yachai to access your microphone for voice interactions.",
+          "speechRecognitionPermission": "Allow Yachai to use speech recognition for voice commands."
         }
       ],
       [
@@ -164,7 +164,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icona.png",
-          "color": "#10b981",
+          "color": "#6366f1",
           "defaultChannel": "default"
         }
       ],

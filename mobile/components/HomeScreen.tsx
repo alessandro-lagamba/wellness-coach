@@ -2625,7 +2625,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
                 activeOpacity={0.8}
               >
                 <Text style={styles.emptyActivitiesButtonText}>
-                  {t('home.activities.askCoach') || 'Chiedi al Coach AI'}
+                  {t('home.activities.askCoach') || 'Chiedi a Yachai'}
                 </Text>
               </TouchableOpacity>
             </View>

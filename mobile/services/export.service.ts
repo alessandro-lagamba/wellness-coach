@@ -31,14 +31,14 @@ export class ExportService {
     try {
       const content = messages
         .map(msg => {
-          const sender = msg.sender === 'user' ? 'Tu' : 'WellnessCoach';
+          const sender = msg.sender === 'user' ? 'Tu' : 'Yachai';
           const time = msg.timestamp.toLocaleString('it-IT');
           return `[${time}] ${sender}:\n${msg.text}\n`;
         })
         .join('\n---\n\n');
 
-      const fullContent = `Conversazione WellnessCoach\n${'='.repeat(50)}\n\n${content}`;
-      
+      const fullContent = `Conversazione Yachai\n${'='.repeat(50)}\n\n${content}`;
+
       const file = new File(Paths.document, filename ?? `chat_${Date.now()}.txt`);
       file.create({ overwrite: true });
       file.write(fullContent);
@@ -62,14 +62,14 @@ export class ExportService {
     try {
       const content = messages
         .map(msg => {
-          const sender = msg.sender === 'user' ? '**Tu**' : '**WellnessCoach**';
+          const sender = msg.sender === 'user' ? '**Tu**' : '**Yachai**';
           const time = msg.timestamp.toLocaleString('it-IT');
           return `### ${sender} - ${time}\n\n${msg.text}\n`;
         })
         .join('\n---\n\n');
 
-      const fullContent = `# Conversazione WellnessCoach\n\n${content}`;
-      
+      const fullContent = `# Conversazione Yachai\n\n${content}`;
+
       const file = new File(Paths.document, filename ?? `chat_${Date.now()}.md`);
       file.create({ overwrite: true });
       file.write(fullContent);

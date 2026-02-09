@@ -125,8 +125,8 @@ export class LiveKitAgentService {
       console.log(`[LiveKit Agent] 🤖 Generating AI response...`);
 
       const model = this.geminiClient.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-      
-      const prompt = `Sei WellnessCoach, un AI coach per il benessere. Rispondi in modo breve, naturale e conversazionale in italiano. 
+
+      const prompt = `Sei Yachai, un AI coach per il benessere. Rispondi in modo breve, naturale e conversazionale in italiano. 
       
       Utente dice: "${transcript}"
       
@@ -134,9 +134,9 @@ export class LiveKitAgentService {
 
       const result = await model.generateContent(prompt);
       const response = result.response.text();
-      
+
       console.log(`[LiveKit Agent] ✅ AI response generated: "${response}"`);
-      
+
       return response;
 
     } catch (error) {

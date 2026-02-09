@@ -50,7 +50,7 @@ app.use((req, res, next) => {
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    message: 'WellnessCoach Backend is healthy',
+    message: 'Yachai Backend is healthy',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
   });
@@ -90,7 +90,7 @@ app.use('*', (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 WellnessCoach Backend running on http://0.0.0.0:${PORT}`);
+  console.log(`🚀 Yachai Backend running on http://0.0.0.0:${PORT}`);
   console.log(`📊 Health check: http://0.0.0.0:${PORT}/api/health`);
   console.log(`🔒 Security: API keys are server-side only`);
 });

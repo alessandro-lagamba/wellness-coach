@@ -9,12 +9,12 @@ import {
   ScrollView,
 } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withTiming, 
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
   withSpring,
-  runOnJS 
+  runOnJS
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MomentumData } from '../services/momentum.service';
@@ -141,8 +141,8 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
             {
               title: t('popups.pillDetail.momentum.current'),
               value: momentumData ? `${momentumData.percentage}%` : t('common.loading'),
-              description: t('popups.pillDetail.momentum.currentDesc', { 
-                completed: momentumData?.completedTasks || 0, 
+              description: t('popups.pillDetail.momentum.currentDesc', {
+                completed: momentumData?.completedTasks || 0,
                 total: momentumData?.totalTasks || 0,
                 days: momentumData?.period === '7days' ? 7 : 30
               })
@@ -150,8 +150,8 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
             {
               title: t('popups.pillDetail.momentum.trend'),
               value: momentumData ? getTrendText(momentumData.trend) : t('popups.pillDetail.momentum.stable'),
-              description: momentumData ? t(`popups.pillDetail.momentum.trendDesc.${momentumData.trend}`, { 
-                percent: momentumData.trendPercentage 
+              description: momentumData ? t(`popups.pillDetail.momentum.trendDesc.${momentumData.trend}`, {
+                percent: momentumData.trendPercentage
               }) : t('popups.pillDetail.momentum.noTrend')
             },
             {
@@ -167,7 +167,7 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
           ]
         };
 
-      case 'next-session':
+      case 'next-session': {
         // 🆕 Calcola statistiche attività
         const completedCount = todaysActivities.filter(a => a.completed).length;
         const totalCount = todaysActivities.length;
@@ -186,12 +186,12 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
               {
                 title: t('popups.pillDetail.nextSession.noActivities') || 'Nessuna Attività',
                 value: '—',
-                description: t('popups.pillDetail.nextSession.noActivitiesDesc') || 'Non hai ancora attività programmate per oggi. Parla con il tuo coach AI o esplora le sezioni dell\'app per aggiungere attività al tuo programma giornaliero.'
+                description: t('popups.pillDetail.nextSession.noActivitiesDesc') || 'Non hai ancora attività programmate per oggi. Parla con Yachai o esplora le sezioni dell\'app per aggiungere attività al tuo programma giornaliero.'
               },
               {
                 title: t('popups.pillDetail.nextSession.howToAdd') || 'Come Aggiungere Attività',
                 value: t('popups.pillDetail.nextSession.explore') || 'Esplora',
-                description: t('popups.pillDetail.nextSession.howToAddDesc') || 'Puoi aggiungere attività dalla chat con l\'AI, dalle ricette, o dai suggerimenti personalizzati.'
+                description: t('popups.pillDetail.nextSession.howToAddDesc') || 'Puoi aggiungere attività dalla chat con Yachai, dalle ricette, o dai suggerimenti personalizzati.'
               }
             ]
           };
@@ -231,7 +231,7 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
             {
               title: t('popups.pillDetail.nextSession.scheduledTime') || 'Orario Programmato',
               value: nextActivity?.time ? `${t('home.analyses.today')} • ${nextActivity.time}` : t('home.analyses.today'),
-              description: nextActivity 
+              description: nextActivity
                 ? (t('popups.pillDetail.nextSession.nextActivityDesc') || 'La tua prossima attività di benessere')
                 : t('popups.pillDetail.nextSession.scheduledTimeDesc')
             },
@@ -252,6 +252,7 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
             }
           ]
         };
+      }
 
       default:
         return null;
@@ -297,12 +298,12 @@ const PillDetailPopup: React.FC<PillDetailPopupProps> = ({
       onRequestClose={onClose}
     >
       <Animated.View style={[styles.overlay, overlayStyle]}>
-        <TouchableOpacity 
-          style={styles.overlayTouchable} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.overlayTouchable}
+          activeOpacity={1}
           onPress={onClose}
         />
-        
+
         <Animated.View style={[styles.popupContainer, animatedStyle]}>
           <LinearGradient colors={content.gradient} style={styles.popupHeader}>
             <View style={styles.popupHeaderContent}>

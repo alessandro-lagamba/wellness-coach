@@ -588,8 +588,8 @@ export const EmotionDetectionScreen: React.FC = () => {
 
         // Perform analysis
         const result = await analysisServiceRef.current.analyzeEmotion(
-          asset.uri,
-          sessionId,
+          dataUrl,
+          undefined,
           i18n?.language || 'en',
           { source: 'gallery', userId }
         );
@@ -597,14 +597,18 @@ export const EmotionDetectionScreen: React.FC = () => {
           // 🔥 FIX: Rimuoviamo console.log eccessivi
 
           // Process results (same logic as camera capture)
-          const { scores, dominantEmotion, confidence } = result.data;
-          const newConfidences = Math.round(confidence * 100);
-          const dominantEmotionKey = dominantEmotion as Emotion;
+          const dominantEmotion = (result.data.dominant_emotion || 'neutral') as Emotion;
+          const newConfidence = Math.round((result.data.confidence || 0) * 100);
 
+          // Store the full analysis result
+          if (isMountedRef.current) {
+            setFullAnalysisResult(result.data);
+          }
+
+          const scores = result.data.emotions ?? {};
           const updatedScores: Record<Emotion, number> = { ...INITIAL_EMOTION_SCORES };
           (Object.keys(EMOTION_META) as Emotion[]).forEach((emotion) => {
-            const score = scores[emotion] ?? 0;
-            const percentage = Math.min(100, Math.max(0, Math.round(score * 100)));
+            const percentage = Math.min(100, Math.max(0, Math.round((scores[emotion] ?? 0) * 100)));
             updatedScores[emotion] = percentage;
           });
 
@@ -617,15 +621,21 @@ export const EmotionDetectionScreen: React.FC = () => {
           // 🔥 FIX: Memory leak - usiamo requestAnimationFrame invece di setTimeout quando possibile
           requestAnimationFrame(() => {
             if (isMountedRef.current) {
-              setCurrentEmotion(dominantEmotionKey);
-              setConfidence(newConfidences);
+              setCurrentEmotion(dominantEmotion);
+              setConfidence(newConfidence);
+
+              const newEntry: EmotionData = {
+                ...EMOTION_META[dominantEmotion],
+                percentage: updatedScores[dominantEmotion],
+              };
+              setEmotionHistory((prev) => [newEntry, ...prev.slice(0, 4)]);
             }
           });
 
         } else {
-          console.error('❌ Gallery emotion analysis failed:', analysisResult.error);
+          console.error('❌ Gallery emotion analysis failed:', result.error);
           if (isMountedRef.current) {
-            alert(t('analysis.emotion.errors.analysisFailed', { error: analysisResult.error || 'Unknown error' }));
+            alert(t('analysis.emotion.errors.analysisFailed', { error: result.error || 'Unknown error' }));
             setDetecting(false);
           }
         }

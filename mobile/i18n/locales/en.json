@@ -50,7 +50,7 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Personalize your experience, manage notifications, and configure your AI coach.",
+    "subtitle": "Personalize your experience, manage notifications, and configure your coach.",
     "account": "Account",
     "appSettings": "App Settings",
     "language": "Language",
@@ -70,7 +70,7 @@
     "subscription": "Subscription",
     "subscriptionDescription": "Manage your plan",
     "about": "About",
-    "aboutDescription": "Learn more about Wellness Coach",
+    "aboutDescription": "Learn more about Yachai",
     "feedback": "Feedback",
     "feedbackDescription": "Tell us what you think or report an issue",
     "feedbackPlaceholder": "Write your feedback here...",
@@ -114,8 +114,8 @@
     "healthPermissionsUpdatedMessage": "Your health data permissions have been updated successfully.",
     "comingSoon": "Coming Soon",
     "comingSoonMessage": "This feature will be available in a future update.",
-    "aboutTitle": "About Wellness Coach",
-    "aboutMessage": "Version 1.0.0\n\nYour personal AI wellness coach powered by advanced emotion and skin analysis.",
+    "aboutTitle": "About Yachai",
+    "aboutMessage": "Version 1.0.0\n\nYour personal wellness coach powered by advanced emotion and skin analysis.",
     "chooseLanguage": "Choose app language",
     "languageChanged": "Language changed to {{lang}}",
     "notificationsCategories": "Notification Categories",
@@ -230,13 +230,13 @@
   },
   "chat": {
     "title": "Chat",
-    "subtitle": "Talk with your AI coach",
+    "subtitle": "Talk with Yachai",
     "placeholder": "Type your message...",
     "voicePlaceholder": "Voice input detected...",
     "sending": "Sending...",
     "welcomeMessage": {
-      "withName": "Hello {{name}}! 👋 I'm your AI wellness coach. How are you feeling today?",
-      "default": "Hello! 👋 I'm your AI wellness coach. How are you feeling today?"
+      "withName": "Hello {{name}}! 👋 I'm Yachai. How are you feeling today?",
+      "default": "Hello! 👋 I'm Yachai. How are you feeling today?"
     },
     "clearChat": {
       "title": "Clear conversation",
@@ -2298,10 +2298,10 @@
         "benefitsDesc": "Regular sessions help track your wellness journey and provide valuable insights for improvement",
         "noActivitiesSubtitle": "No activities scheduled",
         "noActivities": "No Activities",
-        "noActivitiesDesc": "You don't have any activities scheduled for today. Talk to your AI coach or explore the app sections to add activities to your daily schedule.",
+        "noActivitiesDesc": "You don't have any activities scheduled for today. Talk to Yachai or explore the app sections to add activities to your daily schedule.",
         "howToAdd": "How to Add Activities",
         "explore": "Explore",
-        "howToAddDesc": "You can add activities from the AI chat, recipes, or personalized suggestions.",
+        "howToAddDesc": "You can add activities from the chat with Yachai, recipes, or personalized suggestions.",
         "allDoneTitle": "All Done!",
         "allDoneSubtitle": "Great work today!",
         "completedToday": "Completed Today",
@@ -2388,8 +2388,8 @@
     "skip": "Skip",
     "startJourney": "Start Your Journey",
     "welcome": {
-      "title": "Welcome to Wellness Coach",
-      "subtitle": "Your AI wellness companion",
+      "title": "Welcome to Yachai",
+      "subtitle": "Your wellness companion",
       "description": "Discover how artificial intelligence can transform your daily wellness routine.",
       "features": {
         "0": "Real-time emotion analysis",
@@ -2516,7 +2516,7 @@
     "learnMore": "Learn More"
   },
   "welcomeOverlay": {
-    "title": "Welcome to Wellness Coach!",
+    "title": "Welcome to Yachai!",
     "subtitle": "Start your wellness journey",
     "description": "Here are some things you can do to get started:",
     "dismiss": "Dismiss",
@@ -2562,7 +2562,7 @@
     "food": {
       "title": "🎉 First analysis completed!",
       "description": "You've just completed your first nutrition analysis. Now you can track your meals and receive recommendations for a more balanced diet.",
-      "nextStep": "Try writing in your journal to reflect on your day and receive personalized insights from your AI Coach.",
+      "nextStep": "Try writing in your journal to reflect on your day and receive personalized insights from Yachai.",
       "nextAction": "Open Journal"
     }
   },
@@ -2581,15 +2581,15 @@
     },
     "microphone": {
       "title": "Microphone Permission Required",
-      "description": "To use voice chat with your AI Coach, we need access to your microphone.",
-      "benefit1": "Voice chat with AI Coach",
+      "description": "To use voice chat with Yachai, we need access to your microphone.",
+      "benefit1": "Voice chat with Yachai",
       "benefit2": "Voice commands to navigate the app"
     }
   },
   "auth": {
     "welcome": "Welcome",
     "createAccount": "Create Account",
-    "loginSubtitle": "Sign in to your WellnessCoach account",
+    "loginSubtitle": "Sign in to your Yachai account",
     "signupSubtitle": "Start your wellness journey",
     "login": "Sign In",
     "wrongCredentials": "The credentials you entered are incorrect.",
@@ -2803,7 +2803,7 @@
   },
   "wellnessSuggestions": {
     "title": "Wellness Suggestions",
-    "subtitle": "Explore routines curated by your AI coach to support mood, sleep, and skin health",
+    "subtitle": "Explore routines curated by your coach to support mood, sleep, and skin health",
     "personalizedInsights": "Personalized Wellness Insights",
     "viewAll": "View All",
     "categories": {

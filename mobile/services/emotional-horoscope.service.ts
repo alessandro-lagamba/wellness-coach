@@ -23,7 +23,10 @@ export type EmotionalRole =
     | 'un_concerto_metal'
     | 'segnale_infrasuono'
     | 'motore_a_propulsione'
-    | 'l_attore_senza_oscar';
+    | 'l_attore_senza_oscar'
+    | 'la_star_del_red_carpet'
+    | 'il_turista_fuori_stagione'
+    | 'lo_spettatore_in_prima_fila';
 
 export interface EmotionInput {
     dominant_emotion: string;
@@ -153,6 +156,39 @@ export const ROLE_METADATA: Record<EmotionalRole, RoleMetadata> = {
         gradientColors: ['#1a2a1a', '#2d4a2d', '#3d6b3d'],
         emoji: '🎭',
     },
+    la_star_del_red_carpet: {
+        id: 'la_star_del_red_carpet',
+        titleIT: 'La Star del Red Carpet',
+        titleEN: 'The Red Carpet Star',
+        subtitleIT: 'Brillantezza e carisma',
+        subtitleEN: 'Brilliance and charisma',
+        descriptionIT: 'Oggi splendi senza nemmeno provarci. La tua energia è pura luce contagiosa.',
+        descriptionEN: 'Today you shine without even trying. Your energy is pure contagious light.',
+        gradientColors: ['#854d0e', '#a16207', '#ca8a04'],
+        emoji: '🌟',
+    },
+    il_turista_fuori_stagione: {
+        id: 'il_turista_fuori_stagione',
+        titleIT: 'Il Turista Fuori Stagione',
+        titleEN: 'The Off-Season Tourist',
+        subtitleIT: 'Pace e soddisfazione silenziosa',
+        subtitleEN: 'Peace and quiet satisfaction',
+        descriptionIT: 'C\'è una strana pace nel tuo sguardo oggi. È il momento perfetto per goderti il panorama.',
+        descriptionEN: 'There is a strange peace in your look today. It\'s the perfect time to enjoy the view.',
+        gradientColors: ['#075985', '#0369a1', '#0ea5e9'],
+        emoji: '🏖️',
+    },
+    lo_spettatore_in_prima_fila: {
+        id: 'lo_spettatore_in_prima_fila',
+        titleIT: 'Lo Spettatore in Prima Fila',
+        titleEN: 'The Front-Row Spectator',
+        subtitleIT: 'Meraviglia e nuove scoperte',
+        subtitleEN: 'Wonder and new discoveries',
+        descriptionIT: 'Il mondo sembra uno spettacolo privato messo in scena per te. Lasciati sorprendere.',
+        descriptionEN: 'The world feels like a private show staged for you. Let yourself be surprised.',
+        gradientColors: ['#5b21b6', '#6d28d9', '#8b5cf6'],
+        emoji: '🤩',
+    },
 };
 
 // =============================================================================
@@ -195,44 +231,52 @@ export function determineEmotionalRole(input: EmotionInput): EmotionalRole {
     });
 
     // A) Un Concerto Metal - High mental load
-    // arousal >= 0.35 AND (fear+anger combined noticeable)
-    if (arousal >= 0.35 && (fear + anger) >= 0.3) {
+    if (arousal >= 0.35 && (fear + anger) >= 0.35) {
         return 'un_concerto_metal';
     }
 
+    // NEW: La Star del Red Carpet - Euphoria (Very High joy/valence and high energy)
+    if (valence >= 0.5 && arousal >= 0.35 && (dominant_emotion === 'joy' || joy >= 0.4)) {
+        return 'la_star_del_red_carpet';
+    }
+
     // B) Segnale infrasuono - High sensitivity (fear-driven)
-    // fear is dominant OR fear is high with moderate/high arousal
     if (dominant_emotion === 'fear' || (fear >= 0.25 && arousal >= 0.2)) {
         return 'segnale_infrasuono';
     }
 
     // C) Motore a propulsione - Strong drive (anger-driven)
-    // anger noticeable AND arousal >= 0.30
     if ((anger >= 0.2 || dominant_emotion === 'anger') && arousal >= 0.30) {
         return 'motore_a_propulsione';
     }
 
+    // NEW: Lo Spettatore in Prima Fila - Wonder (Positive Surprise)
+    if (dominant_emotion === 'surprise' && valence >= 0.1) {
+        return 'lo_spettatore_in_prima_fila';
+    }
+
     // D) Il Silente - Inward/heavy (sadness-driven)
-    // sadness dominant OR sadness high with valence clearly negative and arousal low-to-mid
     if (dominant_emotion === 'sadness' || (sadness >= 0.25 && valence < -0.1 && arousal <= 0.2)) {
         return 'il_silente';
     }
 
-    // E) In Modalità Risparmio - Low battery
-    // arousal <= -0.20 OR low energy with valence not clearly positive
-    if (arousal <= -0.20 || (arousal <= 0 && valence <= 0.1 && neutral >= 0.3)) {
+    // E) In Modalità Risparmio - Low battery (Tired/Neutral)
+    if (arousal <= -0.25 && (valence < 0.2 || neutral >= 0.4)) {
         return 'in_modalita_risparmio';
     }
 
+    // NEW: Il Turista Fuori Stagione - Peace (Clearly positive valence but very low/calm arousal)
+    if (valence >= 0.3 && arousal <= 0.1 && arousal >= -0.6) {
+        return 'il_turista_fuori_stagione';
+    }
+
     // F) Il Regista con il budget - Directed agency
-    // valence >= 0.10 AND arousal between 0.10 and 0.55, not sadness/fear dominant
     if (valence >= 0.10 && arousal >= 0.10 && arousal <= 0.55 &&
         dominant_emotion !== 'sadness' && dominant_emotion !== 'fear') {
         return 'il_regista_con_il_budget';
     }
 
     // G) L'Attore Senza Oscar - Steady effort
-    // mild positive/neutral valence (0.05..0.30) and moderate arousal (0.05..0.35)
     if (valence >= 0.05 && valence <= 0.30 && arousal >= 0.05 && arousal <= 0.35 &&
         dominant_emotion !== 'fear' && dominant_emotion !== 'sadness') {
         return 'l_attore_senza_oscar';
@@ -265,17 +309,20 @@ Return a JSON object with EXACTLY this format:
 ROLES AND VIBES:
 - il_regista_con_il_budget: High energy, positive/neutral valence, directed action, feeling in control.
 - l_equilibrista: Balanced state, harmony between feeling and doing, neutral/mild valence.
-- in_modalita_risparmio: Low energy, tiredness, needing rest, low arousal.
+- in_modalita_risparmio: Low energy, tiredness, needing rest, low arousal, low/neutral valence.
 - il_silente: Quiet, introspective, reflective, often associated with sadness or neutral state.
 - un_concerto_metal: High mental load, chaos, stress, overthinking, high arousal + negative/mixed valence.
 - segnale_infrasuono: High sensitivity, over-aware of surroundings, reactive, often fear-driven.
 - motore_a_propulsione: Strong inner drive, intense focus, high arousal, often anger or passion-driven.
 - l_attore_senza_oscar: Working hard without recognition, steady effort, determined but underappreciated.
+- la_star_del_red_carpet: Pure euphoria, infectious joy, feeling radiant and high-energy. Glow vibe.
+- il_turista_fuori_stagione: Deep peace, silent contentment, enjoying the view of life without hurry. Zen.
+- lo_spettatore_in_prima_fila: Wonder, positive surprise, finding inspiration in unexpected details.
 
 DECISION LOGIC:
 - Use EMOTION_RESULT as the biometric baseline (Valence/Arousal).
-- Use JOURNAL_CONTEXT (if provided) to resolve ambiguity (e.g., is high energy 'Regista' or 'Concerto Metal'?).
-- The role must be one of the 8 IDs listed above.
+- Use JOURNAL_CONTEXT (if provided) to resolve ambiguity (e.g., is high energy 'Regista' or 'Star del Red Carpet'?).
+- The role must be one of the 11 IDs listed above.
 
 HARD CONSTRAINTS:
 - Write strictly in OUTPUT_LANGUAGE.
@@ -308,6 +355,9 @@ Match your tone to the role:
 - segnale_infrasuono: aware, sensitive
 - motore_a_propulsione: energetic, needing focus
 - l_attore_senza_oscar: determined, underappreciated
+- la_star_del_red_carpet: vibrant, celebratory
+- il_turista_fuori_stagione: calm, peaceful
+- lo_spettatore_in_prima_fila: curious, amazed
 
 EXAMPLES (STYLE REFERENCE ONLY)
 Important:

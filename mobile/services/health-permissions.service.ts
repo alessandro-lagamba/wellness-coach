@@ -445,9 +445,9 @@ export class HealthPermissionsService {
           'Apri Health Connect',
           'L\'app è stata registrata in Health Connect.\n\n' +
           'Ora:\n\n' +
-          '1. Cerca "Wellness Coach" nella lista delle app\n' +
+          '1. Cerca "Yachai" nella lista delle app\n' +
           '2. Se non lo trovi, scrolla verso il basso o cerca nella sezione "Accesso non consentito"\n' +
-          '3. Tocca su "Wellness Coach"\n' +
+          '3. Tocca su "Yachai"\n' +
           '4. Attiva "Consenti tutto" OPPURE abilita manualmente:\n' +
           '   • Passi (Steps)\n' +
           '   • Frequenza cardiaca (Heart Rate)\n' +

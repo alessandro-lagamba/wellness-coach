@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Image } from 'react-native';
-import Animated, { 
-  useAnimatedStyle, 
-  withRepeat, 
-  withTiming, 
+import Animated, {
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
   withSequence,
   withDelay,
   interpolate,
@@ -44,7 +44,7 @@ export const AnimatedOrbVoiceChat: React.FC<AnimatedOrbVoiceChatProps> = ({
   const rippleScale = useSharedValue(0);
   const rippleOpacity = useSharedValue(0);
   const audioBars = useRef(Array.from({ length: 32 }, () => useSharedValue(0.1)));
-  const audioBarStyles = useRef(Array.from({ length: 32 }, (_, index) => 
+  const audioBarStyles = useRef(Array.from({ length: 32 }, (_, index) =>
     useAnimatedStyle(() => ({
       height: interpolate(audioBars.current[index].value, [0, 1], [4, 32]),
     }))
@@ -72,7 +72,7 @@ export const AnimatedOrbVoiceChat: React.FC<AnimatedOrbVoiceChatProps> = ({
         -1,
         true
       );
-      
+
       // Ripple effect
       rippleScale.value = withRepeat(
         withTiming(2, { duration: 1000 }),
@@ -118,7 +118,7 @@ export const AnimatedOrbVoiceChat: React.FC<AnimatedOrbVoiceChatProps> = ({
       pulseScale.value = withTiming(1, { duration: 300 });
       rippleScale.value = withTiming(0, { duration: 300 });
       rippleOpacity.value = withTiming(0, { duration: 300 });
-      
+
       audioBars.current.forEach(bar => {
         bar.value = withTiming(0.1, { duration: 300 });
       });
@@ -195,7 +195,7 @@ export const AnimatedOrbVoiceChat: React.FC<AnimatedOrbVoiceChatProps> = ({
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Voice Chat</Text>
-          <Text style={styles.subtitle}>Speak naturally with your AI coach</Text>
+          <Text style={styles.subtitle}>Speak naturally with Yachai</Text>
         </View>
 
         {/* Avatar */}
@@ -209,10 +209,10 @@ export const AnimatedOrbVoiceChat: React.FC<AnimatedOrbVoiceChatProps> = ({
           <View style={[styles.orb, orbStyle]}>
             <View style={[styles.orbGradient, { backgroundColor: getStatusColor() }]}>
               {/* Mic icon */}
-              <FontAwesome 
-                name={isListening ? 'stop' : isSpeaking ? 'volume-up' : 'microphone'} 
-                size={32} 
-                color="#ffffff" 
+              <FontAwesome
+                name={isListening ? 'stop' : isSpeaking ? 'volume-up' : 'microphone'}
+                size={32}
+                color="#ffffff"
               />
             </View>
           </View>

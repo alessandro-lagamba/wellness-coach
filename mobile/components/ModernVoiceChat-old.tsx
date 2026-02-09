@@ -69,7 +69,7 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
   // Qwen-Omni Correct state
   const [useQwenOmni, setUseQwenOmni] = useState(false);
   const qwenOmniService = useRef(QwenOmniCorrectService.getInstance());
-  
+
   // UI state
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -114,12 +114,12 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
   // ✅ REALTIME: Connetti/disconnetti quando Qwen-Omni è attivo
   useEffect(() => {
     let isActive = true;
-    
+
     const connectRealtime = async () => {
       // ✅ Connetti SOLO se toggle attivo E modal visibile E non già connesso
       if (useQwenOmni && visible && !qwenOmniRealtimeService.current.isConnectedToServer()) {
         console.log('[ModernVoiceChat] 🚀 Connecting to Qwen-Omni Realtime...');
-        
+
         try {
           const apiKey = process.env.EXPO_PUBLIC_DASHSCOPE_API_KEY;
           if (!apiKey) {
@@ -169,7 +169,7 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
           console.error('[ModernVoiceChat] ❌ Failed to connect realtime:', error);
           Alert.alert('Error', 'Failed to connect to realtime service');
         }
-      } 
+      }
       // ✅ Disconnetti SOLO se toggle disattivato (NON quando modal si chiude)
       else if (!useQwenOmni && qwenOmniRealtimeService.current.isConnectedToServer()) {
         console.log('[ModernVoiceChat] 🔌 Disconnecting from Qwen-Omni Realtime (toggle off)...');
@@ -218,10 +218,10 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
     } else if (isAudioPlaying || isSpeaking || isAISpeaking) {
       // 🔊 AI sta parlando
       pulseScale.value = withRepeat(withSequence(withTiming(1.1, { duration: 600 }), withTiming(1, { duration: 600 })), -1, true);
-      
+
       audioBars.current.forEach((bar, index) => {
         const baseDelay = index * 50;
-        
+
         setTimeout(() => {
           if (isAudioPlaying || isSpeaking || isAISpeaking) {
             bar.value = withRepeat(
@@ -358,7 +358,7 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
 
         <View style={styles.header}>
           <Text style={styles.title}>Voice Chat</Text>
-          <Text style={styles.subtitle}>Speak naturally with your AI coach</Text>
+          <Text style={styles.subtitle}>Speak naturally with Yachai</Text>
         </View>
 
         <View style={styles.avatarContainer}>
@@ -490,10 +490,10 @@ export const ModernVoiceChat: React.FC<ModernVoiceChatProps> = ({
 
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsText}>
-            {useQwenOmni 
-              ? 'Qwen-Omni Realtime: Parla liberamente!' 
-              : isListeningLocal 
-                ? 'Speak now...' 
+            {useQwenOmni
+              ? 'Qwen-Omni Realtime: Parla liberamente!'
+              : isListeningLocal
+                ? 'Speak now...'
                 : 'Tap the orb to start speaking'}
           </Text>
         </View>

@@ -110,7 +110,7 @@ const Typewriter = ({
     ])
 
     return (
-        <div className={cn("inline whitespace-pre-wrap tracking-tight", className)}>
+        <div className={cn("inline whitespace-nowrap tracking-tight", className)}>
             <span>{displayText}</span>
             {showCursor && (
                 <motion.span

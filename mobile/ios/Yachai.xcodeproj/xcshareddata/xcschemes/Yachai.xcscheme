@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "WellnessCoach.app"
-               BlueprintName = "WellnessCoach"
-               ReferencedContainer = "container:WellnessCoach.xcodeproj">
+               BuildableName = "Yachai.app"
+               BlueprintName = "Yachai"
+               ReferencedContainer = "container:Yachai.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "WellnessCoachTests.xctest"
-               BlueprintName = "WellnessCoachTests"
-               ReferencedContainer = "container:WellnessCoach.xcodeproj">
+               BuildableName = "YachaiTests.xctest"
+               BlueprintName = "YachaiTests"
+               ReferencedContainer = "container:Yachai.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "WellnessCoach.app"
-            BlueprintName = "WellnessCoach"
-            ReferencedContainer = "container:WellnessCoach.xcodeproj">
+            BuildableName = "Yachai.app"
+            BlueprintName = "Yachai"
+            ReferencedContainer = "container:Yachai.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "WellnessCoach.app"
-            BlueprintName = "WellnessCoach"
-            ReferencedContainer = "container:WellnessCoach.xcodeproj">
+            BuildableName = "Yachai.app"
+            BlueprintName = "Yachai"
+            ReferencedContainer = "container:Yachai.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

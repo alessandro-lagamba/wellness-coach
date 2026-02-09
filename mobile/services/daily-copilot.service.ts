@@ -4,7 +4,6 @@ import { AIContextService } from './ai-context.service';
 import DailyCopilotDBService from './daily-copilot-db.service';
 import { RetryService } from './retry.service';
 import { getUserLanguage, getLanguageInstruction } from './language.service';
-import { widgetConfigService } from './widget-config.service';
 import { widgetGoalsService } from './widget-goals.service';
 
 export interface ThemeIndicator {
@@ -1015,9 +1014,7 @@ OUTPUT FORMAT(return ONLY valid JSON):
    * WEIGHTS: mood:15, sleep:15, steps:15, hydration:15, hrv:15, calories:15, meditation:10 = 100
    */
   async calculateDeterministicScore(data: CopilotAnalysisRequest): Promise<ScoreCalculationResult> {
-    const config = await widgetConfigService.getWidgetConfig();
     const goals = await widgetGoalsService.getGoals();
-    const enabledWidgetIds = new Set(config.filter(w => w.enabled).map(w => w.id));
 
     // Pesi approvati dall'utente
     const WEIGHTS = {
@@ -1079,8 +1076,8 @@ OUTPUT FORMAT(return ONLY valid JSON):
       missingData.push('sleep_auto');
     }
 
-    // Steps (15%) - only if enabled AND not null AND > 0
-    if (enabledWidgetIds.has('steps') && data.healthMetrics.steps !== null && data.healthMetrics.steps > 0) {
+    // Steps (15%) - only if not null AND > 0
+    if (data.healthMetrics.steps !== null && data.healthMetrics.steps > 0) {
       const goal = goals.steps || 10000;
       const score = this.clamp01(data.healthMetrics.steps / goal) * 100;
       breakdown['steps'] = { score, weight: WEIGHTS.steps, value: data.healthMetrics.steps, goal };
@@ -1089,8 +1086,8 @@ OUTPUT FORMAT(return ONLY valid JSON):
       availableCategories.push('steps');
     }
 
-    // Hydration (15%) - only if enabled AND not null AND > 0
-    if (enabledWidgetIds.has('hydration') && data.healthMetrics.hydration !== null && data.healthMetrics.hydration > 0) {
+    // Hydration (15%) - only if not null AND > 0
+    if (data.healthMetrics.hydration !== null && data.healthMetrics.hydration > 0) {
       const goal = goals.hydration || 8;
       const score = this.clamp01(data.healthMetrics.hydration / goal) * 100;
       breakdown['hydration'] = { score, weight: WEIGHTS.hydration, value: data.healthMetrics.hydration, goal };
@@ -1099,8 +1096,8 @@ OUTPUT FORMAT(return ONLY valid JSON):
       availableCategories.push('hydration');
     }
 
-    // HRV (15%) - only if enabled AND not null AND > 0
-    if (enabledWidgetIds.has('hrv') && data.healthMetrics.hrv !== null && data.healthMetrics.hrv > 0) {
+    // HRV (15%) - only if not null AND > 0
+    if (data.healthMetrics.hrv !== null && data.healthMetrics.hrv > 0) {
       const score = this.clamp01(data.healthMetrics.hrv / 50) * 100;
       breakdown['hrv'] = { score, weight: WEIGHTS.hrv, value: data.healthMetrics.hrv, goal: 50 };
       totalPoints += (score * WEIGHTS.hrv) / 100;
@@ -1108,8 +1105,8 @@ OUTPUT FORMAT(return ONLY valid JSON):
       availableCategories.push('hrv');
     }
 
-    // Calories (15%) - only if enabled AND not null AND > 0
-    if (enabledWidgetIds.has('calories') && data.healthMetrics.calories !== null && data.healthMetrics.calories > 0) {
+    // Calories (15%) - only if not null AND > 0
+    if (data.healthMetrics.calories !== null && data.healthMetrics.calories > 0) {
       const goal = goals.calories || 2000;
       // Score based on achieving ~80-100% of calorie goal
       const ratio = data.healthMetrics.calories / goal;
@@ -1128,8 +1125,8 @@ OUTPUT FORMAT(return ONLY valid JSON):
       availableCategories.push('calories');
     }
 
-    // Meditation (10%) - only if enabled AND not null AND > 0
-    if (enabledWidgetIds.has('meditation') && data.healthMetrics.meditationMinutes !== null && data.healthMetrics.meditationMinutes > 0) {
+    // Meditation (10%) - only if not null AND > 0
+    if (data.healthMetrics.meditationMinutes !== null && data.healthMetrics.meditationMinutes > 0) {
       const goal = goals.meditation || 10; // Default 10 minutes meditation goal
       const score = Math.min(this.clamp01(data.healthMetrics.meditationMinutes / goal), 1) * 100;
       breakdown['meditation'] = { score, weight: WEIGHTS.meditation, value: data.healthMetrics.meditationMinutes, goal };

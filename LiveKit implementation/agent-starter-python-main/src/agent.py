@@ -43,7 +43,7 @@ def build_dynamic_prompt(user_context: Optional[Dict[str, Any]] = None,
     # Evita di forzare saluti ad ogni turno: usa il nome solo quando serve
     user_greeting = f"Ciao {user_name}!" if user_name else "Ciao!"
     
-    base_prompt = f"""Sei WellnessCoach, un AI coach avanzato per il benessere integrato che combina analisi emotive e della pelle per offrire supporto personalizzato e actionable.
+    base_prompt = f"""Sei Yachai, un AI coach avanzato per il benessere integrato che combina analisi emotive e della pelle per offrire supporto personalizzato e actionable.
 
 👤 PERSONALIZZAZIONE:
 - L'utente si chiama {user_name if user_name else '[nome non disponibile]'}

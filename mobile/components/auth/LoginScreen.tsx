@@ -58,7 +58,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     if (isLoading) return; // Previeni doppi submit
 
     setIsLoading(true);
-    
+
     // Timeout per la chiamata API (10 secondi)
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Timeout: la richiesta ha impiegato troppo tempo')), 10000);
@@ -67,7 +67,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     try {
       const loginPromise = AuthService.signIn(email.trim(), password);
       const { user, error } = await Promise.race([loginPromise, timeoutPromise]);
-      
+
       if (error) {
         // Messaggi di errore più specifici
         let errorMessage = 'Credenziali non valide';
@@ -111,7 +111,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     try {
       const { error } = await AuthService.resetPassword(email);
-      
+
       if (error) {
         Alert.alert('Errore', error.message || 'Errore durante il reset password');
         return;
@@ -140,7 +140,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Benvenuto</Text>
-              <Text style={styles.subtitle}>Accedi al tuo account WellnessCoach</Text>
+              <Text style={styles.subtitle}>Accedi con il tuo account</Text>
             </View>
 
             {/* Form */}
