@@ -193,7 +193,7 @@ export default function Home() {
                 >
                   <div className="flex flex-col items-center space-y-4">
                     <a
-                      href="https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/WellnessCoach.apk"
+                      href="https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/Yachai.apk"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-12 py-8 bg-gradient-to-r from-sky-400 to-indigo-500 text-white rounded-[3rem] font-black text-2xl md:text-3xl hover:scale-105 active:scale-95 transition-all shadow-[0_25px_60px_-15px_rgba(56,189,248,0.4)] flex items-center gap-4 no-underline"
@@ -222,7 +222,7 @@ export default function Home() {
                     </div>
                     <div className="relative p-2 bg-white rounded-2xl border-4 border-sky-500">
                       <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/WellnessCoach.apk&bgcolor=FFFFFF&color=0EA5E9`}
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://github.com/alessandro-lagamba/wellness-coach-releases/releases/download/android-latest/Yachai.apk&bgcolor=FFFFFF&color=0EA5E9`}
                         alt="Scan QR Code"
                         className="w-40 h-40 rounded-lg"
                       />
