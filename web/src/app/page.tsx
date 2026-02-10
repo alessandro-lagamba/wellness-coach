@@ -37,7 +37,7 @@ export default function Home() {
     const formData = new FormData(e.currentTarget)
 
     try {
-      await fetch("/", {
+      await fetch(window.location.pathname, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams(formData as any).toString(),
@@ -80,23 +80,16 @@ export default function Home() {
         {/* Superior Fade Overlay for smooth transition to white below */}
         <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-white via-white/40 to-transparent pointer-events-none z-10" />
 
-        {/* Floating app icon */}
+        {/* Floating app name */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
-          className="absolute top-4 left-4 md:top-12 md:left-12 z-20"
+          className="absolute top-8 left-6 md:top-12 md:left-12 z-20"
         >
-          <div className="relative group flex items-center gap-4 p-2 pr-6 bg-white/80 backdrop-blur-md rounded-2xl md:rounded-3xl shadow-2xl border border-sky-100/50 hover:bg-white transition-colors">
-            <Image
-              src="/screenshots/yachai-icon.png"
-              alt="WellnessCoach Icon"
-              width={56}
-              height={56}
-              className="rounded-xl md:rounded-2xl transition-transform group-hover:scale-105 md:w-[64px] md:h-[64px]"
-            />
-            <span className="text-2xl md:text-3xl font-black text-sky-900 tracking-tighter">Yachai</span>
-          </div>
+          <span className="text-6xl md:text-8xl font-black text-sky-900 tracking-tighter drop-shadow-sm">
+            Yachai
+          </span>
         </motion.div>
 
         <div className="relative z-10 max-w-5xl w-full text-center space-y-10 px-4">
@@ -154,7 +147,7 @@ export default function Home() {
             transition={{ delay: 0.4, duration: 0.8 }}
             className="text-lg md:text-3xl text-gray-500 max-w-3xl mx-auto leading-tight font-medium"
           >
-            Yachai è l&apos;assistente definitivo che ti aiuta a capire il tuo corpo e la tua mente attraverso la tecnologia più avanzata.
+            <span className="font-extrabold text-sky-900">Yachai</span> è l&apos;assistente definitivo che ti aiuta a capire il tuo corpo e la tua mente attraverso la tecnologia più avanzata.
           </motion.p>
 
           {/* Platform Switcher */}
@@ -199,7 +192,7 @@ export default function Home() {
                       className="px-12 py-8 bg-gradient-to-r from-sky-400 to-indigo-500 text-white rounded-[3rem] font-black text-2xl md:text-3xl hover:scale-105 active:scale-95 transition-all shadow-[0_25px_60px_-15px_rgba(56,189,248,0.4)] flex items-center gap-4 no-underline"
                     >
                       <Smartphone size={32} strokeWidth={3} />
-                      Scarica ora l&apos;App
+                      Scarica ora Yachai!
                     </a>
                     <div className="flex flex-col items-center">
                       <p className="text-gray-400 font-bold flex items-center gap-2">
@@ -257,7 +250,7 @@ export default function Home() {
                       <p className="text-gray-500 font-medium text-base md:text-lg leading-snug">
                         {formStatus === "success"
                           ? "Grazie per l'interesse! Controlla la tua email nei prossimi giorni per l'invito ufficiale a TestFlight."
-                          : "La versione iOS è in fase di test privato. Compila il form per farti aggiungere al gruppo ufficiale su TestFlight."}
+                          : "La versione iOS è in fase di test privato. Compila il form per essere aggiunto al gruppo ufficiale su TestFlight."}
                       </p>
                     </div>
 
@@ -271,6 +264,8 @@ export default function Home() {
                           onSubmit={handleSubmit}
                           name="ios-beta-testers"
                           method="POST"
+                          data-netlify="true"
+                          data-netlify-honeypot="bot-field"
                         >
                           {/* Hidden Netlify Inputs */}
                           <input type="hidden" name="form-name" value="ios-beta-testers" />
@@ -364,7 +359,7 @@ export default function Home() {
               Tutto quello di cui hai bisogno
             </h2>
             <p className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto font-medium">
-              Funzionalità avanzate basate su AI per monitorare ogni aspetto del tuo benessere
+              <span className="font-extrabold text-sky-600">Yachai</span> usa funzionalità avanzate basate su AI per monitorare ogni aspetto del tuo benessere
             </p>
           </motion.div>
 
@@ -410,20 +405,25 @@ export default function Home() {
         <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center">
           {/* App Icon */}
           <div className="mb-12 p-3 bg-white rounded-[2rem] shadow-xl border border-sky-100/50">
-            <Image
-              src="/screenshots/yachai-icon.png"
-              width={100}
-              height={100}
-              alt="Yachai Icon"
-              className="rounded-2xl"
-            />
+            <div className="rounded-[1.5rem] overflow-hidden">
+              <Image
+                src="/screenshots/yachai-icon.png"
+                width={140}
+                height={140}
+                alt="Yachai Icon"
+                className="object-cover"
+              />
+            </div>
           </div>
 
+
+
+
           <h2 className="text-5xl md:text-7xl font-black mb-8 tracking-tighter text-white drop-shadow-sm">
-            Inizia oggi il tuo percorso di benessere
+            Inizia oggi il tuo percorso di benessere con Yachai!
           </h2>
           <p className="text-xl md:text-2xl text-sky-50 max-w-2xl mx-auto font-medium mb-16 leading-relaxed">
-            Scarica Yachai gratuitamente e scopri come la tecnologia può trasformare la tua salute.
+            Scarica <span className="font-extrabold text-white">Yachai</span> gratuitamente e scopri come la tecnologia può trasformare la tua salute.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-10">
@@ -434,7 +434,7 @@ export default function Home() {
               className="px-14 py-8 bg-white text-purple-700 rounded-[3rem] font-black text-2xl hover:scale-105 active:scale-95 transition-all shadow-[0_30px_60px_-10px_rgba(0,0,0,0.3)] flex items-center gap-4 no-underline"
             >
               <Smartphone size={32} />
-              Scarica gratis
+              Scarica Yachai
             </a>
             <div className="flex flex-col items-center space-y-4 p-6 rounded-[3rem] bg-white/10 backdrop-blur-xl border border-white/20">
               <div className="flex items-center gap-3 text-white">
@@ -467,6 +467,15 @@ export default function Home() {
           </p>
         </div>
       </footer >
+
+      {/* Netlify Form Discovery (Ghost Form) */}
+      <form name="ios-beta-testers" data-netlify="true" netlify-honeypot="bot-field" hidden>
+        <input type="hidden" name="form-name" value="ios-beta-testers" />
+        <input type="text" name="nome" />
+        <input type="text" name="cognome" />
+        <input type="email" name="email" />
+        <textarea name="bot-field"></textarea>
+      </form>
 
     </main >
   )

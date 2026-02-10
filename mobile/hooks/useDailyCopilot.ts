@@ -154,16 +154,25 @@ export const useDailyCopilot = () => {
     const now = new Date();
     const currentHour = now.getHours();
 
-    // If it's past 18:00 and we don't have today's recommendations, try to load
-    if (currentHour >= 18) {
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    // 🔥 FIX: Get the user's preferred recommendation time instead of hardcoded 18:00
+    try {
+      const currentUser = await (await import('../services/auth.service')).AuthService.getCurrentUser();
+      if (!currentUser?.id) return;
 
-      // If copilotData doesn't exist or is from yesterday, reload
-      if (!copilotData || !copilotData.recommendations || copilotData.recommendations.length === 0) {
-        await loadCopilotData();
+      const recommendationTime = await copilotService.getRecommendationTime(currentUser.id);
+
+      // If it's past the recommendation time and we don't have today's recommendations, try to load
+      if (currentHour >= recommendationTime) {
+        // If copilotData doesn't exist or is from yesterday (or empty), reload
+        if (!copilotData || !copilotData.recommendations || copilotData.recommendations.length === 0) {
+          console.log(`[COPILOT HOOK] Past recommendation time (${recommendationTime}:00), reloading data...`);
+          await loadCopilotData();
+        }
       }
+    } catch (err) {
+      console.warn('[COPILOT HOOK] Error checking for new recommendations:', err);
     }
-  }, [copilotData, loadCopilotData]);
+  }, [copilotData, loadCopilotData, copilotService]);
 
   return {
     // Complete data (score + recommendations)

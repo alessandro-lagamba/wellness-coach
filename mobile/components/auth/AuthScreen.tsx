@@ -83,53 +83,63 @@ const MeshBackground = ({ mode }: { mode: 'light' | 'dark' }) => {
   );
 };
 
-// Refined Premium Petal Logo
+// Refined Premium Logo with Meditating Image and Ethereal Glow
 const PetalLogo = () => {
+  const { mode } = useTheme();
+
+  // Theme-aware colors
+  const primaryGlow = mode === 'dark' ? '#8B5CF6' : '#A78BFA';
+  const secondaryGlow = mode === 'dark' ? '#4338ca' : '#C4B5FD';
+  const coreBg = mode === 'dark' ? 'rgba(30, 41, 59, 0.4)' : 'rgba(241, 245, 249, 0.6)';
+
   return (
-    <View style={{ width: 120, height: 120, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-      {/* Outer Glow Halo */}
-      <View style={{
-        position: 'absolute',
-        width: 140,
-        height: 140,
-        borderRadius: 70,
-        backgroundColor: 'rgba(139, 92, 246, 0.1)',
-        transform: [{ scale: 1.1 }],
-      }} />
+    <View style={{ width: 200, height: 200, alignItems: 'center', justifyContent: 'center', marginBottom: 32 }}>
+      {/* Dynamic SVG Glow Layers */}
+      <Svg height="300" width="300" style={{ position: 'absolute' }}>
+        <Defs>
+          <RadialGradient id="mainGlow" cx="50%" cy="50%" rx="50%" ry="50%" fx="50%" fy="50%">
+            <Stop offset="0%" stopColor={primaryGlow} stopOpacity={mode === 'dark' ? "0.6" : "0.4"} />
+            <Stop offset="40%" stopColor={secondaryGlow} stopOpacity={mode === 'dark' ? "0.3" : "0.2"} />
+            <Stop offset="80%" stopColor={primaryGlow} stopOpacity="0" />
+          </RadialGradient>
 
-      {/* Core Center - Golden warmth */}
+          <RadialGradient id="innerCore" cx="50%" cy="50%" rx="50%" ry="50%" fx="50%" fy="50%">
+            <Stop offset="0%" stopColor={coreBg} stopOpacity="1" />
+            <Stop offset="100%" stopColor={coreBg} stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+
+        {/* Outer Halo */}
+        <Circle cx="150" cy="150" r="120" fill="url(#mainGlow)" />
+
+        {/* Inner Soft Core */}
+        <Circle cx="150" cy="150" r="85" fill="url(#innerCore)" />
+      </Svg>
+
+      {/* Additional Animated Glow Layer (Native Shadow for extra depth) */}
       <View style={{
         position: 'absolute',
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: '#FBBF24', // Amber-400
-        zIndex: 30,
-        shadowColor: '#F59E0B',
+        width: 150,
+        height: 150,
+        borderRadius: 75,
+        backgroundColor: 'transparent',
+        shadowColor: primaryGlow,
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,
-        shadowRadius: 10,
-        elevation: 5,
+        shadowOpacity: 0.6,
+        shadowRadius: 40,
+        elevation: 15,
       }} />
 
-      {/* Inner Petals (Darker/Saturated) */}
-      {[0, 60, 120, 180, 240, 300].map((deg, i) => (
-        <View key={`inner-${i}`} style={[styles.premiumPetal, {
-          width: 20, height: 36,
-          backgroundColor: 'rgba(124, 58, 237, 0.9)', // Violet-600
-          transform: [{ rotate: `${deg}deg` }, { translateY: -12 }]
-        }]} />
-      ))}
-
-      {/* Outer Petals (Lighter/Translucent) */}
-      {[30, 90, 150, 210, 270, 330].map((deg, i) => (
-        <View key={`outer-${i}`} style={[styles.premiumPetal, {
-          width: 24, height: 42,
-          backgroundColor: 'rgba(167, 139, 250, 0.6)', // Violet-400
-          transform: [{ rotate: `${deg}deg` }, { translateY: -16 }],
-          zIndex: 5
-        }]} />
-      ))}
+      {/* Meditating Image */}
+      <Image
+        source={require('../../assets/images/yachai-variants/meditating.png')}
+        style={{
+          width: 150,
+          height: 150,
+          resizeMode: 'contain',
+          zIndex: 10
+        }}
+      />
     </View>
   );
 };

@@ -2241,10 +2241,19 @@
       "expectedBenefits": "Expected Benefits",
       "categories": {
         "nutrition": "Nutrition",
+        "nutrizione": "Nutrition",
+        "alimentazione": "Nutrition",
         "energy": "Energy",
+        "energia": "Energy",
         "movement": "Movement",
+        "movimento": "Movement",
+        "attivita": "Movement",
         "recovery": "Recovery",
-        "mindfulness": "Mindfulness"
+        "recupero": "Recovery",
+        "riposo": "Recovery",
+        "mindfulness": "Mindfulness",
+        "meditazione": "Mindfulness",
+        "consapevolezza": "Mindfulness"
       }
     },
     "pillDetail": {

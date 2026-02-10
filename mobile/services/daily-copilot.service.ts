@@ -5,6 +5,11 @@ import DailyCopilotDBService from './daily-copilot-db.service';
 import { RetryService } from './retry.service';
 import { getUserLanguage, getLanguageInstruction } from './language.service';
 import { widgetGoalsService } from './widget-goals.service';
+import { supabase } from '../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { FoodAnalysisService } from './food-analysis.service';
+import { HealthDataService } from './health-data.service';
+import { NotificationService } from './notifications.service';
 
 export interface ThemeIndicator {
   icon: string;
@@ -147,7 +152,12 @@ class DailyCopilotService {
 
       if (currentHour >= recommendationTime) {
         // Generate new recommendations
-        return await this.generateDailyRecommendations();
+        const result = await this.generateDailyRecommendations();
+        if (result) return result;
+
+        // Se la generazione fallisce (es. per mancanza temporanea di dati sincronizzati),
+        // proviamo a restituire comunque i dati di ieri come guida temporanea invece di un null
+        console.log('⚠️ [COPILOT] Recommendation generation returned null, falling back to yesterday data as guide');
       }
 
       // Before recommendation time: return yesterday's recommendations with today's score
@@ -303,7 +313,6 @@ class DailyCopilotService {
    */
   async getRecommendationTime(userId: string): Promise<number> {
     try {
-      const { supabase } = await import('../lib/supabase');
       const { data } = await supabase
         .from('user_profiles')
         .select('recommendation_time')
@@ -322,7 +331,6 @@ class DailyCopilotService {
    */
   async updateRecommendationTime(userId: string, time: number): Promise<boolean> {
     try {
-      const { supabase } = await import('../lib/supabase');
       const { error } = await supabase
         .from('user_profiles')
         .update({ recommendation_time: time })
@@ -335,7 +343,6 @@ class DailyCopilotService {
 
       // 🔥 FIX: Update local notification schedule
       try {
-        const { NotificationService } = await import('./notifications.service');
         await NotificationService.scheduleDailyCopilot(time, 0);
         console.log(`✅ Daily Copilot notification rescheduled to ${time}:00`);
       } catch (notifError) {
@@ -425,25 +432,27 @@ class DailyCopilotService {
         return null;
       }
 
-      const { supabase } = await import('../lib/supabase');
       const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const today = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0')
+      ].join('-');
 
-      // 🔥 FIX: Leggi SOLO i dati di OGGI
+      // 🔥 FIX: Leggi i dati dalla tabella corretta 'daily_checkins'
       const { data: todayCheckin } = await supabase
-        .from('daily_copilot_analyses')
-        .select('mood')
+        .from('daily_checkins')
+        .select('mood_value')
         .eq('user_id', currentUser.id)
         .eq('date', today)
         .maybeSingle();
 
-      if (todayCheckin?.mood !== null && todayCheckin?.mood !== undefined) {
-        console.log('✅ Daily Copilot: Using today\'s mood:', todayCheckin.mood);
-        return todayCheckin.mood;
+      if (todayCheckin?.mood_value !== null && todayCheckin?.mood_value !== undefined) {
+        console.log('✅ Daily Copilot: Using today\'s manual check-in mood:', todayCheckin.mood_value);
+        return todayCheckin.mood_value;
       }
 
       // Fallback ad AsyncStorage per retrocompatibilità (solo se di oggi)
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const savedMood = await AsyncStorage.getItem(`checkin:mood:${today}`);
       if (savedMood) {
         return parseInt(savedMood, 10);
@@ -470,26 +479,52 @@ class DailyCopilotService {
         return null;
       }
 
-      const { supabase } = await import('../lib/supabase');
       const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const today = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0')
+      ].join('-');
 
-      // 1. Check-in Manuale
+      // 🔥 FIX: Leggi i dati dalla tabella corretta 'daily_checkins'
       const { data: todayCheckin } = await supabase
-        .from('daily_copilot_analyses')
-        .select('sleep_hours, sleep_quality')
+        .from('daily_checkins')
+        .select('sleep_quality')
         .eq('user_id', currentUser.id)
         .eq('date', today)
         .maybeSingle();
 
-      if (todayCheckin && (todayCheckin.sleep_hours || todayCheckin.sleep_quality)) {
-        console.log('✅ Daily Copilot: Using today\'s MANUAL check-in sleep:', {
-          hours: todayCheckin.sleep_hours,
-          quality: todayCheckin.sleep_quality
-        });
+      // Convertiamo sleep_quality (0-100) in scala 1-5 se necessario, 
+      // ma il servizio si aspetta hours e quality separati.
+      // HealthDataSyncService salva già sleep_hours nella tabella health_data.
+      // Qui cerchiamo il check-in manuale della qualità/stanchezza.
+      if (todayCheckin && todayCheckin.sleep_quality !== null) {
+        // Recuperiamo le ore di sonno effettive dalla tabella health_data o usiamo un default
+        const { data: hData } = await supabase
+          .from('health_data')
+          .select('sleep_hours')
+          .eq('user_id', currentUser.id)
+          .eq('date', today)
+          .maybeSingle();
+
+        console.log('✅ Daily Copilot: Using today\'s MANUAL check-in sleep quality:', todayCheckin.sleep_quality);
         return {
-          hours: todayCheckin.sleep_hours || 7.5,
-          quality: todayCheckin.sleep_quality || 80
+          hours: hData?.sleep_hours || 7.5,
+          quality: todayCheckin.sleep_quality
+        };
+      }
+
+      // Fallback ad AsyncStorage (fondamentale per iOS se il sync non è ancora finito)
+      const savedSleep = await AsyncStorage.getItem(`checkin:sleep:${today}`);
+      const savedRest = await AsyncStorage.getItem(`checkin:rest_level:${today}`);
+
+      if (savedSleep || savedRest) {
+        const hours = savedSleep ? parseFloat(savedSleep) : 7.5;
+        const restLevel = savedRest ? parseInt(savedRest, 10) : 3;
+        console.log('✅ Daily Copilot: Using today\'s local AsyncStorage sleep data');
+        return {
+          hours,
+          quality: restLevel * 20 // Converti 1-5 in 0-100
         };
       }
 
@@ -523,9 +558,12 @@ class DailyCopilotService {
         return { steps: null, hrv: null, hydration: null, calories: null, meditationMinutes: null, restingHR: null, sleepHours: null, sleepQuality: null };
       }
 
-      const { supabase } = await import('../lib/supabase');
       const todayDate = new Date();
-      const today = todayDate.toISOString().split('T')[0];
+      const today = [
+        todayDate.getFullYear(),
+        String(todayDate.getMonth() + 1).padStart(2, '0'),
+        String(todayDate.getDate()).padStart(2, '0')
+      ].join('-');
 
       const { data: healthData } = await supabase
         .from('health_data')
@@ -538,7 +576,6 @@ class DailyCopilotService {
         // 🔥 FIX: Use consumed calories from FoodAnalysisService instead of HealthKit burned calories
         let consumedCalories = null;
         try {
-          const { FoodAnalysisService } = await import('./food-analysis.service');
           const intake = await FoodAnalysisService.getDailyIntake(currentUser.id, todayDate);
           consumedCalories = intake.calories;
         } catch (e) {
@@ -562,7 +599,6 @@ class DailyCopilotService {
 
       // Try HealthDataService as fallback source for real data
       try {
-        const { HealthDataService } = await import('./health-data.service');
         const healthService = HealthDataService.getInstance();
         const syncResult = await healthService.syncHealthData(false);
 
@@ -624,7 +660,6 @@ class DailyCopilotService {
    */
   private async getUserActivityLevel(userId: string): Promise<ActivityLevel | undefined> {
     try {
-      const { supabase } = await import('../lib/supabase');
       const { data } = await supabase
         .from('user_profiles')
         .select('activity_level')
@@ -773,7 +808,7 @@ OUTPUT FORMAT(return ONLY valid JSON):
           const timeoutId = setTimeout(() => controller.abort(), 30000);
 
           try {
-            const response = await fetch(`${backendURL} /api/chat / respond`, {
+            const response = await fetch(`${backendURL}/api/chat/respond`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -894,7 +929,7 @@ OUTPUT FORMAT(return ONLY valid JSON):
         let recommendations = parsedData.recommendations.map((rec: any, index: number) => ({
           id: rec.id || `ai - rec - ${index} `,
           priority: rec.priority || 'medium',
-          category: rec.category || 'energy',
+          category: this.normalizeRecommendationCategory(rec.category),
           action: rec.action || 'Azione generica',
           reason: rec.reason || 'Motivo generico',
           icon: rec.icon || '💡',
@@ -930,8 +965,8 @@ OUTPUT FORMAT(return ONLY valid JSON):
         return {
           overallScore: deterministicScore,
           scoreDetails: scoreResult,
-          mood: data.mood,
-          sleep: data.sleep,
+          mood: this.normalizeMoodValue(data.mood),
+          sleep: this.normalizeSleepData(data),
           healthMetrics: data.healthMetrics,
           recommendations,
           summary: (() => {
@@ -1008,6 +1043,56 @@ OUTPUT FORMAT(return ONLY valid JSON):
   }
 
   private clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+
+  /**
+   * Normalize nullable sleep data into a persistable payload.
+   * Priority: explicit sleep -> health metrics sleep -> safe defaults.
+   */
+  private normalizeSleepData(data: CopilotAnalysisRequest): { hours: number; quality: number } {
+    const sleepHoursFromMetrics = data.healthMetrics.sleepHours ?? 0;
+    const sleepQualityFromMetrics = data.healthMetrics.sleepQuality ?? 0;
+
+    const hours = Number.isFinite(data.sleep?.hours as number)
+      ? (data.sleep?.hours as number)
+      : sleepHoursFromMetrics;
+    const quality = Number.isFinite(data.sleep?.quality as number)
+      ? (data.sleep?.quality as number)
+      : sleepQualityFromMetrics;
+
+    return {
+      hours: Math.max(0, Math.min(24, hours ?? 0)),
+      quality: Math.max(0, Math.min(100, quality ?? 0)),
+    };
+  }
+
+  private normalizeMoodValue(mood: number | null): number {
+    if (Number.isFinite(mood as number)) {
+      return Math.max(1, Math.min(5, Math.round(mood as number)));
+    }
+    return 3;
+  }
+
+  private normalizeRecommendationCategory(category: unknown): DailyCopilotData['recommendations'][number]['category'] {
+    const normalized = String(category || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s_-]+/g, '');
+
+    if (['nutrition', 'nutrizione', 'alimentazione', 'food', 'cibo', 'diet', 'dieta'].includes(normalized)) {
+      return 'nutrition';
+    }
+    if (['movement', 'movimento', 'activity', 'attivita', 'exercise', 'esercizio', 'fitness', 'allenamento', 'training'].includes(normalized)) {
+      return 'movement';
+    }
+    if (['recovery', 'recupero', 'rest', 'riposo', 'sleep', 'sonno'].includes(normalized)) {
+      return 'recovery';
+    }
+    if (['mindfulness', 'mindfullness', 'meditation', 'meditazione', 'consapevolezza'].includes(normalized)) {
+      return 'mindfulness';
+    }
+    return 'energy';
+  }
 
   /**
    * Calcolo punteggio deterministico
@@ -1380,9 +1465,9 @@ OUTPUT FORMAT(return ONLY valid JSON):
         icon: '☀️',
         estimatedTime: '10 min',
         actionable: true,
-        detailedExplanation: `I tuoi parametri mostrano un buon equilibrio: umore ${data.mood}/5, sonno ${data.sleep.hours}h con qualità ${data.sleep.quality}%, HRV ${displayHrv}. Una passeggiata al sole può ottimizzare ulteriormente questi valori. L'esposizione alla luce naturale regola il ritmo circadiano, aumenta la produzione di vitamina D e migliora l'umore.`,
+        detailedExplanation: `I tuoi parametri mostrano un buon equilibrio: umore ${safeMood}/5, sonno ${safeSleepHours}h con qualità ${safeSleepQuality}%, HRV ${displayHrv}. Una passeggiata al sole può ottimizzare ulteriormente questi valori. L'esposizione alla luce naturale regola il ritmo circadiano, aumenta la produzione di vitamina D e migliora l'umore.`,
         correlations: [
-          `Mood positivo (${data.mood}/5) supportato da buon sonno`,
+          `Mood positivo (${safeMood}/5) supportato da buon sonno`,
           `HRV ${displayHrv} indica buon recupero`,
           `La luce solare regola il ritmo circadiano`
         ],
@@ -1575,7 +1660,7 @@ OUTPUT FORMAT(return ONLY valid JSON):
         ? recommendations.map((rec: any) => ({
           id: rec.id || `rec-${Date.now()}-${Math.random()}`,
           priority: rec.priority || 'medium',
-          category: rec.category || 'energy',
+          category: this.normalizeRecommendationCategory(rec.category),
           action: rec.action || '',
           reason: rec.reason || '',
           icon: rec.icon || '💡',

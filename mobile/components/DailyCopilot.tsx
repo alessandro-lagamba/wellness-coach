@@ -110,7 +110,8 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
   };
 
   const getCategoryIcon = (category: string) => {
-    switch (category) {
+    const normalized = normalizeCategory(category);
+    switch (normalized) {
       case 'nutrition': return 'food-apple';
       case 'movement': return 'run';
       case 'recovery': return 'bed';
@@ -120,8 +121,36 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
     }
   };
 
+  const normalizeCategory = (category: string): 'nutrition' | 'movement' | 'recovery' | 'mindfulness' | 'energy' => {
+    const normalized = (category || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s_-]+/g, '');
+
+    if (['nutrition', 'nutrizione', 'alimentazione', 'food', 'cibo', 'dieta', 'diet'].includes(normalized)) {
+      return 'nutrition';
+    }
+    if (['movement', 'movimento', 'attivita', 'activity', 'exercise', 'esercizio', 'fitness', 'allenamento', 'training'].includes(normalized)) {
+      return 'movement';
+    }
+    if (['recovery', 'recupero', 'rest', 'riposo', 'sleep', 'sonno'].includes(normalized)) {
+      return 'recovery';
+    }
+    if (['mindfulness', 'mindfullness', 'meditation', 'meditazione', 'consapevolezza'].includes(normalized)) {
+      return 'mindfulness';
+    }
+    return 'energy';
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const normalized = normalizeCategory(category);
+    return t(`popups.recommendation.categories.${normalized}`);
+  };
+
   const getCategoryColor = (category: string) => {
-    switch (category) {
+    const normalized = normalizeCategory(category);
+    switch (normalized) {
       case 'nutrition': return '#f59e0b';
       case 'movement': return '#10b981';
       case 'recovery': return '#3b82f6';
@@ -318,7 +347,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                         styles.compactCategoryText,
                         { color: getCategoryColor(rec.category) }
                       ]}>
-                        {t(`popups.recommendation.categories.${rec.category}`)}
+                        {getCategoryLabel(rec.category)}
                       </Text>
                     </View>
                     {rec.estimatedTime && (
@@ -518,7 +547,7 @@ export const DailyCopilot: React.FC<DailyCopilotProps> = memo(({
                             { color: getCategoryColor(rec.category) }
                           ]}
                         >
-                          {t(`popups.recommendation.categories.${rec.category}`)}
+                          {getCategoryLabel(rec.category)}
                         </Text>
                       </View>
                       {rec.estimatedTime && (

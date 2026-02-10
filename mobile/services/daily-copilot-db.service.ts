@@ -39,6 +39,63 @@ export interface DailyCopilotRecord {
 class DailyCopilotDBService {
   private static instance: DailyCopilotDBService;
 
+  private clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  private toFiniteNumber(value: unknown, fallback: number): number {
+    const num = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(num) ? num : fallback;
+  }
+
+  private normalizeForPersistence(copilotData: DailyCopilotData): {
+    overallScore: number;
+    mood: number;
+    sleepHours: number;
+    sleepQuality: number;
+  } {
+    const data = copilotData as DailyCopilotData & {
+      sleep?: { hours?: number | null; quality?: number | null } | null;
+      healthMetrics?: { sleepHours?: number | null; sleepQuality?: number | null } | null;
+    };
+
+    const fallbackSleepHours = this.toFiniteNumber(data.healthMetrics?.sleepHours, 0);
+    const fallbackSleepQuality = this.toFiniteNumber(data.healthMetrics?.sleepQuality, 0);
+
+    const normalized = {
+      overallScore: this.clamp(
+        Math.round(this.toFiniteNumber(data.overallScore, 50)),
+        0,
+        100
+      ),
+      mood: this.clamp(
+        Math.round(this.toFiniteNumber(data.mood, 3)),
+        1,
+        5
+      ),
+      sleepHours: this.clamp(
+        this.toFiniteNumber(data.sleep?.hours, fallbackSleepHours),
+        0,
+        24
+      ),
+      sleepQuality: this.clamp(
+        Math.round(this.toFiniteNumber(data.sleep?.quality, fallbackSleepQuality)),
+        0,
+        100
+      ),
+    };
+
+    if (!data.sleep || !Number.isFinite(data.sleep.hours as number) || !Number.isFinite(data.sleep.quality as number)) {
+      console.warn('⚠️ DailyCopilotDBService: normalized nullable sleep payload before save', {
+        hadSleepObject: !!data.sleep,
+        sleepHours: normalized.sleepHours,
+        sleepQuality: normalized.sleepQuality,
+      });
+    }
+
+    return normalized;
+  }
+
   static getInstance(): DailyCopilotDBService {
     if (!DailyCopilotDBService.instance) {
       DailyCopilotDBService.instance = new DailyCopilotDBService();
@@ -57,14 +114,15 @@ class DailyCopilotDBService {
       // ✅ FIX: Use local timezone for "today" to avoid timezone issues
       const now = new Date();
       const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const normalized = this.normalizeForPersistence(copilotData);
 
       const recordData = {
         user_id: userId,
         date: date,
-        overall_score: copilotData.overallScore,
-        mood: copilotData.mood,
-        sleep_hours: copilotData.sleep.hours,
-        sleep_quality: copilotData.sleep.quality,
+        overall_score: normalized.overallScore,
+        mood: normalized.mood,
+        sleep_hours: normalized.sleepHours,
+        sleep_quality: normalized.sleepQuality,
         health_metrics: copilotData.healthMetrics,
         recommendations: copilotData.recommendations,
         summary: copilotData.summary,

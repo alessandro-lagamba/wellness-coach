@@ -7,28 +7,28 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0C360DED153242C2951C034C /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A49DB692498D4753BB214A11 /* GoogleService-Info.plist */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		3D96839B6E27ACF21BA9889B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A382B136559A9E15E1B5DAD2 /* PrivacyInfo.xcprivacy */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		6451316ADCE11101F074A158 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377AC87D22CA2CC600971B44 /* ExpoModulesProvider.swift */; };
-		6FDC91898D24B77AE254C158 /* libPods-Yachai.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 717D3CD8DB94283275B532F9 /* libPods-Yachai.a */; };
+		6B38DCEB34FE49FBAA9335C2 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 2557A3CAA32743D6B2B533D0 /* GoogleService-Info.plist */; };
+		6E8A7F8593C978D3BA90A8E8 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C773B33588FC5B0E2E6C95E /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		E243B8445A2637AB06281FD5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E982B2504AAC92A811668ADD /* PrivacyInfo.xcprivacy */; };
+		D15CAF5A69797051CEBE1CCB /* libPods-Yachai.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 037B40FEE27379CF975C3C21 /* libPods-Yachai.a */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		037B40FEE27379CF975C3C21 /* libPods-Yachai.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Yachai.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07F961A680F5B00A75B9A /* Yachai.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Yachai.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Yachai/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Yachai/Info.plist; sourceTree = "<group>"; };
-		2EB040BB60D5CF4AC33A468E /* Pods-Yachai.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Yachai.release.xcconfig"; path = "Target Support Files/Pods-Yachai/Pods-Yachai.release.xcconfig"; sourceTree = "<group>"; };
-		377AC87D22CA2CC600971B44 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Yachai/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		717D3CD8DB94283275B532F9 /* libPods-Yachai.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Yachai.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		7837722945E0720B7D2C656D /* Pods-Yachai.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Yachai.debug.xcconfig"; path = "Target Support Files/Pods-Yachai/Pods-Yachai.debug.xcconfig"; sourceTree = "<group>"; };
-		A49DB692498D4753BB214A11 /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Yachai/GoogleService-Info.plist"; sourceTree = "<group>"; };
+		2557A3CAA32743D6B2B533D0 /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Yachai/GoogleService-Info.plist"; sourceTree = "<group>"; };
+		4A73D7D41EA60AF525ABA7C9 /* Pods-Yachai.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Yachai.debug.xcconfig"; path = "Target Support Files/Pods-Yachai/Pods-Yachai.debug.xcconfig"; sourceTree = "<group>"; };
+		8C773B33588FC5B0E2E6C95E /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Yachai/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		A382B136559A9E15E1B5DAD2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = Yachai/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Yachai/SplashScreen.storyboard; sourceTree = "<group>"; };
+		ABE3139F8E845A10405998E6 /* Pods-Yachai.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Yachai.release.xcconfig"; path = "Target Support Files/Pods-Yachai/Pods-Yachai.release.xcconfig"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		E982B2504AAC92A811668ADD /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Yachai/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Yachai/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Yachai-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Yachai-Bridging-Header.h"; path = "Yachai/Yachai-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -39,7 +39,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6FDC91898D24B77AE254C158 /* libPods-Yachai.a in Frameworks */,
+				D15CAF5A69797051CEBE1CCB /* libPods-Yachai.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -55,16 +55,8 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				A49DB692498D4753BB214A11 /* GoogleService-Info.plist */,
-				E982B2504AAC92A811668ADD /* PrivacyInfo.xcprivacy */,
-			);
-			name = Yachai;
-			sourceTree = "<group>";
-		};
-		1EE4CA379E623C532C36AE5A /* Yachai */ = {
-			isa = PBXGroup;
-			children = (
-				377AC87D22CA2CC600971B44 /* ExpoModulesProvider.swift */,
+				2557A3CAA32743D6B2B533D0 /* GoogleService-Info.plist */,
+				A382B136559A9E15E1B5DAD2 /* PrivacyInfo.xcprivacy */,
 			);
 			name = Yachai;
 			sourceTree = "<group>";
@@ -73,27 +65,9 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				717D3CD8DB94283275B532F9 /* libPods-Yachai.a */,
+				037B40FEE27379CF975C3C21 /* libPods-Yachai.a */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		610DC3A05051C039BBE8A658 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				1EE4CA379E623C532C36AE5A /* Yachai */,
-			);
-			name = ExpoModulesProviders;
-			sourceTree = "<group>";
-		};
-		7077E74ED5E9C2E144004D80 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				7837722945E0720B7D2C656D /* Pods-Yachai.debug.xcconfig */,
-				2EB040BB60D5CF4AC33A468E /* Pods-Yachai.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -110,8 +84,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				7077E74ED5E9C2E144004D80 /* Pods */,
-				610DC3A05051C039BBE8A658 /* ExpoModulesProviders */,
+				CA9442D26B7614A440818AE2 /* Pods */,
+				C89DCA70014B05605751AAB0 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -135,6 +109,31 @@
 			path = Yachai/Supporting;
 			sourceTree = "<group>";
 		};
+		C641EAACFB54F0A7C23234F9 /* Yachai */ = {
+			isa = PBXGroup;
+			children = (
+				8C773B33588FC5B0E2E6C95E /* ExpoModulesProvider.swift */,
+			);
+			name = Yachai;
+			sourceTree = "<group>";
+		};
+		C89DCA70014B05605751AAB0 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				C641EAACFB54F0A7C23234F9 /* Yachai */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
+		CA9442D26B7614A440818AE2 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				4A73D7D41EA60AF525ABA7C9 /* Pods-Yachai.debug.xcconfig */,
+				ABE3139F8E845A10405998E6 /* Pods-Yachai.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -143,13 +142,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Yachai" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				D69BB3E16B985E7382AC7877 /* [Expo] Configure project */,
+				3A8B94671E7D743D755D2BA3 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				8E41A482BE937AE50D901A5E /* [CP] Embed Pods Frameworks */,
+				C03C8902B7CEA90767D00414 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -199,8 +198,8 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				0C360DED153242C2951C034C /* GoogleService-Info.plist in Resources */,
-				E243B8445A2637AB06281FD5 /* PrivacyInfo.xcprivacy in Resources */,
+				6B38DCEB34FE49FBAA9335C2 /* GoogleService-Info.plist in Resources */,
+				3D96839B6E27ACF21BA9889B /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -245,6 +244,30 @@
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
+		};
+		3A8B94671E7D743D755D2BA3 /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.xcode.env",
+				"$(SRCROOT)/.xcode.env.local",
+				"$(SRCROOT)/Yachai/Yachai.entitlements",
+				"$(SRCROOT)/Pods/Target Support Files/Pods-Yachai/expo-configure-project.sh",
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Pods/Target Support Files/Pods-Yachai/ExpoModulesProvider.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Yachai/expo-configure-project.sh\"\n";
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -294,7 +317,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Yachai/Pods-Yachai-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		8E41A482BE937AE50D901A5E /* [CP] Embed Pods Frameworks */ = {
+		C03C8902B7CEA90767D00414 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -318,30 +341,6 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Yachai/Pods-Yachai-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		D69BB3E16B985E7382AC7877 /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/.xcode.env",
-				"$(SRCROOT)/.xcode.env.local",
-				"$(SRCROOT)/Yachai/Yachai.entitlements",
-				"$(SRCROOT)/Pods/Target Support Files/Pods-Yachai/expo-configure-project.sh",
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(SRCROOT)/Pods/Target Support Files/Pods-Yachai/ExpoModulesProvider.swift",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Yachai/expo-configure-project.sh\"\n";
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -350,7 +349,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				6451316ADCE11101F074A158 /* ExpoModulesProvider.swift in Sources */,
+				6E8A7F8593C978D3BA90A8E8 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -359,13 +358,16 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 7837722945E0720B7D2C656D /* Pods-Yachai.debug.xcconfig */;
+			baseConfigurationReference = 4A73D7D41EA60AF525ABA7C9 /* Pods-Yachai.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Yachai/Yachai.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = V4VB38G95T;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = V4VB38G95T;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -386,6 +388,8 @@
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.labellapartners.wellnesscoach;
 				PRODUCT_NAME = Yachai;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Wellness Coach LBP";
 				SWIFT_OBJC_BRIDGING_HEADER = "Yachai/Yachai-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -396,13 +400,16 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 2EB040BB60D5CF4AC33A468E /* Pods-Yachai.release.xcconfig */;
+			baseConfigurationReference = ABE3139F8E845A10405998E6 /* Pods-Yachai.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Yachai/Yachai.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = V4VB38G95T;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = V4VB38G95T;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Yachai/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -419,6 +426,8 @@
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.labellapartners.wellnesscoach;
 				PRODUCT_NAME = Yachai;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Wellness Coach LBP";
 				SWIFT_OBJC_BRIDGING_HEADER = "Yachai/Yachai-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -482,7 +491,7 @@
 				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../node_modules/react-native";
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../node_modules/.pnpm/react-native@0.81.5_@babel+core@7.28.6_@react-native-community+cli@20.1.1_typescript@5._ce9ec3a6f626c5a45cb0dc2257cb9339/node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
@@ -538,7 +547,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
 				MTL_ENABLE_DEBUG_INFO = NO;
-				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../node_modules/react-native";
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../node_modules/.pnpm/react-native@0.81.5_@babel+core@7.28.6_@react-native-community+cli@20.1.1_typescript@5._ce9ec3a6f626c5a45cb0dc2257cb9339/node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				USE_HERMES = true;
