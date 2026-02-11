@@ -2651,6 +2651,7 @@
   },
   "auth": {
     "welcome": "Benvenuto",
+    "welcomePrefix": "Ciao, sono ",
     "createAccount": "Crea Account",
     "loginSubtitle": "Accedi al tuo account Yachai",
     "signupSubtitle": "Inizia il tuo percorso di benessere",
@@ -3031,6 +3032,57 @@
       "medium": "Medio",
       "high": "Alto",
       "veryHigh": "Molto Alto"
+    }
+  },
+  "yachaiInfo": {
+    "hero": {
+      "title": "Yachai",
+      "subtitle": "Il nome Yachai nasce dall’unione di due mondi che dialogano in modo naturale."
+    },
+    "meaning": {
+      "title": "Yachay",
+      "definition": "In lingua quechua, significa sapere profondo, conoscenza consapevole.",
+      "description": "Non è solo informazione: è la conoscenza che nasce dall’ascolto di sé, dall’esperienza del corpo, dalle emozioni, dal rapporto con la natura e con il tempo.",
+      "philosophy": "Nel pensiero andino, yachay è una forma di intelligenza integrata: mente, corpo e spirito non sono separati, ma parti di un unico equilibrio."
+    },
+    "ai": {
+      "title": "AI (Artificial Intelligence)",
+      "description": "Rappresenta la tecnologia che oggi ci permette di osservare, comprendere e interpretare la complessità della nostra vita quotidiana."
+    },
+    "concept": {
+      "title": "Cosa rappresenta Yachai",
+      "description": "Yachai è uno spazio di consapevolezza guidata, dove la tecnologia non sostituisce l’ascolto interiore, ma lo amplifica.",
+      "highlight": "consapevolezza guidata"
+    },
+    "integration": {
+      "title": "Yachai integra:",
+      "health": {
+        "title": "Salute",
+        "content": "per comprendere i segnali del corpo"
+      },
+      "emotions": {
+        "title": "Emozioni",
+        "content": "per dare un nome e un senso a ciò che sentiamo"
+      },
+      "skin": {
+        "title": "Pelle",
+        "content": "come specchio dello stato interno"
+      },
+      "food": {
+        "title": "Cibo",
+        "content": "come nutrimento, non solo calorie"
+      },
+      "diary": {
+        "title": "Diario",
+        "content": "come strumento di riflessione e crescita"
+      }
+    },
+    "footer": {
+      "philosophy1": "Yachai non dice cosa fare:",
+      "italic1": "aiuta a capire.",
+      "philosophy2": "Non impone regole:",
+      "italic2": "costruisce consapevolezza.",
+      "last": "Ti supporta in un percorso integrato alla ricerca del tuo benessere."
     }
   }
 }

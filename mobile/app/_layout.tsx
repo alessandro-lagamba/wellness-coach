@@ -285,6 +285,7 @@ function RootLayoutNavInner({ onAuthSuccess }: { onAuthSuccess: (user: any) => v
                 />
                 <Stack.Screen name="breathing-exercise" options={{ headerShown: false }} />
                 <Stack.Screen name="auth/confirm" options={{ headerShown: false }} />
+                <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
                 <Stack.Screen name="reset-password" options={{ headerShown: false }} />
               </Stack>
             </NavThemeProvider>

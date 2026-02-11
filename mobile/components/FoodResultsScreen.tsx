@@ -43,7 +43,7 @@ interface FoodResultsScreenProps {
 }
 
 // Video URI per Food Analysis
-const heroVideoUri = require('../assets/videos/food-analysis-video.mp4');
+const heroVideoUri = require('../assets/videos/food-analysis-video-old.mp4');
 
 export const FoodResultsScreen: React.FC<FoodResultsScreenProps> = ({
   results,

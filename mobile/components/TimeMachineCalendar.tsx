@@ -35,6 +35,8 @@ interface TimeMachineCalendarProps {
     showYearSelector?: boolean;
     headerLabel?: string;
     headerIcon?: string;
+    yearStart?: number;
+    yearEnd?: number;
 }
 
 export const TimeMachineCalendar: React.FC<TimeMachineCalendarProps> = ({
@@ -52,6 +54,8 @@ export const TimeMachineCalendar: React.FC<TimeMachineCalendarProps> = ({
     showYearSelector = false,
     headerLabel,
     headerIcon = 'clock-time-three-outline',
+    yearStart,
+    yearEnd,
 }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -206,7 +210,12 @@ export const TimeMachineCalendar: React.FC<TimeMachineCalendarProps> = ({
 
     // Generate year selector range
     const currentYear = new Date().getFullYear();
-    const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
+    const computedYearStart = yearStart ?? currentYear - 2;
+    const computedYearEnd = Math.min(yearEnd ?? currentYear + 2, currentYear);
+    const years = Array.from(
+        { length: Math.max(0, computedYearEnd - computedYearStart + 1) },
+        (_, i) => computedYearEnd - i
+    );
 
     return (
         <Modal visible={visible} transparent animationType="slide">
@@ -229,7 +238,7 @@ export const TimeMachineCalendar: React.FC<TimeMachineCalendarProps> = ({
                     {/* Year Selector (optional) */}
                     {showYearSelector && (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.yearSelector} contentContainerStyle={styles.yearSelectorContent}>
-                            {years.filter(y => y <= currentYear).map(year => {
+                            {years.map(year => {
                                 const active = year === currentMonth.getFullYear();
                                 return (
                                     <TouchableOpacity

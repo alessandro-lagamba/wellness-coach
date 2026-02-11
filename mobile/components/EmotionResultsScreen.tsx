@@ -38,7 +38,7 @@ interface EmotionResultsScreenProps {
 }
 
 // Video URI per Emotion Analysis
-const heroVideoUri = require('../assets/videos/emotion-detection-video.mp4');
+const heroVideoUri = require('../assets/videos/emotion-detection-video-old.mp4');
 
 export const EmotionResultsScreen: React.FC<EmotionResultsScreenProps> = ({
   currentEmotion,

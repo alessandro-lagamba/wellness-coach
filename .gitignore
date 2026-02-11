@@ -121,3 +121,8 @@ GoogleService-Info.plist
 # Mobile
 google-services.json
 **/google-services.json
+
+# Legal Documents
+01-privacy-policy.md
+02-consent-texts.md
+03-terms-conditions.md

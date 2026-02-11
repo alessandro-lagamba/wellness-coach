@@ -37,6 +37,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [showPermissionNotice, setShowPermissionNotice] = useState(false);
 
   const hasCheckedPermissionsRef = useRef<boolean>(false); // 🔥 Previene controlli multipli
   // 🔥 FIX: Memory leak - aggiungiamo ref per tracciare se il componente è montato
@@ -171,6 +172,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
       // Reset quando il modal viene chiuso
       hasCheckedPermissionsRef.current = false;
       isClosingRef.current = false;
+      setShowPermissionNotice(false);
     }
   }, [visible, loadPermissionsState]);
 
@@ -184,7 +186,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
     });
   };
 
-  const handleRequestPermissions = async () => {
+  const performPermissionRequest = async () => {
     // 🔥 FIX: Verifica se il componente è ancora montato
     if (!isMountedRef.current) return;
 
@@ -354,7 +356,12 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
     }
   };
 
+  const handleRequestPermissions = () => {
+    setShowPermissionNotice(true);
+  };
+
   const handleSkip = async () => {
+    setShowPermissionNotice(false);
     onClose();
   };
 
@@ -605,6 +612,40 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                   </TouchableOpacity>
                 </View>
               </View>
+
+              {showPermissionNotice && (
+                <View style={styles.noticeOverlay}>
+                  <View style={styles.noticeCard}>
+                    <Text style={styles.noticeTitle}>
+                      {Platform.OS === 'ios' ? 'Accesso ai dati salute' : 'Accesso ai dati fitness'}
+                    </Text>
+                    <Text style={styles.noticeBody}>
+                      {Platform.OS === 'ios'
+                        ? `Per personalizzare le tue raccomandazioni, Yachai ha bisogno di leggere alcuni dati da Apple Health:\n\n• Peso e altezza\n• Frequenza cardiaca e HRV\n• Qualità del sonno\n• Numero di passi\n\nCome utilizziamo questi dati:\n✓ Generare suggerimenti su misura per te\n✓ Tracciare i tuoi progressi\n✓ Creare insight personalizzati\n\nPrivacy e sicurezza:\n🔒 I tuoi dati sono cifrati e protetti\n🔒 Non condividiamo i dati salute con terze parti per scopi pubblicitari\n🔒 Puoi revocare l'accesso in qualsiasi momento\n\nI dati salute sono trattati in base al consenso che ci hai fornito.`
+                        : `Per personalizzare le tue raccomandazioni, Yachai ha bisogno di leggere alcuni dati da Google Fit:\n\n• Peso e altezza\n• Battito cardiaco\n• Sonno\n• Passi\n\nCome utilizziamo questi dati:\n✓ Generare suggerimenti su misura per te\n✓ Tracciare i tuoi progressi\n✓ Creare insight personalizzati\n\nPrivacy e sicurezza:\n🔒 I tuoi dati sono cifrati e protetti\n🔒 Non condividiamo i dati salute con terze parti per scopi pubblicitari\n🔒 Puoi revocare l'accesso in qualsiasi momento\n\nI dati salute sono trattati in base al consenso che ci hai fornito.`}
+                    </Text>
+                    <View style={styles.noticeButtons}>
+                      <TouchableOpacity
+                        style={styles.noticeSecondaryButton}
+                        onPress={handleSkip}
+                        disabled={isRequesting}
+                      >
+                        <Text style={styles.noticeSecondaryButtonText}>Non ora</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.noticePrimaryButton}
+                        onPress={async () => {
+                          setShowPermissionNotice(false);
+                          await performPermissionRequest();
+                        }}
+                        disabled={isRequesting}
+                      >
+                        <Text style={styles.noticePrimaryButtonText}>Continua</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              )}
             </LinearGradient>
           </View>
         </BlurView>
@@ -863,5 +904,65 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     flexShrink: 1,
     textAlign: 'center',
+  },
+  noticeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(3, 7, 18, 0.86)',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 20,
+  },
+  noticeCard: {
+    backgroundColor: '#0f172a',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.4)',
+    padding: 14,
+    maxHeight: '88%',
+  },
+  noticeTitle: {
+    color: '#fff',
+    fontSize: 19,
+    fontFamily: 'Figtree_700Bold',
+    marginBottom: 10,
+  },
+  noticeBody: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 13,
+    lineHeight: 20,
+    fontFamily: 'Figtree_500Medium',
+  },
+  noticeButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+  },
+  noticeSecondaryButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+  },
+  noticeSecondaryButtonText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    fontFamily: 'Figtree_700Bold',
+  },
+  noticePrimaryButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8B5CF6',
+  },
+  noticePrimaryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'Figtree_700Bold',
   },
 });

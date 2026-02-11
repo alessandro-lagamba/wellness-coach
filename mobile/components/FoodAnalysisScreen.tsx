@@ -193,7 +193,7 @@ interface InsightCard {
 
 const heroImageUri = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=3280&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
 // Video URI per Food Analysis - usando require per file locali
-const heroVideoUri = require('../assets/videos/food-analysis-video.mp4');
+const heroVideoUri = require('../assets/videos/food-analysis-video-old.mp4');
 
 const MIN_SAFE_CALORIES = 1200;
 const MAX_SAFE_CALORIES = 4000;

@@ -108,7 +108,7 @@ const INITIAL_EMOTION_SCORES: Record<Emotion, number> = {
 };
 
 // Video URI per Emotion Detection - usando require per file locali
-const heroVideoUri = require('../assets/videos/emotion-detection-video.mp4');
+const heroVideoUri = require('../assets/videos/emotion-detection-video-old.mp4');
 
 const withAlpha = (color: string | undefined, alpha: string) => {
   if (typeof color === 'string' && color.startsWith('#') && color.length === 7) {

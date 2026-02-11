@@ -30,7 +30,7 @@ interface HeroSectionProps {
     onChatPress: () => void;
     onJournalPress: () => void;
     onTutorialPress: () => void;
-    onSettingsPress: () => void;
+    onInfoPress: () => void;
     onAvatarPress?: () => void;
 }
 
@@ -42,7 +42,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     onChatPress,
     onJournalPress,
     onTutorialPress,
-    onSettingsPress,
+    onInfoPress,
     onAvatarPress,
 }) => {
     const { t, language } = useTranslation();
@@ -83,9 +83,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
                 <TouchableOpacity
                     style={[styles.iconBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.03)' }]}
-                    onPress={onSettingsPress}
+                    onPress={onInfoPress}
                 >
-                    <MaterialCommunityIcons name="cog-outline" size={24} color={colors.text} />
+                    <MaterialCommunityIcons name="information-outline" size={24} color={colors.text} />
                 </TouchableOpacity>
             </View>
 

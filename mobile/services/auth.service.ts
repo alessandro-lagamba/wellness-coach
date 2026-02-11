@@ -1,8 +1,81 @@
 import { supabase, Tables, UserProfile } from '../lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { AuthPersistenceService } from './auth-persistence.service';
+import * as WebBrowser from 'expo-web-browser';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export class AuthService {
+  private static readonly APP_SCHEME = 'yachai';
+
+  private static getRedirectUri(path: string): string {
+    const normalizedPath = path.replace(/^\/+/, '');
+    return `${this.APP_SCHEME}://${normalizedPath}`;
+  }
+
+  private static parseAuthCallbackParams(url: string): URLSearchParams {
+    const [beforeHash, hashPart = ''] = url.split('#');
+    const queryPart = beforeHash.includes('?') ? beforeHash.split('?')[1] : '';
+    const merged = [queryPart, hashPart].filter(Boolean).join('&');
+    return new URLSearchParams(merged);
+  }
+
+  /**
+   * Gestisce callback OAuth da deep link e imposta la sessione Supabase.
+   * Supporta sia access_token/refresh_token che code flow.
+   */
+  static async handleOAuthCallback(url: string): Promise<{ user: User | null; error: any; cancelled?: boolean }> {
+    try {
+      const params = this.parseAuthCallbackParams(url);
+      const oauthError = params.get('error_description') || params.get('error');
+      if (oauthError) {
+        return { user: null, error: new Error(oauthError) };
+      }
+
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+
+      if (accessToken && refreshToken) {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (error) {
+          return { user: null, error };
+        }
+
+        if (data.user && data.session) {
+          await AuthPersistenceService.saveAuthData(data.user, data.session, true);
+          return { user: data.user, error: null };
+        }
+      }
+
+      const authAny = supabase.auth as any;
+      const code = params.get('code');
+      if (code && typeof authAny.exchangeCodeForSession === 'function') {
+        const { data, error } = await authAny.exchangeCodeForSession(code);
+        if (error) {
+          return { user: null, error };
+        }
+        if (data?.user && data?.session) {
+          await AuthPersistenceService.saveAuthData(data.user, data.session, true);
+          return { user: data.user, error: null };
+        }
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await AuthPersistenceService.saveAuthData(session.user, session, true);
+        return { user: session.user, error: null };
+      }
+
+      return { user: null, error: new Error('OAuth callback non contiene token/sessione valida') };
+    } catch (error) {
+      return { user: null, error };
+    }
+  }
+
   /**
    * Ottiene l'utente corrente
    */
@@ -109,6 +182,14 @@ export class AuthService {
       last_name?: string;
       age?: number;
       gender?: string;
+      birth_date?: string;
+      terms_consent_accepted?: boolean;
+      terms_consent_accepted_at?: string;
+      terms_consent_ip?: string | null;
+      health_consent_accepted?: boolean;
+      health_consent_accepted_at?: string;
+      health_consent_ip?: string | null;
+      consent_version?: string;
     }
   ): Promise<{ user: User | null; error: any }> {
     // 🆕 Track signup attempt
@@ -125,6 +206,14 @@ export class AuthService {
         last_name: metadata.last_name,
         age: metadata.age,
         gender: metadata.gender,
+        birth_date: metadata.birth_date,
+        terms_consent_accepted: metadata.terms_consent_accepted,
+        terms_consent_accepted_at: metadata.terms_consent_accepted_at,
+        terms_consent_ip: metadata.terms_consent_ip,
+        health_consent_accepted: metadata.health_consent_accepted,
+        health_consent_accepted_at: metadata.health_consent_accepted_at,
+        health_consent_ip: metadata.health_consent_ip,
+        consent_version: metadata.consent_version,
       });
 
       const { data, error } = await supabase.auth.signUp({
@@ -139,10 +228,18 @@ export class AuthService {
             last_name: metadata.last_name,
             age: metadata.age,
             gender: metadata.gender,
+            birth_date: metadata.birth_date,
+            terms_consent_accepted: metadata.terms_consent_accepted,
+            terms_consent_accepted_at: metadata.terms_consent_accepted_at,
+            terms_consent_ip: metadata.terms_consent_ip,
+            health_consent_accepted: metadata.health_consent_accepted,
+            health_consent_accepted_at: metadata.health_consent_accepted_at,
+            health_consent_ip: metadata.health_consent_ip,
+            consent_version: metadata.consent_version,
           },
           // ✅ Configurazione redirect URL per conferma email
           // Usa lo schema deep link dell'app invece di localhost
-          emailRedirectTo: 'wellnesscoach://auth/confirm',
+          emailRedirectTo: this.getRedirectUri('auth/confirm'),
         }
       });
 
@@ -205,18 +302,18 @@ export class AuthService {
         // Analytics not available, ignore
       }
 
+      const redirectTo = this.getRedirectUri('auth/callback');
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: 'wellnesscoach://auth/callback',
-          // Per Apple è necessario specificare gli scope se vogliamo nome/email
-          queryParams: provider === 'apple' ? {
-            scope: 'name email',
-            response_type: 'code id_token',
-          } : {
+          redirectTo,
+          skipBrowserRedirect: true,
+          scopes: provider === 'apple' ? 'name email' : 'email profile',
+          queryParams: provider === 'google' ? {
             access_type: 'offline',
             prompt: 'consent',
-          },
+          } : undefined,
         },
       });
 
@@ -225,10 +322,62 @@ export class AuthService {
         return { error, data: null };
       }
 
-      return { data, error: null };
+      if (!data?.url) {
+        return { error: new Error('OAuth URL mancante nella risposta Supabase'), data: null };
+      }
+
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      if (result.type !== 'success' || !('url' in result) || !result.url) {
+        return {
+          data: { cancelled: true, type: result.type },
+          error: null,
+        };
+      }
+
+      const callback = await this.handleOAuthCallback(result.url);
+      if (callback.error) {
+        return { error: callback.error, data: null };
+      }
+
+      // 🆕 Gestisci multi-device login anche per OAuth
+      try {
+        const { MultiDeviceAuthService } = await import('./multi-device-auth.service');
+        await MultiDeviceAuthService.handleLogin();
+      } catch {
+        // Non critico
+      }
+
+      return { data: { user: callback.user, type: result.type }, error: null };
     } catch (error) {
       console.error(`Error in signInWithOAuth (${provider}):`, error);
       return { error, data: null };
+    }
+  }
+
+  /**
+   * Recupera il public IP dell'utente (best effort) per audit GDPR.
+   * Non blocca la registrazione in caso di errore/rete assente.
+   */
+  static async getPublicIpAddress(): Promise<string | null> {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    try {
+      const controller = new AbortController();
+      timeout = setTimeout(() => controller.abort(), 2500);
+      const response = await fetch('https://api.ipify.org?format=json', {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        return null;
+      }
+      const body = await response.json();
+      return typeof body?.ip === 'string' ? body.ip : null;
+    } catch {
+      return null;
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
     }
   }
 
@@ -576,7 +725,7 @@ export class AuthService {
         type: 'signup',
         email,
         options: {
-          emailRedirectTo: 'wellnesscoach://auth/confirm',
+          emailRedirectTo: this.getRedirectUri('auth/confirm'),
         },
       });
 
@@ -598,7 +747,7 @@ export class AuthService {
   static async resetPassword(email: string): Promise<{ error: any }> {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'wellnesscoach://reset-password',
+        redirectTo: this.getRedirectUri('reset-password'),
       });
 
       if (error) {
@@ -630,6 +779,27 @@ export class AuthService {
       return { error: null };
     } catch (error) {
       console.error('Error in updatePassword:', error);
+      return { error };
+    }
+  }
+
+  /**
+   * Aggiorna i metadata dell'utente autenticato corrente.
+   */
+  static async updateCurrentUserMetadata(metadata: Record<string, any>): Promise<{ error: any }> {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: metadata,
+      });
+
+      if (error) {
+        console.error('Error updating user metadata:', error);
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Error in updateCurrentUserMetadata:', error);
       return { error };
     }
   }
@@ -708,4 +878,3 @@ export class AuthService {
     }
   }
 }
-

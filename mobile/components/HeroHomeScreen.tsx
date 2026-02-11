@@ -12,6 +12,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Avatar } from './Avatar';
 import { BottomNavigation } from './BottomNavigation';
 import { BACKEND_URL } from '../constants/env';
@@ -26,6 +28,7 @@ interface Message {
 }
 
 export const HeroHomeScreen: React.FC = () => {
+  const router = useRouter();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     {

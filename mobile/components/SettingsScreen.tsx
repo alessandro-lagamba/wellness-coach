@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator, useColorScheme, Modal, TextInput, Platform, BackHandler, Switch, FlatList, ListRenderItem } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator, useColorScheme, Modal, TextInput, Platform, Switch, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SafeAreaWrapper } from './shared/SafeAreaWrapper';
 import { NotificationsSettingsScreen } from './settings/NotificationsSettingsScreen';
@@ -32,6 +32,8 @@ interface SettingsScreenProps {
   user: any;
   onLogout: () => void;
 }
+
+const DELETE_CONFIRMATION_WORD = 'ELIMINA';
 
 // 🆕 Items verranno costruiti dinamicamente con traduzioni nel componente
 
@@ -396,8 +398,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   const [wellnessPermissions, setWellnessPermissions] = useState({ calendar: false, notifications: false });
   const [syncService] = useState(() => WellnessSyncService.getInstance());
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showDeleteAccountSuccessModal, setShowDeleteAccountSuccessModal] = useState(false);
 
   const emailVerified = Boolean(resolvedUser?.email_confirmed_at);
+  const canConfirmDeletion =
+    deleteConfirmationText.trim() === DELETE_CONFIRMATION_WORD && !isDeletingAccount;
 
 
   // Health data hook
@@ -625,6 +633,46 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
         { text: t('settings.logout'), style: 'destructive', onPress: onLogout }
       ]
     );
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!resolvedUser?.id) {
+      Alert.alert(t('common.error'), 'Utente non autenticato');
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    try {
+      const { supabase } = await import('../lib/supabase');
+
+      const { error: rpcError } = await supabase.rpc('delete_user_completely', {
+        user_id_to_delete: resolvedUser.id,
+      });
+
+      if (rpcError) {
+        // Fallback best-effort per ambienti in cui la funzione RPC non è disponibile
+        console.warn('delete_user_completely RPC failed, using fallback deletion:', rpcError);
+        await Promise.allSettled([
+          supabase.from('emotion_analyses').delete().eq('user_id', resolvedUser.id),
+          supabase.from('skin_analyses').delete().eq('user_id', resolvedUser.id),
+          supabase.from('daily_journal_entries').delete().eq('user_id', resolvedUser.id),
+          supabase.from('health_data').delete().eq('user_id', resolvedUser.id),
+          supabase.from('daily_copilot_analyses').delete().eq('user_id', resolvedUser.id),
+          supabase.from('intelligent_insights').delete().eq('user_id', resolvedUser.id),
+          supabase.from('user_profiles').delete().eq('id', resolvedUser.id),
+        ]);
+      }
+
+      await AuthService.signOut();
+      setShowDeleteAccountModal(false);
+      setDeleteConfirmationText('');
+      setShowDeleteAccountSuccessModal(true);
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      Alert.alert(t('common.error'), t('settings.deleteAccountError'));
+    } finally {
+      setIsDeletingAccount(false);
+    }
   };
 
   // 🆕 Handler per reset app
@@ -1036,52 +1084,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
             <Text style={[styles.logoutText, { color: colors.error }]} allowFontScaling={false}>{t('settings.logout')}</Text>
           </TouchableOpacity>
 
-          {/* Account Deletion Button - Solid Red with Extra Spacing */}
+          {/* Account Deletion Action - bottom red text */}
           <TouchableOpacity
-            style={[
-              styles.logoutButton,
-              {
-                backgroundColor: '#ef4444',
-                borderColor: '#ef4444',
-                marginTop: 24,
-              }
-            ]}
-            onPress={() => {
-              Alert.alert(
-                t('settings.deleteAccount'),
-                t('settings.deleteAccountConfirm'),
-                [
-                  { text: t('common.cancel'), style: 'cancel' },
-                  {
-                    text: t('settings.deleteAccountAction'),
-                    style: 'destructive',
-                    onPress: async () => {
-                      try {
-                        setIsLoading(true);
-                        const { supabase } = await import('../lib/supabase');
-                        if (resolvedUser?.id) {
-                          await supabase.from('emotion_analyses').delete().eq('user_id', resolvedUser.id);
-                          await supabase.from('skin_analyses').delete().eq('user_id', resolvedUser.id);
-                          await supabase.from('daily_journal_entries').delete().eq('user_id', resolvedUser.id);
-                          await supabase.from('user_profiles').delete().eq('id', resolvedUser.id);
-                          await AuthService.signOut();
-                          Alert.alert(t('common.success'), t('settings.deleteAccountSuccess'), [{ text: t('common.ok'), onPress: onLogout }]);
-                        }
-                      } catch (error) {
-                        console.error('Error deleting account:', error);
-                        Alert.alert(t('common.error'), t('settings.deleteAccountError'));
-                      } finally {
-                        setIsLoading(false);
-                      }
-                    }
-                  }
-                ]
-              );
-            }}
-            disabled={isLoading}
+            style={styles.deleteAccountAction}
+            onPress={() => setShowDeleteAccountModal(true)}
+            disabled={isLoading || isDeletingAccount}
           >
-            <MaterialCommunityIcons name="account-remove" size={16} color="#fff" />
-            <Text style={[styles.logoutText, { color: '#fff' }]} allowFontScaling={false}>{t('settings.deleteAccount')}</Text>
+            <MaterialCommunityIcons name="account-remove" size={15} color="#ef4444" />
+            <Text style={styles.deleteAccountActionText} allowFontScaling={false}>{t('settings.deleteAccount')}</Text>
           </TouchableOpacity>
 
           <View style={[styles.versionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -1090,6 +1100,99 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
           </View>
         </View>
       </ScrollView>
+
+      {/* Account deletion step 1 */}
+      <Modal
+        visible={showDeleteAccountModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => {
+          if (!isDeletingAccount) {
+            setShowDeleteAccountModal(false);
+            setDeleteConfirmationText('');
+          }
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.deleteModalContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.deleteModalTitle, { color: colors.error }]}>⚠️ ATTENZIONE: Questa operazione è irreversibile.</Text>
+            <Text style={[styles.deleteModalBody, { color: colors.textSecondary }]}>
+              Eliminando il tuo account:{'\n'}
+              ✖ Tutti i tuoi dati personali saranno cancellati entro 60 giorni{'\n'}
+              ✖ Perderai l'accesso alle raccomandazioni e allo storico{'\n'}
+              ✖ Non potrai più accedere all'app con questo account{'\n\n'}
+              Se sei sicuro, scrivi "ELIMINA" qui sotto:
+            </Text>
+
+            <TextInput
+              style={[styles.deleteInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              placeholder='Scrivi "ELIMINA"'
+              placeholderTextColor={colors.textTertiary}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              value={deleteConfirmationText}
+              onChangeText={(value) => setDeleteConfirmationText(value.toUpperCase())}
+              editable={!isDeletingAccount}
+            />
+
+            <View style={styles.deleteActionsRow}>
+              <TouchableOpacity
+                style={[styles.deleteCancelButton, { borderColor: colors.border }]}
+                onPress={() => {
+                  setShowDeleteAccountModal(false);
+                  setDeleteConfirmationText('');
+                }}
+                disabled={isDeletingAccount}
+              >
+                <Text style={[styles.deleteCancelButtonText, { color: colors.textSecondary }]}>Annulla</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.deleteConfirmButton, !canConfirmDeletion && styles.deleteConfirmButtonDisabled]}
+                onPress={handleDeleteAccount}
+                disabled={!canConfirmDeletion}
+              >
+                {isDeletingAccount ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.deleteConfirmButtonText}>Elimina definitivamente</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Account deletion step 2 */}
+      <Modal
+        visible={showDeleteAccountSuccessModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => {
+          setShowDeleteAccountSuccessModal(false);
+          onLogout();
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.deleteModalContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.deleteSuccessTitle, { color: colors.text }]}>Conferma cancellazione</Text>
+            <Text style={[styles.deleteSuccessTitle, { color: colors.error, marginTop: 4 }]}>Account eliminato</Text>
+            <Text style={[styles.deleteModalBody, { color: colors.textSecondary, marginTop: 10 }]}>
+              Il tuo account è stato eliminato. I dati saranno cancellati entro 60 giorni. Ci dispiace vederti andare via!
+            </Text>
+
+            <TouchableOpacity
+              style={styles.deleteSuccessButton}
+              onPress={() => {
+                setShowDeleteAccountSuccessModal(false);
+                onLogout();
+              }}
+            >
+              <Text style={styles.deleteSuccessButtonText}>Chiudi</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Health Permissions Modal */}
       <HealthPermissionsModal
@@ -1385,6 +1488,20 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     marginLeft: 8,
   },
+  deleteAccountAction: {
+    marginTop: 12,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  deleteAccountActionText: {
+    marginLeft: 8,
+    color: '#ef4444',
+    fontSize: 15,
+    fontFamily: 'Figtree_700Bold',
+  },
   smallBtn: {
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -1482,6 +1599,84 @@ const styles = StyleSheet.create({
   feedbackSubmitText: {
     color: '#fff',
     fontSize: 16,
+    fontFamily: 'Figtree_700Bold',
+  },
+  deleteModalContent: {
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  deleteModalTitle: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontFamily: 'Figtree_700Bold',
+    marginBottom: 10,
+  },
+  deleteModalBody: {
+    fontSize: 14,
+    lineHeight: 21,
+    fontFamily: 'Figtree_500Medium',
+  },
+  deleteInput: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    minHeight: 46,
+    fontSize: 14,
+    fontFamily: 'Figtree_700Bold',
+  },
+  deleteActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+  },
+  deleteCancelButton: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteCancelButtonText: {
+    fontSize: 14,
+    fontFamily: 'Figtree_600SemiBold',
+  },
+  deleteConfirmButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 8,
+  },
+  deleteConfirmButtonDisabled: {
+    opacity: 0.45,
+  },
+  deleteConfirmButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: 'Figtree_700Bold',
+    textAlign: 'center',
+  },
+  deleteSuccessTitle: {
+    fontSize: 18,
+    fontFamily: 'Figtree_700Bold',
+    textAlign: 'center',
+  },
+  deleteSuccessButton: {
+    marginTop: 14,
+    minHeight: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8B5CF6',
+  },
+  deleteSuccessButtonText: {
+    color: '#fff',
+    fontSize: 14,
     fontFamily: 'Figtree_700Bold',
   },
 });

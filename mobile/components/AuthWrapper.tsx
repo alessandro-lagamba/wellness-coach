@@ -471,6 +471,26 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
     }
   };
 
+  const handleOAuthCallbackDeepLink = async (url: string) => {
+    try {
+      const { AuthService } = await import('../services/auth.service');
+      const { user, error } = await AuthService.handleOAuthCallback(url);
+
+      if (error) {
+        console.error('❌ Error handling OAuth callback:', error);
+        return;
+      }
+
+      if (user) {
+        setUser(user);
+        setIsAuthenticated(true);
+        await proceedAfterAuthentication(user);
+      }
+    } catch (error) {
+      console.error('❌ Error processing OAuth deep link:', error);
+    }
+  };
+
   useEffect(() => {
     // Handle deep link when app opens from a link
     const handleInitialURL = async () => {
@@ -479,6 +499,8 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         if (initialUrl) {
           if (initialUrl.includes('auth/confirm')) {
             await handleEmailConfirmationDeepLink(initialUrl);
+          } else if (initialUrl.includes('auth/callback')) {
+            await handleOAuthCallbackDeepLink(initialUrl);
           } else if (initialUrl.includes('reset-password') || initialUrl.includes('type=recovery')) {
             // 🔥 FIX: Don't navigate here - Supabase needs to process the URL tokens first
             // Navigation will happen in PASSWORD_RECOVERY event handler after session is created
@@ -517,6 +539,8 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       const { url } = event;
       if (url.includes('auth/confirm')) {
         handleEmailConfirmationDeepLink(url);
+      } else if (url.includes('auth/callback')) {
+        handleOAuthCallbackDeepLink(url);
       } else if (url.includes('reset-password') || url.includes('type=recovery')) {
         // 🔥 FIX: Don't navigate here - Supabase needs to process the URL tokens first
         // Navigation will happen in PASSWORD_RECOVERY event handler after session is created

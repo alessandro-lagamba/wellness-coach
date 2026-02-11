@@ -91,7 +91,7 @@ interface InsightCard {
 
 const heroImageUri = 'https://images.unsplash.com/photo-1557163435-efdb2550fbfb?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
 // Video URI per Skin Analysis - usando require per file locali
-const heroVideoUri = require('../assets/videos/skin-analysis-video.mp4');
+const heroVideoUri = require('../assets/videos/skin-analysis-video-old.mp4');
 
 // Guide dettagliate per ogni modulo - Contenuto in italiano
 const skincareGuides = {

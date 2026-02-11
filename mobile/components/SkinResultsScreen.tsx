@@ -40,7 +40,7 @@ interface SkinResultsScreenProps {
 }
 
 // Video URI per Skin Analysis
-const heroVideoUri = require('../assets/videos/skin-analysis-video.mp4');
+const heroVideoUri = require('../assets/videos/skin-analysis-video-old.mp4');
 
 export const SkinResultsScreen: React.FC<SkinResultsScreenProps> = ({
   results,

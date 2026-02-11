@@ -2298,7 +2298,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
               ]
             );
           }}
-          onSettingsPress={() => router.push('/(tabs)/settings')}
+          onInfoPress={() => router.push('/yachai-info')}
           onAvatarPress={() => setCommunityModalVisible(true)}
         />
 
