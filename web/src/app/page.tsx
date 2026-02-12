@@ -51,7 +51,7 @@ export default function Home() {
     }
 
     try {
-      const response = await fetch("/", {
+      const response = await fetch("/forms.html", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: encodedData.toString(),
@@ -284,7 +284,7 @@ export default function Home() {
                           onSubmit={handleSubmit}
                           name="ios-beta-testers"
                           method="POST"
-                          action="/"
+                          action="/forms.html"
                           data-netlify="true"
                           data-netlify-honeypot="bot-field"
                         >
