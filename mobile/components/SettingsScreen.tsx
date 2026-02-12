@@ -388,7 +388,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   const { mode, colors, toggleTheme } = useTheme(); // 🆕 Theme hook
   const scrollRef = useAutoScrollToTop<ScrollView>('settings');
   const systemColorScheme = useColorScheme();
-  // 🔥 FIX: Fallback color basato su useColorScheme per evitare flash bianco
   const fallbackBackground = systemColorScheme === 'dark' ? '#1a1625' : '#f8fafc';
   const safeAreaBackground = colors?.background || fallbackBackground;
   const [resolvedUser, setResolvedUser] = useState(user ?? null);
