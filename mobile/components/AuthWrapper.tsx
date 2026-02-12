@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, Linking, Alert } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Linking, Alert, Text, Pressable } from 'react-native';
 import { AuthService } from '../services/auth.service';
 import { OnboardingService } from '../services/onboarding.service';
 import { AuthScreen } from './auth/AuthScreen';
+import { SocialLegalCompletionModal } from './auth/SocialLegalCompletionModal';
 // 🔥 REMOVED: OnboardingScreen - non lo usiamo più, andiamo direttamente a InteractiveTutorial
 import { InteractiveTutorial } from './InteractiveTutorial';
 import { EmailVerificationModal } from './EmailVerificationModal';
@@ -13,6 +14,7 @@ import { useRouter } from 'expo-router';
 import PushNotificationService from '../services/push-notification.service'; // 🆕 Push notifications
 import { supabase } from '../lib/supabase';
 import { useTranslation } from '../hooks/useTranslation';
+import { AppRuntimeControlService, RuntimeGateDecision } from '../services/app-runtime-control.service';
 
 // 🔥 FIX: Module-level flag for password recovery - persists across component remounts
 // This is necessary because refs are reset when component unmounts, but auth state changes can cause remounts
@@ -22,6 +24,21 @@ interface AuthWrapperProps {
   children: React.ReactNode;
   onAuthSuccess: (user: any) => void;
 }
+
+const normalizeGender = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  if (value === 'non-binary') return 'non_binary';
+  return value;
+};
+
+const requiresLegalCompletion = (currentUser: any, profile: any | null): boolean => {
+  const birthDate = profile?.birth_date || currentUser?.user_metadata?.birth_date || null;
+  const gender = normalizeGender(profile?.gender || currentUser?.user_metadata?.gender || null);
+  const termsAccepted = Boolean(profile?.terms_accepted || currentUser?.user_metadata?.terms_consent_accepted);
+  const healthConsentAccepted = Boolean(profile?.health_consent_accepted || currentUser?.user_metadata?.health_consent_accepted);
+
+  return !birthDate || !gender || !termsAccepted || !healthConsentAccepted;
+};
 
 // Componente interno che usa il context
 const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
@@ -35,8 +52,10 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   const { showTutorial, setShowTutorial } = useTutorial();
   const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false);
   const [isPasswordRecoveryMode, setIsPasswordRecoveryMode] = useState(false); // 🆕 Track password recovery mode to bypass auth
+  const [showSocialLegalCompletionModal, setShowSocialLegalCompletionModal] = useState(false);
+  const [socialLegalProfileSnapshot, setSocialLegalProfileSnapshot] = useState<any | null>(null);
   const router = useRouter();
-  const { colors, mode } = useTheme(); // 🆕 Theme colors
+  const { colors } = useTheme(); // 🆕 Theme colors
 
   // 🔥 FIX: Esponiamo un metodo per forzare la visualizzazione del tutorial
   // Questo permette di rivisualizzare il tutorial da altre schermate (es. HomeScreen)
@@ -80,7 +99,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   useEffect(() => {
     const checkAndShowTutorial = async () => {
       // Solo se l'utente è autenticato e l'app è renderizzata
-      if (!isAuthenticated || !user) {
+      if (!isAuthenticated || !user || showSocialLegalCompletionModal) {
         return;
       }
 
@@ -125,7 +144,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
     // Delay per permettere all'app di renderizzarsi completamente
     const timer = setTimeout(checkAndShowTutorial, 1000);
     return () => clearTimeout(timer);
-  }, [isAuthenticated, user, showTutorial, setShowTutorial]);
+  }, [isAuthenticated, user, showTutorial, setShowTutorial, showSocialLegalCompletionModal]);
 
   // 🔥 FIX: Memoizziamo checkAuthStatus per evitare ricreazioni - rimuoviamo onAuthSuccess dalle dipendenze
   const proceedAfterAuthentication = useCallback(async (currentUser: any) => {
@@ -142,6 +161,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
     isProcessingAuthRef.current = true;
     processedUserIdRef.current = currentUser?.id || null;
+    let profileSnapshot: any | null = null;
 
     try {
       setIsAuthenticated(true);
@@ -161,6 +181,14 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
           const ageValue = currentUser.user_metadata?.age;
           const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : undefined);
           const gender = currentUser.user_metadata?.gender;
+          const birthDate = currentUser.user_metadata?.birth_date;
+          const termsAccepted = Boolean(currentUser.user_metadata?.terms_consent_accepted);
+          const termsAcceptedAt = currentUser.user_metadata?.terms_consent_accepted_at;
+          const termsConsentIp = currentUser.user_metadata?.terms_consent_ip;
+          const healthConsentAccepted = Boolean(currentUser.user_metadata?.health_consent_accepted);
+          const healthConsentAcceptedAt = currentUser.user_metadata?.health_consent_accepted_at;
+          const healthConsentIp = currentUser.user_metadata?.health_consent_ip;
+          const consentVersion = currentUser.user_metadata?.consent_version;
 
           // 🔥 PERF: Removed verbose logging
 
@@ -182,7 +210,17 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
               firstName,
               lastName,
               age,
-              gender
+              gender,
+              {
+                birthDate,
+                termsAccepted,
+                termsAcceptedAt,
+                termsConsentIp,
+                healthConsentAccepted,
+                healthConsentAcceptedAt,
+                healthConsentIp,
+                consentVersion,
+              }
             );
             // 🔥 PERF: Removed verbose logging
           } else {
@@ -194,6 +232,18 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
             if (lastName) updateData.last_name = lastName;
             if (age !== undefined && age !== null) updateData.age = age;
             if (gender) updateData.gender = gender;
+            if (birthDate) updateData.birth_date = birthDate;
+            if (termsAccepted) {
+              updateData.terms_accepted = true;
+              if (termsAcceptedAt) updateData.terms_accepted_at = termsAcceptedAt;
+              if (termsConsentIp) updateData.terms_consent_ip = termsConsentIp;
+            }
+            if (healthConsentAccepted) {
+              updateData.health_consent_accepted = true;
+              if (healthConsentAcceptedAt) updateData.health_consent_accepted_at = healthConsentAcceptedAt;
+              if (healthConsentIp) updateData.health_consent_ip = healthConsentIp;
+            }
+            if (consentVersion) updateData.consent_version = consentVersion;
 
             if (Object.keys(updateData).length > 0) {
               // 🔥 PERF: Removed verbose logging
@@ -201,6 +251,8 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
               // 🔥 PERF: Removed verbose logging
             }
           }
+
+          profileSnapshot = await AuthService.getUserProfile(currentUser.id);
         } else {
           // 🔥 PERF: Removed verbose logging
         }
@@ -208,6 +260,15 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         console.error('❌ Error checking/creating user profile:', profileError);
         // Non blocchiamo l'autenticazione se la creazione del profilo fallisce
       }
+
+      if (requiresLegalCompletion(currentUser, profileSnapshot)) {
+        setSocialLegalProfileSnapshot(profileSnapshot);
+        setShowSocialLegalCompletionModal(true);
+        return;
+      }
+
+      setShowSocialLegalCompletionModal(false);
+      setSocialLegalProfileSnapshot(null);
 
       // 🔥 FIX: Non mostriamo più OnboardingScreen, andiamo direttamente al tutorial
       // Controlla se mostrare il tutorial
@@ -324,6 +385,8 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);
           setUser(null);
+          setShowSocialLegalCompletionModal(false);
+          setSocialLegalProfileSnapshot(null);
           processedUserIdRef.current = null;
           isProcessingAuthRef.current = false;
           isAuthenticatedRef.current = false;
@@ -345,6 +408,64 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
   // State for showing email verified success modal
   const [showEmailVerifiedSuccess, setShowEmailVerifiedSuccess] = useState(false);
+  const [isRuntimeControlLoading, setIsRuntimeControlLoading] = useState(true);
+  const [runtimeGateDecision, setRuntimeGateDecision] = useState<RuntimeGateDecision | null>(null);
+
+  const refreshRuntimeControl = useCallback(async (forceRefresh: boolean = false) => {
+    try {
+      const decision = await AppRuntimeControlService.getRuntimeGateDecision(forceRefresh);
+      if (decision.block) {
+        console.warn('[RuntimeControl] App blocked:', decision);
+        setRuntimeGateDecision(decision);
+      } else {
+        setRuntimeGateDecision(null);
+      }
+    } catch (error) {
+      console.error('[RuntimeControl] Unexpected error:', error);
+      setRuntimeGateDecision(null);
+    } finally {
+      setIsRuntimeControlLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshRuntimeControl();
+  }, [refreshRuntimeControl]);
+
+  const handleOpenUpdateUrl = useCallback(async () => {
+    const updateUrl = runtimeGateDecision?.updateUrl;
+    if (!updateUrl) {
+      return;
+    }
+
+    try {
+      const canOpen = await Linking.canOpenURL(updateUrl);
+      if (!canOpen) {
+        Alert.alert(
+          t('common.error'),
+          t('runtimeControl.unableToOpenUpdateUrl')
+        );
+        return;
+      }
+      await Linking.openURL(updateUrl);
+    } catch (error) {
+      console.error('[RuntimeControl] Error opening update URL:', error);
+      Alert.alert(
+        t('common.error'),
+        t('runtimeControl.unableToOpenUpdateUrl')
+      );
+    }
+  }, [runtimeGateDecision?.updateUrl, t]);
+
+  const runtimeTitle = runtimeGateDecision?.title
+    || (runtimeGateDecision?.reason === 'maintenance'
+      ? t('runtimeControl.maintenanceTitle')
+      : t('runtimeControl.forceUpdateTitle'));
+
+  const runtimeMessage = runtimeGateDecision?.message
+    || (runtimeGateDecision?.reason === 'maintenance'
+      ? t('runtimeControl.maintenanceMessage')
+      : t('runtimeControl.forceUpdateMessage'));
 
   // 🔥 CRITICAL FIX: Extract tokens from URL and set session manually
   const handleEmailConfirmationDeepLink = async (url: string) => {
@@ -402,6 +523,14 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
                 const ageValue = data.user.user_metadata?.age;
                 const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : undefined);
                 const gender = data.user.user_metadata?.gender;
+                const birthDate = data.user.user_metadata?.birth_date;
+                const termsAccepted = Boolean(data.user.user_metadata?.terms_consent_accepted);
+                const termsAcceptedAt = data.user.user_metadata?.terms_consent_accepted_at;
+                const termsConsentIp = data.user.user_metadata?.terms_consent_ip;
+                const healthConsentAccepted = Boolean(data.user.user_metadata?.health_consent_accepted);
+                const healthConsentAcceptedAt = data.user.user_metadata?.health_consent_accepted_at;
+                const healthConsentIp = data.user.user_metadata?.health_consent_ip;
+                const consentVersion = data.user.user_metadata?.consent_version;
                 const fullName = data.user.user_metadata?.full_name ||
                   data.user.user_metadata?.name ||
                   data.user.email?.split('@')[0] ||
@@ -414,7 +543,17 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
                   firstName,
                   lastName,
                   age,
-                  gender
+                  gender,
+                  {
+                    birthDate,
+                    termsAccepted,
+                    termsAcceptedAt,
+                    termsConsentIp,
+                    healthConsentAccepted,
+                    healthConsentAcceptedAt,
+                    healthConsentIp,
+                    consentVersion,
+                  }
                 );
                 // 🔥 PERF: Removed verbose logging
               } else {
@@ -425,12 +564,32 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
                 const ageValue = data.user.user_metadata?.age;
                 const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : undefined);
                 const gender = data.user.user_metadata?.gender;
+                const birthDate = data.user.user_metadata?.birth_date;
+                const termsAccepted = Boolean(data.user.user_metadata?.terms_consent_accepted);
+                const termsAcceptedAt = data.user.user_metadata?.terms_consent_accepted_at;
+                const termsConsentIp = data.user.user_metadata?.terms_consent_ip;
+                const healthConsentAccepted = Boolean(data.user.user_metadata?.health_consent_accepted);
+                const healthConsentAcceptedAt = data.user.user_metadata?.health_consent_accepted_at;
+                const healthConsentIp = data.user.user_metadata?.health_consent_ip;
+                const consentVersion = data.user.user_metadata?.consent_version;
 
                 const updateData: any = {};
                 if (firstName) updateData.first_name = firstName;
                 if (lastName) updateData.last_name = lastName;
                 if (age !== undefined && age !== null) updateData.age = age;
                 if (gender) updateData.gender = gender;
+                if (birthDate) updateData.birth_date = birthDate;
+                if (termsAccepted) {
+                  updateData.terms_accepted = true;
+                  if (termsAcceptedAt) updateData.terms_accepted_at = termsAcceptedAt;
+                  if (termsConsentIp) updateData.terms_consent_ip = termsConsentIp;
+                }
+                if (healthConsentAccepted) {
+                  updateData.health_consent_accepted = true;
+                  if (healthConsentAcceptedAt) updateData.health_consent_accepted_at = healthConsentAcceptedAt;
+                  if (healthConsentIp) updateData.health_consent_ip = healthConsentIp;
+                }
+                if (consentVersion) updateData.consent_version = consentVersion;
 
                 if (Object.keys(updateData).length > 0) {
                   await AuthService.updateUserProfile(data.user.id, updateData);
@@ -710,17 +869,91 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
       await AuthService.signOut();
       setIsAuthenticated(false);
       setUser(null);
+      setShowSocialLegalCompletionModal(false);
+      setSocialLegalProfileSnapshot(null);
+      processedUserIdRef.current = null;
+      isProcessingAuthRef.current = false;
+      isAuthenticatedRef.current = false;
     } catch (error) {
       // 🔥 FIX: Solo errori critici in console
       console.error('Error signing out:', error);
     }
   };
 
-  if (isLoading) {
+  const handleSocialLegalCompletionDone = useCallback(async (updatedUser: any) => {
+    setShowSocialLegalCompletionModal(false);
+    setSocialLegalProfileSnapshot(null);
+    processedUserIdRef.current = null;
+    isProcessingAuthRef.current = false;
+    await proceedAfterAuthentication(updatedUser);
+  }, [proceedAfterAuthentication]);
+
+  if (isLoading || isRuntimeControlLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
+    );
+  }
+
+  if (runtimeGateDecision?.block) {
+    const primaryButtonText = runtimeGateDecision.reason === 'force_update'
+      ? t('runtimeControl.updateNow')
+      : t('runtimeControl.openUpdate');
+
+    return (
+      <View style={[styles.runtimeGateContainer, { backgroundColor: colors.background }]}>
+        <View style={[styles.runtimeGateCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.runtimeGateTitle, { color: colors.text }]}>
+            {runtimeTitle}
+          </Text>
+          <Text style={[styles.runtimeGateMessage, { color: colors.textSecondary }]}>
+            {runtimeMessage}
+          </Text>
+
+          <Text style={[styles.runtimeGateVersionInfo, { color: colors.textTertiary }]}>
+            {t('runtimeControl.versionInfo', {
+              current: runtimeGateDecision.currentVersion,
+              minimum: runtimeGateDecision.minSupportedVersion,
+            })}
+          </Text>
+
+          {runtimeGateDecision.updateUrl ? (
+            <Pressable
+              onPress={handleOpenUpdateUrl}
+              style={[styles.runtimePrimaryButton, { backgroundColor: colors.primary }]}
+            >
+              <Text style={[styles.runtimePrimaryButtonText, { color: colors.textInverse }]}>
+                {primaryButtonText}
+              </Text>
+            </Pressable>
+          ) : null}
+
+          <Pressable
+            onPress={() => {
+              setIsRuntimeControlLoading(true);
+              refreshRuntimeControl(true);
+            }}
+            style={[styles.runtimeSecondaryButton, { borderColor: colors.border }]}
+          >
+            <Text style={[styles.runtimeSecondaryButtonText, { color: colors.textSecondary }]}>
+              {t('runtimeControl.retryAction')}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  if (showSocialLegalCompletionModal && user) {
+    return (
+      <SocialLegalCompletionModal
+        visible={showSocialLegalCompletionModal}
+        user={user}
+        profile={socialLegalProfileSnapshot}
+        onCompleted={handleSocialLegalCompletionDone}
+        onForceSignOut={handleLogout}
+      />
     );
   }
 
@@ -886,5 +1119,56 @@ const styles = StyleSheet.create({
   },
   appContainer: {
     flex: 1,
+  },
+  runtimeGateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  runtimeGateCard: {
+    width: '100%',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+  },
+  runtimeGateTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  runtimeGateMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  runtimeGateVersionInfo: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  runtimePrimaryButton: {
+    borderRadius: 12,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  runtimePrimaryButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  runtimeSecondaryButton: {
+    borderRadius: 12,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  runtimeSecondaryButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

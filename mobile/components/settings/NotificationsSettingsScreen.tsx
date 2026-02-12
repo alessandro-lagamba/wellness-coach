@@ -31,7 +31,7 @@ export const NotificationsSettingsScreen = ({ onBack }: { onBack: () => void }) 
     const [breathing, setBreathing] = useState(true);
     const [hydration, setHydration] = useState(true);
     const [morningGreeting, setMorningGreeting] = useState(true);
-
+    const [mealReminder, setMealReminder] = useState(true);
     const [showDiaryTimePicker, setShowDiaryTimePicker] = useState(false);
     const [diaryTime, setDiaryTime] = useState(new Date(2024, 0, 1, 21, 30));
 
@@ -56,7 +56,7 @@ export const NotificationsSettingsScreen = ({ onBack }: { onBack: () => void }) 
                 setBreathing(prefs.breathing ?? true);
                 setHydration(prefs.hydration ?? true);
                 setMorningGreeting(prefs.morningGreeting ?? true);
-
+                setMealReminder(prefs.mealReminder ?? true);
                 if (prefs.diaryTime) {
                     const d = new Date();
                     d.setHours(prefs.diaryTime.hour);
@@ -84,6 +84,7 @@ export const NotificationsSettingsScreen = ({ onBack }: { onBack: () => void }) 
                 breathing,
                 hydration,
                 morningGreeting,
+                mealReminder,
                 diaryTime: { hour: diaryTime.getHours(), minute: diaryTime.getMinutes() }
             });
 
@@ -129,6 +130,7 @@ export const NotificationsSettingsScreen = ({ onBack }: { onBack: () => void }) 
                             { id: 'breathing', label: t('settings.notifications.breathing') || 'Pausa Respiro', value: breathing, setter: setBreathing },
                             { id: 'hydration', label: t('settings.notifications.hydration') || 'Idratazione', value: hydration, setter: setHydration },
                             { id: 'morning', label: t('settings.notifications.morningGreeting') || 'Saluto mattutino', value: morningGreeting, setter: setMorningGreeting },
+                            { id: 'mealReminder', label: t('settings.notifications.mealReminder') || 'Promemoria Pasto', value: mealReminder, setter: setMealReminder },
                         ].map((row) => (
                             <View key={row.id} style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                                 <View style={styles.rowCopy}>

@@ -129,6 +129,7 @@
       "breathing": "Pausa Respiro",
       "hydration": "Idratazione",
       "morningGreeting": "Saluto Mattutino",
+      "mealReminder": "Promemoria Pasto",
       "diaryTimeTitle": "Orario Diario",
       "diaryTitle": "Diario",
       "diaryBody": "Ti va di scrivere una breve voce nel diario?",
@@ -157,6 +158,10 @@
         "dailyCopilot": {
           "title": "Daily Copilot: Il tuo piano 🎯",
           "body": "Le tue raccomandazioni per domani sono pronte! Scopri come ottimizzare la tua giornata. 💡"
+        },
+        "mealReminder": {
+          "title": "🍽️ Promemoria Pasto",
+          "body": "È ora di inserire il tuo pasto! Ricorda di aggiungere un pasto alla tua pianificazione. 🥗"
         }
       }
     },
@@ -188,7 +193,59 @@
     "restoreDescription": "Importa dati da un file",
     "restoreConfirm": "Importa i dati da un file di backup precedente. I dati esistenti verranno mantenuti e quelli nel backup verranno aggiunti.",
     "restoreAction": "Importa",
-    "restoreSuccess": "Ripristinati {{count}} elementi con successo."
+    "restoreSuccess": "Ripristinati {{count}} elementi con successo.",
+    "manualBackupTitle": "Esporta backup manuale",
+    "manualBackupDescription": "Crea un file da condividere o salvare manualmente",
+    "manualRestoreTitle": "Ripristina backup manuale",
+    "manualRestoreDescription": "Importa un file backup scelto dal dispositivo",
+    "cloudBackup": {
+      "googleDrive": "Google Drive",
+      "iCloudDrive": "iCloud Drive",
+      "statusTitle": "Backup cloud",
+      "connected": "Connesso",
+      "notConnected": "Non connesso",
+      "connectedDescription": "Connesso a {{provider}}",
+      "notConnectedDescription": "Nessuna cartella cloud collegata ({{provider}})",
+      "lastBackupAt": "Ultimo backup: {{date}}",
+      "connectTitle": "Connetti backup cloud",
+      "reconnectTitle": "Cambia cartella cloud",
+      "connectDescription": "Seleziona una cartella in {{provider}}",
+      "connectConfirm": "Seleziona una cartella su {{provider}} dove salvare i backup automatici.",
+      "connectAction": "Connetti",
+      "connectSuccess": "Backup cloud configurato su {{provider}}.",
+      "connectError": "Impossibile configurare il backup cloud: {{error}}",
+      "notConfiguredTitle": "Backup cloud non configurato",
+      "notConfiguredMessage": "Configura prima una cartella su {{provider}}.",
+      "backupNowTitle": "Backup cloud ora",
+      "backupNowDescription": "Crea subito un backup nel cloud collegato",
+      "backupNowConfirm": "Creare ora un backup su {{provider}}?",
+      "backupNowAction": "Backup ora",
+      "backupNowSuccess": "Backup cloud completato. File: {{fileName}} ({{count}} elementi).",
+      "backupNowError": "Backup cloud fallito: {{error}}",
+      "restoreTitle": "Ripristina ultimo backup cloud",
+      "restoreDescription": "Importa l’ultimo backup disponibile dal cloud",
+      "restoreConfirm": "Importa l’ultimo backup cloud disponibile. I dati locali esistenti verranno mantenuti e quelli del backup aggiunti.",
+      "restoreAction": "Ripristina",
+      "restoreSuccess": "Ripristino completato da {{fileName}} ({{count}} elementi).",
+      "restoreError": "Ripristino cloud fallito: {{error}}",
+      "disconnectTitle": "Disconnetti backup cloud",
+      "disconnectDescription": "Rimuove la cartella cloud collegata da questo dispositivo",
+      "disconnectConfirm": "Vuoi rimuovere la cartella cloud collegata? I file di backup già creati resteranno nel cloud.",
+      "disconnectAction": "Disconnetti",
+      "disconnectSuccess": "Backup cloud disconnesso.",
+      "disconnectError": "Errore durante la disconnessione: {{error}}"
+    }
+  },
+  "runtimeControl": {
+    "maintenanceTitle": "Manutenzione in corso",
+    "maintenanceMessage": "Yachai è temporaneamente non disponibile. Riprova tra qualche minuto.",
+    "forceUpdateTitle": "Aggiornamento richiesto",
+    "forceUpdateMessage": "Questa versione dell'app non è più supportata. Aggiorna per continuare.",
+    "versionInfo": "Versione installata {{current}} · Minima richiesta {{minimum}}",
+    "updateNow": "Aggiorna ora",
+    "openUpdate": "Apri aggiornamento",
+    "retryAction": "Riprova",
+    "unableToOpenUpdateUrl": "Impossibile aprire il link di aggiornamento. Riprova più tardi."
   },
   "journal": {
     "title": "Diario",

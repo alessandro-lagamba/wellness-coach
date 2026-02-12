@@ -7,8 +7,8 @@ import {
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-
-interface BottomNavigationProps {}
+import { useScrollToTop } from '../contexts/ScrollToTopContext';
+interface BottomNavigationProps { }
 
 type TabPath =
   | '/(tabs)'
@@ -20,7 +20,8 @@ type TabPath =
 export const BottomNavigation: React.FC<BottomNavigationProps> = () => {
   const router = useRouter();
   const pathname = usePathname();
-  
+  const { scrollToTop } = useScrollToTop();
+
   const isActive = (path: TabPath) => {
     if (path === '/(tabs)') {
       return pathname === '/' || pathname === '/(tabs)';
@@ -29,8 +30,30 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = () => {
     return pathname === path;
   };
 
+  const getScreenNameFromPath = (path: TabPath): string => {
+    if (path === '/(tabs)') return 'home';
+    if (path === '/(tabs)/analysis') return 'analysis';
+    if (path === '/(tabs)/skin') return 'skin';
+    if (path === '/(tabs)/coach') return 'coach';
+    if (path === '/(tabs)/settings') return 'settings';
+    return '';
+  };
+
   const navigateTo = (path: TabPath) => {
-    router.push(path);
+    // Check if this tab is already active
+    const active = isActive(path);
+    console.log('[BottomNavigation] navigateTo:', { path, pathname, active });
+
+    if (active) {
+      // Scroll to top instead of navigating
+      const screenName = getScreenNameFromPath(path);
+      console.log('[BottomNavigation] Scrolling to top:', screenName);
+      scrollToTop(screenName);
+    } else {
+      // Navigate to the tab
+      console.log('[BottomNavigation] Navigating to:', path);
+      router.push(path);
+    }
   };
 
   const navItems: Array<{ path: TabPath; icon: string; label: string }> = [

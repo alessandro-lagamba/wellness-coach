@@ -17,6 +17,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTabBarVisibility } from '../../contexts/TabBarVisibilityContext';
+import { useScrollToTop } from '../../contexts/ScrollToTopContext';
 
 export default function TabLayout() {
   return <TabNavigator />;
@@ -29,7 +30,7 @@ function TabNavigator() {
   const systemColorScheme = RNUseColorScheme();
   const insets = useSafeAreaInsets();
   const { isVisible } = useTabBarVisibility();
-
+  const { scrollToTop } = useScrollToTop();
   const { mode } = useTheme(); // Use app theme mode
   const isDark = mode === 'dark'; // Derive isDark from app theme
 
@@ -239,6 +240,13 @@ function TabNavigator() {
             )
           ),
         }}
+        listeners={{
+          tabPress: () => {
+            console.log('[TabLayout] Home tab pressed');
+            // Scroll to top when home tab is pressed
+            scrollToTop('home');
+          },
+        }}
       />
 
       <Tabs.Screen
@@ -256,6 +264,12 @@ function TabNavigator() {
               />,
             )
           ),
+        }}
+        listeners={{
+          tabPress: () => {
+            console.log('[TabLayout] Analysis tab pressed');
+            scrollToTop('analysis');
+          },
         }}
       />
 
@@ -275,6 +289,12 @@ function TabNavigator() {
             )
           ),
         }}
+        listeners={{
+          tabPress: () => {
+            console.log('[TabLayout] Skin tab pressed');
+            scrollToTop('skin');
+          },
+        }}
       />
 
       <Tabs.Screen
@@ -293,6 +313,12 @@ function TabNavigator() {
             )
           ),
         }}
+        listeners={{
+          tabPress: () => {
+            console.log('[TabLayout] Food tab pressed');
+            scrollToTop('food');
+          },
+        }}
       />
 
       <Tabs.Screen
@@ -310,6 +336,12 @@ function TabNavigator() {
               />,
             )
           ),
+        }}
+        listeners={{
+          tabPress: () => {
+            console.log('[TabLayout] Suggestions tab pressed');
+            scrollToTop('suggestions');
+          },
         }}
       />
 
@@ -347,6 +379,12 @@ function TabNavigator() {
               />,
             )
           ),
+        }}
+        listeners={{
+          tabPress: () => {
+            console.log('[TabLayout] Settings tab pressed');
+            scrollToTop('settings');
+          },
         }}
       />
     </Tabs>

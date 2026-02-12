@@ -15,6 +15,7 @@ import Animated, { useAnimatedStyle, withSpring, useSharedValue } from 'react-na
 import { useRouter } from 'expo-router';
 import { useTranslation } from '../hooks/useTranslation';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAutoScrollToTop } from '../hooks/useAutoScrollToTop';
 
 import { WELLNESS_CATEGORIES, WELLNESS_SUGGESTIONS, WellnessSuggestion } from '../data/wellnessSuggestions';
 
@@ -25,6 +26,7 @@ export const WellnessSuggestionsScreen: React.FC = () => {
   const router = useRouter();
   const { t, language } = useTranslation();
   const { colors } = useTheme();
+  const scrollRef = useAutoScrollToTop<ScrollView>('suggestions');
 
   const safeT = (key: string, fallbackEn: string, fallbackIt: string) => {
     const v = t(key);
@@ -219,7 +221,7 @@ export const WellnessSuggestionsScreen: React.FC = () => {
 
 
       {/* Categories */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.categoriesContainer}>
           {translatedCategories.map(renderCategoryCard)}
         </View>

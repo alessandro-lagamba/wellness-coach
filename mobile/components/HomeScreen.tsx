@@ -22,6 +22,7 @@ import { SafeAreaWrapper } from './shared/SafeAreaWrapper';
 import { Avatar } from './Avatar';
 import Colors from '../constants/Colors';
 import { useTheme } from '../contexts/ThemeContext';
+import { useScrollToTop } from '../contexts/ScrollToTopContext';
 import WellnessSyncService from '../services/wellness-sync.service';
 import { MomentumService, MomentumData } from '../services/momentum.service';
 import { AuthService } from '../services/auth.service';
@@ -168,6 +169,17 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   const { setShowTutorial } = useTutorial();
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
+  const { registerScrollView, unregisterScrollView } = useScrollToTop();
+
+  // Register this screen's ScrollView for scroll-to-top functionality
+  useEffect(() => {
+    console.log('[HomeScreen] Registering ScrollView for scroll-to-top');
+    registerScrollView('home', scrollViewRef);
+    return () => {
+      console.log('[HomeScreen] Unregistering ScrollView');
+      unregisterScrollView('home');
+    };
+  }, [registerScrollView, unregisterScrollView]);
 
   // 🆕 Attività caricate dal database (rimosse le mock hardcoded)
   const [wellnessActivities, setWellnessActivities] = useState<DailyActivity[]>([]);
@@ -461,7 +473,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
     sleepGoal: number,
     cycle?: CycleData | null,
     dailyIntake?: { calories: number; carbohydrates: number; proteins: number; fats: number } | null,
-    currentUserGender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null // 🔥 FIX: Pass userGender as parameter
+    currentUserGender?: 'male' | 'female' | 'other' | 'non_binary' | 'prefer_not_to_say' | null // 🔥 FIX: Pass userGender as parameter
   ): Promise<WidgetData[]> => {
     // 🔥 PERF: Using static imports instead of dynamic imports for faster widget loading
     const goals = await widgetGoalsService.getGoals();
@@ -606,7 +618,7 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
   // 🆕 Stato per i dati del ciclo mestruale
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
   // 🆕 Stato per il genere dell'utente (per filtrare il widget ciclo)
-  const [userGender, setUserGender] = useState<'male' | 'female' | 'other' | 'prefer_not_to_say' | null>(null);
+  const [userGender, setUserGender] = useState<'male' | 'female' | 'other' | 'non_binary' | 'prefer_not_to_say' | null>(null);
 
   // 🆕 Stato per daily intake (calorie)
   const [dailyIntake, setDailyIntake] = useState<{ calories: number; carbohydrates: number; proteins: number; fats: number } | null>(null);

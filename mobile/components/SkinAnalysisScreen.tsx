@@ -69,6 +69,7 @@ import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
 import { getTodayISODate, toLocalISODate } from '../utils/locale-formatters';
+import { useAutoScrollToTop } from '../hooks/useAutoScrollToTop';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 // Removed useInsights - now using IntelligentInsightsSection directly
 
@@ -199,6 +200,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
   const { colors, mode } = useTheme();
   const cameraController = useCameraController({ isScreenFocused: true });
   const { hideTabBar, showTabBar } = useTabBarVisibility();
+  const scrollRef = useAutoScrollToTop<ScrollView>('skin');
   const [currentImageUri, setCurrentImageUri] = useState(heroImageUri);
   const { guide: guideParam } = useLocalSearchParams(); // Handle deep link
 
@@ -1283,6 +1285,7 @@ const SkinAnalysisScreenContent: React.FC = () => {
       }} />
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
         <ScrollView
+          ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={styles.overviewContent}
           showsVerticalScrollIndicator={false}

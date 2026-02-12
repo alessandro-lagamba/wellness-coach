@@ -18,6 +18,7 @@
     ],
     "ios": {
       "teamId": "V4VB38G95T",
+      "usesIcloudStorage": true,
       "entitlements": {
         "com.apple.developer.healthkit": true,
         "com.apple.developer.healthkit.background-delivery": true,

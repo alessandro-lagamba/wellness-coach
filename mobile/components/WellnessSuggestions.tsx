@@ -15,6 +15,7 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 import { useTranslation } from '../hooks/useTranslation';
+import { useAutoScrollToTop } from '../hooks/useAutoScrollToTop';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface WellnessSuggestion {

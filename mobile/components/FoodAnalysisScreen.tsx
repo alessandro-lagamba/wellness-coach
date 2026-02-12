@@ -70,6 +70,7 @@ import { OnboardingService } from '../services/onboarding.service';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
+import { useAutoScrollToTop } from '../hooks/useAutoScrollToTop';
 import { useFocusEffect } from 'expo-router';
 import { NutritionalGoalsModal } from './NutritionalGoalsModal';
 import { CalorieHistoryModal } from './CalorieHistoryModal';
@@ -423,6 +424,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { t, language } = useTranslation(); // 🆕 i18n hook
   const { colors } = useTheme();
+  const scrollRef = useAutoScrollToTop<ScrollView>('food');
   const [recipeEditorAllowDelete, setRecipeEditorAllowDelete] = useState(false);
 
   // 🆕 Utility functions for meal planning
@@ -2498,6 +2500,7 @@ const FoodAnalysisScreenContent: React.FC = () => {
       }} />
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
         <ScrollView
+          ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={styles.overviewContent}
           showsVerticalScrollIndicator={false}

@@ -12,7 +12,8 @@ export type NotificationCategory =
   | 'breathing_break'
   | 'hydration_reminder'
   | 'morning_greeting'
-  | 'daily_copilot';
+  | 'daily_copilot'
+  | 'meal_reminder';
 
 export interface ScheduleOptions {
   // For time-based triggers
@@ -36,6 +37,7 @@ export interface NotificationPreferences {
   breathing: boolean;
   hydration: boolean;
   morningGreeting: boolean;
+  mealReminder: boolean;
   diaryTime?: { hour: number; minute: number };
 }
 
@@ -45,6 +47,7 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   breathing: true, // Changed default to true as it's less spammy now
   hydration: true,
   morningGreeting: true,
+  mealReminder: true,
   diaryTime: { hour: 21, minute: 30 }
 };
 
@@ -330,6 +333,16 @@ export const NotificationService = {
     );
   },
 
+  async scheduleMealReminder() {
+    return this.schedule(
+      'meal_reminder',
+      i18n.t('notifications.content.mealReminder.title', { defaultValue: '🍽️ Promemoria Pasto' }),
+      i18n.t('notifications.content.mealReminder.body', { defaultValue: 'È ora di inserire il tuo pasto! Ricorda di aggiungere un pasto alla tua pianificazione. 🥗' }),
+      { hour: 13, minute: 0, repeats: true },
+      { screen: 'nutrients' }
+    );
+  },
+
   // 🔥 NEW: Reschedule all notifications with updated language
   async updateLocalization() {
     try {
@@ -354,6 +367,7 @@ export const NotificationService = {
       if (preferences.breathing) await this.scheduleBreathingNudges(); // Includes weekday logic
       if (preferences.hydration) await this.scheduleHydrationReminders();
       if (preferences.morningGreeting) await this.scheduleMorningGreeting();
+      if (preferences.mealReminder) await this.scheduleMealReminder();
       // Daily Copilot is usually triggered by analysis, but if we have a default daily schedule logic:
       await this.scheduleDailyCopilot();
 
@@ -417,10 +431,10 @@ export const NotificationService = {
       ));
     }
 
-    // Removed Fridge Expiry Check, Evening Winddown, Sleep Preparation as per request
     if (prefs.breathing) ids.push(...(await this.scheduleBreathingNudges()));
     if (prefs.hydration) ids.push(...(await this.scheduleHydrationReminders()));
     if (prefs.morningGreeting) ids.push(await this.scheduleMorningGreeting());
+    if (prefs.mealReminder) ids.push(await this.scheduleMealReminder());
 
     // Daily Copilot - recupera orario
     try {

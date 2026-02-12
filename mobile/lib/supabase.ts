@@ -22,7 +22,18 @@ export interface UserProfile {
   first_name?: string;
   last_name?: string;
   age?: number;
-  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+  gender?: 'male' | 'female' | 'other' | 'non_binary' | 'prefer_not_to_say';
+  birth_date?: string;
+  terms_accepted?: boolean;
+  terms_accepted_at?: string;
+  terms_consent_ip?: string;
+  health_consent_accepted?: boolean;
+  health_consent_accepted_at?: string;
+  health_consent_ip?: string;
+  consent_version?: string;
+  deletion_requested_at?: string;
+  deletion_scheduled_for?: string;
+  deletion_status?: 'none' | 'scheduled' | 'completed';
   weight?: number; // kg
   height?: number; // cm
   activity_level?: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extremely_active';
@@ -149,6 +160,18 @@ export interface UserInsight {
   created_at: string;
 }
 
+export interface AppRuntimeControl {
+  platform: 'android' | 'ios' | 'all';
+  min_supported_version: string;
+  latest_version?: string | null;
+  force_update: boolean;
+  is_maintenance: boolean;
+  maintenance_title?: string | null;
+  maintenance_message?: string | null;
+  update_url?: string | null;
+  updated_at: string;
+}
+
 // Database Tables
 export const Tables = {
   USER_PROFILES: 'user_profiles',
@@ -162,6 +185,5 @@ export const Tables = {
   USER_INSIGHTS: 'user_insights',
   HEALTH_DATA: 'health_data',
   USER_FEEDBACKS: 'user_feedbacks',
+  APP_RUNTIME_CONTROLS: 'app_runtime_controls',
 } as const;
-
-

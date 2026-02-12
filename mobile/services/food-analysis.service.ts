@@ -76,8 +76,9 @@ export class FoodAnalysisService {
         console.log('[FoodAnalysis] Image uploaded to Supabase Storage:', finalImageUrl);
       } catch (uploadError) {
         console.error('[FoodAnalysis] Failed to upload image to Supabase Storage:', uploadError);
-        // Continua con l'URI locale come fallback
-        console.warn('[FoodAnalysis] Using local URI as fallback:', analysis.imageUrl);
+        // Privacy hardening: non salvare URI locali (file://...) nel database.
+        finalImageUrl = null;
+        console.warn('[FoodAnalysis] Image URL omitted because upload failed');
       }
     }
     // 🆕 Validazione dati prima del salvataggio
@@ -132,7 +133,8 @@ export class FoodAnalysisService {
                   observations: encryptedObservations || analysis.observations,
                   confidence: analysis.confidence,
                   analysis_data: analysis.analysisData || {},
-                  image_url: finalImageUrl, // 🔥 FIX: Usa l'URL pubblico di Supabase Storage
+                  // Salva solo URL remoti validi; mai percorsi locali del dispositivo.
+                  image_url: finalImageUrl && finalImageUrl.startsWith('http') ? finalImageUrl : null,
                   created_at: (() => {
                     if (analysis.date) {
                       const d = new Date(analysis.date);

@@ -72,6 +72,7 @@ import { EmotionalHoroscopeScreen } from './EmotionalHoroscopeScreen';
 import { useTranslation } from '../hooks/useTranslation'; // 🆕 i18n
 import { useTheme } from '../contexts/ThemeContext';
 import { useTabBarVisibility } from '../contexts/TabBarVisibilityContext';
+import { useAutoScrollToTop } from '../hooks/useAutoScrollToTop';
 import { getTodayISODate, toLocalISODate } from '../utils/locale-formatters';
 
 // Removed Colors import - using theme colors instead
@@ -123,6 +124,7 @@ export const EmotionDetectionScreen: React.FC = () => {
   const cameraController = useCameraController({ isScreenFocused: true });
   const router = useRouter();
   const { hideTabBar, showTabBar } = useTabBarVisibility();
+  const scrollRef = useAutoScrollToTop<ScrollView>('analysis');
 
   const [detecting, setDetecting] = useState(false);
   // Removed capturing state - no more capture overlay
@@ -1152,6 +1154,7 @@ export const EmotionDetectionScreen: React.FC = () => {
       }} />
       <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={["top", "bottom"]}>
         <ScrollView
+          ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={styles.overviewContent}
           showsVerticalScrollIndicator={false}

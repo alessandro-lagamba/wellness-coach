@@ -125,6 +125,7 @@
       "breathing": "Breathing Break",
       "hydration": "Hydration",
       "morningGreeting": "Morning Greeting",
+      "mealReminder": "Meal Reminder",
       "diaryTimeTitle": "Diary Time",
       "diaryTitle": "Diary",
       "diaryBody": "Would you like to write a brief journal entry?",
@@ -153,6 +154,10 @@
         "dailyCopilot": {
           "title": "Daily Copilot: Your Plan 🎯",
           "body": "Your recommendations for tomorrow are ready! Discover how to optimize your day. 💡"
+        },
+        "mealReminder": {
+          "title": "🍽️ Meal Reminder",
+          "body": "Time to add your meal! Remember to add a meal to your planning. 🥗"
         }
       }
     },
@@ -184,7 +189,59 @@
     "restoreDescription": "Import data from a file",
     "restoreConfirm": "Import data from a previous backup file. Existing data will be kept and backup data will be added.",
     "restoreAction": "Import",
-    "restoreSuccess": "Restored {{count}} items successfully."
+    "restoreSuccess": "Restored {{count}} items successfully.",
+    "manualBackupTitle": "Export manual backup",
+    "manualBackupDescription": "Create a file to share or store manually",
+    "manualRestoreTitle": "Restore manual backup",
+    "manualRestoreDescription": "Import a backup file from this device",
+    "cloudBackup": {
+      "googleDrive": "Google Drive",
+      "iCloudDrive": "iCloud Drive",
+      "statusTitle": "Cloud Backup",
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "connectedDescription": "Connected to {{provider}}",
+      "notConnectedDescription": "No cloud folder linked yet ({{provider}})",
+      "lastBackupAt": "Last backup: {{date}}",
+      "connectTitle": "Connect cloud backup",
+      "reconnectTitle": "Change cloud folder",
+      "connectDescription": "Select a folder in {{provider}}",
+      "connectConfirm": "Select a folder on {{provider}} where automatic backups will be stored.",
+      "connectAction": "Connect",
+      "connectSuccess": "Cloud backup configured on {{provider}}.",
+      "connectError": "Unable to configure cloud backup: {{error}}",
+      "notConfiguredTitle": "Cloud backup not configured",
+      "notConfiguredMessage": "Please configure a folder on {{provider}} first.",
+      "backupNowTitle": "Backup to cloud now",
+      "backupNowDescription": "Create an immediate backup in the linked cloud folder",
+      "backupNowConfirm": "Create a backup now on {{provider}}?",
+      "backupNowAction": "Backup now",
+      "backupNowSuccess": "Cloud backup completed. File: {{fileName}} ({{count}} items).",
+      "backupNowError": "Cloud backup failed: {{error}}",
+      "restoreTitle": "Restore latest cloud backup",
+      "restoreDescription": "Import the latest backup available from cloud",
+      "restoreConfirm": "Import the latest available cloud backup. Existing local data will be preserved and backup data will be added.",
+      "restoreAction": "Restore",
+      "restoreSuccess": "Restore completed from {{fileName}} ({{count}} items).",
+      "restoreError": "Cloud restore failed: {{error}}",
+      "disconnectTitle": "Disconnect cloud backup",
+      "disconnectDescription": "Removes the linked cloud folder from this device",
+      "disconnectConfirm": "Do you want to remove the linked cloud folder? Existing backup files will remain in cloud storage.",
+      "disconnectAction": "Disconnect",
+      "disconnectSuccess": "Cloud backup disconnected.",
+      "disconnectError": "Error while disconnecting: {{error}}"
+    }
+  },
+  "runtimeControl": {
+    "maintenanceTitle": "Maintenance in progress",
+    "maintenanceMessage": "Yachai is temporarily unavailable. Please try again in a few minutes.",
+    "forceUpdateTitle": "Update required",
+    "forceUpdateMessage": "This app version is no longer supported. Please update to continue.",
+    "versionInfo": "Installed version {{current}} · Minimum required {{minimum}}",
+    "updateNow": "Update now",
+    "openUpdate": "Open update",
+    "retryAction": "Retry",
+    "unableToOpenUpdateUrl": "Unable to open the update link. Please try again later."
   },
   "journal": {
     "title": "Journal",

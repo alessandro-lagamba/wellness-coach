@@ -493,6 +493,59 @@ export class AuthService {
   }
 
   /**
+   * Pianifica la cancellazione account a +60 giorni (server-side RPC).
+   * Il backend revoca subito l'accesso impostando banned_until.
+   */
+  static async requestAccountDeletion(
+    confirmationText: string = 'ELIMINA'
+  ): Promise<{ scheduledFor: string | null; error: any }> {
+    try {
+      const publicIp = await this.getPublicIpAddress();
+      const { data, error } = await supabase.rpc('request_account_deletion', {
+        p_confirmation_text: confirmationText,
+        p_source: 'mobile_settings',
+        p_ip: publicIp,
+      });
+
+      if (error) {
+        return { scheduledFor: null, error };
+      }
+
+      return {
+        scheduledFor: typeof data === 'string' ? data : null,
+        error: null,
+      };
+    } catch (error) {
+      return { scheduledFor: null, error };
+    }
+  }
+
+  /**
+   * Cancella immediatamente l'utente autenticato corrente.
+   * Usato per enforcement hard (es. blocco under-16 post social login).
+   */
+  static async deleteCurrentUserCompletely(): Promise<{ error: any }> {
+    try {
+      const currentUser = await this.getCurrentUser();
+      if (!currentUser?.id) {
+        return { error: new Error('AUTH_REQUIRED') };
+      }
+
+      const { error } = await supabase.rpc('delete_user_completely', {
+        user_id_to_delete: currentUser.id,
+      });
+
+      if (error) {
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  }
+
+  /**
    * Crea un profilo utente
    */
   static async createUserProfile(
@@ -502,7 +555,17 @@ export class AuthService {
     firstName?: string,
     lastName?: string,
     age?: number,
-    gender?: string
+    gender?: string,
+    options?: {
+      birthDate?: string;
+      termsAccepted?: boolean;
+      termsAcceptedAt?: string;
+      termsConsentIp?: string | null;
+      healthConsentAccepted?: boolean;
+      healthConsentAcceptedAt?: string;
+      healthConsentIp?: string | null;
+      consentVersion?: string;
+    }
   ): Promise<UserProfile | null> {
     try {
       // Ottieni l'utente autenticato corrente
@@ -542,6 +605,14 @@ export class AuthService {
           last_name: finalLastName,
           age: age !== undefined && age !== null ? age : null,
           gender: gender || null,
+          birth_date: options?.birthDate || null,
+          terms_accepted: options?.termsAccepted || false,
+          terms_accepted_at: options?.termsAcceptedAt || null,
+          terms_consent_ip: options?.termsConsentIp || null,
+          health_consent_accepted: options?.healthConsentAccepted || false,
+          health_consent_accepted_at: options?.healthConsentAcceptedAt || null,
+          health_consent_ip: options?.healthConsentIp || null,
+          consent_version: options?.consentVersion || null,
         })
         .select()
         .single();

@@ -118,6 +118,7 @@ import * as Notifications from 'expo-notifications'; // 🆕 Local notifications
 import { useRouter } from 'expo-router'; // 🆕 Navigation
 import { TabBarVisibilityProvider } from '../contexts/TabBarVisibilityContext';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { ScrollToTopProvider } from '../contexts/ScrollToTopContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete
 SplashScreen.preventAutoHideAsync();
@@ -187,7 +188,9 @@ function RootLayoutNav() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <CustomThemeProvider> {/* 🆕 Our custom theme provider (dark mode) */}
         <KeyboardProvider>
-          <RootLayoutNavInner onAuthSuccess={handleAuthSuccess} />
+          <ScrollToTopProvider>
+            <RootLayoutNavInner onAuthSuccess={handleAuthSuccess} />
+          </ScrollToTopProvider>
         </KeyboardProvider>
       </CustomThemeProvider>
     </GestureHandlerRootView>

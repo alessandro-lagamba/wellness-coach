@@ -6,6 +6,7 @@
  */
 
 import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import { LocalJournalService, LocalJournalEntry } from './local-journal.service';
@@ -38,18 +39,15 @@ class BackupServiceClass {
     private readonly BACKUP_FILENAME = 'wellness_backup.json';
 
     /**
-     * Export all local data to a JSON file
+     * Build backup payload from local services
      */
-    async exportBackup(): Promise<string> {
-        console.log('[Backup] Starting export...');
-
-        // Gather all data
+    private async buildBackupData(): Promise<BackupData> {
         const journalEntries = await LocalJournalService.getAll();
         const { sessions, messages } = await LocalChatService.getAllForBackup();
         const checkins = await LocalCheckinsService.getAll();
         const analyses = await LocalAnalysesService.getAllForBackup();
 
-        const backupData: BackupData = {
+        return {
             version: BACKUP_VERSION,
             exported_at: new Date().toISOString(),
             data: {
@@ -62,21 +60,91 @@ class BackupServiceClass {
                 menstrual_notes: analyses.menstrual_notes
             }
         };
+    }
+
+    /**
+     * Restore data from a parsed backup payload
+     */
+    async restoreBackupData(backupData: BackupData): Promise<{ stats: Record<string, number> }> {
+        if (!backupData.version || !backupData.data) {
+            throw new Error('Invalid backup file format');
+        }
+
+        if (backupData.version > BACKUP_VERSION) {
+            throw new Error(`Backup version ${backupData.version} is newer than supported (${BACKUP_VERSION})`);
+        }
+
+        console.log('[Backup] Starting restore from', backupData.exported_at);
+
+        if (backupData.data.journal_entries?.length) {
+            await LocalJournalService.bulkInsert(backupData.data.journal_entries);
+        }
+
+        if (backupData.data.chat_sessions?.length || backupData.data.chat_messages?.length) {
+            await LocalChatService.restoreFromBackup({
+                sessions: backupData.data.chat_sessions || [],
+                messages: backupData.data.chat_messages || []
+            });
+        }
+
+        if (backupData.data.daily_checkins?.length) {
+            await LocalCheckinsService.bulkInsert(backupData.data.daily_checkins);
+        }
+
+        await LocalAnalysesService.restoreFromBackup({
+            emotion_analyses: backupData.data.emotion_analyses || [],
+            skin_analyses: backupData.data.skin_analyses || [],
+            menstrual_notes: backupData.data.menstrual_notes || []
+        });
+
+        const stats = {
+            journal_entries: backupData.data.journal_entries?.length || 0,
+            chat_sessions: backupData.data.chat_sessions?.length || 0,
+            chat_messages: backupData.data.chat_messages?.length || 0,
+            daily_checkins: backupData.data.daily_checkins?.length || 0,
+            emotion_analyses: backupData.data.emotion_analyses?.length || 0,
+            skin_analyses: backupData.data.skin_analyses?.length || 0,
+            menstrual_notes: backupData.data.menstrual_notes?.length || 0
+        };
+
+        console.log('[Backup] Restore complete:', stats);
+
+        return { stats };
+    }
+
+    /**
+     * Export all local data as object
+     */
+    async exportBackupData(): Promise<BackupData> {
+        console.log('[Backup] Starting export...');
+        const backupData = await this.buildBackupData();
+
+        console.log('[Backup] Export data built:', {
+            journal_entries: backupData.data.journal_entries.length,
+            chat_sessions: backupData.data.chat_sessions.length,
+            chat_messages: backupData.data.chat_messages.length,
+            daily_checkins: backupData.data.daily_checkins.length,
+            emotion_analyses: backupData.data.emotion_analyses.length,
+            skin_analyses: backupData.data.skin_analyses.length,
+            menstrual_notes: backupData.data.menstrual_notes.length
+        });
+
+        return backupData;
+    }
+
+    /**
+     * Export all local data to a JSON file
+     */
+    async exportBackup(): Promise<string> {
+        const backupData = await this.exportBackupData();
 
         // Write to file
-        const fileUri = `${FileSystem.cacheDirectory}${this.BACKUP_FILENAME}`;
-        await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(backupData, null, 2));
+        const backupFile = new File(Paths.cache, this.BACKUP_FILENAME);
+        backupFile.create({ overwrite: true, intermediates: true });
+        backupFile.write(JSON.stringify(backupData, null, 2));
+        const fileUri = backupFile.uri;
 
         console.log('[Backup] Export complete, file at:', fileUri);
-        console.log('[Backup] Stats:', {
-            journal_entries: journalEntries.length,
-            chat_sessions: sessions.length,
-            chat_messages: messages.length,
-            daily_checkins: checkins.length,
-            emotion_analyses: analyses.emotion_analyses.length,
-            skin_analyses: analyses.skin_analyses.length,
-            menstrual_notes: analyses.menstrual_notes.length
-        });
 
         return fileUri;
     }
@@ -119,52 +187,7 @@ class BackupServiceClass {
             const fileUri = result.assets[0].uri;
             const content = await FileSystem.readAsStringAsync(fileUri);
             const backupData: BackupData = JSON.parse(content);
-
-            // Validate backup format
-            if (!backupData.version || !backupData.data) {
-                return { success: false, error: 'Invalid backup file format' };
-            }
-
-            if (backupData.version > BACKUP_VERSION) {
-                return { success: false, error: `Backup version ${backupData.version} is newer than supported (${BACKUP_VERSION})` };
-            }
-
-            // Restore data
-            console.log('[Backup] Starting restore from', backupData.exported_at);
-
-            if (backupData.data.journal_entries?.length) {
-                await LocalJournalService.bulkInsert(backupData.data.journal_entries);
-            }
-
-            if (backupData.data.chat_sessions?.length || backupData.data.chat_messages?.length) {
-                await LocalChatService.restoreFromBackup({
-                    sessions: backupData.data.chat_sessions || [],
-                    messages: backupData.data.chat_messages || []
-                });
-            }
-
-            if (backupData.data.daily_checkins?.length) {
-                await LocalCheckinsService.bulkInsert(backupData.data.daily_checkins);
-            }
-
-            await LocalAnalysesService.restoreFromBackup({
-                emotion_analyses: backupData.data.emotion_analyses || [],
-                skin_analyses: backupData.data.skin_analyses || [],
-                menstrual_notes: backupData.data.menstrual_notes || []
-            });
-
-            const stats = {
-                journal_entries: backupData.data.journal_entries?.length || 0,
-                chat_sessions: backupData.data.chat_sessions?.length || 0,
-                chat_messages: backupData.data.chat_messages?.length || 0,
-                daily_checkins: backupData.data.daily_checkins?.length || 0,
-                emotion_analyses: backupData.data.emotion_analyses?.length || 0,
-                skin_analyses: backupData.data.skin_analyses?.length || 0,
-                menstrual_notes: backupData.data.menstrual_notes?.length || 0
-            };
-
-            console.log('[Backup] Restore complete:', stats);
-
+            const { stats } = await this.restoreBackupData(backupData);
             return { success: true, stats };
         } catch (error) {
             console.error('[Backup] Import failed:', error);

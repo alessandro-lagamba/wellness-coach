@@ -19,7 +19,9 @@ import { useTheme } from '../contexts/ThemeContext'; // 🆕 Theme hook
 import { EmptyStateCard } from './EmptyStateCard';
 import WellnessSyncService from '../services/wellness-sync.service';
 import { UserFeedbackService } from '../services/user-feedback.service';
+import { useAutoScrollToTop } from '../hooks/useAutoScrollToTop';
 import Constants from 'expo-constants';
+import type { CloudBackupStatus } from '../services/cloud-backup.service';
 
 interface SettingsItem {
   id: string;
@@ -87,8 +89,9 @@ const UserProfileCard = ({
           <Text style={[styles.profileDetailValue, { color: colors.text }]}>
             {userProfile.gender === 'male' ? t('settings.profile.male') :
               userProfile.gender === 'female' ? t('settings.profile.female') :
-                userProfile.gender === 'other' ? t('settings.profile.other') :
-                  t('settings.profile.preferNotToSay')}
+                userProfile.gender === 'non_binary' ? t('settings.profile.other') :
+                  userProfile.gender === 'other' ? t('settings.profile.other') :
+                    t('settings.profile.preferNotToSay')}
           </Text>
         </View>
         <View style={styles.profileDetailRow}>
@@ -383,6 +386,7 @@ const FeedbackModal = ({
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }) => {
   const { t, language, changeLanguage } = useTranslation(); // 🆕 Hook traduzioni
   const { mode, colors, toggleTheme } = useTheme(); // 🆕 Theme hook
+  const scrollRef = useAutoScrollToTop<ScrollView>('settings');
   const systemColorScheme = useColorScheme();
   // 🔥 FIX: Fallback color basato su useColorScheme per evitare flash bianco
   const fallbackBackground = systemColorScheme === 'dark' ? '#1a1625' : '#f8fafc';
@@ -402,10 +406,18 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [showDeleteAccountSuccessModal, setShowDeleteAccountSuccessModal] = useState(false);
+  const [cloudBackupStatus, setCloudBackupStatus] = useState<CloudBackupStatus | null>(null);
+  const [isCloudBackupBusy, setIsCloudBackupBusy] = useState(false);
 
   const emailVerified = Boolean(resolvedUser?.email_confirmed_at);
   const canConfirmDeletion =
     deleteConfirmationText.trim() === DELETE_CONFIRMATION_WORD && !isDeletingAccount;
+  const fallbackCloudProvider = Platform.OS === 'android' ? 'google_drive' : 'icloud_drive';
+  const effectiveCloudProvider = cloudBackupStatus?.provider || fallbackCloudProvider;
+  const cloudProviderLabel = effectiveCloudProvider === 'google_drive'
+    ? (t('settings.cloudBackup.googleDrive') || 'Google Drive')
+    : (t('settings.cloudBackup.iCloudDrive') || 'iCloud Drive');
+  const isCloudBackupConfigured = Boolean(cloudBackupStatus?.isConfigured);
 
 
   // Health data hook
@@ -429,6 +441,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
     { id: 'about', label: t('settings.about'), description: t('settings.aboutDescription'), icon: 'info-circle' },
     { id: 'feedback', label: t('settings.feedback'), description: t('settings.feedbackDescription'), icon: 'commenting-o' },
   ];
+
+  const loadCloudBackupStatus = async () => {
+    try {
+      const { CloudBackupService } = await import('../services/cloud-backup.service');
+      const status = await CloudBackupService.getStatus();
+      setCloudBackupStatus(status);
+    } catch (error) {
+      console.error('[Settings] Failed to load cloud backup status:', error);
+      setCloudBackupStatus(null);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -477,6 +500,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   }, [syncService]);
 
   useEffect(() => {
+    loadCloudBackupStatus();
+  }, []);
+
+  useEffect(() => {
     if (!resolvedUser) {
       setUserProfile(null);
       setIsLoading(false);
@@ -508,6 +535,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
         const ageValue = targetUser.user_metadata?.age;
         const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : null);
         const gender = targetUser.user_metadata?.gender || 'prefer_not_to_say';
+        const birthDate = targetUser.user_metadata?.birth_date || null;
+        const termsAccepted = Boolean(targetUser.user_metadata?.terms_consent_accepted);
+        const termsAcceptedAt = targetUser.user_metadata?.terms_consent_accepted_at || null;
+        const termsConsentIp = targetUser.user_metadata?.terms_consent_ip || null;
+        const healthConsentAccepted = Boolean(targetUser.user_metadata?.health_consent_accepted);
+        const healthConsentAcceptedAt = targetUser.user_metadata?.health_consent_accepted_at || null;
+        const healthConsentIp = targetUser.user_metadata?.health_consent_ip || null;
+        const consentVersion = targetUser.user_metadata?.consent_version || null;
         const fullName = targetUser.user_metadata?.full_name ||
           (firstName && lastName ? `${firstName} ${lastName}` : null) ||
           targetUser.email?.split('@')[0] ||
@@ -521,6 +556,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
           last_name: lastName,
           age: age,
           gender: gender as any,
+          birth_date: birthDate,
+          terms_accepted: termsAccepted,
+          terms_accepted_at: termsAcceptedAt,
+          terms_consent_ip: termsConsentIp,
+          health_consent_accepted: healthConsentAccepted,
+          health_consent_accepted_at: healthConsentAcceptedAt,
+          health_consent_ip: healthConsentIp,
+          consent_version: consentVersion,
           created_at: targetUser.created_at || new Date().toISOString(),
           updated_at: targetUser.updated_at || new Date().toISOString(),
         } as UserProfile);
@@ -536,7 +579,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
               firstName,
               lastName,
               age || undefined,
-              gender
+              gender,
+              {
+                birthDate,
+                termsAccepted,
+                termsAcceptedAt,
+                termsConsentIp,
+                healthConsentAccepted,
+                healthConsentAcceptedAt,
+                healthConsentIp,
+                consentVersion,
+              }
             );
             console.log('✅ Profile created, reloading...');
             // Ricarica il profilo dopo la creazione
@@ -554,6 +607,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       const ageValue = targetUser.user_metadata?.age;
       const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : null);
       const gender = targetUser.user_metadata?.gender || 'prefer_not_to_say';
+      const birthDate = targetUser.user_metadata?.birth_date || null;
+      const termsAccepted = Boolean(targetUser.user_metadata?.terms_consent_accepted);
+      const termsAcceptedAt = targetUser.user_metadata?.terms_consent_accepted_at || null;
+      const termsConsentIp = targetUser.user_metadata?.terms_consent_ip || null;
+      const healthConsentAccepted = Boolean(targetUser.user_metadata?.health_consent_accepted);
+      const healthConsentAcceptedAt = targetUser.user_metadata?.health_consent_accepted_at || null;
+      const healthConsentIp = targetUser.user_metadata?.health_consent_ip || null;
+      const consentVersion = targetUser.user_metadata?.consent_version || null;
       const fullName = targetUser.user_metadata?.full_name ||
         (firstName && lastName ? `${firstName} ${lastName}` : null) ||
         targetUser.email?.split('@')[0] ||
@@ -567,6 +628,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
         last_name: lastName,
         age: age,
         gender: gender as any,
+        birth_date: birthDate,
+        terms_accepted: termsAccepted,
+        terms_accepted_at: termsAcceptedAt,
+        terms_consent_ip: termsConsentIp,
+        health_consent_accepted: healthConsentAccepted,
+        health_consent_accepted_at: healthConsentAcceptedAt,
+        health_consent_ip: healthConsentIp,
+        consent_version: consentVersion,
         created_at: targetUser.created_at || new Date().toISOString(),
         updated_at: targetUser.updated_at || new Date().toISOString(),
       } as UserProfile);
@@ -643,24 +712,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
 
     setIsDeletingAccount(true);
     try {
-      const { supabase } = await import('../lib/supabase');
-
-      const { error: rpcError } = await supabase.rpc('delete_user_completely', {
-        user_id_to_delete: resolvedUser.id,
-      });
-
-      if (rpcError) {
-        // Fallback best-effort per ambienti in cui la funzione RPC non è disponibile
-        console.warn('delete_user_completely RPC failed, using fallback deletion:', rpcError);
-        await Promise.allSettled([
-          supabase.from('emotion_analyses').delete().eq('user_id', resolvedUser.id),
-          supabase.from('skin_analyses').delete().eq('user_id', resolvedUser.id),
-          supabase.from('daily_journal_entries').delete().eq('user_id', resolvedUser.id),
-          supabase.from('health_data').delete().eq('user_id', resolvedUser.id),
-          supabase.from('daily_copilot_analyses').delete().eq('user_id', resolvedUser.id),
-          supabase.from('intelligent_insights').delete().eq('user_id', resolvedUser.id),
-          supabase.from('user_profiles').delete().eq('id', resolvedUser.id),
-        ]);
+      const { error: deletionError } = await AuthService.requestAccountDeletion(DELETE_CONFIRMATION_WORD);
+      if (deletionError) {
+        throw deletionError;
       }
 
       await AuthService.signOut();
@@ -785,7 +839,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
           text: t('settings.backupAction') || 'Esporta',
           onPress: async () => {
             try {
-              setIsLoading(true);
+              setIsCloudBackupBusy(true);
               const { BackupService } = await import('../services/local-storage/backup.service');
               const success = await BackupService.shareBackup();
               if (success) {
@@ -797,7 +851,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
             } catch (error) {
               Alert.alert(t('common.error'), String(error));
             } finally {
-              setIsLoading(false);
+              setIsCloudBackupBusy(false);
             }
           }
         }
@@ -816,7 +870,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
           text: t('settings.restoreAction') || 'Importa',
           onPress: async () => {
             try {
-              setIsLoading(true);
+              setIsCloudBackupBusy(true);
               const { BackupService } = await import('../services/local-storage/backup.service');
               const result = await BackupService.importBackup();
               if (result.success && result.stats) {
@@ -831,7 +885,166 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
             } catch (error) {
               Alert.alert(t('common.error'), String(error));
             } finally {
-              setIsLoading(false);
+              setIsCloudBackupBusy(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleConnectCloudBackup = async () => {
+    Alert.alert(
+      t('settings.cloudBackup.connectTitle') || 'Connetti backup cloud',
+      t('settings.cloudBackup.connectConfirm', { provider: cloudProviderLabel }) || `Seleziona una cartella su ${cloudProviderLabel} per salvare i backup automatici.`,
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.cloudBackup.connectAction') || 'Connetti',
+          onPress: async () => {
+            try {
+              setIsCloudBackupBusy(true);
+              const { CloudBackupService } = await import('../services/cloud-backup.service');
+              await CloudBackupService.configureBackupDestination();
+              await loadCloudBackupStatus();
+              Alert.alert(
+                t('common.success'),
+                t('settings.cloudBackup.connectSuccess', { provider: cloudProviderLabel }) || `Backup cloud configurato su ${cloudProviderLabel}.`
+              );
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              if (message.toLowerCase().includes('cancel')) {
+                return;
+              }
+              Alert.alert(
+                t('common.error'),
+                t('settings.cloudBackup.connectError', { error: message }) || `Impossibile configurare il backup cloud: ${message}`
+              );
+            } finally {
+              setIsCloudBackupBusy(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleCloudBackupNow = async () => {
+    if (!isCloudBackupConfigured) {
+      Alert.alert(
+        t('settings.cloudBackup.notConfiguredTitle') || 'Backup cloud non configurato',
+        t('settings.cloudBackup.notConfiguredMessage', { provider: cloudProviderLabel }) || `Configura prima una cartella su ${cloudProviderLabel}.`,
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('settings.cloudBackup.connectAction') || 'Connetti', onPress: handleConnectCloudBackup }
+        ]
+      );
+      return;
+    }
+
+    Alert.alert(
+      t('settings.cloudBackup.backupNowTitle') || 'Backup cloud',
+      t('settings.cloudBackup.backupNowConfirm', { provider: cloudProviderLabel }) || `Creare ora un backup su ${cloudProviderLabel}?`,
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.cloudBackup.backupNowAction') || 'Backup ora',
+          onPress: async () => {
+            try {
+              setIsCloudBackupBusy(true);
+              const { CloudBackupService } = await import('../services/cloud-backup.service');
+              const result = await CloudBackupService.backupNow();
+              await loadCloudBackupStatus();
+              const total = (Object.values(result.stats) as number[]).reduce((a, b) => a + b, 0);
+              Alert.alert(
+                t('common.success'),
+                t('settings.cloudBackup.backupNowSuccess', { fileName: result.fileName, count: total }) ||
+                `Backup cloud completato (${total} elementi).`
+              );
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              Alert.alert(
+                t('common.error'),
+                t('settings.cloudBackup.backupNowError', { error: message }) || `Backup cloud fallito: ${message}`
+              );
+            } finally {
+              setIsCloudBackupBusy(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleCloudRestoreLatest = async () => {
+    if (!isCloudBackupConfigured) {
+      Alert.alert(
+        t('settings.cloudBackup.notConfiguredTitle') || 'Backup cloud non configurato',
+        t('settings.cloudBackup.notConfiguredMessage', { provider: cloudProviderLabel }) || `Configura prima una cartella su ${cloudProviderLabel}.`
+      );
+      return;
+    }
+
+    Alert.alert(
+      t('settings.cloudBackup.restoreTitle') || 'Ripristina da cloud',
+      t('settings.cloudBackup.restoreConfirm') || 'Importa l’ultimo backup cloud disponibile. I dati locali esistenti verranno mantenuti e quelli del backup aggiunti.',
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.cloudBackup.restoreAction') || 'Ripristina',
+          onPress: async () => {
+            try {
+              setIsCloudBackupBusy(true);
+              const { CloudBackupService } = await import('../services/cloud-backup.service');
+              const result = await CloudBackupService.restoreLatest();
+              const total = (Object.values(result.stats) as number[]).reduce((a, b) => a + b, 0);
+              Alert.alert(
+                t('common.success'),
+                t('settings.cloudBackup.restoreSuccess', { count: total, fileName: result.fileName }) ||
+                `Ripristino completato (${total} elementi).`
+              );
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              Alert.alert(
+                t('common.error'),
+                t('settings.cloudBackup.restoreError', { error: message }) || `Ripristino cloud fallito: ${message}`
+              );
+            } finally {
+              setIsCloudBackupBusy(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleDisconnectCloudBackup = async () => {
+    Alert.alert(
+      t('settings.cloudBackup.disconnectTitle') || 'Disconnetti backup cloud',
+      t('settings.cloudBackup.disconnectConfirm') || 'Vuoi rimuovere la cartella cloud collegata? I file di backup già creati resteranno nel cloud.',
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.cloudBackup.disconnectAction') || 'Disconnetti',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsCloudBackupBusy(true);
+              const { CloudBackupService } = await import('../services/cloud-backup.service');
+              await CloudBackupService.clearConfiguration();
+              await loadCloudBackupStatus();
+              Alert.alert(
+                t('common.success'),
+                t('settings.cloudBackup.disconnectSuccess') || 'Backup cloud disconnesso.'
+              );
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              Alert.alert(
+                t('common.error'),
+                t('settings.cloudBackup.disconnectError', { error: message }) || `Errore durante la disconnessione: ${message}`
+              );
+            } finally {
+              setIsCloudBackupBusy(false);
             }
           }
         }
@@ -941,7 +1154,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       </View>
 
       {/* Content */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.content}>
           {/* ✅ FIX: Mostra sempre la card di verifica email se l'email non è verificata */}
           {!emailVerified && resolvedUser && (
@@ -1033,7 +1250,147 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>{t('settings.dataManagement') || 'Gestione Dati'}</Text>
 
-            {/* Backup Button */}
+            {/* Cloud backup status */}
+            <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.rowIconWrapper, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
+                <FontAwesome name="cloud" size={16} color={colors.primary} />
+              </View>
+              <View style={styles.rowCopy}>
+                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>
+                  {t('settings.cloudBackup.statusTitle') || 'Backup cloud'}
+                </Text>
+                <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>
+                  {isCloudBackupConfigured
+                    ? (t('settings.cloudBackup.connectedDescription', { provider: cloudProviderLabel }) || `Connesso a ${cloudProviderLabel}`)
+                    : (t('settings.cloudBackup.notConnectedDescription', { provider: cloudProviderLabel }) || `Non connesso a ${cloudProviderLabel}`)}
+                </Text>
+                {cloudBackupStatus?.lastBackupAt && (
+                  <Text style={[styles.cloudStatusMeta, { color: colors.textTertiary }]} allowFontScaling={false}>
+                    {t('settings.cloudBackup.lastBackupAt', { date: new Date(cloudBackupStatus.lastBackupAt).toLocaleString() }) ||
+                      `Ultimo backup: ${new Date(cloudBackupStatus.lastBackupAt).toLocaleString()}`}
+                  </Text>
+                )}
+              </View>
+              <View
+                style={[
+                  styles.cloudStatusBadge,
+                  { backgroundColor: isCloudBackupConfigured ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)' }
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.cloudStatusBadgeText,
+                    { color: isCloudBackupConfigured ? '#16a34a' : '#ef4444' }
+                  ]}
+                  allowFontScaling={false}
+                >
+                  {isCloudBackupConfigured
+                    ? (t('settings.cloudBackup.connected') || 'Connesso')
+                    : (t('settings.cloudBackup.notConnected') || 'Non connesso')}
+                </Text>
+              </View>
+            </View>
+
+            {/* Cloud connect/reconnect */}
+            <TouchableOpacity
+              style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border, opacity: isCloudBackupBusy ? 0.7 : 1 }]}
+              onPress={handleConnectCloudBackup}
+              activeOpacity={0.85}
+              disabled={isCloudBackupBusy}
+            >
+              <View style={[styles.rowIconWrapper, { backgroundColor: 'rgba(14, 165, 233, 0.15)' }]}>
+                <FontAwesome name="link" size={16} color="#0ea5e9" />
+              </View>
+              <View style={styles.rowCopy}>
+                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>
+                  {isCloudBackupConfigured
+                    ? (t('settings.cloudBackup.reconnectTitle') || 'Cambia cartella cloud')
+                    : (t('settings.cloudBackup.connectTitle') || 'Connetti backup cloud')}
+                </Text>
+                <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>
+                  {t('settings.cloudBackup.connectDescription', { provider: cloudProviderLabel }) || `Seleziona una cartella in ${cloudProviderLabel}`}
+                </Text>
+              </View>
+              {isCloudBackupBusy ? (
+                <ActivityIndicator color={colors.primary} size="small" />
+              ) : (
+                <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
+              )}
+            </TouchableOpacity>
+
+            {/* Cloud backup now */}
+            <TouchableOpacity
+              style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border, opacity: isCloudBackupBusy ? 0.7 : 1 }]}
+              onPress={handleCloudBackupNow}
+              activeOpacity={0.85}
+              disabled={isCloudBackupBusy}
+            >
+              <View style={[styles.rowIconWrapper, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
+                <FontAwesome name="cloud-upload" size={16} color="#22c55e" />
+              </View>
+              <View style={styles.rowCopy}>
+                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>
+                  {t('settings.cloudBackup.backupNowTitle') || 'Backup cloud ora'}
+                </Text>
+                <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>
+                  {t('settings.cloudBackup.backupNowDescription') || 'Crea subito un backup nel cloud collegato'}
+                </Text>
+              </View>
+              {isCloudBackupBusy ? (
+                <ActivityIndicator color="#22c55e" size="small" />
+              ) : (
+                <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
+              )}
+            </TouchableOpacity>
+
+            {/* Cloud restore latest */}
+            <TouchableOpacity
+              style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border, opacity: isCloudBackupBusy ? 0.7 : 1 }]}
+              onPress={handleCloudRestoreLatest}
+              activeOpacity={0.85}
+              disabled={isCloudBackupBusy}
+            >
+              <View style={[styles.rowIconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                <FontAwesome name="history" size={16} color="#3b82f6" />
+              </View>
+              <View style={styles.rowCopy}>
+                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>
+                  {t('settings.cloudBackup.restoreTitle') || 'Ripristina ultimo backup cloud'}
+                </Text>
+                <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>
+                  {t('settings.cloudBackup.restoreDescription') || 'Importa l’ultimo backup disponibile dal cloud'}
+                </Text>
+              </View>
+              {isCloudBackupBusy ? (
+                <ActivityIndicator color="#3b82f6" size="small" />
+              ) : (
+                <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
+              )}
+            </TouchableOpacity>
+
+            {isCloudBackupConfigured && (
+              <TouchableOpacity
+                style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border, opacity: isCloudBackupBusy ? 0.7 : 1 }]}
+                onPress={handleDisconnectCloudBackup}
+                activeOpacity={0.85}
+                disabled={isCloudBackupBusy}
+              >
+                <View style={[styles.rowIconWrapper, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                  <FontAwesome name="unlink" size={16} color="#ef4444" />
+                </View>
+                <View style={styles.rowCopy}>
+                  <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>
+                    {t('settings.cloudBackup.disconnectTitle') || 'Disconnetti backup cloud'}
+                  </Text>
+                  <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>
+                    {t('settings.cloudBackup.disconnectDescription') || 'Rimuove la cartella cloud collegata da questo dispositivo'}
+                  </Text>
+                </View>
+                <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
+              </TouchableOpacity>
+            )}
+
+            {/* Manual backup export */}
             <TouchableOpacity
               style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={handleBackupData}
@@ -1043,13 +1400,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
                 <FontAwesome name="cloud-upload" size={16} color="#22c55e" />
               </View>
               <View style={styles.rowCopy}>
-                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>{t('settings.backupTitle') || 'Esporta Backup'}</Text>
-                <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>{t('settings.backupDescription') || 'Salva i tuoi dati in un file'}</Text>
+                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>
+                  {t('settings.manualBackupTitle') || t('settings.backupTitle') || 'Esporta Backup Manuale'}
+                </Text>
+                <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>
+                  {t('settings.manualBackupDescription') || t('settings.backupDescription') || 'Salva i tuoi dati in un file'}
+                </Text>
               </View>
               <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
             </TouchableOpacity>
 
-            {/* Restore Button */}
+            {/* Manual restore */}
             <TouchableOpacity
               style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={handleRestoreData}
@@ -1059,8 +1420,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
                 <FontAwesome name="cloud-download" size={16} color="#3b82f6" />
               </View>
               <View style={styles.rowCopy}>
-                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>{t('settings.restoreTitle') || 'Ripristina Backup'}</Text>
-                <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>{t('settings.restoreDescription') || 'Importa dati da un file'}</Text>
+                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>
+                  {t('settings.manualRestoreTitle') || t('settings.restoreTitle') || 'Ripristina Backup Manuale'}
+                </Text>
+                <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>
+                  {t('settings.manualRestoreDescription') || t('settings.restoreDescription') || 'Importa dati da un file'}
+                </Text>
               </View>
               <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
             </TouchableOpacity>
@@ -1155,7 +1520,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
                 {isDeletingAccount ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={styles.deleteConfirmButtonText}>Elimina definitivamente</Text>
+                  <Text style={styles.deleteConfirmButtonText}>Richiedi cancellazione</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1176,9 +1541,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
         <View style={styles.modalOverlay}>
           <View style={[styles.deleteModalContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <Text style={[styles.deleteSuccessTitle, { color: colors.text }]}>Conferma cancellazione</Text>
-            <Text style={[styles.deleteSuccessTitle, { color: colors.error, marginTop: 4 }]}>Account eliminato</Text>
+            <Text style={[styles.deleteSuccessTitle, { color: colors.error, marginTop: 4 }]}>Cancellazione pianificata</Text>
             <Text style={[styles.deleteModalBody, { color: colors.textSecondary, marginTop: 10 }]}>
-              Il tuo account è stato eliminato. I dati saranno cancellati entro 60 giorni. Ci dispiace vederti andare via!
+              La richiesta è stata registrata con successo. I tuoi dati saranno cancellati entro 60 giorni. Ci dispiace vederti andare via!
             </Text>
 
             <TouchableOpacity
@@ -1363,6 +1728,20 @@ const styles = StyleSheet.create({
     color: '#64748b',
     lineHeight: 20,
     fontFamily: 'Figtree_500Medium',
+  },
+  cloudStatusMeta: {
+    fontSize: 12,
+    marginTop: 4,
+    fontFamily: 'Figtree_500Medium',
+  },
+  cloudStatusBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  cloudStatusBadgeText: {
+    fontSize: 12,
+    fontFamily: 'Figtree_700Bold',
   },
   versionCard: {
     marginTop: 20,
