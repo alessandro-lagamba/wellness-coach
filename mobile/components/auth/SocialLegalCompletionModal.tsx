@@ -14,6 +14,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AuthService } from '../../services/auth.service';
 import { TimeMachineCalendar } from '../TimeMachineCalendar';
+import { useTranslation } from '../../hooks/useTranslation';
 
 type GenderOption = 'female' | 'male' | 'non_binary' | 'prefer_not_to_say';
 
@@ -26,8 +27,6 @@ interface SocialLegalCompletionModalProps {
 }
 
 const MINIMUM_AGE = 16;
-const GDPR_BLOCK_MESSAGE =
-  "In conformità alla normativa vigente in materia di protezione dei dati personali, l’utilizzo dell’app è consentito esclusivamente a utenti di età pari o superiore a 16 anni. Non è possibile dunque procedere con la registrazione";
 const TERMS_URL = 'https://www.yachai.net/terms';
 const PRIVACY_URL = 'https://www.yachai.net/privacy';
 const CONSENT_VERSION = '2026-02-11-v1';
@@ -65,13 +64,35 @@ const calculateAge = (date: Date): number => {
   return age;
 };
 
-const formatBirthDate = (date: Date | null): string => {
-  if (!date) return 'Seleziona data';
-  return date.toLocaleDateString('it-IT', {
+const formatBirthDate = (date: Date | null, locale: string): string => {
+  if (!date) return '';
+  return date.toLocaleDateString(locale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
   });
+};
+
+const resolveNameParts = (metadata: any, email?: string | null) => {
+  const rawFullName =
+    metadata?.full_name ||
+    metadata?.name ||
+    email?.split('@')[0] ||
+    'User';
+
+  const parts = String(rawFullName)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  const parsedFirstName = parts[0] || undefined;
+  const parsedLastName = parts.length > 1 ? parts.slice(1).join(' ') : undefined;
+
+  return {
+    fullName: rawFullName,
+    firstName: metadata?.first_name || parsedFirstName,
+    lastName: metadata?.last_name || parsedLastName,
+  };
 };
 
 export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProps> = ({
@@ -81,6 +102,7 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
   onCompleted,
   onForceSignOut,
 }) => {
+  const { t, language } = useTranslation();
   const { colors, mode } = useTheme();
   const [gender, setGender] = useState<GenderOption | null>(null);
   const [birthDate, setBirthDate] = useState<Date | null>(null);
@@ -104,10 +126,10 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
   const textColor = mode === 'dark' ? '#F8FAFC' : '#0F172A';
 
   const genderOptions: Array<{ value: GenderOption; label: string }> = [
-    { value: 'female', label: 'Donna' },
-    { value: 'male', label: 'Uomo' },
-    { value: 'non_binary', label: 'Non binario' },
-    { value: 'prefer_not_to_say', label: 'Preferisco non dirlo' },
+    { value: 'female', label: t('auth.gender.female') },
+    { value: 'male', label: t('auth.gender.male') },
+    { value: 'non_binary', label: t('auth.gender.nonBinary') },
+    { value: 'prefer_not_to_say', label: t('auth.gender.preferNotToSay') },
   ];
 
   useEffect(() => {
@@ -123,7 +145,7 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
   }, [visible, profile, user]);
 
   const selectedGenderLabel =
-    genderOptions.find((option) => option.value === gender)?.label ?? 'Seleziona';
+    genderOptions.find((option) => option.value === gender)?.label ?? t('auth.gender.select');
 
   const canSubmit = useMemo(() => {
     return Boolean(gender && birthDate && termsConsentAccepted && healthConsentAccepted && !isSubmitting);
@@ -133,17 +155,23 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
     try {
       const supported = await Linking.canOpenURL(url);
       if (!supported) {
-        Alert.alert('Link non disponibile', `Impossibile aprire ${label} in questo momento.`);
+        Alert.alert(
+          t('auth.linkUnavailableTitle'),
+          t('auth.linkUnavailableMessage', { label })
+        );
         return;
       }
       await Linking.openURL(url);
     } catch {
-      Alert.alert('Errore', `Impossibile aprire ${label}. Riprova più tardi.`);
+      Alert.alert(t('common.error'), t('auth.linkOpenError', { label }));
     }
   };
 
   const handleUnderageBlock = async () => {
-    Alert.alert('Registrazione non consentita', GDPR_BLOCK_MESSAGE);
+    Alert.alert(
+      t('auth.underage.title'),
+      t('auth.underage.message', { minAge: MINIMUM_AGE })
+    );
     const provider = String(user?.app_metadata?.provider || '').toLowerCase();
     const isSocialProvider = SOCIAL_PROVIDERS.has(provider);
     try {
@@ -159,13 +187,13 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
 
   const handleSubmit = async () => {
     if (!gender || !birthDate) {
-      Alert.alert('Dati mancanti', 'Completa sesso e data di nascita per continuare.');
+      Alert.alert(t('auth.missingDataTitle'), t('auth.missingDataMessage'));
       return;
     }
     if (!termsConsentAccepted || !healthConsentAccepted) {
       Alert.alert(
-        'Consenso richiesto',
-        "Per continuare devi accettare sia i Termini e Condizioni/Privacy sia il consenso al trattamento dei dati salute."
+        t('auth.consentRequiredTitle'),
+        t('auth.consentRequiredMessage')
       );
       return;
     }
@@ -182,17 +210,13 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
       const consentIp = await AuthService.getPublicIpAddress();
       const birthDateISO = toISODate(birthDate);
       const metadata = user?.user_metadata || {};
-      const firstName = metadata.first_name || null;
-      const lastName = metadata.last_name || null;
-      const fullName =
-        metadata.full_name ||
-        metadata.name ||
-        [firstName, lastName].filter(Boolean).join(' ') ||
-        user?.email?.split('@')[0] ||
-        'User';
+      const { firstName, lastName, fullName } = resolveNameParts(metadata, user?.email);
 
       const metadataUpdate: Record<string, any> = {
         ...metadata,
+        full_name: fullName,
+        first_name: firstName,
+        last_name: lastName,
         gender,
         birth_date: birthDateISO,
         age,
@@ -216,8 +240,8 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
           user.id,
           user.email || '',
           fullName,
-          firstName || undefined,
-          lastName || undefined,
+          firstName,
+          lastName,
           age,
           gender,
           {
@@ -232,7 +256,10 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
           }
         );
       } else {
-        await AuthService.updateUserProfile(user.id, {
+        const profileUpdates: Record<string, any> = {
+          ...(existingProfile?.first_name ? {} : { first_name: firstName }),
+          ...(existingProfile?.last_name ? {} : { last_name: lastName }),
+          ...(existingProfile?.full_name ? {} : { full_name: fullName }),
           gender,
           birth_date: birthDateISO,
           age,
@@ -243,7 +270,9 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
           health_consent_accepted_at: consentAcceptedAt,
           health_consent_ip: consentIp || undefined,
           consent_version: CONSENT_VERSION,
-        });
+        };
+
+        await AuthService.updateUserProfile(user.id, profileUpdates);
       }
 
       const refreshedUser = await AuthService.getCurrentUser();
@@ -251,8 +280,8 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
     } catch (error: any) {
       console.error('Error completing legal data after social auth:', error);
       Alert.alert(
-        'Errore',
-        error?.message || 'Impossibile completare la registrazione legale. Riprova.'
+        t('common.error'),
+        error?.message || t('auth.legalCompletionError')
       );
     } finally {
       setIsSubmitting(false);
@@ -264,13 +293,13 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
       <Modal visible={visible} animationType="fade" transparent>
         <View style={styles.overlay}>
           <View style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.title, { color: colors.text }]}>Completa la registrazione</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('auth.legal.modalTitle')}</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Prima di continuare, completa i requisiti legali richiesti.
+              {t('auth.legal.modalSubtitle')}
             </Text>
 
             <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>SESSO *</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>{`${t('auth.gender.label').toUpperCase()} *`}</Text>
               <TouchableOpacity
                 style={[styles.inputWrapper, { backgroundColor: inputBg, borderColor: inputBorder }]}
                 onPress={() => setShowGenderModal(true)}
@@ -283,7 +312,7 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
                 <MaterialCommunityIcons name="chevron-down" size={20} color={placeholderColor} />
               </TouchableOpacity>
 
-              <Text style={[styles.label, { color: colors.textSecondary }]}>DATA DI NASCITA *</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>{`${t('auth.birthDate.label').toUpperCase()} *`}</Text>
               <TouchableOpacity
                 style={[styles.inputWrapper, { backgroundColor: inputBg, borderColor: inputBorder }]}
                 onPress={() => setShowBirthDateCalendar(true)}
@@ -291,7 +320,9 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
               >
                 <MaterialCommunityIcons name="calendar-month-outline" size={20} color={placeholderColor} style={{ marginRight: 10 }} />
                 <Text style={[styles.valueText, { color: birthDate ? textColor : placeholderColor }]}>
-                  {formatBirthDate(birthDate)}
+                  {birthDate
+                    ? formatBirthDate(birthDate, language.startsWith('en') ? 'en-US' : 'it-IT')
+                    : t('auth.birthDate.select')}
                 </Text>
               </TouchableOpacity>
 
@@ -305,14 +336,14 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
                 </View>
                 <View style={styles.consentTextWrap}>
                   <Text style={[styles.consentText, { color: textColor }]}>
-                    Accetto i Termini e Condizioni d'uso e dichiaro di aver letto l'Informativa Privacy.
+                    {t('auth.legal.termsAndPrivacyConsent')}
                   </Text>
                   <View style={styles.linksRow}>
-                    <TouchableOpacity onPress={() => openExternalDocument(TERMS_URL, 'Termini e Condizioni')}>
-                      <Text style={styles.consentLink}>[Termini]</Text>
+                    <TouchableOpacity onPress={() => openExternalDocument(TERMS_URL, t('auth.legal.termsLabel'))}>
+                      <Text style={styles.consentLink}>[{t('auth.legal.termsLabel')}]</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => openExternalDocument(PRIVACY_URL, 'Informativa Privacy')}>
-                      <Text style={styles.consentLink}>[Privacy Policy]</Text>
+                    <TouchableOpacity onPress={() => openExternalDocument(PRIVACY_URL, t('auth.legal.privacyLabel'))}>
+                      <Text style={styles.consentLink}>[{t('auth.legal.privacyLabel')}]</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -328,7 +359,7 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
                 </View>
                 <View style={styles.consentTextWrap}>
                   <Text style={[styles.consentText, { color: textColor }]}>
-                    Acconsento al trattamento dei miei dati relativi alla salute per ricevere raccomandazioni personalizzate e profilazione automatizzata, come descritto nell'Informativa Privacy.
+                    {t('auth.legal.healthConsentCheckbox')}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -340,7 +371,7 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
                 onPress={onForceSignOut}
                 disabled={isSubmitting}
               >
-                <Text style={[styles.secondaryButtonText, { color: colors.textSecondary }]}>Esci</Text>
+                <Text style={[styles.secondaryButtonText, { color: colors.textSecondary }]}>{t('auth.legal.exit')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -351,7 +382,7 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.primaryButtonText}>Accetta e continua</Text>
+                  <Text style={styles.primaryButtonText}>{t('auth.legal.acceptAndContinue')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -363,13 +394,13 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
         visible={showBirthDateCalendar}
         onClose={() => setShowBirthDateCalendar(false)}
         onSelectDate={(date) => setBirthDate(date)}
-        language="it"
-        title="Seleziona la data di nascita"
-        subtitle={`L'accesso è consentito solo agli utenti con almeno ${MINIMUM_AGE} anni`}
-        confirmText="CONFERMA DATA"
+        language={language.startsWith('en') ? 'en' : 'it'}
+        title={t('auth.birthDate.title')}
+        subtitle={t('auth.birthDate.subtitle', { minAge: MINIMUM_AGE })}
+        confirmText={t('auth.birthDate.confirm')}
         isDark={mode === 'dark'}
         showYearSelector={true}
-        headerLabel="DATA DI NASCITA"
+        headerLabel={t('auth.birthDate.headerLabel')}
         headerIcon="calendar-month-outline"
         {...birthCalendarYearRange}
       />
@@ -382,7 +413,7 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
       >
         <View style={styles.genderModalOverlay}>
           <View style={[styles.genderModalCard, { backgroundColor: inputBg, borderColor: inputBorder }]}>
-            <Text style={[styles.genderModalTitle, { color: textColor }]}>Seleziona il sesso</Text>
+            <Text style={[styles.genderModalTitle, { color: textColor }]}>{t('auth.gender.selectTitle')}</Text>
             {genderOptions.map((option) => {
               const selected = gender === option.value;
               return (
@@ -409,7 +440,7 @@ export const SocialLegalCompletionModal: React.FC<SocialLegalCompletionModalProp
               style={[styles.genderModalCancel, { borderColor: inputBorder }]}
               onPress={() => setShowGenderModal(false)}
             >
-              <Text style={[styles.genderModalCancelText, { color: placeholderColor }]}>Annulla</Text>
+              <Text style={[styles.genderModalCancelText, { color: placeholderColor }]}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -437,13 +468,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   subtitle: {
     fontSize: 14,
     marginTop: 6,
     marginBottom: 16,
     lineHeight: 20,
+    fontFamily: 'Figtree_400Regular',
   },
   scroll: {
     flexGrow: 0,
@@ -453,7 +485,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     marginBottom: 8,
     marginTop: 10,
     letterSpacing: 0.5,
@@ -470,6 +502,7 @@ const styles = StyleSheet.create({
   valueText: {
     fontSize: 16,
     flex: 1,
+    fontFamily: 'Figtree_500Medium',
   },
   consentRow: {
     flexDirection: 'row',
@@ -496,6 +529,7 @@ const styles = StyleSheet.create({
   consentText: {
     fontSize: 13,
     lineHeight: 19,
+    fontFamily: 'Figtree_400Regular',
   },
   linksRow: {
     flexDirection: 'row',
@@ -503,7 +537,7 @@ const styles = StyleSheet.create({
   },
   consentLink: {
     color: '#8b5cf6',
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
     marginRight: 14,
   },
   actionsRow: {
@@ -520,7 +554,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   secondaryButtonText: {
-    fontWeight: '600',
+    fontFamily: 'Figtree_700Bold',
   },
   primaryButton: {
     flex: 2,
@@ -535,7 +569,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#fff',
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
   },
   genderModalOverlay: {
     flex: 1,
@@ -550,7 +584,7 @@ const styles = StyleSheet.create({
   },
   genderModalTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Figtree_700Bold',
     marginBottom: 12,
   },
   genderModalOption: {
@@ -569,7 +603,7 @@ const styles = StyleSheet.create({
   },
   genderModalOptionText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
   genderModalCancel: {
     marginTop: 6,
@@ -579,6 +613,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   genderModalCancelText: {
-    fontWeight: '600',
+    fontFamily: 'Figtree_600SemiBold',
   },
 });

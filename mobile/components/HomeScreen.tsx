@@ -298,41 +298,47 @@ const HomeScreenContent: React.FC<HomeScreenProps> = ({ user, onLogout }) => {
 
   // Carica l'avatar al mount e quando la schermata torna in focus
   const loadAvatar = useCallback(async () => {
+    let currentUserId: string | null = null;
+
     try {
       // Prima prova a recuperare dal database (user_profiles.avatar_url)
       const currentUser = await AuthService.getCurrentUser();
-      if (currentUser?.id) {
-        const userProfile = await AuthService.getUserProfile(currentUser.id);
-        if (userProfile?.avatar_url) {
-          setAvatarUri(userProfile.avatar_url);
-          // Salva anche in AsyncStorage come cache locale
-          await AsyncStorage.setItem('user:avatarUri', userProfile.avatar_url);
-          return;
-        }
+      if (!currentUser?.id) {
+        setAvatarUri(null);
+        return;
       }
 
-      // Fallback: recupera da AsyncStorage (per retrocompatibilità)
-      const savedAvatar = await AsyncStorage.getItem('user:avatarUri');
+      currentUserId = currentUser.id;
+      const avatarCacheKey = `user:avatarUri:${currentUserId}`;
+
+      const userProfile = await AuthService.getUserProfile(currentUserId);
+      if (userProfile?.avatar_url) {
+        setAvatarUri(userProfile.avatar_url);
+        // Salva anche in AsyncStorage come cache locale user-scoped
+        await AsyncStorage.setItem(avatarCacheKey, userProfile.avatar_url);
+        return;
+      }
+
+      // Fallback: recupera solo da cache locale dello stesso utente
+      const savedAvatar = await AsyncStorage.getItem(avatarCacheKey);
       if (savedAvatar) {
         setAvatarUri(savedAvatar);
-
-        // 🔄 MIGRAZIONE: Se l'avatar esiste in AsyncStorage ma non nel DB, migralo al DB
-        // Questo assicura che gli avatar esistenti vengano sincronizzati nel database
-        if (currentUser?.id && savedAvatar.startsWith('http')) {
-          try {
-            await AuthService.updateUserProfile(currentUser.id, { avatar_url: savedAvatar });
-            console.log('✅ Avatar migrato da AsyncStorage al database');
-          } catch (migrationError) {
-            // Non bloccare se la migrazione fallisce (non critico)
-            console.warn('⚠️ Errore durante migrazione avatar al DB (non critico):', migrationError);
-          }
-        }
+        return;
       }
+
+      // Nessun avatar per questo utente: mostra placeholder pre-creazione
+      setAvatarUri(null);
     } catch (error) {
       console.error('Error loading avatar:', error);
-      // In caso di errore, prova comunque AsyncStorage
+      setAvatarUri(null);
+
+      // In caso di errore rete/DB, prova cache locale dell'utente corrente (se nota)
+      if (!currentUserId) {
+        return;
+      }
+
       try {
-        const savedAvatar = await AsyncStorage.getItem('user:avatarUri');
+        const savedAvatar = await AsyncStorage.getItem(`user:avatarUri:${currentUserId}`);
         if (savedAvatar) {
           setAvatarUri(savedAvatar);
         }

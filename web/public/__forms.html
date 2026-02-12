@@ -6,11 +6,11 @@
 </head>
 <body>
     <!-- This file is used by Netlify for form detection in Next.js Runtime v5 -->
-    <form name="ios-beta-testers" data-netlify="true" netlify-honeypot="bot-field">
+    <form name="ios-beta-testers" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+        <input type="hidden" name="form-name" value="ios-beta-testers" />
         <input type="text" name="nome" />
         <input type="text" name="cognome" />
         <input type="email" name="email" />
-        <input type="text" name="form-name" value="ios-beta-testers" />
         <textarea name="bot-field"></textarea>
     </form>
 </body>

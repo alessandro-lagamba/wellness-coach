@@ -6,6 +6,7 @@ import Image from "next/image"
 import { Typewriter } from "@/components/ui/typewriter"
 import { MinimalistHero } from "@/components/ui/minimalist-hero"
 import { Mascot } from '@/components/Mascot';
+import { Footer } from '@/components/Footer';
 import {
   Brain,
   Camera,
@@ -16,7 +17,10 @@ import {
   Apple,
   Chrome,
   ArrowRight,
+  Volume2,
+  VolumeX,
 } from "lucide-react"
+import { Button3D } from "@/components/ui/3d-button"
 
 export default function Home() {
   const typewriterTexts = [
@@ -29,19 +33,34 @@ export default function Home() {
 
   const [platform, setPlatform] = useState<"android" | "ios">("android")
   const [formStatus, setFormStatus] = useState<"idle" | "submitting" | "success" | "error">("idle")
+  const [isMuted, setIsMuted] = useState(true)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setFormStatus("submitting")
 
-    const formData = new FormData(e.currentTarget)
+    const form = e.currentTarget
+    const formData = new FormData(form)
+    formData.set("form-name", form.getAttribute("name") || "ios-beta-testers")
+
+    const encodedData = new URLSearchParams()
+    for (const [key, value] of formData.entries()) {
+      if (typeof value === "string") {
+        encodedData.append(key, value)
+      }
+    }
 
     try {
-      await fetch(window.location.pathname, {
+      const response = await fetch("/__forms.html", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams(formData as any).toString(),
+        body: encodedData.toString(),
       })
+
+      if (!response.ok) {
+        throw new Error(`Netlify submission failed with status ${response.status}`)
+      }
+
       setFormStatus("success")
     } catch (error) {
       console.error("Netlify form submission error:", error)
@@ -52,9 +71,9 @@ export default function Home() {
   // Reordered: Live Coaching, Emotion Hub, Skin Analysis, Nutrition AI
   const features = [
     { icon: <Zap size={24} />, title: "Live Coaching", screenshot: "/screenshots/home.jpeg" },
-    { icon: <Brain size={24} />, title: "Emotion Hub", screenshot: "/screenshots/emotion.jpeg" },
+    { icon: <Brain size={24} />, title: "Emotion Hub", screenshot: "/screenshots/emotion-new.jpeg" },
     { icon: <Camera size={24} />, title: "Skin Analysis", screenshot: "/screenshots/skin.jpeg" },
-    { icon: <Utensils size={24} />, title: "Nutrition AI", screenshot: "/screenshots/nutrition.jpeg" },
+    { icon: <Utensils size={24} />, title: "Nutrition AI", screenshot: "/screenshots/nutrition-new.jpeg" },
   ]
 
   return (
@@ -85,11 +104,12 @@ export default function Home() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
-          className="absolute top-8 left-6 md:top-12 md:left-12 z-20"
+          className="absolute top-8 left-6 md:top-12 md:left-12 z-20 flex flex-col items-start"
         >
-          <span className="text-6xl md:text-8xl font-black text-sky-900 tracking-tighter drop-shadow-sm">
+          <span className="text-6xl md:text-7xl lg:text-8xl font-black text-sky-900 tracking-tighter drop-shadow-sm leading-[0.8]">
             Yachai
           </span>
+          <Button3D className="ml-2 mt-2 md:ml-4 md:mt-4 lg:ml-6 lg:mt-6" />
         </motion.div>
 
         <div className="relative z-10 max-w-5xl w-full text-center space-y-10 px-4">
@@ -147,7 +167,7 @@ export default function Home() {
             transition={{ delay: 0.4, duration: 0.8 }}
             className="text-lg md:text-3xl text-gray-500 max-w-3xl mx-auto leading-tight font-medium"
           >
-            <span className="font-extrabold text-sky-900">Yachai</span> è l&apos;assistente definitivo che ti aiuta a capire il tuo corpo e la tua mente attraverso la tecnologia più avanzata.
+            <span className="font-extrabold text-sky-900">Yachai</span>, il coach che ti aiuta ad ascoltare corpo e mente, grazie alla tecnologia più avanzata.
           </motion.p>
 
           {/* Platform Switcher */}
@@ -264,6 +284,7 @@ export default function Home() {
                           onSubmit={handleSubmit}
                           name="ios-beta-testers"
                           method="POST"
+                          action="/__forms.html"
                           data-netlify="true"
                           data-netlify-honeypot="bot-field"
                         >
@@ -350,6 +371,43 @@ export default function Home() {
       <section className="w-full py-32 px-6 bg-gradient-to-b from-white via-white via-60% to-sky-100 relative z-20">
         <div className="max-w-7xl mx-auto">
           <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-2xl mx-auto mb-20 px-4"
+          >
+            <div
+              className="relative rounded-[2.5rem] md:rounded-[3rem] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] border-8 border-white bg-white cursor-pointer group/video"
+              onClick={() => setIsMuted(!isMuted)}
+            >
+              <div className="aspect-[5/8] md:aspect-[3/5] overflow-hidden">
+                <video
+                  src="/screenshots/yachai-video-edit.mp4"
+                  autoPlay
+                  muted={isMuted}
+                  loop
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Mute/Unmute Overlay */}
+              <div className="absolute top-4 right-4 z-30 p-3 rounded-full bg-black/20 backdrop-blur-md text-white opacity-0 group-hover/video:opacity-100 transition-opacity">
+                {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              </div>
+
+              {/* Interaction prompt */}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover/video:opacity-100 transition-opacity pointer-events-none">
+                <span className="bg-white/90 text-sky-900 px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest shadow-xl">
+                  {isMuted ? "Clicca per l'audio" : "Muta audio"}
+                </span>
+              </div>
+
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/10 to-transparent pointer-events-none" />
+            </div>
+          </motion.div>
+
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -359,7 +417,7 @@ export default function Home() {
               Tutto quello di cui hai bisogno
             </h2>
             <p className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto font-medium">
-              <span className="font-extrabold text-sky-600">Yachai</span> usa funzionalità avanzate basate su AI per monitorare ogni aspetto del tuo benessere
+              <span className="font-extrabold text-sky-600">Yachai</span>, benessere reale supportato dall&apos;IA.
             </p>
           </motion.div>
 
@@ -453,20 +511,11 @@ export default function Home() {
         </div>
       </section>
 
+
+
+
       {/* Footer - Integrated transition */}
-      <footer className="w-full py-16 px-6 bg-gray-900 text-center relative z-20">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-center space-x-2">
-            <Image src="/screenshots/yachai-icon.png" width={24} height={24} alt="icon" className="rounded-md" />
-            <span className="text-white font-black text-xl tracking-tight">Yachai</span>
-          </div>
-          <div className="h-px w-20 bg-purple-500/30 mx-auto" />
-          <p className="text-gray-400 font-medium">© 2026 Yachai. Tutti i diritti riservati.</p>
-          <p className="text-gray-500 text-sm font-bold uppercase tracking-[0.2em]">
-            Un prodotto di <span className="text-white">LaBella&Partners</span>
-          </p>
-        </div>
-      </footer >
+      <Footer />
 
       {/* Netlify Form Discovery (Ghost Form) */}
       <form name="ios-beta-testers" data-netlify="true" netlify-honeypot="bot-field" hidden>

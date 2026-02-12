@@ -48,7 +48,6 @@ type AuthMode = 'login' | 'signup';
 type GenderOption = 'female' | 'male' | 'non_binary' | 'prefer_not_to_say';
 
 const MINIMUM_AGE = 16;
-const GDPR_BLOCK_MESSAGE = "In conformità alla normativa vigente in materia di protezione dei dati personali, l’utilizzo dell’app è consentito esclusivamente a utenti di età pari o superiore a 16 anni. Non è possibile dunque procedere con la registrazione";
 const TERMS_URL = 'https://www.yachai.net/terms';
 const PRIVACY_URL = 'https://www.yachai.net/privacy';
 const CONSENT_VERSION = '2026-02-11-v1';
@@ -130,7 +129,7 @@ const PetalLogo = () => {
 
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { mode: themeMode } = useTheme();
 
   const [mode, setMode] = useState<AuthMode>('login');
@@ -203,8 +202,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   };
 
   const formatBirthDate = (date: Date | null): string => {
-    if (!date) return 'Seleziona data';
-    return date.toLocaleDateString('it-IT', {
+    if (!date) return t('auth.birthDate.select');
+    return date.toLocaleDateString(language.startsWith('en') ? 'en-US' : 'it-IT', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -212,13 +211,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   };
 
   const genderOptions: Array<{ value: GenderOption; label: string }> = [
-    { value: 'female', label: 'Donna' },
-    { value: 'male', label: 'Uomo' },
-    { value: 'non_binary', label: 'Non binario' },
-    { value: 'prefer_not_to_say', label: 'Preferisco non dirlo' },
+    { value: 'female', label: t('auth.gender.female') },
+    { value: 'male', label: t('auth.gender.male') },
+    { value: 'non_binary', label: t('auth.gender.nonBinary') },
+    { value: 'prefer_not_to_say', label: t('auth.gender.preferNotToSay') },
   ];
   const selectedGenderLabel =
-    genderOptions.find((option) => option.value === gender)?.label ?? 'Seleziona';
+    genderOptions.find((option) => option.value === gender)?.label ?? t('auth.gender.select');
   const currentYear = new Date().getFullYear();
   const birthYearStart = currentYear - 100;
   const birthYearEnd = currentYear;
@@ -288,15 +287,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     }
     if (mode === 'signup' && (!termsConsentAccepted || !healthConsentAccepted)) {
       Alert.alert(
-        'Consenso richiesto',
-        "Per completare la registrazione devi accettare sia i Termini e Condizioni/Privacy sia il consenso al trattamento dei dati salute."
+        t('auth.consentRequiredTitle'),
+        t('auth.consentRequiredMessage')
       );
       return;
     }
     if (mode === 'signup' && birthDate) {
       const age = calculateAge(birthDate);
       if (age < MINIMUM_AGE) {
-        Alert.alert('Registrazione non consentita', GDPR_BLOCK_MESSAGE);
+        Alert.alert(
+          t('auth.underage.title'),
+          t('auth.underage.message', { minAge: MINIMUM_AGE })
+        );
         return;
       }
     }
@@ -342,7 +344,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
           Alert.alert(t('auth.signupError'), error.message);
         } else if (user) {
           Alert.alert(t('auth.signupCompleted'), t('auth.checkEmail'), [
-            { text: 'OK', onPress: () => onAuthSuccess(user) }
+            { text: t('common.ok'), onPress: () => onAuthSuccess(user) }
           ]);
         }
       }
@@ -357,12 +359,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     try {
       const supported = await Linking.canOpenURL(url);
       if (!supported) {
-        Alert.alert('Link non disponibile', `Impossibile aprire ${label} in questo momento.`);
+        Alert.alert(
+          t('auth.linkUnavailableTitle'),
+          t('auth.linkUnavailableMessage', { label })
+        );
         return;
       }
       await Linking.openURL(url);
     } catch {
-      Alert.alert('Errore', `Impossibile aprire ${label}. Riprova più tardi.`);
+      Alert.alert(t('common.error'), t('auth.linkOpenError', { label }));
     }
   };
 
@@ -379,8 +384,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       }
       if (error) {
         Alert.alert(
-          'Social Login',
-          error.message || 'Configurazione OAuth non valida.'
+          t('auth.socialLoginTitle'),
+          error.message || t('auth.socialLoginConfigError')
         );
       }
     } catch (e) {
@@ -435,10 +440,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
               }
             ]} />
             <TouchableOpacity style={styles.toggleBtn} onPress={() => switchMode('login')}>
-              <Text style={[styles.toggleBtnText, { color: mode === 'login' ? toggleActiveText : toggleInactiveText }]}>Accedi</Text>
+              <Text style={[styles.toggleBtnText, { color: mode === 'login' ? toggleActiveText : toggleInactiveText }]}>{t('auth.login')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.toggleBtn} onPress={() => switchMode('signup')}>
-              <Text style={[styles.toggleBtnText, { color: mode === 'signup' ? toggleActiveText : toggleInactiveText }]}>Registrati</Text>
+              <Text style={[styles.toggleBtnText, { color: mode === 'signup' ? toggleActiveText : toggleInactiveText }]}>{t('auth.signup')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -448,12 +453,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
               <>
                 <View style={styles.row}>
                   <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
-                    <Text style={[styles.label, { color: iconColor }]}>NOME *</Text>
+                    <Text style={[styles.label, { color: iconColor }]}>{`${t('auth.firstName').toUpperCase()} *`}</Text>
                     <View style={[styles.inputWrapper, { backgroundColor: inputBg, borderColor: inputBorder }]}>
                       <FontAwesome name="user" size={16} color={iconColor} style={{ marginRight: 10 }} />
                       <TextInput
                         style={[styles.input, { color: textColor }]}
-                        placeholder="Nome"
+                        placeholder={t('auth.firstNamePlaceholder')}
                         placeholderTextColor={placeholderColor}
                         value={firstName}
                         onChangeText={setFirstName}
@@ -461,12 +466,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                     </View>
                   </View>
                   <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
-                    <Text style={[styles.label, { color: iconColor }]}>COGNOME *</Text>
+                    <Text style={[styles.label, { color: iconColor }]}>{`${t('auth.lastName').toUpperCase()} *`}</Text>
                     <View style={[styles.inputWrapper, { backgroundColor: inputBg, borderColor: inputBorder }]}>
                       <FontAwesome name="user" size={16} color={iconColor} style={{ marginRight: 10 }} />
                       <TextInput
                         style={[styles.input, { color: textColor }]}
-                        placeholder="Cognome"
+                        placeholder={t('auth.lastNamePlaceholder')}
                         placeholderTextColor={placeholderColor}
                         value={lastName}
                         onChangeText={setLastName}
@@ -476,7 +481,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                 </View>
                 <View style={styles.inlineFieldsRow}>
                   <View style={[styles.inlineField, { marginRight: 8 }]}>
-                    <Text style={[styles.label, { color: iconColor }]}>SESSO *</Text>
+                    <Text style={[styles.label, { color: iconColor }]}>{`${t('auth.gender.label').toUpperCase()} *`}</Text>
                     <TouchableOpacity
                       style={[styles.inputWrapper, { backgroundColor: inputBg, borderColor: inputBorder }]}
                       onPress={() => setShowGenderModal(true)}
@@ -490,7 +495,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                     </TouchableOpacity>
                   </View>
                   <View style={[styles.inlineField, { marginLeft: 8 }]}>
-                    <Text style={[styles.label, { color: iconColor }]}>DATA DI NASCITA *</Text>
+                    <Text style={[styles.label, { color: iconColor }]}>{`${t('auth.birthDate.label').toUpperCase()} *`}</Text>
                     <TouchableOpacity
                       style={[styles.inputWrapper, { backgroundColor: inputBg, borderColor: inputBorder }]}
                       onPress={() => setShowBirthDateCalendar(true)}
@@ -507,12 +512,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
             )}
 
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: iconColor }]}>EMAIL *</Text>
+              <Text style={[styles.label, { color: iconColor }]}>{`${t('auth.email').toUpperCase()} *`}</Text>
               <View style={[styles.inputWrapper, { backgroundColor: inputBg, borderColor: inputBorder }]}>
                 <MaterialCommunityIcons name="email-outline" size={20} color={iconColor} style={{ marginRight: 10 }} />
                 <TextInput
                   style={[styles.input, { color: textColor }]}
-                  placeholder="Inserisci la tua email"
+                  placeholder={t('auth.emailPlaceholder')}
                   placeholderTextColor={placeholderColor}
                   value={email}
                   onChangeText={setEmail}
@@ -523,12 +528,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: iconColor }]}>PASSWORD *</Text>
+              <Text style={[styles.label, { color: iconColor }]}>{`${t('auth.password').toUpperCase()} *`}</Text>
               <View style={[styles.inputWrapper, { backgroundColor: inputBg, borderColor: inputBorder }]}>
                 <MaterialCommunityIcons name="lock-outline" size={20} color={iconColor} style={{ marginRight: 10 }} />
                 <TextInput
                   style={[styles.input, { color: textColor }]}
-                  placeholder="Inserisci la tua password"
+                  placeholder={t('auth.passwordPlaceholder')}
                   placeholderTextColor={placeholderColor}
                   value={password}
                   onChangeText={setPassword}
@@ -546,12 +551,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
             {mode === 'signup' && (
               <View style={styles.inputContainer}>
-                <Text style={[styles.label, { color: iconColor }]}>CONFERMA PASSWORD *</Text>
+                <Text style={[styles.label, { color: iconColor }]}>{`${t('auth.confirmPassword').toUpperCase()} *`}</Text>
                 <View style={[styles.inputWrapper, { backgroundColor: inputBg, borderColor: inputBorder }]}>
                   <MaterialCommunityIcons name="lock-outline" size={20} color={iconColor} style={{ marginRight: 10 }} />
                   <TextInput
                     style={[styles.input, { color: textColor }]}
-                    placeholder="Ripeti password"
+                    placeholder={t('auth.confirmPasswordPlaceholder')}
                     placeholderTextColor={placeholderColor}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -569,7 +574,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
             )}
 
             {mode === 'signup' && (
-              <View style={styles.consentContainer}>
+              <View
+                style={[
+                  styles.consentContainer,
+                  {
+                    backgroundColor: themeMode === 'dark' ? 'rgba(30,41,59,0.18)' : 'rgba(255,255,255,0.92)',
+                    borderColor: themeMode === 'dark' ? 'rgba(139,92,246,0.22)' : 'rgba(139,92,246,0.30)',
+                  },
+                ]}
+              >
                 <TouchableOpacity
                   style={styles.consentRow}
                   activeOpacity={0.85}
@@ -580,32 +593,25 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                   </View>
                   <View style={styles.consentTextWrap}>
                     <Text style={[styles.consentText, { color: textColor }]}>
-                      Accetto i Termini e Condizioni d'uso e dichiaro di aver letto l'Informativa Privacy.
+                      {t('auth.legal.termsAndPrivacyConsent')}
                     </Text>
                     <View style={styles.linksRow}>
-                      <TouchableOpacity onPress={() => openExternalDocument(TERMS_URL, 'Termini e Condizioni')}>
-                        <Text style={styles.consentLink}>[Termini]</Text>
+                      <TouchableOpacity onPress={() => openExternalDocument(TERMS_URL, t('auth.legal.termsLabel'))}>
+                        <Text style={styles.consentLink}>[{t('auth.legal.termsLabel')}]</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => openExternalDocument(PRIVACY_URL, 'Informativa Privacy')}>
-                        <Text style={styles.consentLink}>[Privacy Policy]</Text>
+                      <TouchableOpacity onPress={() => openExternalDocument(PRIVACY_URL, t('auth.legal.privacyLabel'))}>
+                        <Text style={styles.consentLink}>[{t('auth.legal.privacyLabel')}]</Text>
                       </TouchableOpacity>
                     </View>
                     <Text style={[styles.consentHint, { color: iconColor }]}>
-                      Puoi consultare in ogni momento i documenti dalla sezione Impostazioni.
+                      {t('auth.legal.termsHint')}
                     </Text>
                   </View>
                 </TouchableOpacity>
 
-                <Text style={[styles.healthConsentTitle, { color: textColor }]}>Consenso all'uso dei dati salute</Text>
+                <Text style={[styles.healthConsentTitle, { color: textColor }]}>{t('auth.legal.healthConsentTitle')}</Text>
                 <Text style={[styles.healthConsentBody, { color: iconColor }]}>
-                  Per offrirti raccomandazioni personalizzate di benessere, abbiamo bisogno di accedere ai tuoi dati salute (peso, altezza, sonno, battito cardiaco, passi, ecc.) tramite Apple Health / Google Fit.
-                  {'\n\n'}
-                  Questi dati sono "particolari" secondo il GDPR e vengono trattati solo con il tuo consenso esplicito. Li useremo per:
-                  {'\n'}- Generare insight e suggerimenti personalizzati
-                  {'\n'}- Analizzare automaticamente i tuoi progressi (profilazione)
-                  {'\n'}- Migliorare la tua esperienza nell'app
-                  {'\n\n'}
-                  Puoi revocare questo consenso in qualsiasi momento dalle Impostazioni, ma alcune funzionalità potrebbero non essere più disponibili.
+                  {t('auth.legal.healthConsentBody')}
                 </Text>
 
                 <TouchableOpacity
@@ -618,7 +624,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                   </View>
                   <View style={styles.consentTextWrap}>
                     <Text style={[styles.consentText, { color: textColor }]}>
-                      Acconsento al trattamento dei miei dati relativi alla salute per ricevere raccomandazioni personalizzate e profilazione automatizzata, come descritto nell'Informativa Privacy.
+                      {t('auth.legal.healthConsentCheckbox')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -639,10 +645,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                   ]}>
                     {rememberMe && <FontAwesome name="check" size={10} color="#fff" />}
                   </View>
-                  <Text style={[styles.checkboxLabel, { color: iconColor }]}>Ricordami</Text>
+                  <Text style={[styles.checkboxLabel, { color: iconColor }]}>{t('auth.rememberMe')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleForgotPassword}>
-                  <Text style={styles.forgotPassText}>Password dimenticata?</Text>
+                  <Text style={styles.forgotPassText}>{t('auth.forgotPassword')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -657,7 +663,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
               ) : (
                 <>
                   <MaterialCommunityIcons name="login" size={20} color="#fff" style={{ marginRight: 8 }} />
-                  <Text style={styles.mainButtonText}>{mode === 'login' ? 'Accedi' : 'Crea Account'}</Text>
+                  <Text style={styles.mainButtonText}>{mode === 'login' ? t('auth.login') : t('auth.createAccount')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -698,13 +704,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
           visible={showBirthDateCalendar}
           onClose={() => setShowBirthDateCalendar(false)}
           onSelectDate={(date) => setBirthDate(date)}
-          language="it"
-          title="Seleziona la data di nascita"
-          subtitle={`L'accesso è consentito solo agli utenti con almeno ${MINIMUM_AGE} anni`}
-          confirmText="CONFERMA DATA"
+          language={language.startsWith('en') ? 'en' : 'it'}
+          title={t('auth.birthDate.title')}
+          subtitle={t('auth.birthDate.subtitle', { minAge: MINIMUM_AGE })}
+          confirmText={t('auth.birthDate.confirm')}
           isDark={themeMode === 'dark'}
           showYearSelector={true}
-          headerLabel="DATA DI NASCITA"
+          headerLabel={t('auth.birthDate.headerLabel')}
           headerIcon="calendar-month-outline"
           {...birthCalendarYearRange}
         />
@@ -717,7 +723,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
         >
           <View style={styles.genderModalOverlay}>
             <View style={[styles.genderModalCard, { backgroundColor: inputBg, borderColor: inputBorder }]}>
-              <Text style={[styles.genderModalTitle, { color: textColor }]}>Seleziona il sesso</Text>
+              <Text style={[styles.genderModalTitle, { color: textColor }]}>{t('auth.gender.selectTitle')}</Text>
               {genderOptions.map((option) => {
                 const selected = gender === option.value;
                 return (
@@ -746,7 +752,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                 style={[styles.genderModalCancel, { borderColor: inputBorder }]}
                 onPress={() => setShowGenderModal(false)}
               >
-                <Text style={[styles.genderModalCancelText, { color: iconColor }]}>Annulla</Text>
+                <Text style={[styles.genderModalCancelText, { color: iconColor }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
             </View>
           </View>

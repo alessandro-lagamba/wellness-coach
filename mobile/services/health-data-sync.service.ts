@@ -289,6 +289,17 @@ export class HealthDataSyncService {
       }
 
       if (upsertError) {
+        if ((upsertError as any)?.code === '42501') {
+          if (__DEV__) {
+            console.log('ℹ️ [SYNC DEBUG] Supabase upsert skipped by RLS (likely legal gate pending)');
+          }
+          return {
+            success: true,
+            recordsInserted: 0,
+            recordsUpdated: 0,
+          };
+        }
+
         console.error('❌ Error upserting health data:', upsertError);
         return {
           success: false,
@@ -593,4 +604,3 @@ export class HealthDataSyncService {
     }
   }
 }
-

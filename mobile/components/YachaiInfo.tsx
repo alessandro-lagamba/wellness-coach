@@ -107,40 +107,66 @@ export default function YachaiInfo() {
                         {t('yachaiInfo.hero.title')}
                     </Text>
                     <Text style={[styles.subtitle, { color: colors.textSecondary }]} allowFontScaling={false}>
-                        {t('yachaiInfo.hero.subtitle')}
+                        {t('yachaiInfo.hero.subtitle').split('Yachai').map((part, i, arr) => (
+                            <React.Fragment key={i}>
+                                {part}
+                                {i < arr.length - 1 && (
+                                    <Text style={{ color: colors.primary, fontFamily: 'Figtree_700Bold' }} allowFontScaling={false}>Yachai</Text>
+                                )}
+                            </React.Fragment>
+                        ))}
                     </Text>
                 </View>
 
                 {/* Meaning Section */}
-                <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <Text style={[styles.cardTitle, { color: colors.primary }]} allowFontScaling={false}>
+                <View style={[styles.card, { backgroundColor: colors.surface }]}>
+                    <Text style={[styles.cardTitle, { color: colors.primary, marginBottom: 12 }]} allowFontScaling={false}>
                         {t('yachaiInfo.meaning.title')}
                     </Text>
                     <Text style={[styles.cardText, { color: colors.textSecondary }]} allowFontScaling={false}>
-                        {t('yachaiInfo.meaning.definition')}
-                        {"\n"}
+                        {t('yachaiInfo.meaning.definition').split(/(quechua)/i).map((part, i) => (
+                            part.toLowerCase() === 'quechua' ? (
+                                <Text key={i} style={[styles.italicHighlight, { color: colors.text, fontWeight: 'bold' }]} allowFontScaling={false}>
+                                    {part}
+                                </Text>
+                            ) : (
+                                part
+                            )
+                        ))}
+                        {"\n\n"}
                         {t('yachaiInfo.meaning.description')}
                     </Text>
                     <Text style={[styles.cardText, { color: colors.textSecondary, marginBottom: 0 }]} allowFontScaling={false}>
-                        {t('yachaiInfo.meaning.philosophy')}
+                        {t('yachaiInfo.meaning.philosophy').split('intelligenza integrata').map((part, i, arr) => (
+                            <React.Fragment key={i}>
+                                {part}
+                                {i < arr.length - 1 && (
+                                    <Text style={{ color: colors.text, fontFamily: 'Figtree_700Bold' }} allowFontScaling={false}>intelligenza integrata</Text>
+                                )}
+                            </React.Fragment>
+                        ))}
                     </Text>
                 </View>
 
                 {/* AI Section */}
-                <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={[styles.cardTitle, { color: colors.primary }]} allowFontScaling={false}>
-                            {t('yachaiInfo.ai.title')}
-                        </Text>
-                    </View>
+                <View style={[styles.card, { backgroundColor: colors.surface }]}>
+                    <Text style={[styles.cardTitle, { color: isDark ? '#fff' : '#000', fontSize: 22, marginBottom: 12 }]} allowFontScaling={false}>
+                        {t('yachaiInfo.ai.title')}
+                    </Text>
                     <Text style={[styles.cardText, { color: colors.textSecondary, marginBottom: 0 }]} allowFontScaling={false}>
-                        {t('yachaiInfo.ai.description')}
+                        {t('yachaiInfo.ai.description').split(/(osservare|comprendere e interpretare)/i).map((part, i) => (
+                            (part.toLowerCase() === 'osservare' || part.toLowerCase() === 'comprendere e interpretare') ? (
+                                <Text key={i} style={{ fontFamily: 'Figtree_700Bold', color: colors.text }} allowFontScaling={false}>{part}</Text>
+                            ) : (
+                                part
+                            )
+                        ))}
                     </Text>
                 </View>
 
                 {/* Concept Section */}
                 <View style={styles.conceptSection}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]} allowFontScaling={false}>
+                    <Text style={[styles.sectionTitle, { color: colors.primary }]} allowFontScaling={false}>
                         {t('yachaiInfo.concept.title')}
                     </Text>
                     <Text style={[styles.conceptText, { color: colors.textSecondary }]} allowFontScaling={false}>
@@ -148,7 +174,7 @@ export default function YachaiInfo() {
                             <React.Fragment key={i}>
                                 {part}
                                 {i < arr.length - 1 && (
-                                    <Text style={[styles.italicHighlight, { color: colors.text }]} allowFontScaling={false}>
+                                    <Text style={{ color: colors.text, fontFamily: 'Figtree_700Bold' }} allowFontScaling={false}>
                                         {t('yachaiInfo.concept.highlight')}
                                     </Text>
                                 )}
@@ -169,7 +195,6 @@ export default function YachaiInfo() {
                                 styles.gridItem,
                                 {
                                     backgroundColor: colors.surface,
-                                    borderColor: isDark ? colors.border : 'rgba(0,0,0,0.03)'
                                 },
                                 !isDark && styles.gridItemShadow
                             ]}
@@ -203,7 +228,6 @@ export default function YachaiInfo() {
                     </View>
                     <View style={[styles.philosophyBox, {
                         backgroundColor: isDark ? 'rgba(168, 85, 247, 0.05)' : 'rgba(99, 102, 241, 0.03)',
-                        borderColor: isDark ? 'rgba(168, 85, 247, 0.2)' : 'rgba(99, 102, 241, 0.1)'
                     }]}>
                         <Text style={[styles.philosophyText, { color: colors.textSecondary }]} allowFontScaling={false}>
                             {t('yachaiInfo.footer.philosophy1')}
@@ -293,15 +317,27 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
     },
     card: {
-        borderRadius: 24,
-        padding: 24,
-        borderWidth: 1,
+        borderRadius: 40,
+        paddingHorizontal: 28,
+        paddingVertical: 22,
         marginBottom: 20,
     },
     cardTitle: {
         fontSize: 24,
         fontFamily: 'Figtree_700Bold',
-        marginBottom: 12,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    iconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
     },
     cardText: {
         fontSize: 18,
@@ -316,12 +352,14 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     conceptSection: {
+        marginTop: 20,
         marginBottom: 30,
         alignItems: 'center',
         paddingHorizontal: 10,
+        paddingTop: 10,
     },
     sectionTitle: {
-        fontSize: 26,
+        fontSize: 32,
         fontFamily: 'Figtree_700Bold',
         marginBottom: 12,
         textAlign: 'center',
@@ -343,26 +381,26 @@ const styles = StyleSheet.create({
     },
     gridItem: {
         flexDirection: 'row',
-        borderRadius: 20,
-        padding: 16,
+        borderRadius: 35,
+        paddingHorizontal: 24,
+        paddingVertical: 14,
         marginBottom: 16,
         alignItems: 'center',
-        borderWidth: 1,
     },
     gridItemShadow: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 12,
-        elevation: 3,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+        elevation: 4,
     },
     gridImageContainer: {
         width: 80,
         height: 80,
-        borderRadius: 16,
+        borderRadius: 22,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 16,
+        marginRight: 20,
     },
     gridImage: {
         width: 60,
@@ -377,11 +415,12 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     gridItemTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontFamily: 'Figtree_700Bold',
+        marginBottom: 2,
     },
     gridItemText: {
-        fontSize: 16,
+        fontSize: 15.5,
         fontFamily: 'Figtree_500Medium',
         lineHeight: 20,
     },
@@ -404,10 +443,9 @@ const styles = StyleSheet.create({
         zIndex: 1,
     },
     philosophyBox: {
-        borderRadius: 24,
+        borderRadius: 40,
         padding: 30,
         width: '100%',
-        borderWidth: 1,
     },
     philosophyText: {
         fontSize: 18,

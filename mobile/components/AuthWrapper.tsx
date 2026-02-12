@@ -40,6 +40,28 @@ const requiresLegalCompletion = (currentUser: any, profile: any | null): boolean
   return !birthDate || !gender || !termsAccepted || !healthConsentAccepted;
 };
 
+const resolveNameParts = (metadata: any, email?: string | null) => {
+  const rawFullName =
+    metadata?.full_name ||
+    metadata?.name ||
+    email?.split('@')[0] ||
+    'User';
+
+  const parts = String(rawFullName)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  const parsedFirstName = parts[0] || undefined;
+  const parsedLastName = parts.length > 1 ? parts.slice(1).join(' ') : undefined;
+
+  return {
+    fullName: rawFullName,
+    firstName: metadata?.first_name || parsedFirstName,
+    lastName: metadata?.last_name || parsedLastName,
+  };
+};
+
 // Componente interno che usa il context
 const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
   children,
@@ -175,8 +197,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
         if (emailVerified) {
           // 🔥 FIX: Estrai i dati dai metadata PRIMA di creare/aggiornare il profilo
-          const firstName = currentUser.user_metadata?.first_name;
-          const lastName = currentUser.user_metadata?.last_name;
+          const { firstName, lastName, fullName } = resolveNameParts(currentUser.user_metadata, currentUser.email);
           // 🔥 FIX: Gestisci age come numero o stringa (può essere salvato come numero nei metadata)
           const ageValue = currentUser.user_metadata?.age;
           const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : undefined);
@@ -196,12 +217,6 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
           if (!existingProfile) {
             // 🔥 PERF: Removed verbose logging
-            // Crea il profilo con i dati disponibili dall'utente
-            const fullName = currentUser.user_metadata?.full_name ||
-              currentUser.user_metadata?.name ||
-              currentUser.email?.split('@')[0] ||
-              'User';
-
             // 🔥 CRITICAL: Crea il profilo con TUTTI i dati disponibili
             await AuthService.createUserProfile(
               currentUser.id,
@@ -228,8 +243,9 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
             // 🔥 CRITICAL: SEMPRE aggiorna il profilo con i metadata se sono disponibili
             const updateData: any = {};
-            if (firstName) updateData.first_name = firstName;
-            if (lastName) updateData.last_name = lastName;
+            if (!existingProfile?.first_name && firstName) updateData.first_name = firstName;
+            if (!existingProfile?.last_name && lastName) updateData.last_name = lastName;
+            if (!existingProfile?.full_name && fullName) updateData.full_name = fullName;
             if (age !== undefined && age !== null) updateData.age = age;
             if (gender) updateData.gender = gender;
             if (birthDate) updateData.birth_date = birthDate;
@@ -518,8 +534,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
 
               if (!existingProfile) {
                 // 🔥 PERF: Removed verbose logging
-                const firstName = data.user.user_metadata?.first_name;
-                const lastName = data.user.user_metadata?.last_name;
+                const { firstName, lastName, fullName } = resolveNameParts(data.user.user_metadata, data.user.email);
                 const ageValue = data.user.user_metadata?.age;
                 const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : undefined);
                 const gender = data.user.user_metadata?.gender;
@@ -531,11 +546,6 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
                 const healthConsentAcceptedAt = data.user.user_metadata?.health_consent_accepted_at;
                 const healthConsentIp = data.user.user_metadata?.health_consent_ip;
                 const consentVersion = data.user.user_metadata?.consent_version;
-                const fullName = data.user.user_metadata?.full_name ||
-                  data.user.user_metadata?.name ||
-                  data.user.email?.split('@')[0] ||
-                  'User';
-
                 await AuthService.createUserProfile(
                   data.user.id,
                   data.user.email || '',
@@ -559,8 +569,7 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
               } else {
                 // 🔥 PERF: Removed verbose logging
                 // Update profile with metadata if needed
-                const firstName = data.user.user_metadata?.first_name;
-                const lastName = data.user.user_metadata?.last_name;
+                const { firstName, lastName, fullName } = resolveNameParts(data.user.user_metadata, data.user.email);
                 const ageValue = data.user.user_metadata?.age;
                 const age = typeof ageValue === 'number' ? ageValue : (ageValue ? parseInt(String(ageValue), 10) : undefined);
                 const gender = data.user.user_metadata?.gender;
@@ -574,8 +583,9 @@ const AuthWrapperContent: React.FC<AuthWrapperProps> = ({
                 const consentVersion = data.user.user_metadata?.consent_version;
 
                 const updateData: any = {};
-                if (firstName) updateData.first_name = firstName;
-                if (lastName) updateData.last_name = lastName;
+                if (!existingProfile?.first_name && firstName) updateData.first_name = firstName;
+                if (!existingProfile?.last_name && lastName) updateData.last_name = lastName;
+                if (!existingProfile?.full_name && fullName) updateData.full_name = fullName;
                 if (age !== undefined && age !== null) updateData.age = age;
                 if (gender) updateData.gender = gender;
                 if (birthDate) updateData.birth_date = birthDate;

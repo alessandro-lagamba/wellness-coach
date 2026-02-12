@@ -100,8 +100,8 @@ export const AvatarCaptureScreen: React.FC = () => {
         mimeType: 'image/jpeg',
       });
 
-      // Salva l'avatar URI
-      await AsyncStorage.setItem('user:avatarUri', result.avatarUri);
+      // Salva l'avatar URI in cache locale user-scoped
+      await AsyncStorage.setItem(`user:avatarUri:${currentUser.id}`, result.avatarUri);
 
       if (isMountedRef.current) {
         setGenerating(false);
@@ -270,4 +270,3 @@ const styles = StyleSheet.create({
     fontFamily: 'Figtree_700Bold', // Was 600
   },
 });
-

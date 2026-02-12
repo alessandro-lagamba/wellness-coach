@@ -13,6 +13,7 @@ import {
 import {
   Figtree_400Regular,
   Figtree_500Medium,
+  Figtree_600SemiBold,
   Figtree_700Bold,
 } from '@expo-google-fonts/figtree';
 import { registerGlobals } from '@livekit/react-native';
@@ -142,6 +143,7 @@ export default function RootLayout() {
     PlayfairDisplay_600SemiBold_Italic,
     Figtree_400Regular,
     Figtree_500Medium,
+    Figtree_600SemiBold,
     Figtree_700Bold,
   });
 

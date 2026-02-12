@@ -706,7 +706,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
 
   const handleDeleteAccount = async () => {
     if (!resolvedUser?.id) {
-      Alert.alert(t('common.error'), 'Utente non autenticato');
+      Alert.alert(t('common.error'), t('settings.userNotAuthenticated'));
       return;
     }
 
@@ -733,7 +733,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   const handleResetApp = () => {
     Alert.alert(
       t('settings.resetApp'),
-      t('settings.resetAppConfirm'),
+      t('settings.resetAppDetailedConfirm'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
@@ -799,93 +799,31 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
   // 🆕 Handler per rigenerare embeddings diario
   const handleReEmbedDiary = async () => {
     if (!resolvedUser?.id) {
-      Alert.alert(t('common.error'), 'Utente non autenticato');
+      Alert.alert(t('common.error'), t('settings.userNotAuthenticated'));
       return;
     }
     Alert.alert(
-      'Rigenera Embeddings Diario',
-      'Questa operazione rigenera gli embeddings per la ricerca semantica nel diario. Continua?',
+      t('settings.reEmbedDiary.title'),
+      t('settings.reEmbedDiary.confirm'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Rigenera',
+          text: t('settings.reEmbedDiary.action'),
           onPress: async () => {
             try {
               setIsLoading(true);
               const result = await DailyJournalDBService.reEmbedAllEntries(resolvedUser.id);
               Alert.alert(
                 t('common.success'),
-                `Rigenerati: ${result.success}, Falliti: ${result.failed}`
+                t('settings.reEmbedDiary.result', {
+                  success: result.success,
+                  failed: result.failed,
+                })
               );
             } catch (error) {
               Alert.alert(t('common.error'), String(error));
             } finally {
               setIsLoading(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  // 🆕 Handler per backup dati locali
-  const handleBackupData = async () => {
-    Alert.alert(
-      t('settings.backupTitle') || 'Backup Dati',
-      t('settings.backupConfirm') || 'Esporta tutti i tuoi dati personali (diario, chat, analisi) in un file di backup. Potrai usare questo file per ripristinare i dati su un nuovo dispositivo.',
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('settings.backupAction') || 'Esporta',
-          onPress: async () => {
-            try {
-              setIsCloudBackupBusy(true);
-              const { BackupService } = await import('../services/local-storage/backup.service');
-              const success = await BackupService.shareBackup();
-              if (success) {
-                Alert.alert(
-                  t('common.success'),
-                  t('settings.backupSuccess') || 'Backup creato con successo. Salvalo in un luogo sicuro.'
-                );
-              }
-            } catch (error) {
-              Alert.alert(t('common.error'), String(error));
-            } finally {
-              setIsCloudBackupBusy(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  // 🆕 Handler per ripristino dati
-  const handleRestoreData = async () => {
-    Alert.alert(
-      t('settings.restoreTitle') || 'Ripristina Dati',
-      t('settings.restoreConfirm') || 'Importa i dati da un file di backup precedente. I dati esistenti verranno mantenuti e quelli nel backup verranno aggiunti.',
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('settings.restoreAction') || 'Importa',
-          onPress: async () => {
-            try {
-              setIsCloudBackupBusy(true);
-              const { BackupService } = await import('../services/local-storage/backup.service');
-              const result = await BackupService.importBackup();
-              if (result.success && result.stats) {
-                const total = (Object.values(result.stats) as number[]).reduce((a, b) => a + b, 0);
-                Alert.alert(
-                  t('common.success'),
-                  t('settings.restoreSuccess', { count: total }) || `Ripristinati ${total} elementi con successo.`
-                );
-              } else if (!result.success) {
-                Alert.alert(t('common.error'), result.error || 'Errore durante il ripristino');
-              }
-            } catch (error) {
-              Alert.alert(t('common.error'), String(error));
-            } finally {
-              setIsCloudBackupBusy(false);
             }
           }
         }
@@ -1390,45 +1328,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
               </TouchableOpacity>
             )}
 
-            {/* Manual backup export */}
-            <TouchableOpacity
-              style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={handleBackupData}
-              activeOpacity={0.85}
-            >
-              <View style={[styles.rowIconWrapper, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
-                <FontAwesome name="cloud-upload" size={16} color="#22c55e" />
-              </View>
-              <View style={styles.rowCopy}>
-                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>
-                  {t('settings.manualBackupTitle') || t('settings.backupTitle') || 'Esporta Backup Manuale'}
-                </Text>
-                <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>
-                  {t('settings.manualBackupDescription') || t('settings.backupDescription') || 'Salva i tuoi dati in un file'}
-                </Text>
-              </View>
-              <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
-            </TouchableOpacity>
-
-            {/* Manual restore */}
-            <TouchableOpacity
-              style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={handleRestoreData}
-              activeOpacity={0.85}
-            >
-              <View style={[styles.rowIconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                <FontAwesome name="cloud-download" size={16} color="#3b82f6" />
-              </View>
-              <View style={styles.rowCopy}>
-                <Text style={[styles.rowTitle, { color: colors.text }]} allowFontScaling={false}>
-                  {t('settings.manualRestoreTitle') || t('settings.restoreTitle') || 'Ripristina Backup Manuale'}
-                </Text>
-                <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} allowFontScaling={false}>
-                  {t('settings.manualRestoreDescription') || t('settings.restoreDescription') || 'Importa dati da un file'}
-                </Text>
-              </View>
-              <FontAwesome name="chevron-right" size={14} color={colors.textTertiary} />
-            </TouchableOpacity>
           </View>
 
           {/* Reset App Button */}
@@ -1451,12 +1350,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
 
           {/* Account Deletion Action - bottom red text */}
           <TouchableOpacity
-            style={styles.deleteAccountAction}
+            style={[
+              styles.deleteAccountAction,
+              { backgroundColor: `${String(colors.error)}18`, borderColor: `${String(colors.error)}55` },
+            ]}
             onPress={() => setShowDeleteAccountModal(true)}
             disabled={isLoading || isDeletingAccount}
           >
-            <MaterialCommunityIcons name="account-remove" size={15} color="#ef4444" />
-            <Text style={styles.deleteAccountActionText} allowFontScaling={false}>{t('settings.deleteAccount')}</Text>
+            <MaterialCommunityIcons name="account-remove" size={16} color={colors.error} />
+            <Text style={[styles.deleteAccountActionText, { color: colors.error }]} allowFontScaling={false}>
+              {t('settings.deleteAccount')}
+            </Text>
           </TouchableOpacity>
 
           <View style={[styles.versionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -1480,18 +1384,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.deleteModalContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.deleteModalTitle, { color: colors.error }]}>⚠️ ATTENZIONE: Questa operazione è irreversibile.</Text>
+            <Text style={[styles.deleteModalTitle, { color: colors.error }]}>{t('settings.accountDeletion.modalWarningTitle')}</Text>
             <Text style={[styles.deleteModalBody, { color: colors.textSecondary }]}>
-              Eliminando il tuo account:{'\n'}
-              ✖ Tutti i tuoi dati personali saranno cancellati entro 60 giorni{'\n'}
-              ✖ Perderai l'accesso alle raccomandazioni e allo storico{'\n'}
-              ✖ Non potrai più accedere all'app con questo account{'\n\n'}
-              Se sei sicuro, scrivi "ELIMINA" qui sotto:
+              {t('settings.accountDeletion.modalBody', { word: DELETE_CONFIRMATION_WORD })}
             </Text>
 
             <TextInput
               style={[styles.deleteInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder='Scrivi "ELIMINA"'
+              placeholder={t('settings.accountDeletion.inputPlaceholder', { word: DELETE_CONFIRMATION_WORD })}
               placeholderTextColor={colors.textTertiary}
               autoCapitalize="characters"
               autoCorrect={false}
@@ -1509,7 +1409,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
                 }}
                 disabled={isDeletingAccount}
               >
-                <Text style={[styles.deleteCancelButtonText, { color: colors.textSecondary }]}>Annulla</Text>
+                <Text style={[styles.deleteCancelButtonText, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -1520,7 +1420,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
                 {isDeletingAccount ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={styles.deleteConfirmButtonText}>Richiedi cancellazione</Text>
+                  <Text style={styles.deleteConfirmButtonText}>{t('settings.accountDeletion.requestButton')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1540,10 +1440,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.deleteModalContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.deleteSuccessTitle, { color: colors.text }]}>Conferma cancellazione</Text>
-            <Text style={[styles.deleteSuccessTitle, { color: colors.error, marginTop: 4 }]}>Cancellazione pianificata</Text>
+            <Text style={[styles.deleteSuccessTitle, { color: colors.text }]}>{t('settings.accountDeletion.successTitle')}</Text>
+            <Text style={[styles.deleteSuccessTitle, { color: colors.error, marginTop: 4 }]}>{t('settings.accountDeletion.successSubtitle')}</Text>
             <Text style={[styles.deleteModalBody, { color: colors.textSecondary, marginTop: 10 }]}>
-              La richiesta è stata registrata con successo. I tuoi dati saranno cancellati entro 60 giorni. Ci dispiace vederti andare via!
+              {t('settings.accountDeletion.successBody')}
             </Text>
 
             <TouchableOpacity
@@ -1553,7 +1453,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onLogout }
                 onLogout();
               }}
             >
-              <Text style={styles.deleteSuccessButtonText}>Chiudi</Text>
+              <Text style={styles.deleteSuccessButtonText}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1873,11 +1773,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: 14,
   },
   deleteAccountActionText: {
     marginLeft: 8,
-    color: '#ef4444',
     fontSize: 15,
     fontFamily: 'Figtree_700Bold',
   },

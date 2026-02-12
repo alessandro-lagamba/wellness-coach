@@ -137,6 +137,41 @@ export class HealthDataService {
 
   private needsHrvPermission: boolean = false;
 
+  /**
+   * Verifica se l'utente ha completato i requisiti legali minimi richiesti
+   * prima di consentire sync verso Supabase.
+   */
+  private async isLegalProfileCompleted(currentUser: any): Promise<boolean> {
+    try {
+      const metadata = currentUser?.user_metadata || {};
+      const metadataCompleted = Boolean(
+        metadata.birth_date &&
+        metadata.gender &&
+        metadata.terms_consent_accepted &&
+        metadata.health_consent_accepted
+      );
+
+      if (metadataCompleted) {
+        return true;
+      }
+
+      const Auth = await getAuthService();
+      const profile = await Auth.getUserProfile(currentUser?.id);
+      if (!profile) {
+        return false;
+      }
+
+      return Boolean(
+        profile.birth_date &&
+        profile.gender &&
+        profile.terms_accepted &&
+        profile.health_consent_accepted
+      );
+    } catch {
+      return false;
+    }
+  }
+
   private constructor() {
     this.config = {
       enableHealthKit: Platform.OS === 'ios',
@@ -551,17 +586,22 @@ export class HealthDataService {
         const Auth = await getAuthService();
         const currentUser = await Auth.getCurrentUser();
         if (currentUser) {
-          const emptyHealthData: HealthData = {
-            steps: 0, distance: 0, calories: 0, activeMinutes: 0,
-            heartRate: 0, restingHeartRate: 0, hrv: 0,
-            sleepHours: 0, sleepQuality: 0, deepSleepMinutes: 0, remSleepMinutes: 0, lightSleepMinutes: 0,
-            // 🔥 FIX: Do NOT pass hydration/mindfulness as 0, use undefined to preserve existing DB values
-            hydration: undefined, mindfulnessMinutes: undefined
-          };
-          const Sync = await getHealthDataSyncService();
-          const syncService = Sync.getInstance();
-          await syncService.syncHealthData(currentUser.id, emptyHealthData);
-          if (__DEV__) console.log('💓 Activity heartbeat synced to Supabase (no health permissions)');
+          const canSyncToSupabase = await this.isLegalProfileCompleted(currentUser);
+          if (canSyncToSupabase) {
+            const emptyHealthData: HealthData = {
+              steps: 0, distance: 0, calories: 0, activeMinutes: 0,
+              heartRate: 0, restingHeartRate: 0, hrv: 0,
+              sleepHours: 0, sleepQuality: 0, deepSleepMinutes: 0, remSleepMinutes: 0, lightSleepMinutes: 0,
+              // 🔥 FIX: Do NOT pass hydration/mindfulness as 0, use undefined to preserve existing DB values
+              hydration: undefined, mindfulnessMinutes: undefined
+            };
+            const Sync = await getHealthDataSyncService();
+            const syncService = Sync.getInstance();
+            await syncService.syncHealthData(currentUser.id, emptyHealthData);
+            if (__DEV__) console.log('💓 Activity heartbeat synced to Supabase (no health permissions)');
+          } else if (__DEV__) {
+            console.log('ℹ️ Supabase health sync skipped: legal profile completion pending');
+          }
         }
 
         safeTimeEnd('HealthDataService_Sync_Total');
@@ -578,14 +618,19 @@ export class HealthDataService {
       const Auth = await getAuthService();
       const currentUser = await Auth.getCurrentUser();
       if (currentUser) {
-        safeTime('Supabase_Health_Sync');
-        const Sync = await getHealthDataSyncService();
-        const syncService = Sync.getInstance();
-        const syncResult = await syncService.syncHealthData(currentUser.id, healthData);
-        safeTimeEnd('Supabase_Health_Sync');
+        const canSyncToSupabase = await this.isLegalProfileCompleted(currentUser);
+        if (canSyncToSupabase) {
+          safeTime('Supabase_Health_Sync');
+          const Sync = await getHealthDataSyncService();
+          const syncService = Sync.getInstance();
+          const syncResult = await syncService.syncHealthData(currentUser.id, healthData);
+          safeTimeEnd('Supabase_Health_Sync');
 
-        if (!syncResult.success) {
-          console.error('❌ Failed to sync to Supabase:', syncResult.error);
+          if (!syncResult.success) {
+            console.error('❌ Failed to sync to Supabase:', syncResult.error);
+          }
+        } else if (__DEV__) {
+          console.log('ℹ️ Supabase health sync skipped: legal profile completion pending');
         }
       }
 

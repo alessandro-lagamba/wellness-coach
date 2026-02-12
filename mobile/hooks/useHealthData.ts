@@ -142,6 +142,8 @@ export function useHealthData(): UseHealthDataReturn {
 
       // 🔥 CRITICO: Aggiorna i permessi prima di sincronizzare
       await healthService.refreshPermissions();
+      const refreshedPermissions = healthService.getPermissions();
+      setPermissions(refreshedPermissions);
 
       const result = await healthService.syncHealthData(true);
       let resolvedResult = result;

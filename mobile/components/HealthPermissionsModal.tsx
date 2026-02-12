@@ -244,7 +244,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
             // ✅ Permessi funzionanti - abbiamo dati reali
             Alert.alert(
               t('common.success'),
-              t('modals.healthPermissions.iosPermissionsWorking', 'Permessi HealthKit attivi! I tuoi dati salute sono stati sincronizzati.'),
+              t('modals.healthPermissions.iosPermissionsWorking'),
               [{
                 text: t('modals.healthPermissions.perfect'),
                 onPress: () => { onSuccess(); onClose(); }
@@ -253,12 +253,8 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
           } else {
             // ❌ Nessun dato - guida l'utente alle impostazioni
             Alert.alert(
-              t('modals.healthPermissions.iosPermissionsNeeded', 'Attiva i permessi manualmente'),
-              t('modals.healthPermissions.iosManualInstructions',
-                'iOS non permette di sapere quali permessi hai concesso.\n\n' +
-                'Se hai già concesso i permessi ma i dati non appaiono, vai in:\n\n' +
-                '📱 Impostazioni → Privacy e sicurezza → Salute → Yachai\n\n' +
-                'E assicurati che tutte le categorie siano attive.'),
+              t('modals.healthPermissions.iosPermissionsNeeded'),
+              t('modals.healthPermissions.iosManualInstructions'),
               [
                 {
                   text: t('common.cancel'),
@@ -387,6 +383,20 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
     return names[category] || t('modals.healthPermissions.categories.other');
   };
 
+  const isDarkTheme = mode === 'dark';
+  const modalGradientColors = isDarkTheme ? ['#1e3a5f', '#0d2137'] : ['#eef2ff', '#dbeafe'];
+  const modalTextColor = isDarkTheme ? '#ffffff' : '#0f172a';
+  const modalSecondaryTextColor = isDarkTheme ? 'rgba(255, 255, 255, 0.9)' : '#334155';
+  const modalMutedTextColor = isDarkTheme ? 'rgba(255, 255, 255, 0.8)' : '#475569';
+  const modalSurfaceTint = isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 23, 42, 0.06)';
+  const modalBorderTint = isDarkTheme ? 'rgba(255, 255, 255, 0.2)' : 'rgba(148, 163, 184, 0.45)';
+  const noticeTitle = Platform.OS === 'ios'
+    ? t('modals.healthPermissions.notice.titleHealth')
+    : t('modals.healthPermissions.notice.titleFitness');
+  const permissionNoticeText = Platform.OS === 'ios'
+    ? t('modals.healthPermissions.notice.bodyIOS')
+    : t('modals.healthPermissions.notice.bodyAndroid');
+
   if (!visible || !state) return null;
 
   return (
@@ -401,7 +411,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
           <View style={styles.modalContainer}>
             {/* 🔥 FIX: Colori più scuri per migliorare la leggibilità del testo */}
             <LinearGradient
-              colors={['#1e3a5f', '#0d2137']}
+              colors={modalGradientColors as [string, string]}
               style={styles.modalGradient}
             >
               {/* Header */}
@@ -410,11 +420,11 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                   <MaterialCommunityIcons
                     name="heart-pulse"
                     size={32}
-                    color="#fff"
+                    color={modalTextColor}
                   />
                 </View>
-                <Text style={styles.title}>{t('modals.healthPermissions.title')}</Text>
-                <Text style={styles.subtitle}>
+                <Text style={[styles.title, { color: modalTextColor }]}>{t('modals.healthPermissions.title')}</Text>
+                <Text style={[styles.subtitle, { color: modalSecondaryTextColor }]}>
                   {t('modals.healthPermissions.subtitle')}
                 </Text>
               </View>
@@ -430,7 +440,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                       <View style={styles.motivationBox}>
                         <MaterialCommunityIcons name="shield-check" size={18} color="#16a34a" />
                         <Text style={styles.motivationText}>
-                          {t('modals.healthPermissions.importanceMessage') || 'Concedere questi permessi ci permette di mostrarti passi, sonno e frequenza cardiaca reali e darti consigli personalizzati. I dati restano sul tuo dispositivo e puoi revocare i permessi in qualsiasi momento.'}
+                          {t('modals.healthPermissions.importanceMessage')}
                         </Text>
                       </View>
                     );
@@ -439,19 +449,19 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                 })()}
                 {isLoading ? (
                   <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#fff" />
-                    <Text style={styles.loadingText}>{t('modals.healthPermissions.loading')}</Text>
+                    <ActivityIndicator size="large" color={modalTextColor} />
+                    <Text style={[styles.loadingText, { color: modalTextColor }]}>{t('modals.healthPermissions.loading')}</Text>
                   </View>
                 ) : (
                   <View style={styles.permissionsContainer}>
                     {/* Platform Info */}
-                    <View style={styles.platformInfo}>
+                    <View style={[styles.platformInfo, { backgroundColor: modalSurfaceTint }]}>
                       <MaterialCommunityIcons
                         name={Platform.OS === 'ios' ? 'apple' : 'android'}
                         size={20}
-                        color="#fff"
+                        color={modalTextColor}
                       />
-                      <Text style={styles.platformText}>
+                      <Text style={[styles.platformText, { color: modalTextColor }]}>
                         {t('modals.healthPermissions.platformAvailable', {
                           platform: Platform.OS === 'ios' ? 'HealthKit' : 'Google Fit'
                         })}
@@ -473,7 +483,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                           <Text style={styles.categoryIcon}>
                             {getCategoryIcon(category)}
                           </Text>
-                          <Text style={styles.categoryName}>
+                          <Text style={[styles.categoryName, { color: modalTextColor }]}>
                             {getCategoryName(category)}
                           </Text>
                         </View>
@@ -483,6 +493,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                             key={permission.id}
                             style={[
                               styles.permissionItem,
+                              { backgroundColor: modalSurfaceTint, borderColor: modalBorderTint },
                               selectedPermissions.includes(permission.id) && styles.permissionItemSelected,
                               permission.required && styles.permissionItemRequired,
                             ]}
@@ -492,16 +503,17 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                             <View style={styles.permissionContent}>
                               <Text style={styles.permissionIcon}>{permission.icon}</Text>
                               <View style={styles.permissionTextContainer}>
-                                <Text style={styles.permissionName}>
+                                <Text style={[styles.permissionName, { color: modalTextColor }]}>
                                   {permission.name}
                                   {permission.required && ' *'}
                                 </Text>
-                                <Text style={styles.permissionDescription}>
+                                <Text style={[styles.permissionDescription, { color: modalMutedTextColor }]}>
                                   {permission.description}
                                 </Text>
                               </View>
                               <View style={[
                                 styles.checkbox,
+                                { borderColor: isDarkTheme ? 'rgba(255, 255, 255, 0.5)' : 'rgba(15, 23, 42, 0.45)' },
                                 selectedPermissions.includes(permission.id) && styles.checkboxChecked,
                                 permission.required && styles.checkboxRequired,
                               ]}>
@@ -516,9 +528,9 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                     ))}
 
                     {/* Info Note */}
-                    <View style={styles.infoNote}>
+                    <View style={[styles.infoNote, { backgroundColor: isDarkTheme ? 'rgba(74, 222, 128, 0.2)' : 'rgba(22, 163, 74, 0.12)' }]}>
                       <MaterialCommunityIcons name="information" size={16} color="#4ade80" />
-                      <Text style={styles.infoText}>
+                      <Text style={[styles.infoText, { color: modalTextColor }]}>
                         {t('modals.healthPermissions.privacyNote')}
                       </Text>
                     </View>
@@ -576,11 +588,11 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                         style={{ marginRight: 8 }}
                       />
                       <Text style={styles.refreshButtonText}>
-                        {t('modals.healthPermissions.reloadPermissions') || 'Ricarica permessi'}
+                        {t('modals.healthPermissions.reloadPermissions')}
                       </Text>
                     </TouchableOpacity>
                     <Text style={styles.refreshButtonHint}>
-                      {t('modals.healthPermissions.reloadPermissionsHint') || 'Usa questo pulsante se hai concesso i permessi manualmente in Health Connect'}
+                      {t('modals.healthPermissions.reloadPermissionsHint')}
                     </Text>
                   </View>
                 )}
@@ -591,7 +603,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                     style={styles.skipButton}
                     disabled={isRequesting}
                   >
-                    <Text style={styles.skipButtonText}>{t('modals.healthPermissions.skipForNow')}</Text>
+                    <Text style={[styles.skipButtonText, { color: modalMutedTextColor }]}>{t('modals.healthPermissions.skipForNow')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -605,7 +617,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                       <>
                         <MaterialCommunityIcons name="heart-pulse" size={18} color="#60a5fa" style={{ flexShrink: 0 }} />
                         <Text style={styles.requestButtonText} numberOfLines={1} ellipsizeMode="tail">
-                          {t('modals.healthPermissions.requestPermissions', { count: selectedPermissions.length }) || 'Concedi i permessi consigliati'}
+                          {t('modals.healthPermissions.requestPermissions', { count: selectedPermissions.length })}
                         </Text>
                       </>
                     )}
@@ -615,22 +627,42 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
 
               {showPermissionNotice && (
                 <View style={styles.noticeOverlay}>
-                  <View style={styles.noticeCard}>
-                    <Text style={styles.noticeTitle}>
-                      {Platform.OS === 'ios' ? 'Accesso ai dati salute' : 'Accesso ai dati fitness'}
+                  <View style={[styles.noticeCard, {
+                    backgroundColor: isDarkTheme ? '#0f172a' : '#ffffff',
+                    borderColor: isDarkTheme ? 'rgba(148, 163, 184, 0.4)' : 'rgba(148, 163, 184, 0.55)',
+                  }]}>
+                    <Text style={[styles.noticeTitle, { color: isDarkTheme ? '#fff' : '#0f172a' }]}>
+                      {noticeTitle}
                     </Text>
-                    <Text style={styles.noticeBody}>
-                      {Platform.OS === 'ios'
-                        ? `Per personalizzare le tue raccomandazioni, Yachai ha bisogno di leggere alcuni dati da Apple Health:\n\n• Peso e altezza\n• Frequenza cardiaca e HRV\n• Qualità del sonno\n• Numero di passi\n\nCome utilizziamo questi dati:\n✓ Generare suggerimenti su misura per te\n✓ Tracciare i tuoi progressi\n✓ Creare insight personalizzati\n\nPrivacy e sicurezza:\n🔒 I tuoi dati sono cifrati e protetti\n🔒 Non condividiamo i dati salute con terze parti per scopi pubblicitari\n🔒 Puoi revocare l'accesso in qualsiasi momento\n\nI dati salute sono trattati in base al consenso che ci hai fornito.`
-                        : `Per personalizzare le tue raccomandazioni, Yachai ha bisogno di leggere alcuni dati da Google Fit:\n\n• Peso e altezza\n• Battito cardiaco\n• Sonno\n• Passi\n\nCome utilizziamo questi dati:\n✓ Generare suggerimenti su misura per te\n✓ Tracciare i tuoi progressi\n✓ Creare insight personalizzati\n\nPrivacy e sicurezza:\n🔒 I tuoi dati sono cifrati e protetti\n🔒 Non condividiamo i dati salute con terze parti per scopi pubblicitari\n🔒 Puoi revocare l'accesso in qualsiasi momento\n\nI dati salute sono trattati in base al consenso che ci hai fornito.`}
-                    </Text>
+                    <View
+                      style={[
+                        styles.noticeBodyContainer,
+                        {
+                          backgroundColor: isDarkTheme ? 'rgba(15, 23, 42, 0.28)' : 'rgba(15, 23, 42, 0.05)',
+                          borderColor: isDarkTheme ? 'rgba(148, 163, 184, 0.28)' : 'rgba(148, 163, 184, 0.45)',
+                        },
+                      ]}
+                    >
+                      <ScrollView
+                        style={styles.noticeBodyScroll}
+                        contentContainerStyle={styles.noticeBodyScrollContent}
+                        showsVerticalScrollIndicator
+                      >
+                        <Text style={[styles.noticeBody, { color: isDarkTheme ? 'rgba(255,255,255,0.9)' : '#334155' }]}>{permissionNoticeText}</Text>
+                      </ScrollView>
+                    </View>
                     <View style={styles.noticeButtons}>
                       <TouchableOpacity
-                        style={styles.noticeSecondaryButton}
+                        style={[styles.noticeSecondaryButton, {
+                          borderColor: isDarkTheme ? 'rgba(148, 163, 184, 0.6)' : 'rgba(100, 116, 139, 0.4)',
+                          backgroundColor: isDarkTheme ? 'rgba(30, 41, 59, 0.6)' : '#f1f5f9',
+                        }]}
                         onPress={handleSkip}
                         disabled={isRequesting}
                       >
-                        <Text style={styles.noticeSecondaryButtonText}>Non ora</Text>
+                        <Text style={[styles.noticeSecondaryButtonText, { color: isDarkTheme ? '#cbd5e1' : '#334155' }]}>
+                          {t('modals.healthPermissions.notice.notNow')}
+                        </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.noticePrimaryButton}
@@ -640,7 +672,7 @@ export const HealthPermissionsModal: React.FC<HealthPermissionsModalProps> = ({
                         }}
                         disabled={isRequesting}
                       >
-                        <Text style={styles.noticePrimaryButtonText}>Continua</Text>
+                        <Text style={styles.noticePrimaryButtonText}>{t('modals.healthPermissions.notice.continue')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -907,39 +939,64 @@ const styles = StyleSheet.create({
   },
   noticeOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(3, 7, 18, 0.86)',
+    backgroundColor: 'rgba(2, 6, 23, 0.92)',
     justifyContent: 'center',
-    padding: 14,
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 2,
     borderRadius: 20,
+    zIndex: 20,
   },
   noticeCard: {
     backgroundColor: '#0f172a',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(148, 163, 184, 0.4)',
-    padding: 14,
-    maxHeight: '88%',
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 16,
+    width: '100%',
+    maxWidth: 520,
+    maxHeight: '100%',
+    flex: 1,
+    overflow: 'hidden',
+  },
+  noticeBodyContainer: {
+    flex: 1,
+    maxHeight: Math.min(height * 0.36, 320),
+    marginBottom: 14,
+    borderWidth: 1,
+    borderRadius: 12,
+  },
+  noticeBodyScroll: {
+    flex: 1,
+  },
+  noticeBodyScrollContent: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 20,
   },
   noticeTitle: {
     color: '#fff',
-    fontSize: 19,
+    fontSize: 22,
     fontFamily: 'Figtree_700Bold',
     marginBottom: 10,
   },
   noticeBody: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
     fontFamily: 'Figtree_500Medium',
   },
   noticeButtons: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 14,
+    paddingTop: 4,
+    marginTop: 'auto',
   },
   noticeSecondaryButton: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 50,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(148, 163, 184, 0.6)',
@@ -949,12 +1006,12 @@ const styles = StyleSheet.create({
   },
   noticeSecondaryButtonText: {
     color: '#cbd5e1',
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Figtree_700Bold',
   },
   noticePrimaryButton: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 50,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -962,7 +1019,7 @@ const styles = StyleSheet.create({
   },
   noticePrimaryButtonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Figtree_700Bold',
   },
 });
